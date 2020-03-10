@@ -18,10 +18,10 @@
         "https://twitter.com/compose/tweet"
       ],
       "css": [
-        "surething.css"
+        "content.css"
       ],
       "js": [
-        "surething.js"
+        "content.js"
       ]
     }
   ],
