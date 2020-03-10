@@ -1,0 +1,42 @@
+{
+  "name": "Related Tweets",
+  "version": "1.0",
+  "description": "Self-thread helper",
+  "permissions": [
+    "activeTab",
+    "storage"
+  ],
+  "background": {
+    "scripts": [
+      "background.js"
+    ],
+    "persistent": false
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://twitter.com/compose/tweet"
+      ],
+      "css": [
+        "surething.css"
+      ],
+      "js": [
+        "surething.js"
+      ]
+    }
+  ],
+  "page_action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "128": "images/thread_128.png"
+    }
+  },
+  "icons": {
+    "16": "images/thread_16.png",
+    "32": "images/thread_32.png",
+    "48": "images/thread_48.png",
+    "128": "images/thread_128.png"
+  },
+  "options_page": "options.html",
+  "manifest_version": 2
+}
