@@ -1,0 +1,27 @@
+#suggestionBox {
+	position: "fixed";
+	right: "10px";
+	top: "10px";
+	width: "100px";
+	height: "100px";
+	background-color: "orange";
+}
+
+.tweet {
+	outline: 1px solid black;
+	margin: 20px;
+	padding: 5px;
+}
+
+.time {
+	color: gray;
+	background-color: aqua;
+	font-size: small;
+}
+
+.text {
+	margin: 10px;
+}
+
+.url {
+}
