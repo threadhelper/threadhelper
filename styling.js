@@ -3,7 +3,7 @@
 const styles = {
     suggestionBox: {
         position: "fixed",
-        top: "150px",
+        top: "300px",
         minWidth: "550px",
         minHeight: "100px",
         backgroundColor: "lightgrey",

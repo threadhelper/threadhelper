@@ -15,8 +15,3 @@ Later:
 - Learn about chrome extension store
 
 (Ask nosilverv for all his documents)
-
-Known bugs:
-
-- If whole text field is deleted, events (MutationObserver stuff) stop catching (need to set up a new catcher)
-	- Typing events might also stop catching if you hit backspace? Or randomly? Might need a better way to watch the text field.

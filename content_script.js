@@ -16,7 +16,7 @@ function waitForRender() {
 	if (textDiv === null) {
 		setTimeout(waitForRender, 250);
 	} else {
-		addLogger(textDiv);
+		addLogger(textDiv.parentElement);
 	}
 }
 
