@@ -2,12 +2,22 @@
 	"name": "Related Tweets",
 	"version": "1.0",
 	"description": "Self-thread helper",
-	"permissions": ["activeTab"],
+	"permissions": [
+		"activeTab"
+	],
 	"content_scripts": [
 		{
-			"matches": ["https://twitter.com/compose/tweet"],
-			"css": ["content.css"],
-			"js": ["content.js"]
+			"matches": [
+				"https://twitter.com/compose/tweet"
+			],
+			"js": [
+				"nosilverv.js",
+				"stemmer.js",
+				"stopwords.js",
+				"getRelated.js",
+				"content_script.js",
+				"styling.js"
+			]
 		}
 	],
 	"icons": {
