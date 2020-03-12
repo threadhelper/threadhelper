@@ -6,7 +6,10 @@
   "content_scripts": [
     {
       "matches": ["https://twitter.com/compose/tweet"],
+      "all_frames": true,
+      "run_at": "document_end",
       "js": [
+        "jquery-3.4.1.slim.js",
         "nosilverv.js",
         "stemmer.js",
         "stopwords.js",

@@ -4,31 +4,27 @@ buildBox();
 waitForRender();
 
 function buildBox() {
-  var div = document.createElement("div");
-  div.id = "suggestionBox";
-  var h3 = document.createElement("h3");
-  h3.innerHTML = "Related Tweets";
-  div.appendChild(h3);
-  document.body.appendChild(div);
+  $('<div id="suggestionBox"></div>')
+    .add("<h3>Related Tweets</h3>")
+    .appendTo("body");
 }
 
 function waitForRender() {
-  let textDiv = document.querySelector('span[data-text="true"]');
-  if (textDiv === null) {
+  const textDivs = $('span[data-text="true"]');
+  if (textDivs.length === 0) {
     setTimeout(waitForRender, 250);
   } else {
-    addLogger(textDiv.parentElement);
+    addLogger(textDivs[0].parentElement.parentElement);
   }
 }
 
 function onChange(mutationRecords) {
-  console.log("new text is " + mutationRecords[0].target.wholeText);
   const text = mutationRecords[0].target.wholeText;
-  let bag = toBag(text);
-  let tweet = { text: text, bag: bag };
+  console.log("text is: ", text);
+  const bag = toBag(text);
+  const tweet = { text: text, bag: bag };
   const related = getRelated(tweet, nosilvervTweets);
-  console.log("Related tweets:", related);
-  render_tweets(related);
+  renderTweets(related);
 }
 
 function addLogger(div) {
@@ -37,29 +33,26 @@ function addLogger(div) {
 }
 
 function render_tweet(tweet) {
-  let div = document.createElement("div");
-  div.classList.add("rtweet");
-
-  let time = document.createElement("div");
-  time.classList.add("rtime");
-  time.innerHTML = tweet.timestamp;
-  div.appendChild(time);
-
-  let text = document.createElement("div");
-  text.classList.add("rtext");
-  text.innerHTML = tweet.text;
-  div.appendChild(text);
-
-  let url = document.createElement("a");
-  url.classList.add("rurl");
-  url.href = "https://twitter.com" + tweet.url;
-  url.innerHTML = tweet.url;
-  div.appendChild(url);
-
-  return div;
+  //   return (
+  //     <div class="rtweet">
+  //       <div class="rtime">{tweet.timestamp}</div>
+  //       <div class="rtext">{tweet.text}</div>
+  //       <a href={"https://twitter.com" + tweet.url} class="rurl">
+  //         tweet.url
+  //       </a>
+  //     </div>
+  //   );
+  const rtime = $("<div/>", { class: "rtime", text: tweet.timestamp });
+  const rtext = $("<div/>", { class: "rtext", text: tweet.text });
+  const rurl = $("<a/>", {
+    class: "rurl",
+    href: "https://twitter.com" + tweet.url,
+    text: tweet.url
+  });
+  return $("<div/>", { class: "rtweet" }).append([rtime, rtext, rurl])[0];
 }
 
-function render_tweets(tweets) {
+function renderTweets(tweets) {
   var resultsDiv = document.getElementById("suggestionBox");
   while (resultsDiv.firstChild) {
     resultsDiv.removeChild(resultsDiv.firstChild);
