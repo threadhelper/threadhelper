@@ -1,30 +1,26 @@
 {
-	"name": "Related Tweets",
-	"version": "1.0",
-	"description": "Self-thread helper",
-	"permissions": [
-		"activeTab"
-	],
-	"content_scripts": [
-		{
-			"matches": [
-				"https://twitter.com/compose/tweet"
-			],
-			"js": [
-				"nosilverv.js",
-				"stemmer.js",
-				"stopwords.js",
-				"getRelated.js",
-				"content_script.js",
-				"styling.js"
-			]
-		}
-	],
-	"icons": {
-		"16": "images/thread_16.png",
-		"32": "images/thread_32.png",
-		"48": "images/thread_48.png",
-		"128": "images/thread_128.png"
-	},
-	"manifest_version": 2
+  "name": "Related Tweets",
+  "version": "1.0",
+  "description": "Self-thread helper",
+  "permissions": ["activeTab"],
+  "content_scripts": [
+    {
+      "matches": ["https://twitter.com/compose/tweet"],
+      "js": [
+        "nosilverv.js",
+        "stemmer.js",
+        "stopwords.js",
+        "getRelated.js",
+        "content_script.js"
+      ],
+      "css": ["style.css"]
+    }
+  ],
+  "icons": {
+    "16": "images/thread_16.png",
+    "32": "images/thread_32.png",
+    "48": "images/thread_48.png",
+    "128": "images/thread_128.png"
+  },
+  "manifest_version": 2
 }

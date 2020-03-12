@@ -1,0 +1,23 @@
+#suggestionBox {
+  position: fixed;
+  top: 300px;
+  min-width: 550px;
+  min-height: 100px;
+  background-color: lightgrey;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.rtweet {
+  outline: 1px solid black;
+  margin: 20px;
+  padding: 5px;
+}
+
+.rtext {
+  margin: 10px;
+}
+
+.rurl {
+  margin: 10px;
+}
