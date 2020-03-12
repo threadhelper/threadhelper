@@ -8,7 +8,7 @@ for (let i = 0; i < nosilvervTweets.length; i++) {
 }
 
 function getRelated(tweet, tweets) {
-  return topKBy(tweets, t => similarity(t.bag, tweet.bag), 5);
+  return topKBy(tweets, t => similarity(t.bag, tweet.bag), 20);
 }
 
 function toBag(string) {
