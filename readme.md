@@ -21,4 +21,4 @@ A Chrome browser extension that shows you related tweets on your own account.
 
 ## Project Info
 
-- No frameworks. Vanilla js. Strict mode on. `Prettier` code formatting
+- jQuery! Strict mode on. `Prettier` code formatting
