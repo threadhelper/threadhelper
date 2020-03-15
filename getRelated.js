@@ -1,27 +1,24 @@
 "use strict";
 
 // precompute bags for all tweets:
-for (let i = 0; i < nosilvervTweets.length; i++) {
-  const t = nosilvervTweets[i];
+console.log("starting bagging");
+for (let i = 0; i < trumpTweets.length; i++) {
+  const t = trumpTweets[i];
   t.index = i;
   t.bag = toBag(t.text);
 }
+console.log("done bagging");
 
 function getRelated(tweet, tweets) {
   return topKBy(tweets, t => similarity(t.bag, tweet.bag), 20);
 }
 
 function toBag(string) {
-  if (string === "") {
-    return new Set(["<empty>"]);
-  }
-  return new Set(
-    string
-      .toLowerCase()
-      .match(/\b(\w+)\b/g)
-      .filter(x => !stopwords.has(x))
-      .map(stemmer)
-  );
+  const lstring = string.toLowerCase();
+  const words = lstring.match(/\b(\w+)\b/g);
+  const actualWords = words ? words.filter(x => !stopwords.has(x)) : [];
+  const shortWords = actualWords.map(stemmer);
+  return new Set(shortWords);
 }
 
 // more efficient algorithms and data structures exist. Could flip the database (word -> tweet) or use a proper search engine (e.g. elasticlunr), etc
