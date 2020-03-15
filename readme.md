@@ -1,4 +1,4 @@
-## Related Tweets
+# Related Tweets
 
 A Chrome browser extension that shows you related tweets on your own account.
 
@@ -39,3 +39,4 @@ A Chrome browser extension that shows you related tweets on your own account.
 ## Project Info
 
 - jQuery! Strict mode on. `Prettier` code formatting
+- Use `git clone --depth 1` because there will be old random shit in old versions
