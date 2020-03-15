@@ -1,23 +1,9 @@
 "use strict";
-// console.log("script opened");
-// $(document).ready(function() {
-//   console.log("document ready");
-//   const s = 'a[href="/compose/tweet"]';
-//   $(s).bind("DOMNodeRemoved", () => console.log("deleted!"));
-//   if ($(s).length > 0) {
-//     console.log("query succeeded");
-//   }
-//   $(s).ready(function() {
-//     console.log("link is ready");
-//     $(s).click(function() {
-//       console.log("link clicked");
-//     });
-//   });
-// });
 
 buildBox();
 watchForStart();
 
+/** buildBox creates the 'related tweets' html elements */
 function buildBox() {
   $("<div>", { id: "suggestionBox" })
     .hide()
@@ -26,8 +12,8 @@ function buildBox() {
 }
 
 // TODO: Make this based on events, (div creation and deletion, or clicks)
+/** waits for the compose button to appear */
 function watchForStart() {
-  console.log("checked for start");
   const divs = $('span[data-text="true"]');
   if (divs.length) {
     $("#suggestionBox").show();
@@ -38,8 +24,8 @@ function watchForStart() {
   }
 }
 
+/** watchForStop checks if the box has disappeared */
 function watchForStop() {
-  console.log("checked for stop");
   const divs = $('span[data-text="true"]');
   if (divs.length) {
     setTimeout(watchForStop, 250);
@@ -49,12 +35,13 @@ function watchForStop() {
   }
 }
 
+/** Updates the tweetlist when user types */
 function onChange(mutationRecords) {
   const text = mutationRecords[0].target.wholeText;
   console.log("text is: ", text);
   const bag = toBag(text);
   const tweet = { text: text, bag: bag };
-  const related = getRelated(tweet, nosilvervTweets);
+  const related = getRelated(tweet, trumpTweets);
   renderTweets(related);
 }
 
@@ -64,16 +51,6 @@ function addLogger(div) {
 }
 
 function render_tweet(tweet, textTarget) {
-  //   return (
-  //     <div class="rtweet">
-  //       <div class="rtime">{tweet.timestamp}</div>
-  //       <div class="rtext">{tweet.text}</div>
-  //       <a href={"https://twitter.com" + tweet.url} class="rurl">
-  //         tweet.url
-  //       </a>
-  //     </div>
-  //   );
-
   // TODO: print user on retweets
   const rtime = $("<a>", {
     class: "rtime",
@@ -86,7 +63,6 @@ function render_tweet(tweet, textTarget) {
     text: "+"
   });
   add.click(function() {
-    console.log("Plus clicked");
     const s = $('span[data-text="true"]').text();
     // TODO: links go away for some reason when you type after they're added
     $('span[data-text="true"]').text(s + " twitter.com" + tweet.url); // TODO: temporary
@@ -108,5 +84,4 @@ function renderTweets(tweets) {
     const tweetDiv = render_tweet(t, textTarget);
     resultsDiv.appendChild(tweetDiv);
   }
-  // applyStyle()
 }

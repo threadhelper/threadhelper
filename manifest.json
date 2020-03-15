@@ -8,7 +8,7 @@
       "matches": ["https://twitter.com/*"],
       "js": [
         "jquery-3.4.1.slim.js",
-        "nosilverv.js",
+        "trump.js",
         "stemmer.js",
         "stopwords.js",
         "getRelated.js",
