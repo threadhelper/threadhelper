@@ -16,16 +16,21 @@ A Chrome browser extension that shows you related tweets on your own account.
 
 ## Todo items
 
+- [ ] Reverse the tweet-word datastructure maybe
+  - [ ] Better data structure in general maybe a db (note there's max a few thousand tweets)
 - [ ] Encapsulate getRelated.js into a public function thing
-- [ ] Box should go away when compose box goes away
-- [ ] Box should always appear when compose box appears
-- [ ] Maybe the suggestion box should have a close button
-- [ ] Maybe clicking the corner icon makes the box come back
+- [x] Box should go away when compose box goes away
+- [x] Box should always appear when compose box appears
+- [ ] ~~Maybe the suggestion box should have a close button~~
+- [ ] ~~Maybe clicking the corner icon makes the box come back~~
 - [ ] Bar could be on the side when there's room and below otherwise
 - [ ] Write a script to process twitter private data export
 - [ ] Use ecmascript modules
 - [ ] Upload JSON file prompt
-- [ ] Use storage API
+- [ ] Use chrome storage API
+- [ ] Use twitter api??
+- [ ] Use separate server??
+- [ ] Use actual user's tweets
 - [ ] Try it with Trump's tweets
 - [ ] Think about better search algorithms
 - [ ] Make sidebar look nice
