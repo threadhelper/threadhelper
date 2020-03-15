@@ -1,20 +1,51 @@
 "use strict";
+// console.log("script opened");
+// $(document).ready(function() {
+//   console.log("document ready");
+//   const s = 'a[href="/compose/tweet"]';
+//   $(s).bind("DOMNodeRemoved", () => console.log("deleted!"));
+//   if ($(s).length > 0) {
+//     console.log("query succeeded");
+//   }
+//   $(s).ready(function() {
+//     console.log("link is ready");
+//     $(s).click(function() {
+//       console.log("link clicked");
+//     });
+//   });
+// });
 
 buildBox();
-waitForRender();
+watchForStart();
 
 function buildBox() {
-  $('<div id="suggestionBox"></div>')
-    .add("<h3>Related Tweets</h3>")
+  $("<div>", { id: "suggestionBox" })
+    .hide()
+    .append("<h3>", { text: "Related Tweets" })
     .appendTo("body");
 }
 
-function waitForRender() {
-  const textDivs = $('span[data-text="true"]');
-  if (textDivs.length === 0) {
-    setTimeout(waitForRender, 250);
+// TODO: Make this based on events, (div creation and deletion, or clicks)
+function watchForStart() {
+  console.log("checked for start");
+  const divs = $('span[data-text="true"]');
+  if (divs.length) {
+    $("#suggestionBox").show();
+    addLogger(divs[0].parentElement.parentElement);
+    setTimeout(watchForStop, 250);
   } else {
-    addLogger(textDivs[0].parentElement.parentElement);
+    setTimeout(watchForStart, 250);
+  }
+}
+
+function watchForStop() {
+  console.log("checked for stop");
+  const divs = $('span[data-text="true"]');
+  if (divs.length) {
+    setTimeout(watchForStop, 250);
+  } else {
+    $("#suggestionBox").hide();
+    setTimeout(watchForStart, 250);
   }
 }
 
@@ -32,7 +63,7 @@ function addLogger(div) {
   observer.observe(div, { characterData: true, subtree: true });
 }
 
-function render_tweet(tweet) {
+function render_tweet(tweet, textTarget) {
   //   return (
   //     <div class="rtweet">
   //       <div class="rtime">{tweet.timestamp}</div>
@@ -42,14 +73,26 @@ function render_tweet(tweet) {
   //       </a>
   //     </div>
   //   );
-  const rtime = $("<div/>", { class: "rtime", text: tweet.timestamp });
-  const rtext = $("<div/>", { class: "rtext", text: tweet.text });
-  const rurl = $("<a/>", {
-    class: "rurl",
-    href: "https://twitter.com" + tweet.url,
-    text: tweet.url
+
+  // TODO: print user on retweets
+  const rtime = $("<a>", {
+    class: "rtime",
+    text: tweet.timestamp,
+    href: "https://twitter.com" + tweet.url
   });
-  return $("<div/>", { class: "rtweet" }).append([rtime, rtext, rurl])[0];
+
+  const add = $("<span>", {
+    class: "rplus",
+    text: "+"
+  });
+  add.click(function() {
+    console.log("Plus clicked");
+    const s = $('span[data-text="true"]').text();
+    // TODO: links go away for some reason when you type after they're added
+    $('span[data-text="true"]').text(s + " twitter.com" + tweet.url); // TODO: temporary
+  });
+  const rtext = $("<div>", { class: "rtext", text: tweet.text });
+  return $("<div>", { class: "rtweet" }).append([rtime, add, rtext])[0];
 }
 
 function renderTweets(tweets) {
@@ -60,8 +103,9 @@ function renderTweets(tweets) {
   var h3 = document.createElement("h3");
   h3.innerHTML = "Related Tweets";
   resultsDiv.appendChild(h3);
+  const textTarget = $('span[data-text="true"]');
   for (let t of tweets) {
-    const tweetDiv = render_tweet(t);
+    const tweetDiv = render_tweet(t, textTarget);
     resultsDiv.appendChild(tweetDiv);
   }
   // applyStyle()
