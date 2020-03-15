@@ -2,6 +2,20 @@
 
 A Chrome browser extension that shows you related tweets on your own account.
 
+## Description of files
+
+- `content_script.js`: manages html and interface
+- `getRelated.js`: provides NLP stuff
+- `manifest.json`: settings for chrome extension
+- `nosilverv.js`: His tweets
+- `readme.md`: this file
+- `stemmer.js`: one function for word stemming, from node package `stemmer`
+- `stopwords.js`: just a list of stopwords, taken from python's nltk
+- `style.css`: styling for extension components
+- `trump.js`: trump tweets
+
+## Todo items
+
 - [ ] Encapsulate getRelated.js into a public function thing
 - [ ] Box should go away when compose box goes away
 - [ ] Box should always appear when compose box appears
