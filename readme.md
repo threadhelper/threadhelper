@@ -25,8 +25,8 @@ A Chrome browser extension that shows you related tweets on your own account.
 - [ ] ~~Maybe clicking the corner icon makes the box come back~~
 - [ ] Bar could be on the side when there's room and below otherwise
 - [ ] Write a script to process twitter private data export
-- [ ] Use ecmascript modules
-- [ ] Upload JSON file prompt
+- [ ] Use ecmascript modules?
+- [ ] Upload JSON file prompt?
 - [ ] Use chrome storage API
 - [ ] Use twitter api??
 - [ ] Use separate server??
