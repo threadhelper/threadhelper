@@ -39,6 +39,10 @@ A Chrome browser extension that shows you related tweets on your own account.
 - [ ] Scroll on the preview
 - [x] Use CSS files
 
+- [ ] Enable github issues and put these todos there
+- [ ] Trump tweet links don't work - is that the data or a bug?
+- [ ] Only search on word boundary
+
 (Ask nosilverv for all his documents)
 
 ## Project Info
