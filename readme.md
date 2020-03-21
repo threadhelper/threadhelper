@@ -5,7 +5,7 @@ A Chrome browser extension that shows you related tweets on your own account.
 ## Description of files
 
 - `content_script.js`: manages html and interface
-- `getRelated.js`: provides NLP stuff
+- `nlp.js`: provides NLP stuff
 - `manifest.json`: settings for chrome extension
 - `nosilverv.js`: His tweets
 - `readme.md`: this file
@@ -24,7 +24,7 @@ A Chrome browser extension that shows you related tweets on your own account.
 
 - [ ] Reverse the tweet-word datastructure maybe
   - [ ] Better data structure in general maybe a db (note there's max a few thousand tweets)
-- [ ] Encapsulate getRelated.js into a public function thing
+- [ ] Encapsulate nlp.js into a public function thing
 - [x] Box should go away when compose box goes away
 - [x] Box should always appear when compose box appears
 - [ ] ~~Maybe the suggestion box should have a close button~~

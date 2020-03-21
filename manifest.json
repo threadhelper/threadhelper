@@ -11,7 +11,7 @@
         "js/trump.js",
         "js/stemmer.js",
         "js/stopwords.js",
-        "js/getRelated.js",
+        "js/nlp.js",
         "js/content_script.js"
       ],
       "css": ["style.css"]
@@ -25,6 +25,6 @@
   },
   "manifest_version": 2,
   "background": {
-    "scripts": ["background.js"]
+    "scripts": ["js/background.js"]
   }
 }

@@ -39,9 +39,9 @@ function watchForStop() {
 function onChange(mutationRecords) {
   const text = mutationRecords[0].target.wholeText;
   console.log("text is: ", text);
-  const bag = toBag(text);
+  const bag = nlp.toBag(text);
   const tweet = { text: text, bag: bag };
-  const related = getRelated(tweet, trumpTweets);
+  const related = nlp.getRelated(tweet, trumpTweets);
   renderTweets(related);
 }
 
