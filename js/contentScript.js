@@ -84,7 +84,7 @@ function renderTweets(tweets) {
   resultsDiv.appendChild(h3);
   const textTarget = $('span[data-text="true"]');
   for (let t of tweets) {
-    const tweetDiv = render_tweet(t, textTarget);
+    const tweetDiv = renderTweet(t, textTarget);
     resultsDiv.appendChild(tweetDiv);
   }
 }
