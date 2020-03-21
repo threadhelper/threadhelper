@@ -9,7 +9,20 @@ const nlp = (function() {
     t.bag = toBag(t.text);
   }
   console.log("done bagging");
-  return { getRelated: getRelated, toBag: toBag };
+
+  console.log("starting reverse map");
+  let wordToTweets = new Map();
+  for (const t of trumpTweets) {
+    for (const word of t.bag) {
+      if (!wordToTweets.has(word)) {
+        wordToTweets.set(word, new Set());
+      }
+      wordToTweets.get(word).add(t.id);
+    }
+  }
+  console.log("finished reverse map");
+
+  return { getRelated: getRelated, toBag: toBag, wordToTweets: wordToTweets };
 
   //** Find related tweets */
   function getRelated(tweet, tweets) {

@@ -54,10 +54,11 @@ function addLogger(div) {
 //** Build the html for one tweet */
 function renderTweet(tweet, textTarget) {
   // TODO: print user on retweets
+  const url = "https://twitter.com/realDonaldTrump/status/" + tweet.id;
   const rtime = $("<a>", {
     class: "rtime",
     text: tweet.timestamp,
-    href: "https://twitter.com" + tweet.url
+    href: url
   });
 
   const add = $("<span>", {
@@ -67,7 +68,7 @@ function renderTweet(tweet, textTarget) {
   add.click(function() {
     const s = $('span[data-text="true"]').text();
     // TODO: links go away for some reason when you type after they're added
-    $('span[data-text="true"]').text(s + " twitter.com" + tweet.url); // TODO: temporary
+    $('span[data-text="true"]').text(s + " " + url); // TODO: temporary
   });
   const rtext = $("<div>", { class: "rtext", text: tweet.text });
   return $("<div>", { class: "rtweet" }).append([rtime, add, rtext])[0];
