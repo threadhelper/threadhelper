@@ -10,19 +10,7 @@ const nlp = (function() {
   }
   console.log("done bagging");
 
-  console.log("starting reverse map");
-  let wordToTweets = new Map();
-  for (const t of trumpTweets) {
-    for (const word of t.bag) {
-      if (!wordToTweets.has(word)) {
-        wordToTweets.set(word, new Set());
-      }
-      wordToTweets.get(word).add(t.id);
-    }
-  }
-  console.log("finished reverse map");
-
-  return { getRelated: getRelated, toBag: toBag, wordToTweets: wordToTweets };
+  return { getRelated: getRelated, toBag: toBag };
 
   //** Find related tweets */
   function getRelated(tweet, tweets) {
@@ -47,15 +35,16 @@ const nlp = (function() {
   }
 
   //** Get top k elements of array by key */
-  function topKBy(array, f, k = 5) {
-    return sortBy(array, f)
-      .slice(array.length - k, array.length)
-      .reverse();
-  }
-
-  //** Sort array by key */
-  function sortBy(array, f) {
-    return array.slice().sort((x, y) => f(x) - f(y));
+  function topKBy(arr, f, k = 5) {
+    let items = arr.slice(0, k).map(x => [x, f(x)]);
+    for (const x of arr) {
+      const y = f(x);
+      if (y > items[0][1]) {
+        items[0] = [x, y];
+        items.sort(([_, y1], [__, y2]) => y1 - y2);
+      }
+    }
+    return items.map(([x, _]) => x);
   }
 
   //** Intersection of sets */

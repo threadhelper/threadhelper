@@ -20,9 +20,13 @@ A Chrome browser extension that shows you related tweets on your own account.
   - [ ] Make my own simple fetch
   - [ ] Fetch all of a user's tweets
   - [ ] Store them in the chrome storage api
-- [ ] Reverse the tweet-word datastructure?
-  - [ ] Better data structure in general maybe a db (note there's max a few thousand tweets)
-  - [ ] Think about better search algorithms in general
+- [ ] ~~Reverse the tweet-word datastructure?~~
+  - [x] ~~Construct reverse tables~~
+  - [ ] ~~use them~~
+  - [x] more efficient top-k algorithm?
+    - update: this alone is enough for instant results so i don't need to use anything else
+  - [ ] ~~Better data structure in general maybe a db (note there's max a few thousand tweets)~~
+- [ ] Think about more intelligent search algorithms in general
 - [ ] Add click-to-search for keywords in tweets
   - [ ] Search for one keyword
   - [ ] Click to do a thing on words in sidebar
