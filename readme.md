@@ -14,6 +14,12 @@ A Chrome browser extension that shows you related tweets on your own account.
 - `style.css`: styling for extension components
 - `trump.js`: trump tweets
 
+## Backend todos
+
+- [ ] Fetch all of a user's tweets
+- [ ] Some kind of trivial search functionality
+  - Oh hmm wait search could still occur in the browser
+
 ## Todo items
 
 - [ ] Reverse the tweet-word datastructure maybe

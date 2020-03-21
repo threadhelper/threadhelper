@@ -2,17 +2,17 @@
   "name": "Related Tweets",
   "version": "1.0",
   "description": "Self-thread helper",
-  "permissions": ["activeTab"],
+  "permissions": ["activeTab", "webRequest", "declarativeContent"],
   "content_scripts": [
     {
       "matches": ["https://twitter.com/*"],
       "js": [
-        "jquery-3.4.1.slim.js",
-        "trump.js",
-        "stemmer.js",
-        "stopwords.js",
-        "getRelated.js",
-        "content_script.js"
+        "js/jquery-3.4.1.slim.js",
+        "js/trump.js",
+        "js/stemmer.js",
+        "js/stopwords.js",
+        "js/getRelated.js",
+        "js/content_script.js"
       ],
       "css": ["style.css"]
     }
@@ -23,5 +23,8 @@
     "48": "images/thread_48.png",
     "128": "images/thread_128.png"
   },
-  "manifest_version": 2
+  "manifest_version": 2,
+  "background": {
+    "scripts": ["background.js"]
+  }
 }
