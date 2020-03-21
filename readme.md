@@ -23,7 +23,15 @@ A Chrome browser extension that shows you related tweets on your own account.
 - [ ] Reverse the tweet-word datastructure?
   - [ ] Better data structure in general maybe a db (note there's max a few thousand tweets)
   - [ ] Think about better search algorithms in general
+- [ ] Add click-to-search for keywords in tweets
+  - [ ] Search for one keyword
+  - [ ] Click to do a thing on words in sidebar
+  - [ ] Click on words in compose box
+  - [ ] Maybe completely replace compose box?
+  - [ ] Button to go back to full tweet search
+  - [ ] Is just a twitter search sidebar better?
 - [ ] Have bar on side when there's room
+- [ ] Is it better to have the sidebar floating 'inside' twitter container or be like a "browser sidebar" that looks like it's not part of twitter?
 - [ ] Make sidebar look nice
 - [ ] Learn about chrome extension store
 - [ ] Only search on word boundary?
