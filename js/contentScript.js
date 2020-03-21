@@ -45,12 +45,14 @@ function onChange(mutationRecords) {
   renderTweets(related);
 }
 
+//** Attach a mutation observer to a div */
 function addLogger(div) {
   var observer = new MutationObserver(onChange);
   observer.observe(div, { characterData: true, subtree: true });
 }
 
-function render_tweet(tweet, textTarget) {
+//** Build the html for one tweet */
+function renderTweet(tweet, textTarget) {
   // TODO: print user on retweets
   const rtime = $("<a>", {
     class: "rtime",
@@ -71,6 +73,7 @@ function render_tweet(tweet, textTarget) {
   return $("<div>", { class: "rtweet" }).append([rtime, add, rtext])[0];
 }
 
+//** Build the html for a set of tweets */
 function renderTweets(tweets) {
   var resultsDiv = document.getElementById("suggestionBox");
   while (resultsDiv.firstChild) {

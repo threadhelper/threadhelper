@@ -12,7 +12,7 @@
         "js/stemmer.js",
         "js/stopwords.js",
         "js/nlp.js",
-        "js/content_script.js"
+        "js/contentScript.js"
       ],
       "css": ["style.css"]
     }
