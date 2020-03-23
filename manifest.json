@@ -11,20 +11,14 @@
   ],
   "content_scripts": [
     {
-      "matches": [
-        "https://twitter.com/*"
-      ],
+      "matches": ["https://twitter.com/*"],
       "js": [
         "js/jquery-3.4.1.slim.js",
         "js/trump.js",
-        "js/stemmer.js",
-        "js/stopwords.js",
         "js/nlp.js",
         "js/contentScript.js"
       ],
-      "css": [
-        "style.css"
-      ]
+      "css": ["style.css"]
     }
   ],
   "icons": {
@@ -35,9 +29,7 @@
   },
   "manifest_version": 2,
   "background": {
-    "scripts": [
-      "js/background.js"
-    ]
+    "scripts": ["js/background.js"]
   },
   "page_action": {
     "default_title": "Treeverse"
