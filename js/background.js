@@ -74,3 +74,28 @@ function onInstalled() {
     ]);
   });
 }
+
+function getUrlForTweetId(tweetId) {
+  let params = new URLSearchParams({
+    include_reply_count: "1",
+    tweet_mode: "extended"
+  });
+  // if (cursor !== null && cursor !== undefined) {
+  //   params.set("cursor", cursor);
+  // }
+  return `https://api.twitter.com/2/timeline/conversation/${tweetId}.json?${params.toString()}`;
+}
+
+function fetchTweets(tweetId, auth) {
+  let url = getUrlForTweetId(tweetId);
+  let fetch = typeof content === "undefined" ? window.fetch : content.fetch;
+  return fetch(url, {
+    credentials: "include",
+    headers: {
+      "x-csrf-token": auth.csrfToken,
+      authorization: auth.authorization
+    }
+  })
+    .then(x => x.json())
+    .catch(e => console.error("Failed to load tweets", e));
+}
