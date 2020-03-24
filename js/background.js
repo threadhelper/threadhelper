@@ -99,3 +99,19 @@ function fetchTweets(tweetId, auth) {
     .then(x => x.json())
     .catch(e => console.error("Failed to load tweets", e));
 }
+
+function fetchTrump(since, until, auth) {
+  var query = escape(
+    `from:realdonaldtrump since:${since} until:${until} include:retweets`
+  );
+  var url = `https://api.twitter.com/2/search/adaptive.json?q=${query}&count=20`;
+  var x = fetch(url, {
+    credentials: "include",
+    headers: {
+      authorization: auth.authorization,
+      "x-csrf-token": auth.csrfToken
+    }
+  });
+  var y = x.then(v => v.json());
+  return y;
+}
