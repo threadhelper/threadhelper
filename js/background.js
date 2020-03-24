@@ -78,8 +78,8 @@ function onInstalled() {
 function fetchTrump(
   auth,
   cursor = null,
-  since = "2012-01-01",
-  until = "2012-01-31"
+  since = "2018-01-01",
+  until = "2018-01-31"
 ) {
   const query = escape(`from:realdonaldtrump since:${since} until:${until}`);
   let url = `https://api.twitter.com/2/search/adaptive.json?q=${query}&count=20`;
@@ -114,31 +114,34 @@ function parseCursor(response) {
   return null;
 }
 
-// function parseTweets(response) {
-//   let tweets = [];
-//   let users = new Map();
-//   for (let userId in response.globalObjects.users) {
-//     let user = response.globalObjects.users[userId];
-//     users.set(userId, {
-//       handle: user.screen_name,
-//       name: user.name,
-//       avatar: user.profile_image_url_https
-//     });
-//   }
-//   for (let tweetId in response.globalObjects.tweets) {
-//     let entry = response.globalObjects.tweets[tweetId];
-//     let tweet = new Tweet();
-//     let user = users.get(entry.user_id_str);
-//     tweet.id = entry.id_str;
-//     tweet.bodyText = entry.full_text;
-//     tweet.bodyHtml = entry.full_text;
-//     tweet.name = user.name;
-//     tweet.username = user.handle;
-//     tweet.avatar = user.avatar;
-//     tweet.parent = entry.in_reply_to_status_id_str;
-//     tweet.time = new Date(entry.created_at).getTime();
-//     tweet.replies = entry.reply_count;
-//     tweets.push(tweet);
-//   }
-//   return tweets;
-// }
+function parseTweets(response) {
+  // collect users:
+  let users = new Map();
+  for (const userId in response.globalObjects.users) {
+    const user = response.globalObjects.users[userId];
+    users.set(userId, {
+      handle: user.screen_name,
+      name: user.name
+    });
+  }
+
+  // collect tweets:
+  let tweets = [];
+  for (const [id, entry] of Object.entries(response.globalObjects.tweets)) {
+    const user = users.get(entry.user_id_str);
+    const tweet = {
+      id: id,
+      text: entry.full_text || entry.text,
+      name: user.name,
+      username: user.handle,
+      parent: entry.in_reply_to_status_id_str,
+      time: new Date(entry.created_at).getTime(),
+      replies: entry.reply_count,
+      urls: entry.entities.urls.map(x => x.expanded_url), // TODO
+      media: null // TODO
+    };
+    tweets.push(tweet);
+  }
+
+  return tweets;
+}

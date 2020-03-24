@@ -25,6 +25,8 @@ A Chrome browser extension that shows you related tweets on your own account.
 
 (Feature ideas are in the google doc)
 
+oh one idea: links to your own tweets in the sidebar should appear in the sidebar
+
 ### Done or cancelled
 
 - [x] Try it with Trump's tweets
