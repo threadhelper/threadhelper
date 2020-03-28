@@ -8,8 +8,6 @@ A Chrome browser extension that shows you related tweets on your own account.
 - `contentScript.js`: manages html and interface
 - `nlp.js`: provides NLP stuff
 - `readme.md`: this file
-- `stemmer.js`: one function for word stemming, from node package `stemmer`
-- `stopwords.js`: just a list of stopwords, taken from python's nltk
 - `style.css`: styling for extension components
 - `trump.js`: trump tweets
 

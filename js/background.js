@@ -1,6 +1,6 @@
 "use strict";
 
-chrome.pageAction.onClicked.addListener(clickAction);
+chrome.browserAction.onClicked.addListener(clickAction);
 chrome.webRequest.onBeforeSendHeaders.addListener(
   c => {
     updateAuth(c.requestHeaders);
