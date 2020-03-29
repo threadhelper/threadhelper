@@ -1,5 +1,6 @@
 "use strict";
 
+chrome.runtime.onMessage.addListener(onMessage);
 chrome.browserAction.onClicked.addListener(clickAction);
 chrome.webRequest.onBeforeSendHeaders.addListener(
   c => {
@@ -125,11 +126,9 @@ function parseTweets(response) {
     });
   }
 
-  // collect tweets:
-  let tweets = [];
-  for (const [id, entry] of Object.entries(response.globalObjects.tweets)) {
+  function toTweet(id, entry) {
     const user = users.get(entry.user_id_str);
-    const tweet = {
+    return {
       id: id,
       text: entry.full_text || entry.text,
       name: user.name,
@@ -137,16 +136,14 @@ function parseTweets(response) {
       parent: entry.in_reply_to_status_id_str,
       time: new Date(entry.created_at).getTime(),
       replies: entry.reply_count,
-      urls: entry.entities.urls.map(x => x.expanded_url), // TODO
+      urls: entry.entities.urls.map(x => x.expanded_url),
       media: null // TODO
     };
-    tweets.push(tweet);
   }
-
-  return tweets;
+  return Object.entries(response.globalObjects.tweets).map(toTweet);
 }
 
-function onMessageFromContentScript(message, sender, sendResponse) {
+function onMessage(message, sender, sendResponse) {
   if (message.type === "auth") {
     console.log("received click from tab", message.tabId);
     clickAction(message.tabId);
@@ -162,7 +159,6 @@ function onMessageFromContentScript(message, sender, sendResponse) {
     sendResponse();
   }
 }
-chrome.runtime.onMessage.addListener(onMessageFromContentScript);
 
 // need to use chrome.tabs.sendMessage to communicate to content script
-// or can use the sendresponse feature
+// or can use the sendresponse parameter
