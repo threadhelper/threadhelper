@@ -1,9 +1,10 @@
 {
-  "name": "Related Tweets",
+  "name": "Thread Helper",
   "version": "1.0",
   "description": "Self-thread helper",
   "permissions": [
     "activeTab",
+    "declarativeContent",
     "storage",
     "tabs",
     "unlimitedStorage",
@@ -28,7 +29,7 @@
   "background": {
     "scripts": ["js/background.js"]
   },
-  "browser_action": {
+  "page_action": {
     "default_title": "Thread helper",
     "default_popup": "html/popup.html"
   },
