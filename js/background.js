@@ -8,9 +8,9 @@ chrome.webRequest.onBeforeSendHeaders.addListener(
   { urls: ["https://api.twitter.com/*"] },
   ["requestHeaders"]
 );
-chrome.runtime.onInstalled.addListener(onInstalled);
+// chrome.runtime.onInstalled.addListener(onInstalled);
 
-const matchTweetURL = "https?://(?:mobile\\.)?twitter.com/(.+)/status/(\\d+)";
+// const matchTweetURL = "https?://(?:mobile\\.)?twitter.com/(.+)/status/(\\d+)";
 
 // Stores auth and CSRF tokens once they are captured in the headers.
 let auth = {
@@ -39,12 +39,12 @@ function updateAuth(headers) {
   }
 }
 
-function clickAction(tab) {
-  let tabId = tab.id;
+function clickAction(tabId) {
+  console.log("button clicked");
   if (auth.authorization === null) {
     // If authorization hasn't been captured yet, we need to reload the page to get it
     waiting.tabId = tabId;
-    chrome.tabs.reload(tab.id);
+    chrome.tabs.reload(tabId);
     setTimeout(ensureLoaded, 2000);
   } else {
     // Inject scripts here
@@ -58,22 +58,22 @@ function ensureLoaded() {
   }
 }
 
-function onInstalled() {
-  chrome.declarativeContent.onPageChanged.removeRules(undefined, () => {
-    chrome.declarativeContent.onPageChanged.addRules([
-      {
-        conditions: [
-          new chrome.declarativeContent.PageStateMatcher({
-            pageUrl: {
-              urlMatches: matchTweetURL
-            }
-          })
-        ],
-        actions: [new chrome.declarativeContent.ShowPageAction()]
-      }
-    ]);
-  });
-}
+// function onInstalled() {
+//   chrome.declarativeContent.onPageChanged.removeRules(undefined, () => {
+//     chrome.declarativeContent.onPageChanged.addRules([
+//       {
+//         conditions: [
+//           new chrome.declarativeContent.PageStateMatcher({
+//             pageUrl: {
+//               urlMatches: matchTweetURL
+//             }
+//           })
+//         ],
+//         actions: [new chrome.declarativeContent.ShowPageAction()]
+//       }
+//     ]);
+//   });
+// }
 
 function fetchTrump(
   auth,
@@ -145,3 +145,24 @@ function parseTweets(response) {
 
   return tweets;
 }
+
+function onMessageFromContentScript(message, sender, sendResponse) {
+  if (message.type === "auth") {
+    console.log("received click from tab", message.tabId);
+    clickAction(message.tabId);
+  } else if (message.type === "load") {
+    // load more tweets into storage
+    console.log("load");
+  } else if (message.type === "clear") {
+    // clear storage
+    console.log("clear");
+  }
+
+  if (sendResponse) {
+    sendResponse();
+  }
+}
+chrome.runtime.onMessage.addListener(onMessageFromContentScript);
+
+// need to use chrome.tabs.sendMessage to communicate to content script
+// or can use the sendresponse feature
