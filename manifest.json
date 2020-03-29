@@ -4,20 +4,17 @@
   "description": "Self-thread helper",
   "permissions": [
     "activeTab",
+    "storage",
+    "tabs",
+    "unlimitedStorage",
     "webRequest",
-    "declarativeContent",
     "https://api.twitter.com/",
     "https://mobile.twitter.com/"
   ],
   "content_scripts": [
     {
       "matches": ["https://twitter.com/*"],
-      "js": [
-        "js/jquery-3.4.1.slim.js",
-        "js/trump.js",
-        "js/nlp.js",
-        "js/contentScript.js"
-      ],
+      "js": ["js/jquery-3.4.1.slim.js", "js/nlp.js", "js/contentScript.js"],
       "css": ["style.css"]
     }
   ],
@@ -33,6 +30,7 @@
   },
   "browser_action": {
     "default_title": "Thread helper",
-    "default_popup": "popup.html"
-  }
+    "default_popup": "html/popup.html"
+  },
+  "options_page": "html/options.html"
 }
