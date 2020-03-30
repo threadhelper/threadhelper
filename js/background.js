@@ -75,7 +75,7 @@ function onInstalled() {
 //** Fetches a json search from twitter.com */
 function fetchTweets(auth, username, since, until, cursor = null) {
   const query = escape(`from:${username} since:${since} until:${until}`);
-  let url = `https://api.twitter.com/2/search/adaptive.json?q=${query}&count=50&tweet_mode=extended`;
+  let url = `https://api.twitter.com/2/search/adaptive.json?q=${query}&count=1000&tweet_mode=extended`;
   if (cursor !== null) {
     url += `&cursor=${escape(cursor)}`;
   }
@@ -160,6 +160,17 @@ function onMessage(m, sender, sendResponse) {
       console.log("clear");
       break;
   }
+}
+
+async function completeQuery(auth, username, since, until) {
+  let tweets = [];
+  let cursor = null;
+  do {
+    const r = await fetchTweets(auth, username, since, until, cursor);
+    tweets = tweets.concat(extractTweets(r));
+    cursor = extractCursor(r);
+  } while (cursor !== null);
+  return tweets;
 }
 
 // need to use chrome.tabs.sendMessage to communicate to content script
