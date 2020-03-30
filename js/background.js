@@ -10,8 +10,6 @@ chrome.webRequest.onBeforeSendHeaders.addListener(
   ["requestHeaders"]
 );
 
-// const matchTweetURL = "https?://(?:mobile\\.)?twitter.com/(.+)/status/(\\d+)";
-
 // Stores auth and CSRF tokens once they are captured in the headers.
 let auth = {
   csrfToken: null,
@@ -39,26 +37,26 @@ function updateAuth(headers) {
   }
 }
 
-// TODO: We only need to get a fresh auth when the old one is stable
+// TODO: We only need to get a fresh auth when the old one is stale
 function confirmAuth(tabId) {
-  console.log("button clicked");
   if (auth.authorization === null) {
     // If authorization hasn't been captured yet, we need to reload the page to get it
     waiting.tabId = tabId;
     chrome.tabs.reload(tabId);
-    setTimeout(ensureLoaded, 2000);
+    setTimeout(check, 2000);
   } else {
     // Inject scripts here
   }
-}
 
-function ensureLoaded() {
-  if (waiting.tabId != null) {
-    alert("Could not read authentication tokens");
-    waiting.tabId = null;
+  function check() {
+    if (waiting.tabId != null) {
+      alert("Could not read authentication tokens");
+      waiting.tabId = null;
+    }
   }
 }
 
+//** Activates the extension icon on twitter.com */
 function onInstalled() {
   chrome.declarativeContent.onPageChanged.removeRules(undefined, function() {
     chrome.declarativeContent.onPageChanged.addRules([
@@ -74,13 +72,13 @@ function onInstalled() {
   });
 }
 
+//** Fetches a json search from twitter.com */
 function fetchTweets(auth, username, since, until, cursor = null) {
   const query = escape(`from:${username} since:${since} until:${until}`);
   let url = `https://api.twitter.com/2/search/adaptive.json?q=${query}&count=20`;
   if (cursor !== null) {
     url += `&cursor=${escape(cursor)}`;
   }
-  console.log("fetching url: " + url);
   const init = {
     credentials: "include",
     headers: {
@@ -93,8 +91,8 @@ function fetchTweets(auth, username, since, until, cursor = null) {
     .catch(e => console.error("Failed to load tweets", e));
 }
 
-//** Finds 'cursor' value which corresponds to scroll in the search results */
-function parseCursor(response) {
+//** Pulls out cursor value from large json response */
+function extractCursor(response) {
   for (let entry of response.timeline.instructions[0].addEntries.entries) {
     if (entry.content.operation && entry.content.operation.cursor) {
       if (entry.content.operation.cursor.cursorType === "Bottom") {
@@ -108,7 +106,8 @@ function parseCursor(response) {
   return null;
 }
 
-function parseTweets(response) {
+//** Pulls out the tweet data from the large json response */
+function extractTweets(response) {
   // collect users:
   let users = new Map();
   for (const userId in response.globalObjects.users) {
@@ -136,33 +135,30 @@ function parseTweets(response) {
   return Object.entries(response.globalObjects.tweets).map(toTweet);
 }
 
+//** Handles messages sent from popup or content scripts */
 function onMessage(m, sender, sendResponse) {
   console.log("message received:", m);
   switch (m.type) {
     case "auth":
       confirmAuth(m.tabId);
       break;
+
+    // TODO: fix bug where it takes two clicks for tweets to update
     case "load":
       // load more tweets into storage
-      console.log("load");
       fetchTweets(auth, m.username, m.since, m.until).then(function(r) {
-        console.log("response:", r);
-        const tweets = parseTweets(r);
-        const cursor = parseCursor(r);
-        console.log("got tweets and cursor", tweets, cursor);
+        const tweets = extractTweets(r);
+        const cursor = extractCursor(r);
         chrome.storage.local.set({ tweets: tweets }, function() {
-          console.log("saved");
           sendResponse();
         });
       });
       break;
+
     case "clear":
       // clear storage
       console.log("clear");
       break;
-  }
-  if (sendResponse) {
-    sendResponse();
   }
 }
 

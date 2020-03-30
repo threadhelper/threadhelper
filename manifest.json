@@ -9,12 +9,11 @@
     "tabs",
     "unlimitedStorage",
     "webRequest",
-    "https://api.twitter.com/",
-    "https://mobile.twitter.com/"
+    "https://api.twitter.com/"
   ],
   "content_scripts": [
     {
-      "matches": ["https://twitter.com/*"],
+      "matches": ["https://*.twitter.com/*"],
       "js": ["js/jquery-3.4.1.slim.js", "js/nlp.js", "js/contentScript.js"],
       "css": ["style.css"]
     }

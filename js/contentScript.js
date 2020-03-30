@@ -41,7 +41,8 @@ function onChange(mutationRecords) {
   console.log("text is: ", text);
   const bag = nlp.toBag(text);
   const tweet = { text: text, bag: bag };
-  const related = nlp.getRelated(tweet, trumpTweets);
+  // const related = nlp.getRelated(tweet, trumpTweets);
+  const related = [ { id: "123", text: "a tweet here", name: "bob t", username: "bobt", time: "2020", urls: [] } ]; //prettier-ignore
   renderTweets(related);
 }
 

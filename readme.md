@@ -9,7 +9,6 @@ A Chrome browser extension that shows you related tweets on your own account.
 - `nlp.js`: provides NLP stuff
 - `readme.md`: this file
 - `style.css`: styling for extension components
-- `trump.js`: trump tweets
 
 ## Todo items
 
