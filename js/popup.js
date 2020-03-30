@@ -8,8 +8,15 @@ $(document).ready(function() {
       );
     }
   });
+  // TODO: You shouldn't be able to click download until you have an auth
   $("#downloadButton").click(function() {
-    chrome.runtime.sendMessage({ type: "load" });
+    const username = $("#username").val();
+    chrome.runtime.sendMessage({
+      type: "load",
+      username: username,
+      since: "2020-03-01",
+      until: "2020-03-31"
+    });
   });
   $("#clearButton").click(function() {
     chrome.runtime.sendMessage({ type: "clear" });

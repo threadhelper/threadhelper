@@ -74,13 +74,8 @@ function onInstalled() {
   });
 }
 
-function fetchTrump(
-  auth,
-  cursor = null,
-  since = "2018-01-01",
-  until = "2018-01-31"
-) {
-  const query = escape(`from:realdonaldtrump since:${since} until:${until}`);
+function fetchTweets(auth, username, since, until, cursor = null) {
+  const query = escape(`from:${username} since:${since} until:${until}`);
   let url = `https://api.twitter.com/2/search/adaptive.json?q=${query}&count=20`;
   if (cursor !== null) {
     url += `&cursor=${escape(cursor)}`;
@@ -124,7 +119,7 @@ function parseTweets(response) {
     });
   }
 
-  function toTweet(id, entry) {
+  function toTweet([id, entry]) {
     const user = users.get(entry.user_id_str);
     return {
       id: id,
@@ -141,18 +136,27 @@ function parseTweets(response) {
   return Object.entries(response.globalObjects.tweets).map(toTweet);
 }
 
-function onMessage(message, sender, sendResponse) {
-  if (message.type === "auth") {
-    console.log("received click from tab", message.tabId);
-    confirmAuth(message.tabId);
-  } else if (message.type === "load") {
-    // load more tweets into storage
-    console.log("load");
-  } else if (message.type === "clear") {
-    // clear storage
-    console.log("clear");
+function onMessage(m, sender, sendResponse) {
+  console.log("message received:", m);
+  switch (m.type) {
+    case "auth":
+      confirmAuth(m.tabId);
+      break;
+    case "load":
+      // load more tweets into storage
+      console.log("load");
+      fetchTweets(auth, m.username, m.since, m.until).then(function(r) {
+        console.log("response:", r);
+        const tweets = parseTweets(r);
+        const cursor = parseCursor(r);
+        console.log("got tweets and cursor", tweets, cursor);
+      });
+      break;
+    case "clear":
+      // clear storage
+      console.log("clear");
+      break;
   }
-
   if (sendResponse) {
     sendResponse();
   }
