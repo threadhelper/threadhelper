@@ -75,7 +75,7 @@ function onInstalled() {
 //** Fetches a json search from twitter.com */
 function fetchTweets(auth, username, since, until, cursor = null) {
   const query = escape(`from:${username} since:${since} until:${until}`);
-  let url = `https://api.twitter.com/2/search/adaptive.json?q=${query}&count=20`;
+  let url = `https://api.twitter.com/2/search/adaptive.json?q=${query}&count=50&tweet_mode=extended`;
   if (cursor !== null) {
     url += `&cursor=${escape(cursor)}`;
   }
