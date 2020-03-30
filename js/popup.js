@@ -11,12 +11,19 @@ $(document).ready(function() {
   // TODO: You shouldn't be able to click download until you have an auth
   $("#downloadButton").click(function() {
     const username = $("#username").val();
-    chrome.runtime.sendMessage({
+    const message = {
       type: "load",
       username: username,
       since: "2020-03-01",
       until: "2020-03-31"
-    });
+    };
+    function onCompletion() {
+      console.log("query completed");
+      chrome.storage.local.get(["tweets"], r =>
+        $("#storedTweets").html(JSON.stringify(r.tweets))
+      );
+    }
+    chrome.runtime.sendMessage(message, onCompletion);
   });
   $("#clearButton").click(function() {
     chrome.runtime.sendMessage({ type: "clear" });

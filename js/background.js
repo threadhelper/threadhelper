@@ -150,6 +150,10 @@ function onMessage(m, sender, sendResponse) {
         const tweets = parseTweets(r);
         const cursor = parseCursor(r);
         console.log("got tweets and cursor", tweets, cursor);
+        chrome.storage.local.set({ tweets: tweets }, function() {
+          console.log("saved");
+          sendResponse();
+        });
       });
       break;
     case "clear":
