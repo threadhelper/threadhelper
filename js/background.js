@@ -145,14 +145,26 @@ function onMessage(m, sender, sendResponse) {
 
     // TODO: fix bug where it takes two clicks for tweets to update
     case "load":
-      // load more tweets into storage
-      fetchTweets(auth, m.username, m.since, m.until).then(function(r) {
-        const tweets = extractTweets(r);
-        const cursor = extractCursor(r);
-        chrome.storage.local.set({ tweets: tweets }, function() {
-          sendResponse();
+      if(auth.authorization !== null){
+        // load more tweets into storage
+        /*fetchTweets(auth, m.username, m.since, m.until).then(function(r) {
+          const tweets = extractTweets(r);
+          const cursor = extractCursor(r);
+          
+        });*/
+        completeQuery(auth, m.username, m.since, m.until).then(function(tweets) {
+          chrome.storage.local.set({ tweets: tweets }, function() {
+            sendResponse();
+          });
+          console.log("sending message to cs after load")
+          chrome.tabs.query({active: true, currentWindow: true}, function(tabs){
+          console.log(tabs)
+            chrome.tabs.sendMessage(tabs[0].id, {type: "tweets-loaded"}, function(response) {
+              console.log("tweet-load-received");
+          })
+          });
         });
-      });
+      }
       break;
 
     case "clear":
@@ -160,18 +172,21 @@ function onMessage(m, sender, sendResponse) {
       console.log("clear");
       break;
   }
+  return true;
 }
 
 async function completeQuery(auth, username, since, until) {
   let tweets = [];
   let cursor = null;
+  console.log("doing complete query")
   do {
     const r = await fetchTweets(auth, username, since, until, cursor);
     tweets = tweets.concat(extractTweets(r));
     cursor = extractCursor(r);
+    console.log("c-query cycle, got" + tweets.length + "tweets")
   } while (cursor !== null);
+  console.log("query completed")
+  console.log(tweets)
   return tweets;
 }
 
-// need to use chrome.tabs.sendMessage to communicate to content script
-// or can use the sendresponse parameter

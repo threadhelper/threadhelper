@@ -14,11 +14,14 @@ $(document).ready(function() {
   // TODO: fix bug where it takes two clicks for tweets to update
   $("#downloadButton").click(function() {
     const username = $("#username").val();
+    var today = new Date();
+    today.setDate(today.getDate()+1)
+    var date = today.toISOString().substring(0, 10);
     const message = {
       type: "load",
       username: username,
-      since: "2020-03-01",
-      until: "2020-03-31"
+      since: "2020-01-01",
+      until: date
     };
     function onCompletion() {
       console.log("query completed");

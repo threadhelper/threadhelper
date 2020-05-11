@@ -8,7 +8,8 @@ const nlp = (function() {
 
   //** Find related tweets */
   function getRelated(tweet, tweets) {
-    return topKBy(tweets, t => similarity(t.bag, tweet.bag), 20);
+    
+    return topKBy(tweets, t => similarity(t.bag, tweet.bag),5);
   }
 
   //** Turn a string into a bag of keywords */
@@ -29,6 +30,9 @@ const nlp = (function() {
 
   //** Get top k elements of array by key */
   function topKBy(arr, f, k = 5) {
+    if(arr===null){
+      arr = []
+    }
     let items = arr.slice(0, k).map(x => [x, f(x)]);
     for (const x of arr) {
       const y = f(x);
