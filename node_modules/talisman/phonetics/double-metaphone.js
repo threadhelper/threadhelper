@@ -1,0 +1,479 @@
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = doubleMetaphone;
+/* eslint no-constant-condition: 0 */
+/**
+ * Talisman phonetics/double-metaphone
+ * ====================================
+ *
+ * The double metaphone algorithm.
+ *
+ * [Reference]:
+ * https://en.wikipedia.org/wiki/Metaphone#Double_Metaphone
+ *
+ * [Author]:
+ * Lawrence Philips, 2000
+ */
+
+/**
+ * Helpers.
+ */
+var STARTING_REGEX = /^GN|KN|PN|WR|PS$/;
+
+var SLAVO_GERMANIC_REGEX = /W|K|CZ|WITZ/;
+
+function isSlavoGermanic(string) {
+  return SLAVO_GERMANIC_REGEX.test(string);
+}
+
+var VOWELS = new Set(['A', 'E', 'I', 'O', 'U', 'Y']);
+
+function isVowel(string) {
+  return string.length === 1 && VOWELS.has(string);
+}
+
+/**
+ * Lookups.
+ */
+var CHSet1 = new Set(['HARAC', 'HARIS']),
+    CHSet2 = new Set(['HOR', 'HYM', 'HIA', 'HEM']),
+    CHSet3 = new Set(['VAN ', 'VON ']),
+    CHSet4 = new Set(['ORCHES', 'ARCHIT', 'ORCHID']),
+    ChSet5 = new Set(['T', 'S']),
+    CHSet6 = new Set(['A', 'O', 'U', 'E']),
+    CHSet7 = new Set(['L', 'R', 'N', 'M', 'B', 'H', 'F', 'V', 'W', ' ']),
+    CSet1 = new Set(['CE', 'CI']);
+
+var LOOKUPS = {
+  B: function B(string, pos) {
+    return ['P', 'P', string.substr(pos + 1, 1) === 'B' ? 2 : 1];
+  },
+  CH: function CH(string, pos) {
+    if (pos && string.substr(pos, 4) === 'CHAE') {
+      return ['K', 'X', 2];
+    } else if (!pos && (CHSet1.has(string.substr(pos + 1, 5)) || CHSet2.has(string.substr(pos + 1, 3))) && string.substr(0, 5) !== 'CHORE') {
+      return ['K', 'K', 2];
+    } else if (CHSet3.has(string.substr(0, 4)) || string.substr(0, 3) === 'SCH' || CHSet4.has(string.substr(pos - 2, 6)) || ChSet5.has(string.substr(pos + 2, 1)) || (!pos || CHSet6.has(string.substr(pos - 1, 1))) && CHSet7.has(string.substr(pos + 2, 1))) {
+      return ['K', 'K', 2];
+    } else if (pos) {
+      return [string.substr(0, 2) === 'MC' ? 'K' : 'X', 'K', 2];
+    }
+
+    return ['X', 'X', 2];
+  },
+  CC: function CC(string, pos) {
+    if (/^I|E|H$/.test(string.substr(pos + 2, 1)) && string.substr(pos + 2, 2) !== 'HU') {
+      if (pos === 1 && string.substr(pos - 1, 1) === 'A' || /^UCCE(E|S)$/.test(string.substr(pos - 1, 5))) {
+        return [['K', 'S'], ['K', 'S'], 3];
+      } else {
+        return ['X', 'X', 3];
+      }
+    }
+
+    return ['K', 'K', 2];
+  },
+  C: function C(string, pos) {
+    if (pos > 1 && isVowel(string.substr(pos - 2, 1)) && string.substr(pos - 1, 3) === 'ACH' && string.substr(pos + 2, 1) !== 'I' && (string.substr(pos + 2, 1) !== 'E' || /^(B|M)ACHER$/.test(string.substr(pos - 2, 6)))) {
+      return ['K', 'K', 2];
+    }
+
+    if (!pos && string.substr(pos, 6) === 'CAESAR') {
+      return ['S', 'S', 2];
+    }
+
+    if (string.substr(pos, 4) === 'CHIA') {
+      return ['K', 'K', 2];
+    }
+
+    if (string.substr(pos, 2) === 'CH') {
+      return LOOKUPS.CH(string, pos);
+    }
+
+    if (string.substr(pos, 2) === 'CZ' && string.substr(pos - 2, 4) !== 'WICZ') {
+      return ['S', 'X', 2];
+    }
+
+    if (string.substr(pos + 1, 3) === 'CIA') {
+      return ['X', 'X', 3];
+    }
+
+    if (string.substr(pos, 2) === 'CC' && !(pos === 1 || string.substr(0, 1) === 'M')) {
+      return LOOKUPS.CC(string, pos);
+    }
+
+    if (/^C(K|G|Q)$/.test(string.substr(pos, 2))) {
+      return ['K', 'K', 2];
+    }
+
+    if (/^C(I|E|Y)$/.test(string.substr(pos, 2))) {
+      return ['S', /^CI(O|E|A)$/.test(string.substr(pos, 3)) ? 'X' : 'S', 2];
+    }
+
+    if (/^ (C|Q|G)$/.test(string.substr(pos + 1, 2))) {
+      return ['K', 'K', 3];
+    }
+
+    var offset = 1;
+
+    if (/^C|K|Q$/.test(string.substr(pos + 1, 1)) && !CSet1.has(string.substr(pos + 1, 2))) {
+      offset = 2;
+    }
+
+    return ['K', 'K', offset];
+  },
+  Ç: function _() {
+    return ['S', 'S', 1];
+  },
+  D: function D(string, pos) {
+    if (string.substr(pos, 2) === 'DG') {
+      return (/^I|E|Y$/.test(string.substr(pos + 2, 1)) ? ['J', 'J', 3] : [['T', 'K'], ['T', 'K'], 2]
+      );
+    }
+
+    return ['T', 'T', /^D(T|D)$/.test(string.substr(pos, 2)) ? 2 : 1];
+  },
+  F: function F(string, pos) {
+    return ['F', 'F', string.substr(pos + 1, 1) === 'F' ? 2 : 1];
+  },
+  GH: function GH(string, pos) {
+    if (pos && !isVowel(string.substr(pos - 1, 1))) {
+      return ['K', 'K', 2];
+    }
+
+    if (!pos) {
+      return string.substr(pos + 2, 1) === 'I' ? ['J', 'J', 2] : ['K', 'K', 2];
+    }
+
+    if (pos > 1 && /^B|H|D$/.test(string.substr(pos - 2, 1)) || pos > 2 && /^B|H|D$/.test(string.substr(pos - 3, 1)) || pos > 3 && /^B|H$/.test(string.substr(pos - 4, 1))) {
+      return [null, null, 2];
+    }
+
+    if (pos > 2 && string.substr(pos - 1, 1) === 'U' && /^C|G|L|R|T$/.test(string.substr(pos - 3, 1))) {
+      return ['F', 'F', 2];
+    }
+
+    if (pos && string.substr(pos - 1, 1) !== 'I') {
+      return ['K', 'K', 2];
+    }
+
+    return [null, null, 2];
+  },
+  GN: function GN(string, pos) {
+    if (pos === 1 && isVowel(string.substr(0, 1)) && !isSlavoGermanic(string)) {
+      return [['K', 'N'], 'N', 2];
+    }
+
+    if (string.substr(pos + 2, 2) !== 'EY' && string.substr(pos + 1, 1) !== 'Y' && !isSlavoGermanic(string)) {
+      return ['N', ['K', 'N'], 2];
+    }
+
+    return [['K', 'N'], ['K', 'N'], 2];
+  },
+  G: function G(string, pos) {
+    var nextLetter = string.substr(pos + 1, 1),
+        nextPair = string.substr(pos + 1, 2);
+
+    if (nextLetter === 'H') {
+      return LOOKUPS.GH(string, pos);
+    }
+
+    if (nextLetter === 'N') {
+      return LOOKUPS.GN(string, pos);
+    }
+
+    if (nextPair === 'LI' && !isSlavoGermanic(string)) {
+      return [['K', 'L'], 'L', 2];
+    }
+
+    if (!pos && (nextLetter === 'Y' || /^(E(S|P|B|L|Y|I|R)|I(B|L|N|E))$/.test(nextPair))) {
+      return ['K', 'J', 2];
+    }
+
+    if ((nextPair === 'ER' || nextLetter === 'Y') && !/^(D|R|M)ANGER$/.test(string.substr(0, 6)) && !/^E|I$/.test(string.substr(pos - 1, 1)) && !/^(R|O)GY$/.test(string.substr(pos - 1, 3))) {
+      return ['K', 'J', 2];
+    }
+
+    if (/^E|I|Y$/.test(nextLetter) || /^(A|O)GGI$/.test(string.substr(pos - 1, 4))) {
+
+      if (/^V(A|O)N /.test(string.substr(0, 4)) || string.substr(0, 3) === 'SCH' || string.substr(pos + 1, 2 === 'ET')) {
+        return ['K', 'K', 2];
+      }
+
+      return string.substr(pos + 1, 4) === 'IER ' ? ['J', 'J', 2] : ['J', 'K', 2];
+    }
+
+    return ['K', 'K', nextLetter === 'G' ? 2 : 1];
+  },
+  H: function H(string, pos) {
+    if ((!pos || isVowel(string.substr(pos - 1, 1))) && isVowel(string.substr(pos + 1, 1))) {
+      return ['H', 'H', 2];
+    }
+
+    return [null, null, 1];
+  },
+  J: function J(string, pos, lastIndex) {
+    if (string.substr(pos, 4) === 'JOSE' || string.substr(0, 4) === 'SAN ') {
+
+      if (!pos && string.substr(pos + 4, 1) === ' ' || string.substr(0, 4) === 'SAN ') {
+        return ['H', 'H', 1];
+      }
+
+      return ['J', 'H', 1];
+    }
+
+    var offset = string.substr(pos + 1, 1) === 'J' ? 2 : 1;
+
+    if (!pos && string.substr(pos, 4) !== 'JOSE') {
+      return ['J', 'A', offset];
+    }
+
+    if (isVowel(string.substr(pos - 1, 1)) && !isSlavoGermanic(string) && /^A|O$/.test(string.substr(pos + 1, 1))) {
+      return ['J', 'H', offset];
+    }
+
+    if (lastIndex === pos) {
+      return ['J', null, offset];
+    }
+
+    if (!/^L|T|K|S|N|M|B|Z$/.test(string.substr(pos + 1, 1)) && !/^S|K|L$/.test(string.substr(pos - 1, 1))) {
+      return ['J', 'J', offset];
+    }
+
+    return [null, null, offset];
+  },
+  K: function K(string, pos) {
+    return ['K', 'K', string.substr(pos + 1, 1) === 'K' ? 2 : 1];
+  },
+  L: function L(string, pos, lastIndex, length) {
+    if (string.substr(pos + 1, 1) === 'L') {
+
+      if (pos === length - 3 && /^(ILL(O|A)|ALLE)$/.test(string.substr(pos - 1, 4)) || /^(A|O)S$/.test(string.substr(lastIndex - 1, 2) || /^A|O$/.test(string.substr(lastIndex, 1))) && string.substr(pos - 1, 4) === 'ALLE') {
+        return ['L', null, 2];
+      }
+
+      return ['L', 'L', 2];
+    }
+
+    return ['L', 'L', 1];
+  },
+  M: function M(string, pos, lastIndex) {
+    if (string.substr(pos - 1, 3) === 'UMB' && (pos === lastIndex - 1 || string.substr(pos + 2, 2) === 'ER') || string.substr(pos + 1, 1) === 'M') {
+      return ['M', 'M', 2];
+    }
+
+    return ['M', 'M', 1];
+  },
+  N: function N(string, pos) {
+    return ['N', 'N', string.substr(pos + 1, 1) === 'N' ? 2 : 1];
+  },
+  Ñ: function _() {
+    return ['N', 'N', 1];
+  },
+  P: function P(string, pos) {
+    if (string.substr(pos + 1, 1) === 'H') {
+      return ['F', 'F', 2];
+    }
+
+    return ['P', 'P', /^P|B$/.test(string.substr(pos + 1, 1)) ? 2 : 1];
+  },
+  Q: function Q(string, pos) {
+    return ['K', 'K', string.substr(pos + 1, 1) === 'Q' ? 2 : 1];
+  },
+  R: function R(string, pos, lastIndex) {
+    var offset = string.substr(pos + 1, 1) === 'R' ? 2 : 1;
+
+    if (pos === lastIndex && !isSlavoGermanic(string) && string.substr(pos - 2, 2) === 'IE' && !/^M(E|A)$/.test(string.substr(pos - 4, 2))) {
+      return [null, 'R', offset];
+    }
+
+    return ['R', 'R', offset];
+  },
+  SH: function SH(string, pos) {
+    return (/^H(EIM|OEK|OLM|OLZ)$/.test(string.substr(pos + 1, 4)) ? ['S', 'S', 2] : ['X', 'X', 2]
+    );
+  },
+  SC: function SC(string, pos) {
+    if (string.substr(pos + 2, 1) === 'H') {
+      if (/^OO|ER|EN|UY|ED|EM$/.test(string.substr(pos + 3, 2))) {
+        return [/^E(R|N)$/.test(string.substr(pos + 3, 2)) ? 'X' : ['S', 'K'], ['S', 'K'], 3];
+      }
+
+      return ['X', !pos && !isVowel(string.substr(3, 1)) && string.substr(pos + 3, 1) !== 'W' ? 'S' : 'X', 3];
+    }
+
+    if (/^I|E|Y$/.test(string.substr(pos + 2, 1))) {
+      return ['S', 'S', 3];
+    }
+
+    return [['S', 'K'], ['S', 'K'], 3];
+  },
+  S: function S(string, pos, lastIndex) {
+    if (/^(I|Y)SL$/.test(string.substr(pos - 1, 3))) {
+      return [null, null, 1];
+    }
+
+    if (!pos && string.substr(pos, 5) === 'SUGAR') {
+      return ['X', 'S', 1];
+    }
+
+    if (string.substr(pos, 2) === 'SH') {
+      return LOOKUPS.SH(string, pos);
+    }
+
+    if (/^SI(O|A)$/.test(string.substr(pos, 3)) || string.substr(pos, 4) === 'SIAN') {
+      return ['S', isSlavoGermanic(string) ? 'S' : 'X', 3];
+    }
+
+    if (!pos && /^M|N|L|W$/.test(string.substr(pos + 1, 1)) || string.substr(pos + 1, 1) === 'Z') {
+      return ['S', 'X', string.substr(pos + 1, 1) === 'Z' ? 2 : 1];
+    }
+
+    if (string.substr(pos, 2) === 'SC') {
+      return LOOKUPS.SC(string, pos);
+    }
+
+    return [!(lastIndex === pos && /^(A|O)I$/.test(string.substr(pos - 2, 2))) ? 'S' : null, 'S', /^S|Z$/.test(string.substr(pos + 1, 1)) ? 2 : 1];
+  },
+  TH: function TH(string, pos) {
+    if (/^(O|A)M$/.test(string.substr(pos + 2, 2)) || /^V(A|O)N /.test(string.substr(0, 4)) || string.substr(0, 3) === 'SCH') {
+      return ['T', 'T', 2];
+    }
+
+    return ['0', 'T', 2];
+  },
+  T: function T(string, pos) {
+    if (string.substr(pos, 4) === 'TION' || /^T(IA|CH)$/.test(string.substr(pos, 3))) {
+      return ['X', 'X', 3];
+    }
+
+    if (string.substr(pos, 2) === 'TH' || string.substr(pos, 3) === 'TTH') {
+      return LOOKUPS.TH(string, pos);
+    }
+
+    return ['T', 'T', /^T|D$/.test(string.substr(pos + 1, 1)) ? 2 : 1];
+  },
+  V: function V(string, pos) {
+    return ['F', 'F', string.substr(pos + 1, 1) === 'V' ? 2 : 1];
+  },
+  W: function W(string, pos, lastIndex) {
+    if (string.substr(pos, 2) === 'WR') {
+      return ['R', 'R', 2];
+    }
+
+    var primary = [],
+        secondary = [];
+
+    if (!pos && isVowel(string.substr(pos + 1, 1) || string.substr(pos, 2) === 'WH')) {
+      primary.push('A');
+      secondary.push(isVowel(string.substr(pos + 1, 1)) ? 'F' : 'A');
+    }
+
+    if (pos === lastIndex && isVowel(string.substr(pos - 1, 1)) || string.substr(0, 3) === 'SCH' || /^EWSKI|EWSKY|OWSKI|OWSKY$/.test(string.substr(pos - 1, 5))) {
+      return [primary, secondary.concat('F'), 1];
+    }
+
+    if (/^WI(C|T)Z$/.test(string.substr(pos, 4))) {
+      return [primary.concat(['T', 'S']), secondary.concat(['F', 'X']), 4];
+    }
+
+    return [primary, secondary, 1];
+  },
+  X: function X(string, pos, lastIndex) {
+    if (!pos) {
+      return ['S', 'S', 1];
+    }
+
+    var offset = /^C|X$"/.test(string.substr(pos + 1, 1)) ? 2 : 1;
+
+    if (pos === lastIndex && /^(I|E)AU$/.test(string.substr(pos - 3, 3)) || /^(A|O)U$/.test(string.substr(pos - 2, 2))) {
+      return [null, null, offset];
+    }
+
+    return [['K', 'S'], ['K', 'S'], offset];
+  },
+  Z: function Z(string, pos) {
+    if (string.substr(pos + 1, 1) === 'H') {
+      return ['J', 'J', 2];
+    }
+
+    var offset = string.substr(pos + 1, 1) === 'Z' ? 2 : 1;
+
+    if (/^Z(O|I|A)$/.test(string.substr(pos + 1, 2)) || pos && isSlavoGermanic(string) && string.substr(pos - 1, 1) === 'T') {
+      return ['S', ['T', 'S'], offset];
+    }
+
+    return ['S', 'S', offset];
+  }
+};
+
+/**
+ * Function taking a single word and computing its double metaphone code.
+ *
+ * @param  {string}  word - The word to process.
+ * @return {array}        - The double metaphone codes.
+ *
+ * @throws {Error} The function expects the word to be a string.
+ */
+function doubleMetaphone(word) {
+  if (typeof word !== 'string') throw Error('talisman/phonetics/doubleMetaphone: the given word is not a string.');
+
+  // Preparing the word
+  var preparedWord = word.toUpperCase() + '     ';
+
+  // Defining the start position & finding necessary indexes
+  var startPosition = STARTING_REGEX.test(preparedWord.slice(0, 2)) ? 1 : 0,
+      length = word.length,
+      lastIndex = length - 1;
+
+  // Codes
+  var primary = [],
+      secondary = [];
+
+  // Iterating
+  var pos = startPosition;
+
+  while (true) {
+
+    if (pos > length || primary.length >= 4 && secondary.length >= 4) break;
+
+    // Lookup the current letter
+    var letter = preparedWord[pos];
+
+    var offset = 1;
+
+    // Vowel lookup
+    if (isVowel(letter)) {
+      if (!pos) {
+        primary.push('A');
+        secondary.push('A');
+      }
+    }
+
+    // Consonant lookup
+    var method = LOOKUPS[letter];
+
+    if (method) {
+      var _method = method(preparedWord, pos, lastIndex, length),
+          _method$ = _method[0],
+          one = _method$ === undefined ? null : _method$,
+          _method$2 = _method[1],
+          two = _method$2 === undefined ? null : _method$2,
+          _method$3 = _method[2],
+          newOffset = _method$3 === undefined ? 1 : _method$3;
+
+      offset = newOffset;
+
+      if (one) primary = primary.concat(one);
+      if (two) secondary = secondary.concat(two);
+    }
+
+    // Incrementing position
+    pos += offset;
+  }
+
+  return [primary.join('').slice(0, 4), secondary.join('').slice(0, 4)];
+}
+module.exports = exports['default'];

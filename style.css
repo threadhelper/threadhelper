@@ -1,12 +1,12 @@
-#suggestionBox {
-  position: fixed;
+.suggestionBox {
+  /*position: fixed;
   left: 50%;
   transform: translateX(-50%);
   top: 350px;
   width: 600px;
-  height: 500px;
+  height: 500px;*/
   background-color: white;
-  overflow: scroll;
+  overflow-y: scroll;
   border-radius: 5px;
   padding: 20px;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,

@@ -13,6 +13,7 @@ function buildBox() {
   var sideBar = document.querySelector('[aria-label="Timeline: Trending now"]').parentNode.parentNode.parentNode.parentNode.parentNode
   var box = document.createElement('div');   //create a div
   box.setAttribute("aria-label", 'suggestionBox');
+  box.setAttribute("class", 'suggestionBox');
   var h3 = document.createElement('h3')
   h3.textContent = "Related Tweets"
   box.appendChild(h3)
@@ -49,7 +50,9 @@ function watchForStop() {
   if (divs.length) {
     setTimeout(watchForStop, 250);
   } else {
-    box.style.display = "none";
+    if(box){
+      box.style.display = "none";
+    }
     setTimeout(watchForStart, 250);
   }
 }
@@ -66,6 +69,10 @@ function getTweets() {
 
 /** Updates the tweetlist when user types */
 function onChange(mutationRecords) {
+  const box = document.querySelector('[aria-label="suggestionBox"]')
+  if(box.style.display != "block"){
+    box.style.display = "block"
+  }
   const text = mutationRecords[0].target.wholeText;
   console.log("text is: ", text);
   const bag = nlp.toBag(text);
@@ -93,22 +100,36 @@ function renderTweet(tweet, textTarget) {
   const url = 'https://twitter.com/' + tweet.username + '/status/' + tweet.id;
   const rtime = $("<a>", {
     class: "rtime",
-    text: tweet.time,
+    text: tweet.time.toString(),
     href: url
   });
 
-  const add = $("<span>", {
+  var add = $("<span>", {
     class: "rplus",
     text: "+"
   });
-  add.click(function() {
-    const s = $('span[data-text="true"]').text();
-    // TODO: links go away for some reason when you type after they're added
-    $('span[data-text="true"]').text(s + " " + url); // TODO: temporary
+  add.click(function(e) {
+    // to copy something to clipboard it need to be on the page
+    var textArea = document.createElement("textarea");
+    textArea.value = url;
+    var plus = e.target;
+    plus.parentNode.insertBefore(textArea,plus.parentNode.children[1]);
+    textArea.focus();
+    textArea.select();
+    textArea.style.size = 1
+    document.execCommand("copy");
+    textArea.style.display = "none";
+    plus.style.cssText = "font-size: small";
+    plus.textContent = "copied link!"
+    setTimeout(function() {
+      plus.textContent = "+";
+      plus.style.cssText = "font-size: x-large";
+    }, 2000);
   });
   const rtext = $("<div>", { class: "rtext", text: tweet.text });
   return $("<div>", { class: "rtweet" }).append([rtime, add, rtext])[0];
 }
+
 
 //** Build the html for a set of tweets */
 function renderTweets(tweets) {

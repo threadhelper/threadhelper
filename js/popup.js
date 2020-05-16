@@ -19,14 +19,14 @@ $(document).ready(function() {
     var date = today.toISOString().substring(0, 10);
     const message = {
       type: "load",
-      username: username,
-      since: "2020-01-01",
-      until: date
+      //since: "2020-01-01",
+      //until: date,
+      username: username
     };
     function onCompletion() {
       console.log("query completed");
       chrome.storage.local.get(["tweets"], r =>
-        $("#storedTweets").html(JSON.stringify(r.tweets))
+        $("#storedTweets").html(`Stored ${String(r.tweets.length)} tweets!`))
       );
     }
     chrome.runtime.sendMessage(message, onCompletion);

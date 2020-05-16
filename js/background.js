@@ -72,10 +72,34 @@ function onInstalled() {
   });
 }
 
+function fetchTweets2(auth, username, count = 1000, max_id = 0){
+  var tweets = []
+
+  const init = {
+    credentials: "include",
+    headers: {
+      authorization: auth.authorization,
+      "x-csrf-token": auth.csrfToken
+    }
+  };
+
+  var uurl = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}&count=${count}`
+
+  do{ 
+      res = await fetch(uurl,init).then(x => x.json())
+      tweets = tweets.concat(res)
+      max_id = res[res.length - 1].id
+      uurl = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=ExGenesis&count=${count}&max_id=${max_id}`
+  }while(tweets.length < count)
+}
+
 //** Fetches a json search from twitter.com */
-function fetchTweets(auth, username, since, until, cursor = null) {
+function fetchTweets(auth, username, since, until, count = 1000, cursor = null) {
   const query = escape(`from:${username} since:${since} until:${until}`);
-  let url = `https://api.twitter.com/2/search/adaptive.json?q=${query}&count=1000&tweet_mode=extended`;
+  //let url = `https://api.twitter.com/2/search/adaptive.json?q=${query}&count=1000&tweet_mode=extended`;
+  //let url = `https://api.twitter.com/2/search/adaptive.json?q=from:ExGenesis&count=1000&tweet_mode=extended`;
+  let url = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}&count=${count}`;
+  console.log(url)
   if (cursor !== null) {
     url += `&cursor=${escape(cursor)}`;
   }
@@ -106,7 +130,6 @@ function extractCursor(response) {
   return null;
 }
 
-//** Pulls out the tweet data from the large json response */
 function extractTweets(response) {
   // collect users:
   let users = new Map();
