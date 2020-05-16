@@ -11,6 +11,12 @@ A Chrome browser extension that shows you related tweets on your own account.
 - `style.css`: styling for extension components
 
 ## Todo items
+- [ ] fuzzy search
+- [ ] auto auth and load
+- [ ] requests with since_id for efficiency
+- [ ] go past latest 3200 tweets
+
+
 
 ### MVP
 
@@ -46,6 +52,7 @@ oh one idea: links to your own tweets in the sidebar should appear in the sideba
 - [ ] ~~Write a script to process twitter private data export~~
 - [ ] ~~Use ecmascript modules?~~
 - [ ] ~~Upload JSON file prompt?~~
+
 
 (Ask nosilverv for all his documents)
 
