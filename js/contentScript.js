@@ -32,9 +32,14 @@ function buildBox() {
 function watchForStart() {
   const divs = $('span[data-text="true"]');
   if (divs.length) {
-    buildBox();
-    const box = document.querySelector('[aria-label="suggestionBox"]')
-    box.style.display = "block";
+    var box = document.querySelector('[aria-label="suggestionBox"]')
+    if(typeof box !== 'undefined' && box != null){
+      box.style.display = "block";
+    }else{
+      buildBox();
+      box = document.querySelector('[aria-label="suggestionBox"]')
+      box.style.display = "block";
+    }
     addLogger(divs[0].parentElement.parentElement);
     setTimeout(watchForStop, 250);
   } else {
@@ -50,7 +55,7 @@ function watchForStop() {
   if (divs.length) {
     setTimeout(watchForStop, 250);
   } else {
-    if(box){
+    if(typeof box !== 'undefined' && box != null){
       box.style.display = "none";
     }
     setTimeout(watchForStart, 250);
@@ -61,9 +66,9 @@ function getTweets() {
   console.log("getting tweets from storage")
   chrome.storage.local.get(["tweets"], r =>{
         tweets = r.tweets.map(t => ({...t, bag:nlp.toBag(t.text)}))
-        console.log(r.tweets);
       }
       );
+  console.log(r.tweets);    
 }
 
 

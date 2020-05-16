@@ -72,27 +72,6 @@ function onInstalled() {
   });
 }
 
-function fetchTweets2(auth, username, count = 1000, max_id = 0){
-  var tweets = []
-
-  const init = {
-    credentials: "include",
-    headers: {
-      authorization: auth.authorization,
-      "x-csrf-token": auth.csrfToken
-    }
-  };
-
-  var uurl = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}&count=${count}`
-
-  do{ 
-      res = await fetch(uurl,init).then(x => x.json())
-      tweets = tweets.concat(res)
-      max_id = res[res.length - 1].id
-      uurl = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=ExGenesis&count=${count}&max_id=${max_id}`
-  }while(tweets.length < count)
-}
-
 //** Fetches a json search from twitter.com */
 function fetchTweets(auth, username, since, until, count = 1000, cursor = null) {
   const query = escape(`from:${username} since:${since} until:${until}`);
@@ -198,18 +177,56 @@ function onMessage(m, sender, sendResponse) {
   return true;
 }
 
-async function completeQuery(auth, username, since, until) {
-  let tweets = [];
-  let cursor = null;
-  console.log("doing complete query")
-  do {
-    const r = await fetchTweets(auth, username, since, until, cursor);
-    tweets = tweets.concat(extractTweets(r));
-    cursor = extractCursor(r);
-    console.log("c-query cycle, got" + tweets.length + "tweets")
-  } while (cursor !== null);
-  console.log("query completed")
-  console.log(tweets)
-  return tweets;
-}
+// async function completeQuery(auth, username, since, until) {
+//   let tweets = [];
+//   let cursor = null;
+//   console.log("doing complete query")
+//   do {
+//     const r = await fetchTweets(auth, username, since, until, cursor);
+//     tweets = tweets.concat(extractTweets(r));
+//     cursor = extractCursor(r);
+//     console.log("c-query cycle, got" + tweets.length + "tweets")
+//   } while (cursor !== null);
+//   console.log("query completed")
+//   console.log(tweets)
+//   return tweets;
+// }
 
+async function completeQuery(auth, username, count = 1000, max_id = 0, include_rts = false) {
+  var tweets = []
+  let res = []
+
+  const init = {
+    credentials: "include",
+    headers: {
+      authorization: auth.authorization,
+      "x-csrf-token": auth.csrfToken
+    }
+  };
+
+  var uurl = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}&count=${count}&include_rts=${include_rts}`
+
+  do{ 
+      res = await fetch(uurl,init).then(x => x.json())
+      tweets = tweets.concat(res)
+      max_id = res[res.length - 1].id
+      uurl = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=ExGenesis&count=${count}&max_id=${max_id}&include_rts=${include_rts}`
+  }while(tweets.length < count)
+
+  function toTweet(entry) {
+    return {
+      id: entry.id_str,
+      text: entry.full_text || entry.text,
+      name: entry.user.name,
+      username: entry.user.screen_name,
+      parent: entry.in_reply_to_status_id_str,
+      time: new Date(entry.created_at).getTime(),
+      retweets: entry.retweet_count,
+      urls: entry.entities.urls.map(x => x.expanded_url),
+      media: null // TODO
+    };
+  }
+var tweets_normal = tweets.map(toTweet)
+console.log(tweets_normal)
+return tweets_normal
+}

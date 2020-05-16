@@ -7,9 +7,9 @@ const nlp = (function() {
   return { getRelated: getRelated, toBag: toBag };
 
   //** Find related tweets */
-  function getRelated(tweet, tweets) {
+  function getRelated(tweet, tweets, n_tweets = 20) {
     
-    return topKBy(tweets, t => similarity(t.bag, tweet.bag),5);
+    return topKBy(tweets, t => similarity(t.bag, tweet.bag),n_tweets);
   }
 
   //** Turn a string into a bag of keywords */
@@ -25,11 +25,11 @@ const nlp = (function() {
 
   //** Similarity metric for bags of words */
   function similarity(bag1, bag2) {
-    return intersect(bag1, bag2).size;
+    return intersect(bag1, bag2).size/union(bag1,bag2).size;
   }
 
   //** Get top k elements of array by key */
-  function topKBy(arr, f, k = 5) {
+  function topKBy(arr, f, k = 20) {
     if(arr===null){
       arr = []
     }
@@ -38,14 +38,25 @@ const nlp = (function() {
       const y = f(x);
       if (y > items[0][1]) {
         items[0] = [x, y];
+        //items = items.filter(([x,s]) => s*s > 0);
         items.sort(([_, y1], [__, y2]) => y1 - y2);
       }
     }
+    
     return items.map(([x, _]) => x);
   }
 
   //** Intersection of sets */
   function intersect(set1, set2) {
     return new Set([...set1].filter(x => set2.has(x)));
+  }
+
+  //** Union of sets */
+  function union(setA, setB) {
+    let _union = new Set(setA)
+    for (let elem of setB) {
+        _union.add(elem)
+    }
+    return _union
   }
 })();

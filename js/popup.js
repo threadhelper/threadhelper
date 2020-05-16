@@ -26,7 +26,7 @@ $(document).ready(function() {
     function onCompletion() {
       console.log("query completed");
       chrome.storage.local.get(["tweets"], r =>
-        $("#storedTweets").html(`Stored ${String(r.tweets.length)} tweets!`))
+        $("#storedTweets").html(`Stored ${String(r.tweets.length)} tweets!`)
       );
     }
     chrome.runtime.sendMessage(message, onCompletion);
