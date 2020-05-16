@@ -19,10 +19,11 @@ A Chrome browser extension that shows you related tweets on your own account.
 - If it's still not working after auth and loading, clear your cache.
 
 ## Todo items
-- [ ] ML search
 - [ ] automate auth and load
-- [ ] requests with since_id for efficiency
 - [ ] Search EVERY TWEET (go past latest 3200 tweets)
+- [ ] requests with since_id for efficiency
+- [ ] prettier tweet cards
+- [ ] ML search
 
 
 
