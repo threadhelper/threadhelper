@@ -10,15 +10,19 @@ A Chrome browser extension that shows you related tweets on your own account.
 - `readme.md`: this file
 - `style.css`: styling for extension components
 
-## Install:
+## Installation:
 - Download repository
 - Settings -> Extensions -> Developer mode -> Load unpacked -> Select root folder
+
+## Instructions
+- If you close your twitter tab, or too much time passes, you'll have to get auth and load tweets again.
+- If it's still not working after auth and loading, clear your cache.
 
 ## Todo items
 - [ ] ML search
 - [ ] automate auth and load
 - [ ] requests with since_id for efficiency
-- [ ] go past latest 3200 tweets
+- [ ] Search EVERY TWEET (go past latest 3200 tweets)
 
 
 
