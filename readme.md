@@ -15,10 +15,10 @@ A Chrome browser extension that shows you related tweets on your own account.
 ### MVP
 
 - [x] Steal key from client fetch
-- [ ] Make a simple fetch
-- [ ] Download all of a user's tweet piecemeal
-- [ ] Store them in chrome storage api
-- [ ] Move bar to side
+- [x] Make a simple fetch
+- [x] Download all of a user's tweet piecemeal
+- [x] Store them in chrome storage api
+- [x] Move bar to side
 
 (Feature ideas are in the google doc)
 
