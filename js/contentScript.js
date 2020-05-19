@@ -13,15 +13,20 @@ function buildBox() {
   var trending_block = document.querySelector('[aria-label="Timeline: Trending now"]')
   if(typeof trending_block !== 'undefined' && trending_block != null)
   {
-  var sideBar = trending_block.parentNode.parentNode.parentNode.parentNode.parentNode
-  var box = document.createElement('div');   //create a div
-  box.setAttribute("aria-label", 'suggestionBox');
-  box.setAttribute("class", 'suggestionBox');
-  var h3 = document.createElement('h3')
-  h3.textContent = "Related Tweets"
-  box.appendChild(h3)
-  sideBar.insertBefore(box,sideBar.children[2])
+    //var sideBar = trending_block.parentNode.parentNode.parentNode.parentNode.parentNode
+    var sideBar = document.body
+    var box = document.createElement('div');   //create a div
+    box.setAttribute("aria-label", 'suggestionBox');
+    box.setAttribute("class", 'suggestionBox');
+    var h3 = document.createElement('h3')
+    h3.textContent = "Related Tweets"
+    box.appendChild(h3)
+    //sideBar.insertBefore(box,sideBar.children[2])
+    sideBar.appendChild(box,sideBar)
   }  
+  else{
+    console.log("didn't make box, couldn't find trends block")
+  }
   // $("<div>", { id: "suggestionBox" })
   //   .hide()
   //   .append("<h3>", { text: "Related Tweets" })
@@ -37,7 +42,7 @@ function watchForStart() {
     getTweets()
   }
   const divs = $('span[data-text="true"]');
-  if (divs.length) {
+  if (divs.length > 0) {
     var box = document.querySelector('[aria-label="suggestionBox"]')
     if(typeof box !== 'undefined' && box != null){
       box.style.display = "block";

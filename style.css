@@ -1,10 +1,10 @@
 .suggestionBox {
-  /*position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  top: 350px;
-  width: 600px;
-  height: 500px;*/
+  position: fixed;
+  left: 80%;
+  transform: translateX(-20%);
+  top: 5%;
+  width: 20%;
+  height: 90%;
   background-color: white;
   overflow-y: scroll;
   border-radius: 5px;
@@ -13,6 +13,10 @@
     Ubuntu, "Helvetica Neue", sans-serif;
   line-height: 1.3125;
   font-size: 13px;
+  /*z-index:-1;
+  float: right;
+  height: 80%;
+  width: 20%;*/
 }
 
 .rtweet {
