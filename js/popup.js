@@ -5,7 +5,8 @@ $(document).ready(function() {
     chrome.tabs.query({ currentWindow: true, active: true }, sendToBackground);
     function sendToBackground(tabs) {
       chrome.runtime.sendMessage({ type: "auth", tabId: tabs[0].id }, () =>
-        console.log("auth complete")
+        {console.log("auth complete");
+        $("#notif").html(`Got auth!!`);}
       );
     }
   });
@@ -26,7 +27,7 @@ $(document).ready(function() {
     function onCompletion() {
       console.log("query completed");
       chrome.storage.local.get(["tweets"], r =>
-        $("#storedTweets").html(`Stored ${String(r.tweets.length)} tweets!`)
+        $("#notif").html(`Stored ${String(r.tweets.length)} tweets!`)
       );
     }
     chrome.runtime.sendMessage(message, onCompletion);

@@ -4,13 +4,16 @@
 chrome.runtime.onMessage.addListener(onMessage);
 
 
-watchForStart();
 let tweets = null;
+watchForStart();
 //getTweets();
 
 /** buildBox creates the 'related tweets' html elements */
 function buildBox() {
-  var sideBar = document.querySelector('[aria-label="Timeline: Trending now"]').parentNode.parentNode.parentNode.parentNode.parentNode
+  var trending_block = document.querySelector('[aria-label="Timeline: Trending now"]')
+  if(typeof trending_block !== 'undefined' && trending_block != null)
+  {
+  var sideBar = trending_block.parentNode.parentNode.parentNode.parentNode.parentNode
   var box = document.createElement('div');   //create a div
   box.setAttribute("aria-label", 'suggestionBox');
   box.setAttribute("class", 'suggestionBox');
@@ -18,7 +21,7 @@ function buildBox() {
   h3.textContent = "Related Tweets"
   box.appendChild(h3)
   sideBar.insertBefore(box,sideBar.children[2])
-    
+  }  
   // $("<div>", { id: "suggestionBox" })
   //   .hide()
   //   .append("<h3>", { text: "Related Tweets" })
@@ -30,6 +33,9 @@ function buildBox() {
 // TODO: Make this based on events, (div creation and deletion, or clicks)
 /** waits for the compose button to appear */
 function watchForStart() {
+  if (tweets == null){
+    getTweets()
+  }
   const divs = $('span[data-text="true"]');
   if (divs.length) {
     var box = document.querySelector('[aria-label="suggestionBox"]')
@@ -65,28 +71,31 @@ function watchForStop() {
 function getTweets() {
   console.log("getting tweets from storage")
   chrome.storage.local.get(["tweets"], r =>{
-        tweets = r.tweets.map(t => ({...t, bag:nlp.toBag(t.text)}))
+      if (r != null) tweets = r.tweets.map(t => ({...t, bag:nlp.toBag(t.text)}))
+      console.log(r.tweets);    
       }
       );
-  console.log(r.tweets);    
 }
 
 
 /** Updates the tweetlist when user types */
 function onChange(mutationRecords) {
-  const box = document.querySelector('[aria-label="suggestionBox"]')
-  if(box.style.display != "block"){
-    box.style.display = "block"
-  }
-  const text = mutationRecords[0].target.wholeText;
-  console.log("text is: ", text);
-  const bag = nlp.toBag(text);
-  const tweet = { text: text, bag: bag };
-  if(tweets.length>0){
-    const related = nlp.getRelated(tweet, tweets);
-    //const related = [ { id: "123", text: "a tweet here", name: "bob t", username: "bobt", time: "2020", urls: [] } ]; //prettier-ignore
-    renderTweets([...new Set(related.reverse())]);
-    console.log(related);
+  if(tweets != null){
+    if(tweets.length>0){
+      const box = document.querySelector('[aria-label="suggestionBox"]')
+      if(box.style.display != "block"){
+        box.style.display = "block"
+      }
+      const text = mutationRecords[0].target.wholeText;
+      console.log("text is: ", text);
+      const bag = nlp.toBag(text);
+      const tweet = { text: text, bag: bag };
+    
+      const related = nlp.getRelated(tweet, tweets);
+      //const related = [ { id: "123", text: "a tweet here", name: "bob t", username: "bobt", time: "2020", urls: [] } ]; //prettier-ignore
+      renderTweets([...new Set(related.reverse())]);
+      console.log(related);
+    }
   }
   else{
     console.log("no tweets")
