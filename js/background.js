@@ -1,5 +1,12 @@
 "use strict";
 
+// Stores auth and CSRF tokens once they are captured in the headers.
+let auth = {
+  csrfToken: null,
+  authorization: null,
+  expired: true
+};
+
 chrome.runtime.onMessage.addListener(onMessage);
 chrome.runtime.onInstalled.addListener(onInstalled);
 chrome.webRequest.onBeforeSendHeaders.addListener(
@@ -11,12 +18,7 @@ chrome.webRequest.onBeforeSendHeaders.addListener(
 );
 
 
-// Stores auth and CSRF tokens once they are captured in the headers.
-let auth = {
-  csrfToken: null,
-  authorization: null,
-  expired: true
-};
+
 
 // If we have to refresh the page to gather the headers, store the tab and
 // tweet to load after we get the headers in this object.
