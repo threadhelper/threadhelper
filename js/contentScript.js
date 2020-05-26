@@ -45,8 +45,11 @@ function scanTweetEditors(){
 /** waits for the compose button to appear */
 function watchForStart() {
   if (tweets == null){
-    getTweets()
+    tweets = getTweets()  
+    setTimeout(watchForStart, 10000);
+    return
   }
+  
   /*var editors = document.getElementsByClassName("DraftEditor-root") //finds all editors, last on the list is always home page's
   if (editors.length > 1){
     var editor = editors[editors.length - 2] //-2 because the last one is in the home page
@@ -69,14 +72,14 @@ function watchForStart() {
     }
     addLogger(div.parentElement.parentElement);
     //addLogger(editor_span);
-    setTimeout(watchForStop, 250);
+    setTimeout(watchForStop, 250)
   } else {
     setTimeout(watchForStart, 250);
   }
 }
 
 function pickDiv(divs){
-  return divs[divs.length - 2] ? divs.length > 1 : divs[0]
+  return divs.length > 1 ? divs[divs.length - 2] : divs[0]
 }
 
 /** watchForStop checks if the box has disappeared */
@@ -99,10 +102,15 @@ function watchForStop() {
 function getTweets() {
   console.log("getting tweets from storage")
   chrome.storage.local.get(["tweets"], r =>{
-      if (r != null) tweets = r.tweets.map(t => ({...t, bag:nlp.toBag(t.text)}))
+    if (typeof r.tweets !== 'undefined' && r.tweets != null){ 
+      tweets = r.tweets.map(t => ({...t, bag:nlp.toBag(t.text)}))
       console.log(r.tweets);    
-      }
-      );
+    }else{
+      console.log("got no tweets")
+    }
+    return true
+  });
+  return tweets
 }
 
 
@@ -111,7 +119,7 @@ function onChange(mutationRecords) {
   if(tweets != null){
     if(tweets.length>0){
       const box = document.querySelector('[aria-label="suggestionBox"]')
-      if(box.style.display != "block"){
+      if(typeof box !== 'undefined' && box != null && box.style.display != "block"){
         box.style.display = "block"
       }
       const text = mutationRecords[0].target.wholeText;
@@ -143,7 +151,8 @@ function renderTweet(tweet, textTarget) {
   const rtime = $("<a>", {
     class: "rtime",
     text: tweet.time.toString(),
-    href: url
+    href: url,
+    style: "float: right"
   });
 
   var add = $("<span>", {
@@ -161,15 +170,15 @@ function renderTweet(tweet, textTarget) {
     textArea.style.size = 1
     document.execCommand("copy");
     textArea.style.display = "none";
-    plus.style.cssText = "font-size: small";
+    plus.style.cssText = "font-size: small; font-weight:normal;";
     plus.textContent = "copied link!"
     setTimeout(function() {
       plus.textContent = "+";
-      plus.style.cssText = "font-size: x-large";
+      plus.style.cssText = "font-size: x-large; font-weight:bold;";
     }, 2000);
   });
   const rtext = $("<div>", { class: "rtext", text: tweet.text });
-  return $("<div>", { class: "rtweet" }).append([rtime, add, rtext])[0];
+  return $("<div>", { class: "rtweet" }).append([add, rtime,$("</br>"), rtext])[0];
 }
 
 
@@ -203,4 +212,5 @@ function onMessage(m, sender, sendResponse) {
       sendResponse()
       break;
   }
+  return true
 }
