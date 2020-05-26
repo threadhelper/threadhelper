@@ -5,6 +5,8 @@ chrome.runtime.onMessage.addListener(onMessage);
 
 
 let tweets = null;
+let activeDiv = null;
+
 watchForStart();
 //getTweets();
 
@@ -35,35 +37,56 @@ function buildBox() {
     
 }
 
+function scanTweetEditors(){
+  
+}
+
 // TODO: Make this based on events, (div creation and deletion, or clicks)
 /** waits for the compose button to appear */
 function watchForStart() {
   if (tweets == null){
     getTweets()
   }
-  const divs = $('span[data-text="true"]');
+  /*var editors = document.getElementsByClassName("DraftEditor-root") //finds all editors, last on the list is always home page's
+  if (editors.length > 1){
+    var editor = editors[editors.length - 2] //-2 because the last one is in the home page
+  } else{
+    var editor = editors[0]
+  }
+  var editor_span = editor.lastElementChild.lastElementChild.lastElementChild.lastElementChild.lastElementChild.lastElementChild*/
+  //const divs = $('span[data-text="true"]');
+  var divs = document.querySelectorAll('span[data-text="true"]')
+  var div = pickDiv(divs)
   if (divs.length > 0) {
+  //if (editor){
     var box = document.querySelector('[aria-label="suggestionBox"]')
     if(typeof box !== 'undefined' && box != null){
       box.style.display = "block";
     }else{
       buildBox();
-      box = document.querySelector('[aria-label="suggestionBox"]')
-      box.style.display = "block";
+      //box = document.querySelector('[aria-label="suggestionBox"]')
+      //box.style.display = "block";
     }
-    addLogger(divs[0].parentElement.parentElement);
+    addLogger(div.parentElement.parentElement);
+    //addLogger(editor_span);
     setTimeout(watchForStop, 250);
   } else {
     setTimeout(watchForStart, 250);
   }
 }
 
+function pickDiv(divs){
+  return divs[divs.length - 2] ? divs.length > 1 : divs[0]
+}
+
 /** watchForStop checks if the box has disappeared */
 function watchForStop() {
-  const divs = $('span[data-text="true"]');
+  var divs = document.querySelectorAll('span[data-text="true"]')
+  var   div = pickDiv(divs)
   const box = document.querySelector('[aria-label="suggestionBox"]')
 
   if (divs.length) {
+    if (div != activeDiv){}
     setTimeout(watchForStop, 250);
   } else {
     if(typeof box !== 'undefined' && box != null){
