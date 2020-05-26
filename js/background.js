@@ -28,25 +28,35 @@ let waiting = {
 
 // Gets auth and csrf token Called before every request. 
 function updateAuth(headers) {
-  if (auth.expired){
-    for (let header of headers) {
-      if (header.name.toLowerCase() == "x-csrf-token") {
-        auth.csrfToken = header.value;
-      } else if (header.name.toLowerCase() == "authorization") {
-        auth.authorization = header.value;
+  if (typeof auth  !== 'undefined'){    
+    if (auth.expired){
+      for (let header of headers) {
+        if (header.name.toLowerCase() == "x-csrf-token") {
+          auth.csrfToken = header.value;
+        } else if (header.name.toLowerCase() == "authorization") {
+          auth.authorization = header.value;
+        }
       }
+      console.log("ran updateAuth")
+      //store it don't forget it
+      chrome.storage.local.set({ auth: auth }, function() {
+        console.log("auth stored")
+      })
+      auth.expired = false;
     }
-    console.log("ran updateAuth")
-    //store it don't forget it
-    chrome.storage.local.set({ auth: auth }, function() {
-      console.log("auth stored")
-    })
-    auth.expired = false;
+    // If we previously reloaded the page in order to capture the tokens:
+    if (auth.authorization !== null && waiting.tabId !== null) {
+      // Inject scripts here
+      waiting.tabId = null;
+    }
   }
-  // If we previously reloaded the page in order to capture the tokens:
-  if (auth.authorization !== null && waiting.tabId !== null) {
-    // Inject scripts here
-    waiting.tabId = null;
+  else{
+    auth = {
+      csrfToken: null,
+      authorization: null,
+      expired: true
+    };
+    setTimeout(updateAuth(headers),250)
   }
 }
 
