@@ -74,13 +74,22 @@ function getMode(){
 
 // EVENT DELEGATION CRL, EVENT BUBBLING FTW
 function setUpListeningComposeClick(){
-  console.log("event listener added")
+  console.log("event listeners added")
   document.addEventListener('focusin',function(e){
     console.log("something focused")
     var divs = document.getElementsByClassName(editorClass)
     for (var div of divs){
       if(e.target && div.contains(e.target)){
         textBoxClicked(div)
+      }
+    }
+  });
+  document.addEventListener('focusout',function(e){
+    console.log("focused out")
+    var divs = document.getElementsByClassName(editorClass)
+    for (var div of divs){
+      if(e.target && div.contains(e.target)){
+        textBoxUnfocused(div)
       }
     }
   });
@@ -106,15 +115,27 @@ function getTextField(compose_box){
   return compose_box.firstElementChild.firstElementChild.firstElementChild.firstElementChild
 }
 
+function textBoxUnfocused(compose_box){
+  // If the active composer is empty and unselected, kill
+  if (compose_box == activeComposer.composer && isComposeEmpty(activeComposer)){
+    //hideSuggBox(activeComposer)
+    if (activeComposer.mode != "home"){
+      killComposer(activeComposer)
+    }
+  }
+}
+
 // The .composer parameter of the composer
 function textBoxClicked(compose_box){
   console.log("text box clicked!")
   // if the clicked composer is different from previous active composer and elligible
   if (compose_box != activeComposer.composer && getMode() != "other"){
-
+    if (activeComposer.mode != "home") killComposer(activeComposer)
     var composer = setUpBox(compose_box)
     //if suggestion box was created, add logger
-    
+  }
+  else{
+    showSuggBox(activeComposer)
   }
 }
 
@@ -139,8 +160,7 @@ function setUpBox(compose_box){
     composer.composer = compose_box;
     composer.sugg_box = sugg_box;
     composer.mode = mode;
-    activeComposer = composer
-    composers.push(composer)
+    activeComposer = composer;
     watchForStart();
     //addLogger(getTextField(activeComposer.composer));
     //sugg_box.style.display = "block";
@@ -198,7 +218,7 @@ function buildBox(mode) {
 function showSuggBox(composer){
   if (typeof composer.sugg_box !== 'undefined' ){
     console.log("showing box")
-    composer.sugg_box.style.display = "block"
+    if (composer.sugg_box != null) composer.sugg_box.style.display = "block"
     //composer.sugg_box.remove()
     //composer.sugg_box = null
   }
@@ -208,41 +228,66 @@ function showSuggBox(composer){
 function hideSuggBox(composer){
   if (typeof composer.sugg_box !== 'undefined' ){
     console.log("hiding box")
-    composer.sugg_box.style.display = "none"
+    if (composer.mode == "home") renderTweets([]);
+    else if (composer.sugg_box != null) composer.sugg_box.style.display = "none"
     //composer.sugg_box.remove()
     //composer.sugg_box = null
+  }
+}
+
+//usually activeComposer
+function killComposer(composer){
+  if (composer.mode == "home")
+    hideSuggBox(composer) 
+  else{
+    //{composer: null, sugg_box: null, observer: null, mode: null}
+    composer.composer = null
+    if (typeof composer.sugg_box !== 'undefined' && composer.sugg_box != null){
+      composer.sugg_box.remove()
+      composer.sugg_box = null
+    }
+    //home_sugg = null;
+    if (typeof composer.observer !== 'undefined' && composer.observer != null){
+      composer.observer.disconnect()
+      composer.observer = null
+    }
+    composer.mode = null
   }
 }
 
 //checks whether composeBox is empty
 function isComposeEmpty(comp){
   var spans = document.querySelectorAll(textFieldClass);
+  
   for (var s of spans){
     if(comp.composer.contains(s)){
       return false
     }
   } 
+  
   return true
 }
 
 /** watchForStop checks if the box has disappeared */
 //should be runnning on active composer usually
+
 function watchForStart() {
   console.log("watching for start")
-  if(!isComposeEmpty(activeComposer)){
+  if(activeComposer.composer != null && !isComposeEmpty(activeComposer)){
     showSuggBox(activeComposer) 
     setTimeout(watchForStop, w_period);
   } else{
     setTimeout(watchForStart, w_period);
   }
-}
-  
+}  
   
 /** watchForStop checks if the box has disappeared */
 //should be runnning on active composer usually
+
 function watchForStop() {
   console.log("watching for stop")
-  if(isComposeEmpty(activeComposer)){
+  if(activeComposer.composer != null && isComposeEmpty(activeComposer)){
+    
     hideSuggBox(activeComposer)
     setTimeout(watchForStart, w_period);
   } else{
