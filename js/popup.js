@@ -11,14 +11,14 @@ $(document).ready(function() {
   });
 
   //present info about loaded tweets
-  chrome.storage.local.get(["tweets_meta"], r =>{
+  /*chrome.storage.local.get(["tweets_meta"], r =>{
     if (typeof r !== 'undefined' && r!=null && typeof r.tweets_meta !== 'undefined'){
       var meta = r.tweets_meta 
       $("#tweetStatus").html(`${meta.count} tweets, last updated: ${meta.since_time}`);
     } else{
         $("#tweetStatus").html(`${0} tweets, last updated: ${"never"}`);
       }
-    });
+    });*/
 
 
   //$("#username").val(stored_username);
@@ -55,9 +55,10 @@ $(document).ready(function() {
     function onCompletion() {
       console.log("query completed");
       chrome.storage.local.get(["tweets","tweets_meta"], r =>{
-        $("#notif").html(`Stored ${String(r.tweets.length)} tweets!`);
+        //$("#notif").html(`Stored ${String(r.tweets.length)} tweets!`);
+        $("#notif").html(`Got tweets, locally saved!`);
         if (typeof r.tweets_meta !== 'undefined'){
-          $("#tweetStatus").html(`${String(r.tweets_meta.count)} tweets, last updated: ${String(r.tweets_meta.since_time)}`);
+          //$("#tweetStatus").html(`${String(r.tweets_meta.count)} tweets, last updated: ${String(r.tweets_meta.since_time)}`);
         }
       });
     }
