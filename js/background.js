@@ -176,6 +176,7 @@ function updateTweets(m, sendResponse){
       max_id = r.tweets_meta.max_id
     }
     console.log(`querying with max id: ${max_id} and since id: ${since_id}`)
+    console.log(auth)
     completeQuery(auth, m.username, m.tabId, max_id, since_id).then(function(tweets) {
       if (tweets.length > 0){
         var tweets_meta = {count: tweets.length, max_id: tweets[tweets.length - 1].id, since_id: tweets[0].id, since_time:tweets[0].time}
@@ -243,17 +244,55 @@ async function completeQuery(auth, username, tabId, max_id, since_id = null, cou
   }while(stop_condition(res,tweets))
 
   function toTweet(entry) {
-    return {
+    // entry.entities.media is not present if media is not present, hence we need to populate those
+    // fields only if media is present. Same with quote.
+    let tweet = {
+      // Basic info.
       id: entry.id_str,
       text: entry.full_text || entry.text,
       name: entry.user.name,
       username: entry.user.screen_name,
-      parent: entry.in_reply_to_status_id_str,
+      profile_image: entry.user.profile_image_url_https,
       time: new Date(entry.created_at).getTime(),
-      retweets: entry.retweet_count,
-      urls: entry.entities.urls.map(x => x.expanded_url),
-      media: null // TODO
-    };
+      // Replies/mentions.
+      reply_to: entry.in_reply_to_screen_name, // null if not present.
+      mentions: entry.entities.user_mentions.map(x => ({username: x.screen_name, indices: x.indices})),
+      // URLs.
+      urls: entry.entities.urls.map(x => ({current_text: x.url, display: x.display_url, expanded: x.expanded_url})),
+      // Media.
+      has_media: typeof entry.entities.media !== "undefined",
+      media: null,
+      // Quote info.
+      has_quote: entry.is_quote_status,
+      quote: null,
+    }
+    // Add media info.
+    if (tweet.has_media) {
+      tweet.media = entry.entities.media.map(x => ({current_text: x.url, url: x.media_url_https}))
+    }
+    // Add full quote info.
+    if (tweet.has_quote) {
+      tweet.quote = {
+        // Basic info.
+        text: entry.quoted_status.text,
+        name: entry.quoted_status.user.name,
+        username: entry.quoted_status.user.screen_name,
+        time: new Date(entry.quoted_status.created_at).getTime(),
+        profile_image: entry.quoted_status.user.profile_image_url_https,
+        // Replies/mentions.
+        reply_to: entry.quoted_status.in_reply_to_screen_name,
+        mentions: entry.quoted_status.entities.user_mentions.map(x => ({username: x.screen_name, indices: x.indices})),
+        // URLs.
+        urls: entry.quoted_status.entities.urls.map(x => ({current_text: x.url, display: x.display_url, expanded: x.expanded_url})),
+        has_media: typeof entry.quoted_status.entities.media !== "undefined",
+        media: null,
+      }
+      if (tweet.quote.has_media) {
+        tweet.quote.media = entry.quoted_status.entities.media.map(x => ({current_text: x.url, url: x.media_url_https}))
+      }
+    }
+
+    return tweet
   }
 var tweets_normal = tweets.map(toTweet)
 console.log(tweets_normal)

@@ -334,45 +334,201 @@ function addLogger(div) {
   return observer
 }
 
-//** Build the html for one tweet */
 function renderTweet(tweet, textTarget) {
-  // TODO: print user on retweets
-  //console.log("rendering one tweet")
-  const url = 'https://twitter.com/' + tweet.username + '/status/' + tweet.id;
-  const rtime = $("<a>", {
-    class: "rtime",
-    text: tweet.time.toString(),
-    href: url,
-    style: "float: right"
-  });
+  let tweetLink = `https://twitter.com/${tweet.username}/status/${tweet.id}`
+  let timeDiff = getTimeDiff(tweet.time)
+  let reply_text = getReplyText(tweet.reply_to, tweet.mentions)
+  let text = reformatText(tweet.text, tweet.reply_to, tweet.mentions, tweet.urls, tweet.media)
+  let maybeMedia = tweet.has_media ? renderMedia(tweet.media, "th-media") : ""
+  let maybeQuote = tweet.has_quote ? renderQuote(tweet.quote, tweet.has_media) : ""
+  let template = $(`
+  <div class="th-tweet-container">
+    <div class="th-tweet">
+      <div class="th-gutter">
+        <img class="th-profile" src="${tweet.profile_image}">
+      </div>
+      <div class="th-body">
+        <div class="th-header">
+          <div class="th-header-name">${tweet.name}</div>
+          <div class="th-header-username">@${tweet.username}</div>
+          <div class="th-header-dot">·</div>
+          <div class="th-header-time">${timeDiff}</div>
+        </div>
+        <div class="th-reply">${reply_text}</div>
+        <div class="th-text">${text}</div>
+        ${maybeMedia}
+        ${maybeQuote}
+      </div>
+    </div>
+    <div class="th-hover">
+      <textarea style="display: none" id="th-link-${tweet.id}" class="th-link">${tweetLink}</textarea>
+      <div class="th-hover-copy">copy</div>
+    </div>
+  </div>`)
 
-  var add = $("<span>", {
-    class: "rplus",
-    text: "+"
-  });
-  add.click(function(e) {
-    // to copy something to clipboard it need to be on the page
-    var textArea = document.createElement("textarea");
-    textArea.value = url;
-    var plus = e.target;
-    plus.parentNode.insertBefore(textArea,plus.parentNode.children[1]);
-    textArea.focus();
-    textArea.select();
-    textArea.style.size = 1
-    document.execCommand("copy");
-    textArea.style.display = "none";
-    plus.style.cssText = "font-size: small; font-weight:normal;";
-    plus.textContent = "copied link!"
+  let hover = $('.th-hover', template)
+  hover.click(function(e) {
+    var link = $(`#th-link-${tweet.id}`)[0]
+    var copy = $(e.target).find(".th-hover-copy")
+    link.style.display = "flex"
+    link.select()
+    document.execCommand("copy")
+    link.style.display = "none"
+    copy.text("copied!")
     setTimeout(function() {
-      activeComposer.composer.focus()
-      plus.textContent = "+";
-      plus.style.cssText = "font-size: x-large; font-weight:bold;";
-    }, 2000);
-  });
-  const rtext = $("<div>", { class: "rtext", text: tweet.text });
-  return $("<div>", { class: "rtweet" }).append([add, rtime,$("</br>"), rtext])[0];
+      copy.text("copy")
+    }, 2000)
+  })
+
+  return template[0]
 }
 
+let shortMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+function getTimeDiff(time) {
+  let now = new Date()
+  let timeDate = new Date(time)
+  let diff = now-timeDate // In milliseconds.
+  let seconds = parseInt(diff/1000)
+  if (seconds < 60) {
+    return `${seconds}s`
+  }
+  let mins = parseInt(seconds/60)
+  if (mins < 60) {
+    return `${mins}m`
+  }
+  let hours = parseInt(mins/60)
+  if (hours < 24) {
+    return `${hours}h`
+  }
+  let month = shortMonths[timeDate.getMonth()-1]
+  let day = timeDate.getDate()
+  let thisYear = new Date(now.getFullYear(), 0)
+  return timeDate > thisYear ? `${month} ${day}` : `${month} ${day}, ${timeDate.getFullYear()}`
+}
+
+function getReplyText(reply_to, mentions) {
+  if (reply_to === null) {
+    return ""
+  }
+  if (mentions.length === 1 || mentions.length === 0) {
+    return `Replying to @${reply_to}`
+  }
+
+  // Count number of mentions that occur at the beginning of the tweet. Begin at -1 because mentions
+  // will include reply_to.
+  let numOthers = -1
+  let nextIndex = 0
+  for (var mention of mentions) {
+    if (mention.indices[0] !== nextIndex) {
+      break
+    }
+    numOthers++
+    nextIndex = mention.indices[1]+1
+  }
+  let otherWord = numOthers===1 ? "other" : "others"
+  return `Replying to @${reply_to} and ${numOthers} ${otherWord}`
+}
+
+String.prototype.replaceBetween = function(start, end, what) {
+  return this.substring(0, start) + what + this.substring(end);
+};
+
+function reformatText(text, reply_to, mentions, urls, media) {
+  let ret = text
+  let charsRemoved = 0
+  // Cut out reply_to + any mentions at the beginning.
+  if (reply_to !== null) {
+    let nextIndex = 0
+    for (var mention of mentions) {
+      if (mention.indices[0] !== nextIndex) {
+        break
+      }
+      // Plus one to get rid of the space between usernames.
+      ret = ret.replaceBetween(mention.indices[0]-charsRemoved, mention.indices[1]-charsRemoved+1, "")
+      charsRemoved += mention.indices[1]-mention.indices[0]+1
+      nextIndex = mention.indices[1]+1
+    }
+  }
+  if (urls !== null) {
+    for (var url of urls) {
+      if (url.expanded.includes("https://twitter.com")) {
+        ret = ret.replace(url.current_text, "")
+      } else {
+        ret = ret.replace(url.current_text, url.display)
+      }
+    }
+  }
+  if (media !== null) {
+    for (var m of media) {
+      ret = ret.replace(m.current_text, "")
+    }
+  }
+
+  return ret
+}
+
+function renderMedia(media, className) {
+  let topImgs = ""
+  let botImgs = ""
+  if (media.length > 0) {
+    topImgs += `<div style="background-image: url('${media[0].url}');"></div>`
+  }
+  if (media.length > 1) {
+    topImgs += `<div style="background-image: url('${media[1].url}');"></div>`
+  }
+  if (media.length > 2) {
+    botImgs += `<div style="background-image: url('${media[2].url}');"></div>`
+  }
+  if (media.length > 3) {
+    botImgs += `<div style="background-image: url('${media[3].url}');"></div>`
+  }
+
+  let top = `<div class="th-media-top">${topImgs}</div>`
+  let bottom = botImgs === "" ? "" : `<div class="th-media-bottom">${botImgs}</div>`
+  let template = `
+  <div class="${className}">
+    ${top}
+    ${bottom}
+  </div>
+  `
+  return template
+}
+
+function renderQuote(quote, parent_has_media) {
+  let timeDiff = getTimeDiff(quote.time)
+  let replyText = getReplyText(quote.reply_to, quote.mentions)
+  let text = reformatText(quote.text, quote.reply_to, quote.mentions, null, quote.media)
+  let minimedia = ""
+  let mainmedia = ""
+  if (quote.has_media) {
+    if (parent_has_media) {
+      minimedia = renderMedia(quote.media, "th-quote-content-minimedia")
+    } else {
+      mainmedia = renderMedia(quote.media, "th-quote-content-main-media")
+    }
+  }
+  let template = `
+  <div class="th-quote">
+    <div class="th-quote-header">
+      <img class="th-quote-header-profile" src="${quote.profile_image}">
+      <div class="th-quote-header-name">${quote.name}</div>
+      <div class="th-quote-header-username">@${quote.username}</div>
+      <div class="th-header-dot">·</div>
+      <div class="th-quote-header-time">${timeDiff}</div>
+    </div>
+    <div class="th-quote-reply">${replyText}</div>
+    <div class="th-quote-content">
+      ${minimedia}
+      <div class="th-quote-content-main">
+        <div class="th-quote-content-main-text">${text}</div>
+        ${mainmedia}
+      </div>
+    </div>
+  </div>
+  `
+  return template
+}
 
 //** Build the html for a set of tweets */
 function renderTweets(tweets) {
