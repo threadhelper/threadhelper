@@ -176,7 +176,6 @@ function updateTweets(m, sendResponse){
       max_id = r.tweets_meta.max_id
     }
     console.log(`querying with max id: ${max_id} and since id: ${since_id}`)
-    console.log(auth)
     completeQuery(auth, m.username, m.tabId, max_id, since_id).then(function(tweets) {
       if (tweets.length > 0){
         var tweets_meta = {count: tweets.length, max_id: tweets[tweets.length - 1].id, since_id: tweets[0].id, since_time:tweets[0].time}
@@ -262,8 +261,9 @@ async function completeQuery(auth, username, tabId, max_id, since_id = null, cou
       // Media.
       has_media: typeof entry.entities.media !== "undefined",
       media: null,
-      // Quote info.
-      has_quote: entry.is_quote_status,
+      // Quote info. Tweets quoting deleted tweets will have is_quote_status true but undefined
+      // quoted_status.
+      has_quote: entry.is_quote_status && (typeof entry.quoted_status !== "undefined"),
       quote: null,
     }
     // Add media info.
