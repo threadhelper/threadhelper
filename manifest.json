@@ -15,6 +15,7 @@
     {
       "matches": ["https://*.twitter.com/*"],
       "js": ["js/jquery-3.4.1.slim.js", "js/nlp.js", "js/contentScript.js"],
+      //"js": ["js/jquery-3.4.1.slim.js", "js/nlp.js"],
       "css": ["style.css"]
     }
   ],
