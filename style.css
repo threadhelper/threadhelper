@@ -1,6 +1,7 @@
 .suggestionBox_home {
   background-color: white;
-  overflow-y: scroll;
+  overflow-y: hidden;
+  top: 5%;
   border-radius: 5px;
   padding: 20px;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
@@ -21,7 +22,7 @@
   width: 25%;
   height: 90%;
   background-color: white;
-  overflow-y: scroll;
+  overflow-y: hidden;
   border-radius: 5px;
   padding: 20px;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
@@ -35,7 +36,7 @@
 }
 
 .sugg_box_space {
-  height: 5%;
+  height: 50px;
 }
 
 .th-tweet {

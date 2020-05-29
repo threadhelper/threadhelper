@@ -191,15 +191,15 @@ function main()
   function placeBox(sugg_box, mode){
     if (mode == "home"){
       //insert a little space bc of the title
-      var space = document.createElement('div') //a bit of space
-      sugg_box.setAttribute("class", 'sugg_box_space');
-      sugg_box.insertBefore(space,sugg_box.children[0].nextSibling); 
       sugg_box.setAttribute("class", 'suggestionBox_home');
       var trending_block = document.querySelector('[aria-label="Timeline: Trending now"]')
       if(typeof trending_block !== 'undefined' && trending_block != null)
       {
         var sideBar = trending_block.parentNode.parentNode.parentNode.parentNode.parentNode
+        var space = document.createElement('div') //a bit of space
+        space.setAttribute("class", 'sugg_box_space');
         sideBar.insertBefore(sugg_box,sideBar.children[1])
+        sideBar.insertBefore(space,sugg_box); 
         home_sugg = sugg_box
       }
       else{
