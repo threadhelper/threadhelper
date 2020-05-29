@@ -472,16 +472,16 @@ function renderMedia(media, className) {
   let topImgs = ""
   let botImgs = ""
   if (media.length > 0) {
-    topImgs += `<div style="background-image: url('${media[0].url}');"></div>`
+    topImgs += `<div class="th-media-image"><img src="${media[0].url}"></div>`
   }
   if (media.length > 1) {
-    topImgs += `<div style="background-image: url('${media[1].url}');"></div>`
+    topImgs += `<div class="th-media-image"><img src="${media[1].url}"></div>`
   }
   if (media.length > 2) {
-    botImgs += `<div style="background-image: url('${media[2].url}');"></div>`
+    botImgs += `<div class="th-media-image"><img src="${media[2].url}"></div>`
   }
   if (media.length > 3) {
-    botImgs += `<div style="background-image: url('${media[3].url}');"></div>`
+    botImgs += `<div class="th-media-image"><img src="${media[3].url}"></div>`
   }
 
   let top = `<div class="th-media-top">${topImgs}</div>`

@@ -98,33 +98,33 @@
 .th-media {
   display: flex;
   flex-direction: column;
-  height: 200px;
+  max-height: 200px;
   border: 1px solid #e1e8ed;
   border-radius: 8px;
   margin-top: 8px;
   overflow: hidden;
 }
 
+.th-media-image img {
+  max-width: 100%;
+  align-self: center;
+}
+
+.th-media-image {
+    min-width: 50%;
+    display: flex;
+}
+
 .th-media-top {
-  flex-grow: 1;
-  display: flex;
+    min-height: 50%;
+    flex-grow: 1;
+    display: flex;
 }
 
 .th-media-bottom {
-  flex-grow: 1;
-  display: flex;
-}
-
-.th-media-top div {
-  flex-grow: 1;
-  background-size: contain;
-  background-repeat: no-repeat;
-}
-
-.th-media-bottom div {
-  flex-grow: 1;
-  background-size: contain;
-  background-repeat: no-repeat;
+    min-height: 50%;
+    flex-grow: 1;
+    display: flex;
 }
 
 .th-tweet-container {
@@ -190,14 +190,14 @@
 .th-quote-content-main-media {
   display: flex;
   flex-direction: column;
-  height: 150px;
+  max-height: 150px;
   margin-top: 10px;
   overflow: hidden;
 }
 
 .th-quote-content-minimedia {
-  height: 90px;
-  width: 90px;
+  max-height: 90px;
+  max-width: 90px;
   display: flex;
   flex-direction: column;
   padding-right: 5px;
