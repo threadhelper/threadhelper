@@ -212,6 +212,12 @@
 .th-quote-content {
   display: flex;
   padding-top: 3px;
+  padding-bottom: 3px;
+}
+
+.th-unavailable {
+  background-color: #f5f8fa;
+  color: #657786;
 }
 
 .th-quote-content-main {

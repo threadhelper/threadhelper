@@ -589,13 +589,11 @@ function main()
       return template
     }
     else{
-      let text = "This tweet is unavailable."
       let template = `
-      <div class="th-quote">
-        <div class="th-quote-reply"></div>
+      <div class="th-quote th-unavailable">
         <div class="th-quote-content">
           <div class="th-quote-content-main">
-            <div class="th-quote-content-main-text">${text}</div>
+            <div class="th-quote-content-main-text">This Tweet is unavailable.</div>
           </div>
         </div>
       </div>
