@@ -439,7 +439,17 @@ function main()
       link.select()
       document.execCommand("copy")
       link.style.display = "none"
-      getTextField(activeComposer.composer).focus()
+      var input = activeComposer.composer.firstElementChild
+      input.focus()
+      // https://stackoverflow.com/questions/24115860/set-caret-position-at-a-specific-position-in-contenteditable-div
+      // There will be multiple spans if multiple lines, so we get the last one to set caret to the end of the last line.
+      var text = $(input).find('span[data-text=true]').last()[0].firstChild
+      var range = document.createRange()
+      range.setStart(text, text.length)
+      range.setEnd(text, text.length)
+      var sel = window.getSelection()
+      sel.removeAllRanges()
+      sel.addRange(range)
       copy.text("copied!")
       setTimeout(function() {
         copy.text("copy")
