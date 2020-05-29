@@ -3,8 +3,7 @@
 // Stores auth and CSRF tokens once they are captured in the headers.
 let auth = {
   csrfToken: null,
-  authorization: null,
-  expired: true
+  authorization: null
 };
 
 chrome.runtime.onMessage.addListener(onMessage);
@@ -18,66 +17,49 @@ chrome.webRequest.onBeforeSendHeaders.addListener(
   ["requestHeaders"]
 );
 
-/*
-document.addEventListener("DOMContentLoaded", () => {
-  runContentScript()
-});*/
 
-
-
-// If we have to refresh the page to gather the headers, store the tab and
-// tweet to load after we get the headers in this object.
-let waiting = {
-  tabId: null,
-  justUpdated : false
-};
-
-function runContentScript(){
-  chrome.tabs.executeScript(null, {file: "contentScript.js"});
-}
-
-//make a trivial request to make sure auth works
-async function isAuthFresh(auth){
-  if (typeof auth === 'undefined' || auth.authorization == null || auth.csrfToken == null){
-    console.log("auth is null")
+// is auth something rather than null and friend?
+function isAuth(auth){
+  if (typeof auth === 'undefined' || auth.authorization == null || auth.csrfToken == null || auth.authorization == 'null' ||auth.csrfToken == 'null'){
     return false
   }
-  try{
-    const init = {
-      credentials: "include",
-      headers: {
-        authorization: auth.authorization,
-        "x-csrf-token": auth.csrfToken
-      }
-    };
-    var uurl = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}${since}${max}&count=${count}&include_rts=${include_rts}`
-    res = await fetch(uurl,init).then(x => x.json())//.catch(throw new Error("caught in fetch"))
-    console.log("auth is good")
-  }catch(err){
-    if (err.code == 353){
-      console.log("auth is stale")
-      return false
-    }
+  else{
+    return true
   }
-  return true
 }
-
-function setAuth(auth_){
-  auth = auth_
+//make a trivial request to make sure auth works
+async function isAuthFresh(auth){
+  if (isAuth(auth)){
+    try{
+      const init = {
+        credentials: "include",
+        headers: {
+          authorization: auth.authorization,
+          "x-csrf-token": auth.csrfToken
+        }
+      };
+      var uurl = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=Twitter&count=1`
+      var res = await fetch(uurl,init).then(x => x.json())//.catch(throw new Error("caught in fetch"))
+      console.log("auth is good")
+    }catch(err){
+        console.log("auth is stale")
+        console.log(err)
+        return false
+  }}
+  return true
 }
 
 // TODO: We only need to get a fresh auth when the old one is stale
 async function loadAuth(tabId) {
   //try to get from storage first
-  if (await isAuthFresh(auth)){
+  if (isAuth(auth)){
+    console.log("current auth fresh af")
     return auth
   }
   else{
     console.log("gonna load auth from storage")
     chrome.storage.local.get(["auth"], r =>{
-      var def = typeof r.auth !== 'undefined';
-      var is_fresh = isAuthFresh(r.auth)
-      if(def && is_fresh){
+      if(isAuth(r.auth)){
         auth = r.auth;
         console.log("got it")
         console.log(auth)
@@ -92,14 +74,13 @@ async function loadAuth(tabId) {
 
 // tries to reload page to get a new auth
 function getNewAuth(tabId){
-  waiting.tabId = tabId;
   var reload_ok = confirm("I'll have to reload the page to get my authorization token :)");
   if (reload_ok){
     chrome.tabs.reload(tabId);
   }
 }
 
-// called after reloading
+// called after reloading, checks if auth exists and if not 
 async function processHeaders(headers){
   // on mac there's a bug where updateAuth is called befor auth is defined, 
   // so this is checking that
@@ -108,11 +89,10 @@ async function processHeaders(headers){
     console.log("auth was undefined, for some reason, gonna define it and do nothing else")
     auth = {
       csrfToken: null,
-      authorization: null,
-      expired: true
+      authorization: null
     };
   } 
-  if (! await isAuthFresh(auth)){
+  if (!isAuth(auth)){
     console.log("updatingAuth")
     updateAuth(headers)
   }
@@ -128,13 +108,12 @@ async function updateAuth(headers) {
       auth.csrfToken = header.value;
     } else if (header.name.toLowerCase() == "authorization") {
       auth.authorization = header.value;
-      auth.expired = false;
     }
   }
 
   console.log("ran updateAuth")
   //store it don't forget it
-  if(await isAuthFresh(auth)){
+  if(isAuth(auth)){
     chrome.storage.local.set({ auth: auth }, function() {
       console.log("auth stored")
       console.log(auth)
@@ -159,7 +138,6 @@ function onInstalled() {
       }
     ]);
   });
-  //chrome.tabs.query({ currentWindow: true, active: true }, (tabs) => chrome.tabs.reload(tabs[0].id));
 }
 
 //** Handles messages sent from popup or content scripts */
@@ -171,16 +149,15 @@ async function onMessage(m, sender, sendResponse) {
       loadAuth(m.tabId).then(() => {sendResponse();});
       break;
 
-    // TODO: fix bug where it takes two clicks for tweets to update
     case "load":
-      if(auth.authorization !== null){
-        //console.log("auth good")
+      if(isAuth(auth)){
+        console.log("auth good")
+        updateTweets(m, sendResponse);
       }
       else{
-        console.log(auth)
-        await loadAuth(m.tabId)
+        console.log("auth bad, loadin")
+        await loadAuth(m.tabId).then(updateTweets(m, sendResponse))
       }
-      updateTweets(m, sendResponse);
       break;
 
     case "clear":
@@ -204,7 +181,7 @@ function clearStorage(sendResponse){
 }
 
 function updateTweets(m, sendResponse){
-  console.log("updating tweets");
+  //console.log("updating tweets");
   chrome.storage.local.get(["tweets_meta"], r =>{
     var since_id = null
     var max_id = null
@@ -212,22 +189,24 @@ function updateTweets(m, sendResponse){
       since_id = r.tweets_meta.since_id
       max_id = r.tweets_meta.max_id
     }
-    console.log(`querying with max id: ${max_id} and since id: ${since_id}`)
+    //console.log(`querying with max id: ${max_id} and since id: ${since_id}`)
     completeQuery(auth, m.username, m.tabId, max_id, since_id).then(function(tweets) {
       if (tweets.length > 0){
         var tweets_meta = {count: tweets.length, max_id: tweets[tweets.length - 1].id, since_id: tweets[0].id, since_time:tweets[0].time}
         chrome.storage.local.set({ tweets: tweets, tweets_meta: tweets_meta}, function() {
-          console.log("set storage with tweets and meta info!")
+          //console.log("set storage with tweets and meta info!")
           sendResponse();
         });
-        console.log("sending message to cs after load")
+        //console.log("sending message to cs after load")
         chrome.tabs.query({active: true, currentWindow: true}, function(tabs){
-          console.log(tabs)
+          //console.log(tabs)
           if (tabs != null && tabs.length < 1 && typeof tabs[0] !== 'undefined'){
             chrome.tabs.sendMessage(tabs[0].id, {type: "tweets-loaded"}, function(response) {
-              console.log("tweet-load-received");
+              //console.log("tweet-load-received");
         })}
-          else{console.log("tabs are null")}
+          else{
+            //console.log("tabs are null")
+          }
         });
       } 
       else{
@@ -240,14 +219,16 @@ function updateTweets(m, sendResponse){
 }
 
 function handleError(err, tabId){
-  console.log("handling tweet query error")
-  console.log(err)
+  //console.log("handling tweet query error")
   switch (err.code){
     case 353: //"This request requires a matching csrf cookie and header."
       console.log("auth is bad, getting new")
-      auth.expired = true; 
       getNewAuth(tabId);
-
+    case 215: //""Bad Authentication data.""
+      console.log("auth is bad, getting new")
+      getNewAuth(tabId);
+    default:
+      console.log(err)
   }
 }
 
@@ -265,48 +246,90 @@ async function completeQuery(auth, username, tabId, max_id = null, since_id = nu
       "x-csrf-token": auth.csrfToken
     }
   };
-  
-  const stop_condition = (res,tweets) => {return tweets.length < count && res.length > 1}
-  do
-  { 
-    console.log(`GET: ${uurl}`)
-    try
-    {
-      res = await fetch(uurl,init).then(x => x.json())
-      //res = x.json()
-      if (res.length == 0){throw new Error("res is empty")}
-      tweets = tweets.concat(res)
-      console.log(res)
-      
-      // pass since_id again only if we got more recent tweets
-      // since = parseInt(since_id) < parseInt(res[0].id) ? '' : `&since_id=${since_id}`
-      // since_id = parseInt(since_id) > parseInt(res[0].id) ? since_id : res[0].id
-      since = ''
-      max_id = parseInt(max_id) < parseInt(res[res.length - 1].id - 1) ? since_id : res[res.length - 1].id - 1
-      uurl = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}&count=${count}&max_id=${max_id}${since}&include_rts=${include_rts}`
+  if ( await isAuthFresh(auth)){
+    const stop_condition = (res,tweets) => {return tweets.length < count && res.length > 1}
+    do
+    { 
       console.log(`GET: ${uurl}`)
-      console.log(`loaded ${tweets.length} tweets`)
+      try
+      {
+        res = await fetch(uurl,init).then(x => x.json())
+        //res = x.json()
+        if (res.length == 0){throw new Error("res is empty")}
+        console.log(res)
+        tweets = tweets.concat(res)
+        
+        // pass since_id again only if we got more recent tweets
+        // since = parseInt(since_id) < parseInt(res[0].id) ? '' : `&since_id=${since_id}`
+        // since_id = parseInt(since_id) > parseInt(res[0].id) ? since_id : res[0].id
+        since = ''
+        max_id = parseInt(max_id) < parseInt(res[res.length - 1].id - 1) ? since_id : res[res.length - 1].id - 1
+        uurl = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}&count=${count}&max_id=${max_id}${since}&include_rts=${include_rts}`
+        console.log(`GET: ${uurl}`)
+        console.log(`loaded ${tweets.length} tweets`)
+      }
+      catch(err){
+        handleError(err, tabId)
+      }
     }
-    catch(err){
-      handleError(err, tabId)
-    }
+    while(stop_condition(res,tweets))
   }
-  while(stop_condition(res,tweets))
 
   function toTweet(entry) {
-    return {
+    // entry.entities.media is not present if media is not present, hence we need to populate those
+    // fields only if media is present. Same with quote.
+    let tweet = {
+      // Basic info.
       id: entry.id_str,
       text: entry.full_text || entry.text,
       name: entry.user.name,
       username: entry.user.screen_name,
-      parent: entry.in_reply_to_status_id_str,
+      profile_image: entry.user.profile_image_url_https,
       time: new Date(entry.created_at).getTime(),
-      retweets: entry.retweet_count,
-      urls: entry.entities.urls.map(x => x.expanded_url),
-      media: null // TODO
-    };
+      // Replies/mentions.
+      reply_to: entry.in_reply_to_screen_name, // null if not present.
+      mentions: entry.entities.user_mentions.map(x => ({username: x.screen_name, indices: x.indices})),
+      // URLs.
+      urls: entry.entities.urls.map(x => ({current_text: x.url, display: x.display_url, expanded: x.expanded_url})),
+      // Media.
+      has_media: typeof entry.entities.media !== "undefined",
+      media: null,
+      // Quote info.
+      has_quote: entry.is_quote_status,
+      is_quote_up: typeof entry.quoted_status !== "undefined",
+      quote: null
+    }
+    // Add media info.
+    if (tweet.has_media) {
+      tweet.media = entry.entities.media.map(x => ({current_text: x.url, url: x.media_url_https}))
+    }
+    // Add full quote info.
+    if (tweet.has_quote && tweet.is_quote_up) {
+      tweet.quote = {
+        // Basic info.
+        text: entry.quoted_status.text,
+        name: entry.quoted_status.user.name,
+        username: entry.quoted_status.user.screen_name,
+        time: new Date(entry.quoted_status.created_at).getTime(),
+        profile_image: entry.quoted_status.user.profile_image_url_https,
+        // Replies/mentions.
+        reply_to: entry.quoted_status.in_reply_to_screen_name,
+        mentions: entry.quoted_status.entities.user_mentions.map(x => ({username: x.screen_name, indices: x.indices})),
+        // URLs.
+        urls: entry.quoted_status.entities.urls.map(x => ({current_text: x.url, display: x.display_url, expanded: x.expanded_url})),
+        has_media: typeof entry.quoted_status.entities.media !== "undefined",
+        media: null,
+      }
+      if (tweet.quote.has_media) {
+        tweet.quote.media = entry.quoted_status.entities.media.map(x => ({current_text: x.url, url: x.media_url_https}))
+      }
+    
+    }
+
+    return tweet
   }
+  
+console.log(tweets)
 var tweets_normal = tweets.map(toTweet)
-console.log(tweets_normal)
 return tweets_normal
 }
