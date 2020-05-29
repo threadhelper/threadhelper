@@ -580,28 +580,22 @@ function main()
         <div class="th-quote-content">
           ${minimedia}
           <div class="th-quote-content-main">
-          <div class="th-quote-content-main-text">${text}</div>
-          ${mainmedia}
+            <div class="th-quote-content-main-text">${text}</div>
+            ${mainmedia}
           </div>
-          </div>
-          </div>
-          `
+        </div>
+      </div>
+      `
       return template
     }
     else{
-      let timeDiff = ''
-      let replyText = ''
-      let text = reformatText("This tweet is unavailable.")
-      let minimedia = ""
-      let mainmedia = ""
+      let text = "This tweet is unavailable."
       let template = `
       <div class="th-quote">
-        <div class="th-quote-reply">${replyText}</div>
+        <div class="th-quote-reply"></div>
         <div class="th-quote-content">
-          ${minimedia}
           <div class="th-quote-content-main">
             <div class="th-quote-content-main-text">${text}</div>
-            ${mainmedia}
           </div>
         </div>
       </div>
@@ -661,108 +655,6 @@ then the most extension API methods in the content script cease to work (includi
 [ ] Option 1: Fall back to contentscript-only functionality
 [X] Option 2: Unload the previous content script on content script insertion
 - When a connection with the background page is important to your content script, then you have to implement a proper unloading routine, and set up some events to unload the previous content script when the content script is inserted back via chrome.tabs.executeScript.
-
-
-String.prototype.replaceBetween = function(start, end, what) {
-  return this.substring(0, start) + what + this.substring(end);
-};
-
-function reformatText(text, reply_to, mentions, urls, media) {
-  let ret = text
-  let charsRemoved = 0
-  // Cut out reply_to + any mentions at the beginning.
-  if (reply_to !== null) {
-    let nextIndex = 0
-    for (var mention of mentions) {
-      if (mention.indices[0] !== nextIndex) {
-        break
-      }
-      // Plus one to get rid of the space between usernames.
-      ret = ret.replaceBetween(mention.indices[0]-charsRemoved, mention.indices[1]-charsRemoved+1, "")
-      charsRemoved += mention.indices[1]-mention.indices[0]+1
-      nextIndex = mention.indices[1]+1
-    }
-  }
-  if (urls !== null) {
-    for (var url of urls) {
-      if (url.expanded.includes("https://twitter.com")) {
-        ret = ret.replace(url.current_text, "")
-      } else {
-        ret = ret.replace(url.current_text, url.display)
-      }
-    }
-  }
-  if (media !== null) {
-    for (var m of media) {
-      ret = ret.replace(m.current_text, "")
-    }
-  }
-
-  return ret
-}
-
-function renderMedia(media, className) {
-  let topImgs = ""
-  let botImgs = ""
-  if (media.length > 0) {
-    topImgs += `<div class="th-media-image"><img src="${media[0].url}"></div>`
-  }
-  if (media.length > 1) {
-    topImgs += `<div class="th-media-image"><img src="${media[1].url}"></div>`
-  }
-  if (media.length > 2) {
-    botImgs += `<div class="th-media-image"><img src="${media[2].url}"></div>`
-  }
-  if (media.length > 3) {
-    botImgs += `<div class="th-media-image"><img src="${media[3].url}"></div>`
-  }
-
-  let top = `<div class="th-media-top">${topImgs}</div>`
-  let bottom = botImgs === "" ? "" : `<div class="th-media-bottom">${botImgs}</div>`
-  let template = `
-  <div class="${className}">
-    ${top}
-    ${bottom}
-  </div>
-  `
-  return template
-}
-
-function renderQuote(quote, parent_has_media) {
-  let timeDiff = getTimeDiff(quote.time)
-  let replyText = getReplyText(quote.reply_to, quote.mentions)
-  let text = reformatText(quote.text, quote.reply_to, quote.mentions, null, quote.media)
-  let minimedia = ""
-  let mainmedia = ""
-  if (quote.has_media) {
-    if (parent_has_media) {
-      minimedia = renderMedia(quote.media, "th-quote-content-minimedia")
-    } else {
-      mainmedia = renderMedia(quote.media, "th-quote-content-main-media")
-    }
-  }
-  let template = `
-  <div class="th-quote">
-    <div class="th-quote-header">
-      <img class="th-quote-header-profile" src="${quote.profile_image}">
-      <div class="th-quote-header-name">${quote.name}</div>
-      <div class="th-quote-header-username">@${quote.username}</div>
-      <div class="th-header-dot">·</div>
-      <div class="th-quote-header-time">${timeDiff}</div>
-    </div>
-    <div class="th-quote-reply">${replyText}</div>
-    <div class="th-quote-content">
-      ${minimedia}
-      <div class="th-quote-content-main">
-        <div class="th-quote-content-main-text">${text}</div>
-        ${mainmedia}
-      </div>
-    </div>
-  </div>
-  `
-  return template
-}
-
 
 function destructor() {
   // Destruction is needed only once

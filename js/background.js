@@ -298,7 +298,8 @@ async function completeQuery(auth, username, tabId, max_id = null, since_id = nu
       media: null,
       // Quote info. Tweets quoting deleted tweets will have is_quote_status true but undefined
       // quoted_status.
-      has_quote: entry.is_quote_status && (typeof entry.quoted_status !== "undefined"),
+      has_quote: entry.is_quote_status,
+      is_quote_up: (typeof entry.quoted_status !== "undefined"),
       quote: null,
     }
     // Add media info.
@@ -306,7 +307,7 @@ async function completeQuery(auth, username, tabId, max_id = null, since_id = nu
       tweet.media = entry.entities.media.map(x => ({current_text: x.url, url: x.media_url_https}))
     }
     // Add full quote info.
-    if (tweet.has_quote) {
+    if (tweet.has_quote && is_quote_up) {
       tweet.quote = {
         // Basic info.
         text: entry.quoted_status.text,
@@ -325,6 +326,7 @@ async function completeQuery(auth, username, tabId, max_id = null, since_id = nu
       if (tweet.quote.has_media) {
         tweet.quote.media = entry.quoted_status.entities.media.map(x => ({current_text: x.url, url: x.media_url_https}))
       }
+
     }
 
     return tweet
