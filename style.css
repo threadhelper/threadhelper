@@ -1,6 +1,33 @@
+@media (prefers-color-scheme: dark) {
+  :root {
+    --main-bg-color: #192734;
+    --main-txt-color: #ffffff;
+    --main-border-color: #38444d;
+  }
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --main-bg-color: white;
+    --main-txt-color: black;
+    --main-border-color: #e1e8ed;
+  }
+}
+@media (prefers-color-scheme: no-preference) {
+  :root {
+    --main-bg-color: white;
+    --main-txt-color: black;
+    --main-border-color: #e1e8ed;
+  }
+}
+
+.suggTitle{
+  color: var(--main-txt-color);
+}
+
 .suggestionBox_home {
-  background-color: white;
-  overflow-y: scroll;
+  background-color: var(--main-bg-color);
+  overflow-y: hidden;
+  top: 5%;
   border-radius: 5px;
   padding: 20px;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
@@ -20,8 +47,9 @@
   top: 5%;
   width: 25%;
   height: 90%;
-  background-color: white;
-  overflow-y: scroll;
+  background-color: var(--main-bg-color);
+  color: var(--main-txt-color);
+  overflow-y: hidden;
   border-radius: 5px;
   padding: 20px;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
@@ -34,13 +62,18 @@
   width: 20%;*/
 }
 
+.sugg_box_space {
+  height: 50px;
+}
+
 .th-tweet {
   padding: 8px 5px 8px 5px;
   flex-direction: row;
   display: flex;
   margin-top: 8px;
-  border: 1px solid #e1e8ed;
+  border: 1px solid var(--main-border-color);
   border-radius: 3px;
+  color: var(--main-txt-color);
 }
 
 .th-gutter {
@@ -99,7 +132,7 @@
   display: flex;
   flex-direction: column;
   max-height: 200px;
-  border: 1px solid #e1e8ed;
+  border: 1px solid var(--main-border-color);
   border-radius: 8px;
   margin-top: 8px;
   overflow: hidden;
@@ -134,7 +167,7 @@
 .th-quote {
   display: flex;
   flex-direction: column;
-  border: 1px solid #e1e8ed;
+  border: 1px solid var(--main-border-color);
   border-radius: 8px;
   margin-top: 8px;
   padding: 5px 8px 5px 8px;
@@ -225,6 +258,5 @@
 
 .th-hover-copy {
     font-size: 16px;
-    color: black;
     font-weight: 500;
 }
