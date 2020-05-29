@@ -218,13 +218,14 @@ function main()
   }
 
 
-  /** buildBox creates the 'related tweets' html elements */
+  /** buildBox creates the 'Thread Helper' html elements */
   function buildBox() {
     var sugg_box = null;
     sugg_box = document.createElement('div');   //create a div
     sugg_box.setAttribute("aria-label", 'suggestionBox');
     var h3 = document.createElement('h3')
-    h3.textContent = "\nRelated Tweets"
+    h3.textContent = "Thread Helper"
+    h3.setAttribute("class","suggTitle");
     sugg_box.appendChild(h3)    
     return sugg_box
   }
@@ -618,7 +619,8 @@ function main()
       resultsDiv.removeChild(resultsDiv.firstChild);
     }
     var h3 = document.createElement("h3");
-    h3.innerHTML = "Related Tweets";
+    h3.innerHTML = "Thread Helper";
+    h3.setAttribute("class","suggTitle");
     resultsDiv.appendChild(h3);
     const textTarget = $('span[data-text="true"]');
     for (let t of tweets) {
