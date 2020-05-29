@@ -530,16 +530,16 @@ function main()
     let topImgs = ""
     let botImgs = ""
     if (media.length > 0) {
-      topImgs += `<div style="background-image: url('${media[0].url}');"></div>`
+      topImgs += `<div class="th-media-image"><img src="${media[0].url}"></div>`
     }
     if (media.length > 1) {
-      topImgs += `<div style="background-image: url('${media[1].url}');"></div>`
+      topImgs += `<div class="th-media-image"><img src="${media[1].url}"></div>`
     }
     if (media.length > 2) {
-      botImgs += `<div style="background-image: url('${media[2].url}');"></div>`
+      botImgs += `<div class="th-media-image"><img src="${media[2].url}"></div>`
     }
     if (media.length > 3) {
-      botImgs += `<div style="background-image: url('${media[3].url}');"></div>`
+      botImgs += `<div class="th-media-image"><img src="${media[3].url}"></div>`
     }
 
     let top = `<div class="th-media-top">${topImgs}</div>`
@@ -656,15 +656,15 @@ then the most extension API methods in the content script cease to work (includi
 [X] Option 2: Unload the previous content script on content script insertion
 - When a connection with the background page is important to your content script, then you have to implement a proper unloading routine, and set up some events to unload the previous content script when the content script is inserted back via chrome.tabs.executeScript.
 
+
+
+
 function destructor() {
   // Destruction is needed only once
   document.removeEventListener(destructionEvent, destructor);
   // Tear down content script: Unbind events, clear timers, restore DOM, etc.
   chrome.tabs.query({ currentWindow: true, active: true }, (tabs) => chrome.tabs.reload(tabId));
 }
-
-
-
 
 var destructionEvent = 'destructmyextension_' + chrome.runtime.id;
 // Unload previous content script if needed
