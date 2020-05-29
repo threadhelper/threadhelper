@@ -207,9 +207,17 @@ function main()
       }
     }
     else if(mode == "compose"){
+      let dummyUI = $(`
+        <div class="dummyContainer">
+          <div class="dummyLeft"></div>
+          <div id="suggestionContainer" class="dummyRight"></div>
+        </div>
+      `)
       sugg_box.setAttribute("class", 'suggestionBox_compose');
-      var sideBar = document.body
-      sideBar.appendChild(sugg_box,sideBar)
+      var sideBar = $("#suggestionContainer", dummyUI)
+      sideBar.append(sugg_box,sideBar)
+      console.log("trying to append dummy")
+      document.body.append(dummyUI[0])
     }
     else{
         console.log("didn't place box, not in right mode")
