@@ -207,9 +207,17 @@ function main()
       }
     }
     else if(mode == "compose"){
+      let dummyUI = $(`
+        <div class="dummyContainer">
+          <div class="dummyLeft"></div>
+          <div id="suggestionContainer" class="dummyRight"></div>
+        </div>
+      `)
       sugg_box.setAttribute("class", 'suggestionBox_compose');
-      var sideBar = document.body
-      sideBar.appendChild(sugg_box,sideBar)
+      var sideBar = $("#suggestionContainer", dummyUI)
+      sideBar.append(sugg_box,sideBar)
+      console.log("trying to append dummy")
+      document.body.append(dummyUI[0])
     }
     else{
         console.log("didn't place box, not in right mode")
@@ -431,7 +439,17 @@ function main()
       link.select()
       document.execCommand("copy")
       link.style.display = "none"
-      getTextField(activeComposer.composer).focus()
+      var input = activeComposer.composer.firstElementChild
+      input.focus()
+      // https://stackoverflow.com/questions/24115860/set-caret-position-at-a-specific-position-in-contenteditable-div
+      // There will be multiple spans if multiple lines, so we get the last one to set caret to the end of the last line.
+      var text = $(input).find('span[data-text=true]').last()[0].firstChild
+      var range = document.createRange()
+      range.setStart(text, text.length)
+      range.setEnd(text, text.length)
+      var sel = window.getSelection()
+      sel.removeAllRanges()
+      sel.addRange(range)
       copy.text("copied!")
       setTimeout(function() {
         copy.text("copy")
