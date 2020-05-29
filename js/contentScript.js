@@ -530,16 +530,16 @@ function main()
     let topImgs = ""
     let botImgs = ""
     if (media.length > 0) {
-      topImgs += `<div style="background-image: url('${media[0].url}');"></div>`
+      topImgs += `<div class="th-media-image"><img src="${media[0].url}"></div>`
     }
     if (media.length > 1) {
-      topImgs += `<div style="background-image: url('${media[1].url}');"></div>`
+      topImgs += `<div class="th-media-image"><img src="${media[1].url}"></div>`
     }
     if (media.length > 2) {
-      botImgs += `<div style="background-image: url('${media[2].url}');"></div>`
+      botImgs += `<div class="th-media-image"><img src="${media[2].url}"></div>`
     }
     if (media.length > 3) {
-      botImgs += `<div style="background-image: url('${media[3].url}');"></div>`
+      botImgs += `<div class="th-media-image"><img src="${media[3].url}"></div>`
     }
 
     let top = `<div class="th-media-top">${topImgs}</div>`
@@ -580,28 +580,20 @@ function main()
         <div class="th-quote-content">
           ${minimedia}
           <div class="th-quote-content-main">
-          <div class="th-quote-content-main-text">${text}</div>
-          ${mainmedia}
+            <div class="th-quote-content-main-text">${text}</div>
+            ${mainmedia}
           </div>
-          </div>
-          </div>
-          `
+        </div>
+      </div>
+      `
       return template
     }
     else{
-      let timeDiff = ''
-      let replyText = ''
-      let text = reformatText("This tweet is unavailable.")
-      let minimedia = ""
-      let mainmedia = ""
       let template = `
-      <div class="th-quote">
-        <div class="th-quote-reply">${replyText}</div>
+      <div class="th-quote th-unavailable">
         <div class="th-quote-content">
-          ${minimedia}
           <div class="th-quote-content-main">
-            <div class="th-quote-content-main-text">${text}</div>
-            ${mainmedia}
+            <div class="th-quote-content-main-text">This Tweet is unavailable.</div>
           </div>
         </div>
       </div>

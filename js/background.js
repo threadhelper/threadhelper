@@ -299,7 +299,7 @@ async function completeQuery(auth, username, tabId, max_id = null, since_id = nu
       // Quote info.
       has_quote: entry.is_quote_status,
       is_quote_up: typeof entry.quoted_status !== "undefined",
-      quote: null
+      quote: null,
     }
     // Add media info.
     if (tweet.has_media) {
@@ -325,7 +325,6 @@ async function completeQuery(auth, username, tabId, max_id = null, since_id = nu
       if (tweet.quote.has_media) {
         tweet.quote.media = entry.quoted_status.entities.media.map(x => ({current_text: x.url, url: x.media_url_https}))
       }
-    
     }
 
     return tweet
