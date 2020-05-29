@@ -190,12 +190,16 @@ function main()
 
   function placeBox(sugg_box, mode){
     if (mode == "home"){
+      //insert a little space bc of the title
+      var space = document.createElement('div') //a bit of space
+      sugg_box.setAttribute("class", 'sugg_box_space');
+      sugg_box.insertBefore(space,sugg_box.children[0].nextSibling); 
       sugg_box.setAttribute("class", 'suggestionBox_home');
       var trending_block = document.querySelector('[aria-label="Timeline: Trending now"]')
       if(typeof trending_block !== 'undefined' && trending_block != null)
       {
         var sideBar = trending_block.parentNode.parentNode.parentNode.parentNode.parentNode
-        sideBar.insertBefore(sugg_box,sideBar.children[2])
+        sideBar.insertBefore(sugg_box,sideBar.children[1])
         home_sugg = sugg_box
       }
       else{
@@ -220,23 +224,18 @@ function main()
     sugg_box = document.createElement('div');   //create a div
     sugg_box.setAttribute("aria-label", 'suggestionBox');
     var h3 = document.createElement('h3')
-    h3.textContent = "Related Tweets"
+    h3.textContent = "\nRelated Tweets"
     sugg_box.appendChild(h3)    
     return sugg_box
   }
 
   // gets composer object that has composer and sugg_box elements
   function showSuggBox(composer){
-    if (typeof composer.sugg_box !== 'undefined' ){
-      console.log("showing box")
-      if (composer.sugg_box != null) 
-      {
-        composer.sugg_box.style.display = "block"
-      } else{
-        console.log(composer.sugg_box)
+    if (typeof composer.sugg_box !== 'undefined' && composer.sugg_box != null){
+      composer.sugg_box.style.display = "block"
+      if(!document.body.contains(composer.sugg_box)){
+        placeBox(composer.sugg_box)
       }
-      //composer.sugg_box.remove()
-      //composer.sugg_box = null
     }
   }
 
@@ -431,6 +430,7 @@ function main()
       link.select()
       document.execCommand("copy")
       link.style.display = "none"
+      getTextField(activeComposer.composer).focus()
       copy.text("copied!")
       setTimeout(function() {
         copy.text("copy")
@@ -579,12 +579,13 @@ function main()
         <div class="th-quote-content">
           ${minimedia}
           <div class="th-quote-content-main">
-            <div class="th-quote-content-main-text">${text}</div>
-            ${mainmedia}
+          <div class="th-quote-content-main-text">${text}</div>
+          ${mainmedia}
           </div>
-        </div>
-      </div>
-      `
+          </div>
+          </div>
+          `
+      return template
     }
     else{
       let timeDiff = ''
@@ -594,13 +595,6 @@ function main()
       let mainmedia = ""
       let template = `
       <div class="th-quote">
-        <div class="th-quote-header">
-          <img class="th-quote-header-profile" src="${quote.profile_image}">
-          <div class="th-quote-header-name">${quote.name}</div>
-          <div class="th-quote-header-username">@${quote.username}</div>
-          <div class="th-header-dot">·</div>
-          <div class="th-quote-header-time">${timeDiff}</div>
-        </div>
         <div class="th-quote-reply">${replyText}</div>
         <div class="th-quote-content">
           ${minimedia}
@@ -611,8 +605,8 @@ function main()
         </div>
       </div>
       `
+      return template
     }
-    return template
   }
 
   //** Build the html for a set of tweets */

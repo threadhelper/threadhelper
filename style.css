@@ -34,6 +34,10 @@
   width: 20%;*/
 }
 
+.sugg_box_space {
+  height: 5%;
+}
+
 .th-tweet {
   padding: 8px 5px 8px 5px;
   flex-direction: row;

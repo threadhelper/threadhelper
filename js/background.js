@@ -169,6 +169,8 @@ async function onMessage(m, sender, sendResponse) {
   return true;
 }
 
+
+//clears storage of tweets, tweets meta info, and auth
 function clearStorage(sendResponse){
   chrome.storage.local.remove(["tweets","tweets_meta","auth"],function(){
     sendResponse()
@@ -246,7 +248,7 @@ async function completeQuery(auth, username, tabId, max_id = null, since_id = nu
       "x-csrf-token": auth.csrfToken
     }
   };
-  if ( await isAuthFresh(auth)){
+  if (await isAuthFresh(auth)){
     const stop_condition = (res,tweets) => {return tweets.length < count && res.length > 1}
     do
     { 
