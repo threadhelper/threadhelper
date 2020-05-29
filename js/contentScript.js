@@ -663,6 +663,9 @@ function destructor() {
   chrome.tabs.query({ currentWindow: true, active: true }, (tabs) => chrome.tabs.reload(tabId));
 }
 
+
+
+
 var destructionEvent = 'destructmyextension_' + chrome.runtime.id;
 // Unload previous content script if needed
 document.dispatchEvent(new CustomEvent(destructionEvent));
