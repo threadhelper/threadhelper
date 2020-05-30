@@ -36,10 +36,10 @@ function main()
 
   async function getTweets() {
     const processTweets = function(ts){
-      if (typeof ts !== 'undefined' && ts != null){ 
+      if (typeof ts !== 'undefined' && ts != null){
         //tweets = ts.map(t => ({...t, bag:nlp.toBag(t.text)}))
         tweets = ts
-        console.log(ts);    
+        console.log(ts);
       }else{
         console.log("got no tweets")
         return null
@@ -222,7 +222,7 @@ function main()
     var h3 = document.createElement('h3')
     h3.textContent = "Thread Helper"
     h3.setAttribute("class","suggTitle");
-    sugg_box.appendChild(h3)    
+    sugg_box.appendChild(h3)
     var p = document.createElement("p");
     p.innerHTML = "Type something to get related tweets :)"
     sugg_box.appendChild(p);
@@ -253,7 +253,7 @@ function main()
   //usually activeComposer
   function killComposer(composer){
     if (composer.mode == "home"){
-      //hideSuggBox(composer) 
+      //hideSuggBox(composer)
     }
     else{
       //{composer: null, sugg_box: null, observer: null, mode: null}
@@ -287,11 +287,11 @@ function main()
     const t_fields = document.querySelectorAll(textFieldClass)
     var tgt = mutationRecords[0].target
     var daddy = null
-    
+
     if (tgt.tagName == "DIV") {daddy = tgt}                 //when newline
     else if (tgt.tagName !== "SPAN") {                       //if tgt is final text element - happens when you write
       daddy = tgt.parentNode.parentNode.parentNode.parentNode.parentNode
-    }    
+    }
     else if (!(tgt in t_fields)) {                           //when backspace the tgt is the grandparent span of the text element
       daddy = tgt.parentNode.parentNode.parentNode
     }
@@ -318,11 +318,11 @@ function main()
         const tweet = text
         const related = nlp.getRelated(tweet, tweets);
         renderTweets([...new Set(related)]);
-      } 
+      }
     }
     else{
       console.log("no tweets")
-      if (typeof activeComposer.sugg_box !== 'undefined'){ 
+      if (typeof activeComposer.sugg_box !== 'undefined'){
         renderTweets([], text);
       }
     }
