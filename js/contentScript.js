@@ -25,40 +25,11 @@ function main()
   let composers = []
   let home_sugg = null
 
+  window.addEventListener('resize', showSuggBox)
   window.onload = () => {
     //scanForTweets(); 
     setUpListeningComposeClick();}
 
-  // async function scanForTweets(){
-  //   console.log("scanning for tweets")
-  //   if (tweets == null){
-  //     tweets = await getTweets()
-  //     if (tweets == null){
-  //       setTimeout(scanForTweets, 1000);
-  //     }
-  //   }
-  //   return true
-  // }
-
-  // async function getTweets() {   
-  //   const prom = new Promise(function (resolve, reject) {
-  //     chrome.storage.local.get(["tweets"], r =>{
-  //       console.log("getting tweets from storage")
-  //       resolve(r)
-  //     });
-  //   });
-  //   const processTweets = (r) => {
-  //     if (typeof ts !== 'undefined' && ts != null){ 
-  //       tweets = ts.map(t => ({...t, bag:nlp.toBag(t.text)}))
-  //       console.log(ts);    
-  //     }else{
-  //       console.log("got no tweets")
-  //       return null
-  //     }
-  //   }
-  //   tweets = await prom.then(processTweets);
-  //   return tweets
-  // }
 
   async function getTweets() {   
     const processTweets = function(ts){
@@ -150,6 +121,12 @@ function main()
     }
   }
 
+  function setUpAfterResize(){
+    if (activeComposer.composer != null){
+
+    }
+  }
+
   function setUpBox(compose_box){
     console.log("setting up suggestion box")
     var mode = getMode();
@@ -170,7 +147,6 @@ function main()
       composer.sugg_box = sugg_box;
       composer.mode = mode;
       activeComposer = composer;
-      watchForStart();
       //addLogger(getTextField(activeComposer.composer));
       //sugg_box.style.display = "block";
       console.log("box set up")
@@ -275,13 +251,11 @@ function main()
   //checks whether composeBox is empty
   function isComposeEmpty(comp){
     var spans = document.querySelectorAll(textFieldClass);
-    
     for (var s of spans){
       if(comp.composer.contains(s)){
         return false
       }
     } 
-    
     return true
   }
 
@@ -310,22 +284,19 @@ function main()
     }
   }
 
+
   /** Updates the tweetlist when user types */
   function onChange(mutationRecords) {
-    
-    /*var text = mutationRecords[0].target.wholeText
-    var textField = mutationRecords[0].target.firstElementChild.firstElementChild
-    if(textField.tag != "SPAN" || text == ''){
-    }*/
-    if(tweets != null){
+    console.log("CHANGE! text is: ", mutationRecords[0].target.wholeText);
+    const text = mutationRecords[0].target.wholeText;
+    if(tweets != null && typeof text != "undefined" && text != null){
       if(tweets.length>0){
-        //box = activeComposer.sugg_box
+        var box = activeComposer.sugg_box
         //const box = document.`querySelector('[aria-label="suggestionBox"]')
         if(typeof activeComposer.sugg_box !== 'undefined' && activeComposer.sugg_box != null && activeComposer.sugg_box.style.display != "block"){
           activeComposer.sugg_box.style.display = "block"
         }
         const text = mutationRecords[0].target.wholeText;
-        console.log("text is: ", text);
         const bag = nlp.toBag(text);
         const tweet = { text: text, bag: bag };
       
@@ -333,10 +304,11 @@ function main()
         //const related = [ { id: "123", text: "a tweet here", name: "bob t", username: "bobt", time: "2020", urls: [] } ]; //prettier-ignore
         renderTweets([...new Set(related.reverse())]);
         //console.log(related);
-      }
+      } 
     }
     else{
       console.log("no tweets")
+      renderTweets([]);
     }
   }
 
@@ -344,7 +316,7 @@ function main()
   function addLogger(div) {
     console.log("adding logger")
     var observer = new MutationObserver(onChange);
-    observer.observe(div, { characterData: true, subtree: true });
+    observer.observe(div, { characterData: true, subtree: true, childList: true, attributes: true	 });
     return observer
   }
 
@@ -590,7 +562,7 @@ function main()
       var p = document.createElement("p");
       p.innerHTML = "Type something to get related tweets :)"
       resultsDiv.appendChild(p);
-    }
+    } 
     const textTarget = $('span[data-text="true"]');
     for (let t of tweets) {
       const tweetDiv = renderTweet(t, textTarget);
