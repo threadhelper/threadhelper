@@ -18,6 +18,7 @@ function main()
   chrome.runtime.onMessage.addListener(onMessage);
   const editorClass = "DraftEditor-editorContainer";
   const textFieldClass = 'span[data-text="true"]';
+  const trendText = '[aria-label="Timeline: Trending now"]';
   const w_period = 500;
   let tweets = null;
   let activeDiv = null;
@@ -28,7 +29,9 @@ function main()
   window.addEventListener('resize', showSuggBox)
   window.onload = () => {
     //scanForTweets(); 
-    setUpListeningComposeClick();}
+    setUpListeningComposeClick();
+    setUpTrendsListener();
+  }
 
 
   async function getTweets() {   
@@ -65,6 +68,20 @@ function main()
     }
   }
 
+  
+  function setUpTrendsListener(){
+    console.log("adding trends logger")
+    var observer = new MutationObserver((mutationRecords, me) => {
+      var trending_block = document.querySelector(trendText)
+      if (trending_block){
+        var compose_box = document.getElementsByClassName(editorClass)[0]
+        textBoxFocused(compose_box)    
+        me.disconnect()
+      }
+    });
+    observer.observe(document, { subtree: true, childList: true});
+    return observer
+  }
   
   // EVENT DELEGATION CRL, EVENT BUBBLING FTW
   function setUpListeningComposeClick(){
@@ -132,15 +149,16 @@ function main()
     var mode = getMode();
     var composer = new Object()
     var sugg_box = null
-    
+
+    // for the case on reload to home page, we don't need composebox as an argument, we can find it ourselves
     if (mode == "home" && home_sugg != null){
       sugg_box = home_sugg
     } 
     else{
       sugg_box = buildBox();
     }
-    placeBox(sugg_box,mode)
     if (sugg_box != null){
+      placeBox(sugg_box,mode)
       var observer = addLogger(getTextField(compose_box));
       composer.observer = observer;
       composer.composer = compose_box;
@@ -162,7 +180,7 @@ function main()
     if (mode == "home"){
       //insert a little space bc of the title
       sugg_box.setAttribute("class", 'suggestionBox_home');
-      var trending_block = document.querySelector('[aria-label="Timeline: Trending now"]')
+      var trending_block = document.querySelector(trendText)
       if(typeof trending_block !== 'undefined' && trending_block != null)
       {
         var sideBar = trending_block.parentNode.parentNode.parentNode.parentNode.parentNode
@@ -257,31 +275,6 @@ function main()
       }
     } 
     return true
-  }
-
-  /** watchForStop checks if the box has disappeared */
-  //should be runnning on active composer usually
-  function watchForStart() {
-    console.log("watching for start")
-    if(activeComposer.composer != null && !isComposeEmpty(activeComposer)){
-      showSuggBox(activeComposer) 
-      setTimeout(watchForStop, w_period);
-    } else{
-      //if (activeComposer.sugg_box.style.display !)
-      hideSuggBox(activeComposer)
-      setTimeout(watchForStart, w_period);
-    }
-  }  
-  /** watchForStop checks if the box has disappeared */
-  //should be runnning on active composer usually
-  function watchForStop() {
-    console.log("watching for stop")
-    if(activeComposer.composer != null && isComposeEmpty(activeComposer)){
-      hideSuggBox(activeComposer)
-      setTimeout(watchForStart, w_period);
-    } else{
-      setTimeout(watchForStop, w_period);
-    }
   }
 
 
