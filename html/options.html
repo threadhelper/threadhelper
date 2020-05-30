@@ -1,6 +1,27 @@
 <!DOCTYPE html>
 <html>
-  <body>
-    No options right now
-  </body>
+<head><title>My Test Extension Options</title></head>
+<body>
+
+<!--Search over:
+<select id="searchOver">
+ <option value="My tweets">red</option>
+ <option value="My tweets + retweets">green</option>
+</select>-->
+
+<label>
+  <input type="checkbox"  id="getRetweets" >
+  Search over my retweets in addition to my tweets.
+</label>
+<br />
+<label>
+  <input type="checkbox" id="getArchive">
+  Get archive (experimental, will attempt to get all user tweets)
+</label>
+
+<div id="status"></div>
+<button id="save">Save</button>
+
+<script src="options.js"></script>
+</body>
 </html>

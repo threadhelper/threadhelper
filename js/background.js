@@ -6,6 +6,13 @@ let auth = {
   authorization: null
 };
 
+// document.querySelector('#go-to-options').addEventListener(function() {
+//   if (chrome.runtime.openOptionsPage) {
+//     chrome.runtime.openOptionsPage();
+//   } else {
+//     window.open(chrome.runtime.getURL('options.html'));
+//   }
+// });
 chrome.runtime.onMessage.addListener(onMessage);
 chrome.runtime.onInstalled.addListener(onInstalled);
 chrome.webRequest.onBeforeSendHeaders.addListener(
