@@ -37,7 +37,8 @@ function main()
   async function getTweets() {   
     const processTweets = function(ts){
       if (typeof ts !== 'undefined' && ts != null){ 
-        tweets = ts.map(t => ({...t, bag:nlp.toBag(t.text)}))
+        //tweets = ts.map(t => ({...t, bag:nlp.toBag(t.text)}))
+        tweets = ts
         console.log(ts);    
       }else{
         console.log("got no tweets")
@@ -308,25 +309,22 @@ function main()
   function onChange(mutationRecords) {
     const text = getTextFromMutation(mutationRecords)
     console.log("CHANGE! text is:", text, "; in element: ", mutationRecords[0].target);
-    if(tweets != null && typeof text != "undefined" && text != null && text != ''){
+    if(tweets != null && typeof text != "undefined" && text != null && text.trim() != ''){
       if(tweets.length>0){
         var box = activeComposer.sugg_box
         //const box = document.`querySelector('[aria-label="suggestionBox"]')
         if(typeof activeComposer.sugg_box !== 'undefined' && activeComposer.sugg_box != null && activeComposer.sugg_box.style.display != "block"){
           activeComposer.sugg_box.style.display = "block"
         }
-        const bag = nlp.toBag(text);
-        const tweet = { text: text, bag: bag };
-      
+        const tweet = text
         const related = nlp.getRelated(tweet, tweets);
-        renderTweets([...new Set(related.reverse())]);
-        //console.log(related);
+        renderTweets([...new Set(related)]);
       } 
     }
     else{
       console.log("no tweets")
       if (typeof activeComposer.sugg_box !== 'undefined'){ 
-        renderTweets([]);
+        renderTweets([], text);
       }
     }
   }
@@ -566,7 +564,7 @@ function main()
   }
 
   //** Build the html for a set of tweets */
-  function renderTweets(tweets) {
+  function renderTweets(tweets, text = '') {
     //console.log("rendering tweets")
     //var resultsDiv = document.querySelector('[aria-label="suggestionBox"]');
     var resultsDiv = activeComposer.sugg_box
@@ -577,9 +575,14 @@ function main()
     h3.innerHTML = "Thread Helper";
     h3.setAttribute("class","suggTitle");
     resultsDiv.appendChild(h3);
-    if (tweets.length < 1){
+    if (tweets.length < 1 ){
+      if(text == ''){
+        message = "Type something to get related tweets :)"
+      } else{
+        message = "No matching tweets yet!"
+      }
       var p = document.createElement("p");
-      p.innerHTML = "Type something to get related tweets :)"
+      p.innerHTML = message
       resultsDiv.appendChild(p);
     } 
     const textTarget = $('span[data-text="true"]');
