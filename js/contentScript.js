@@ -575,6 +575,7 @@ function main()
     h3.setAttribute("class","suggTitle");
     resultsDiv.appendChild(h3);
     if (tweets.length < 1 ){
+      let message = ""
       if(text == ''){
         message = "Type something to get related tweets :)"
       } else{
