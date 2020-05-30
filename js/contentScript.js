@@ -26,7 +26,7 @@ function main()
   let composers = []
   let home_sugg = null
 
-  window.addEventListener('resize', showSuggBox)
+  window.addEventListener('resize', ()=>{if(activeComposer.sugg_box)showSuggBox(activeComposer)})
   window.onload = () => {
     //scanForTweets(); 
     setUpListeningComposeClick();
