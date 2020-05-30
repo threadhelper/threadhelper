@@ -107,7 +107,8 @@ function main()
   // given composer found by editorClass = "DraftEditor-editorContainer", 
   // outputs grandparent of const textFieldClass = 'span[data-text="true"]'
   function getTextField(compose_box){
-    return compose_box.firstElementChild.firstElementChild.firstElementChild.firstElementChild
+    //return compose_box.firstElementChild.firstElementChild.firstElementChild.firstElementChild
+    return compose_box.firstElementChild.firstElementChild
   }
 
   function textBoxUnfocused(compose_box){
@@ -222,6 +223,9 @@ function main()
     h3.textContent = "Thread Helper"
     h3.setAttribute("class","suggTitle");
     sugg_box.appendChild(h3)    
+    var p = document.createElement("p");
+    p.innerHTML = "Type something to get related tweets :)"
+    sugg_box.appendChild(p);
     return sugg_box
   }
 
@@ -248,8 +252,9 @@ function main()
 
   //usually activeComposer
   function killComposer(composer){
-    if (composer.mode == "home")
-      hideSuggBox(composer) 
+    if (composer.mode == "home"){
+      //hideSuggBox(composer) 
+    }
     else{
       //{composer: null, sugg_box: null, observer: null, mode: null}
       composer.composer = null
@@ -277,31 +282,52 @@ function main()
     return true
   }
 
+  function getTextFromMutation(mutationRecords){
+    //const text = mutationRecords[0].target.wholeText
+    const t_fields = document.querySelectorAll(textFieldClass)
+    var tgt = mutationRecords[0].target
+    var daddy = null
+    
+    if (tgt.tagName == "DIV") {daddy = tgt}                 //when newline
+    else if (tgt.tagName !== "SPAN") {                       //if tgt is final text element - happens when you write
+      daddy = tgt.parentNode.parentNode.parentNode.parentNode.parentNode
+    }    
+    else if (!(tgt in t_fields)) {                           //when backspace the tgt is the grandparent span of the text element
+      daddy = tgt.parentNode.parentNode.parentNode
+    }
+
+    var text = ''
+    console.log("daddy: ", daddy)
+    for (var ch of daddy.children){
+      text += ch.textContent + ' '
+    }
+    return text
+  }
 
   /** Updates the tweetlist when user types */
   function onChange(mutationRecords) {
-    console.log("CHANGE! text is: ", mutationRecords[0].target.wholeText);
-    const text = mutationRecords[0].target.wholeText;
-    if(tweets != null && typeof text != "undefined" && text != null){
+    const text = getTextFromMutation(mutationRecords)
+    console.log("CHANGE! text is:", text, "; in element: ", mutationRecords[0].target);
+    if(tweets != null && typeof text != "undefined" && text != null && text != ''){
       if(tweets.length>0){
         var box = activeComposer.sugg_box
         //const box = document.`querySelector('[aria-label="suggestionBox"]')
         if(typeof activeComposer.sugg_box !== 'undefined' && activeComposer.sugg_box != null && activeComposer.sugg_box.style.display != "block"){
           activeComposer.sugg_box.style.display = "block"
         }
-        const text = mutationRecords[0].target.wholeText;
         const bag = nlp.toBag(text);
         const tweet = { text: text, bag: bag };
       
         const related = nlp.getRelated(tweet, tweets);
-        //const related = [ { id: "123", text: "a tweet here", name: "bob t", username: "bobt", time: "2020", urls: [] } ]; //prettier-ignore
         renderTweets([...new Set(related.reverse())]);
         //console.log(related);
       } 
     }
     else{
       console.log("no tweets")
-      renderTweets([]);
+      if (typeof activeComposer.sugg_box !== 'undefined'){ 
+        renderTweets([]);
+      }
     }
   }
 
@@ -309,7 +335,7 @@ function main()
   function addLogger(div) {
     console.log("adding logger")
     var observer = new MutationObserver(onChange);
-    observer.observe(div, { characterData: true, subtree: true, childList: true, attributes: true	 });
+    observer.observe(div, { characterData: true, subtree: true, childList: true }); //attribute: true
     return observer
   }
 
