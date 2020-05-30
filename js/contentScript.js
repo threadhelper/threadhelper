@@ -1,6 +1,17 @@
 "use strict";
 
 
+  //somehow this isn't a native method
+  Array.prototype.contains = function(obj) {
+    var i = this.length;
+    while (i--) {
+        if (this[i] === obj) {
+            return true;
+        }
+    }
+    return false;
+  }
+
 
 function main()
 {
@@ -14,10 +25,6 @@ function main()
   let composers = []
   let home_sugg = null
 
-  /*document.addEventListener("DOMContentLoaded", () => {
-    console.log("content loaded")
-    setUpListeningComposeClick()
-  });*/
   window.onload = () => {
     //scanForTweets(); 
     setUpListeningComposeClick();}
@@ -109,20 +116,6 @@ function main()
     });
   }
 
-
-
-  //somehow this isn't a native method
-  Array.prototype.contains = function(obj) {
-    var i = this.length;
-    while (i--) {
-        if (this[i] === obj) {
-            return true;
-        }
-    }
-    return false;
-  }
-
-
   // given composer found by editorClass = "DraftEditor-editorContainer", 
   // outputs grandparent of const textFieldClass = 'span[data-text="true"]'
   function getTextField(compose_box){
@@ -189,6 +182,7 @@ function main()
   }
 
   function placeBox(sugg_box, mode){
+    mode = getMode()
     if (mode == "home"){
       //insert a little space bc of the title
       sugg_box.setAttribute("class", 'suggestionBox_home');
@@ -224,7 +218,6 @@ function main()
         console.log(mode)
     }
   }
-
 
   /** buildBox creates the 'Thread Helper' html elements */
   function buildBox() {
@@ -294,7 +287,6 @@ function main()
 
   /** watchForStop checks if the box has disappeared */
   //should be runnning on active composer usually
-
   function watchForStart() {
     console.log("watching for start")
     if(activeComposer.composer != null && !isComposeEmpty(activeComposer)){
@@ -306,10 +298,8 @@ function main()
       setTimeout(watchForStart, w_period);
     }
   }  
-    
   /** watchForStop checks if the box has disappeared */
   //should be runnning on active composer usually
-
   function watchForStop() {
     console.log("watching for stop")
     if(activeComposer.composer != null && isComposeEmpty(activeComposer)){
@@ -319,7 +309,6 @@ function main()
       setTimeout(watchForStop, w_period);
     }
   }
-
 
   /** Updates the tweetlist when user types */
   function onChange(mutationRecords) {
@@ -359,45 +348,10 @@ function main()
     return observer
   }
 
-  /* Build the html for one tweet 
-  function renderTweet(tweet, textTarget) {
-    // TODO: print user on retweets
-    //console.log("rendering one tweet")
-    const url = 'https://twitter.com/' + tweet.username + '/status/' + tweet.id;
-    const rtime = $("<a>", {
-      class: "rtime",
-      text: tweet.time.toString(),
-      href: url,
-      style: "float: right"
-    });
 
-    var add = $("<span>", {
-      class: "rplus",
-      text: "+"
-    });
-    add.click(function(e) {
-      // to copy something to clipboard it need to be on the page
-      var textArea = document.createElement("textarea");
-      textArea.value = url;
-      var plus = e.target;
-      plus.parentNode.insertBefore(textArea,plus.parentNode.children[1]);
-      textArea.focus();
-      textArea.select();
-      textArea.style.size = 1
-      document.execCommand("copy");
-      textArea.style.display = "none";
-      plus.style.cssText = "font-size: small; font-weight:normal;";
-      plus.textContent = "copied link!"
-      setTimeout(function() {
-        activeComposer.composer.focus()
-        plus.textContent = "+";
-        plus.style.cssText = "font-size: x-large; font-weight:bold;";
-      }, 2000);
-    });
-    const rtext = $("<div>", { class: "rtext", text: tweet.text });
-    return $("<div>", { class: "rtweet" }).append([add, rtime,$("</br>"), rtext])[0];
-  }*/
 
+
+  //||||||| RENDER CITY STARTS HERE |||||||
     
   function renderTweet(tweet, textTarget) {
     let tweetLink = `https://twitter.com/${tweet.username}/status/${tweet.id}`
@@ -632,12 +586,19 @@ function main()
     h3.innerHTML = "Thread Helper";
     h3.setAttribute("class","suggTitle");
     resultsDiv.appendChild(h3);
+    if (tweets.length < 1){
+      var p = document.createElement("p");
+      p.innerHTML = "Type something to get related tweets :)"
+      resultsDiv.appendChild(p);
+    }
     const textTarget = $('span[data-text="true"]');
     for (let t of tweets) {
       const tweetDiv = renderTweet(t, textTarget);
       resultsDiv.appendChild(tweetDiv);
     }
   }
+
+  //||||||| RENDER CITY STOPS HERE ||||||| 
 
   //** Handles messages sent from background or popup */
   function onMessage(m, sender, sendResponse) {
