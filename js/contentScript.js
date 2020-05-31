@@ -32,7 +32,7 @@ function main()
     setUpListeningComposeClick();
     setUpTrendsListener();
   }
-
+  history.pushState = ()=>{if(activeComposer.sugg_box)showSuggBox(activeComposer)}
 
   async function getTweets() {   
     const processTweets = function(ts){
@@ -577,9 +577,9 @@ function main()
     resultsDiv.appendChild(h3);
     if (tweets.length < 1 ){
       if(text == ''){
-        message = "Type something to get related tweets :)"
+        var message = "Type something to get related tweets :)"
       } else{
-        message = "No matching tweets yet!"
+        var message = "No matching tweets yet!"
       }
       var p = document.createElement("p");
       p.innerHTML = message
