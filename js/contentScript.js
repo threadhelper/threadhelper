@@ -28,18 +28,18 @@ function main()
 
   window.addEventListener('resize', ()=>{if(activeComposer.sugg_box)showSuggBox(activeComposer)})
   window.onload = () => {
-    //scanForTweets(); 
+    //scanForTweets();
     setUpListeningComposeClick();
     setUpTrendsListener();
   }
   history.pushState = ()=>{if(activeComposer.sugg_box)showSuggBox(activeComposer)}
 
-  async function getTweets() {   
+  async function getTweets() {
     const processTweets = function(ts){
-      if (typeof ts !== 'undefined' && ts != null){ 
+      if (typeof ts !== 'undefined' && ts != null){
         //tweets = ts.map(t => ({...t, bag:nlp.toBag(t.text)}))
         tweets = ts
-        console.log(ts);    
+        console.log(ts);
       }else{
         console.log("got no tweets")
         return null
@@ -56,34 +56,34 @@ function main()
     var pageURL = window.location.href
     var home = 'https://twitter.com/home'
     var compose = 'https://twitter.com/compose/tweet'
-    
+
     console.log("mode is " + pageURL)
     if (pageURL.indexOf(home) > -1){
       return 'home'
     }
     else if (pageURL.indexOf(compose) > -1){
       return "compose"
-    } 
+    }
     else{
       return "other"
     }
   }
 
-  
+
   function setUpTrendsListener(){
     console.log("adding trends logger")
     var observer = new MutationObserver((mutationRecords, me) => {
       var trending_block = document.querySelector(trendText)
       if (trending_block){
         var compose_box = document.getElementsByClassName(editorClass)[0]
-        textBoxFocused(compose_box)    
+        textBoxFocused(compose_box)
         me.disconnect()
       }
     });
     observer.observe(document, { subtree: true, childList: true});
     return observer
   }
-  
+
   // EVENT DELEGATION CRL, EVENT BUBBLING FTW
   function setUpListeningComposeClick(){
     console.log("event listeners added")
@@ -105,7 +105,7 @@ function main()
     });
   }
 
-  // given composer found by editorClass = "DraftEditor-editorContainer", 
+  // given composer found by editorClass = "DraftEditor-editorContainer",
   // outputs grandparent of const textFieldClass = 'span[data-text="true"]'
   function getTextField(compose_box){
     //return compose_box.firstElementChild.firstElementChild.firstElementChild.firstElementChild
@@ -155,7 +155,7 @@ function main()
     // for the case on reload to home page, we don't need composebox as an argument, we can find it ourselves
     if (mode == "home" && home_sugg != null){
       sugg_box = home_sugg
-    } 
+    }
     else{
       sugg_box = buildBox();
     }
@@ -171,7 +171,7 @@ function main()
       //sugg_box.style.display = "block";
       console.log("box set up")
       console.log(activeComposer)
-    } 
+    }
     else{
       console.log("null box")
     }
@@ -186,10 +186,7 @@ function main()
       if(typeof trending_block !== 'undefined' && trending_block != null)
       {
         var sideBar = trending_block.parentNode.parentNode.parentNode.parentNode.parentNode
-        var space = document.createElement('div') //a bit of space
-        space.setAttribute("class", 'sugg_box_space');
-        sideBar.insertBefore(sugg_box,sideBar.children[1])
-        sideBar.insertBefore(space,sugg_box); 
+        sideBar.insertBefore(sugg_box,sideBar.children[2])
         home_sugg = sugg_box
       }
       else{
@@ -197,17 +194,19 @@ function main()
       }
     }
     else if(mode == "compose"){
-      let dummyUI = $(`
-        <div class="dummyContainer">
-          <div class="dummyLeft"></div>
-          <div id="suggestionContainer" class="dummyRight"></div>
-        </div>
-      `)
+      if (!$(".dummyContainer").length) {
+        let dummyUI = $(`
+          <div class="dummyContainer">
+            <div class="dummyLeft"></div>
+            <div id="suggestionContainer" class="dummyRight"></div>
+          </div>
+        `)
+        console.log("trying to append dummy")
+        document.body.append(dummyUI[0])
+      }
       sugg_box.setAttribute("class", 'suggestionBox_compose');
-      var sideBar = $("#suggestionContainer", dummyUI)
+      var sideBar = $("#suggestionContainer")
       sideBar.append(sugg_box,sideBar)
-      console.log("trying to append dummy")
-      document.body.append(dummyUI[0])
     }
     else{
         console.log("didn't place box, not in right mode")
@@ -223,7 +222,7 @@ function main()
     var h3 = document.createElement('h3')
     h3.textContent = "Thread Helper"
     h3.setAttribute("class","suggTitle");
-    sugg_box.appendChild(h3)    
+    sugg_box.appendChild(h3)
     var p = document.createElement("p");
     p.innerHTML = "Type something to get related tweets :)"
     sugg_box.appendChild(p);
@@ -233,7 +232,7 @@ function main()
   // gets composer object that has composer and sugg_box elements
   function showSuggBox(composer){
     if (typeof composer.sugg_box !== 'undefined' && composer.sugg_box != null){
-      composer.sugg_box.style.display = "block"
+      composer.sugg_box.style.display = "flex"
       if(!document.body.contains(composer.sugg_box)){
         placeBox(composer.sugg_box)
       }
@@ -254,7 +253,7 @@ function main()
   //usually activeComposer
   function killComposer(composer){
     if (composer.mode == "home"){
-      //hideSuggBox(composer) 
+      //hideSuggBox(composer)
     }
     else{
       //{composer: null, sugg_box: null, observer: null, mode: null}
@@ -279,7 +278,7 @@ function main()
       if(comp.composer.contains(s)){
         return false
       }
-    } 
+    }
     return true
   }
 
@@ -288,11 +287,11 @@ function main()
     const t_fields = document.querySelectorAll(textFieldClass)
     var tgt = mutationRecords[0].target
     var daddy = null
-    
+
     if (tgt.tagName == "DIV") {daddy = tgt}                 //when newline
     else if (tgt.tagName !== "SPAN") {                       //if tgt is final text element - happens when you write
       daddy = tgt.parentNode.parentNode.parentNode.parentNode.parentNode
-    }    
+    }
     else if (!(tgt in t_fields)) {                           //when backspace the tgt is the grandparent span of the text element
       daddy = tgt.parentNode.parentNode.parentNode
     }
@@ -313,17 +312,17 @@ function main()
       if(tweets.length>0){
         var box = activeComposer.sugg_box
         //const box = document.`querySelector('[aria-label="suggestionBox"]')
-        if(typeof activeComposer.sugg_box !== 'undefined' && activeComposer.sugg_box != null && activeComposer.sugg_box.style.display != "block"){
-          activeComposer.sugg_box.style.display = "block"
+        if(typeof activeComposer.sugg_box !== 'undefined' && activeComposer.sugg_box != null && activeComposer.sugg_box.style.display != "flex"){
+          activeComposer.sugg_box.style.display = "flex"
         }
         const tweet = text
         const related = nlp.getRelated(tweet, tweets);
         renderTweets([...new Set(related)]);
-      } 
+      }
     }
     else{
       console.log("no tweets")
-      if (typeof activeComposer.sugg_box !== 'undefined'){ 
+      if (typeof activeComposer.sugg_box !== 'undefined'){
         renderTweets([], text);
       }
     }
@@ -341,7 +340,7 @@ function main()
 
 
   //||||||| RENDER CITY STARTS HERE |||||||
-    
+
   function renderTweet(tweet, textTarget) {
     let tweetLink = `https://twitter.com/${tweet.username}/status/${tweet.id}`
     let timeDiff = getTimeDiff(tweet.time)
@@ -576,6 +575,7 @@ function main()
     h3.setAttribute("class","suggTitle");
     resultsDiv.appendChild(h3);
     if (tweets.length < 1 ){
+      let message = ""
       if(text == ''){
         var message = "Type something to get related tweets :)"
       } else{
@@ -584,7 +584,7 @@ function main()
       var p = document.createElement("p");
       p.innerHTML = message
       resultsDiv.appendChild(p);
-    } 
+    }
     const textTarget = $('span[data-text="true"]');
     for (let t of tweets) {
       const tweetDiv = renderTweet(t, textTarget);
@@ -592,7 +592,7 @@ function main()
     }
   }
 
-  //||||||| RENDER CITY STOPS HERE ||||||| 
+  //||||||| RENDER CITY STOPS HERE |||||||
 
   //** Handles messages sent from background or popup */
   function onMessage(m, sender, sendResponse) {

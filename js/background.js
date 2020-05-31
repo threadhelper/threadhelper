@@ -87,18 +87,18 @@ function getNewAuth(tabId){
   }
 }
 
-// called after reloading, checks if auth exists and if not 
+// called after reloading, checks if auth exists and if not
 async function processHeaders(headers){
-  // on mac there's a bug where updateAuth is called befor auth is defined, 
+  // on mac there's a bug where updateAuth is called befor auth is defined,
   // so this is checking that
   console.log("processing headers")
-  if (typeof auth  === 'undefined'){   
+  if (typeof auth  === 'undefined'){
     console.log("auth was undefined, for some reason, gonna define it and do nothing else")
     auth = {
       csrfToken: null,
       authorization: null
     };
-  } 
+  }
   if (!isAuth(auth)){
     console.log("updatingAuth")
     updateAuth(headers)
@@ -217,7 +217,7 @@ function updateTweets(m, sendResponse){
             //console.log("tabs are null")
           }
         });
-      } 
+      }
       else{
         console.log("didn't load any tweets!")
         sendResponse();
@@ -258,7 +258,7 @@ async function completeQuery(auth, username, tabId, max_id = null, since_id = nu
   if (await isAuthFresh(auth)){
     const stop_condition = (res,tweets) => {return tweets.length < count && res.length > 1}
     do
-    { 
+    {
       console.log(`GET: ${uurl}`)
       try
       {
@@ -267,7 +267,7 @@ async function completeQuery(auth, username, tabId, max_id = null, since_id = nu
         if (res.length == 0){throw new Error("res is empty")}
         console.log(res)
         tweets = tweets.concat(res)
-        
+
         // pass since_id again only if we got more recent tweets
         // since = parseInt(since_id) < parseInt(res[0].id) ? '' : `&since_id=${since_id}`
         // since_id = parseInt(since_id) > parseInt(res[0].id) ? since_id : res[0].id
@@ -336,7 +336,7 @@ async function completeQuery(auth, username, tabId, max_id = null, since_id = nu
 
     return tweet
   }
-  
+
 console.log(tweets)
 var tweets_normal = tweets.map(toTweet)
 return tweets_normal
