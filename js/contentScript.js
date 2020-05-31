@@ -186,7 +186,7 @@ function main()
       if(typeof trending_block !== 'undefined' && trending_block != null)
       {
         var sideBar = trending_block.parentNode.parentNode.parentNode.parentNode.parentNode
-        sideBar.insertBefore(sugg_box,sideBar.children[1])
+        sideBar.insertBefore(sugg_box,sideBar.children[2])
         home_sugg = sugg_box
       }
       else{
@@ -232,7 +232,7 @@ function main()
   // gets composer object that has composer and sugg_box elements
   function showSuggBox(composer){
     if (typeof composer.sugg_box !== 'undefined' && composer.sugg_box != null){
-      composer.sugg_box.style.display = "block"
+      composer.sugg_box.style.display = "flex"
       if(!document.body.contains(composer.sugg_box)){
         placeBox(composer.sugg_box)
       }
@@ -312,8 +312,8 @@ function main()
       if(tweets.length>0){
         var box = activeComposer.sugg_box
         //const box = document.`querySelector('[aria-label="suggestionBox"]')
-        if(typeof activeComposer.sugg_box !== 'undefined' && activeComposer.sugg_box != null && activeComposer.sugg_box.style.display != "block"){
-          activeComposer.sugg_box.style.display = "block"
+        if(typeof activeComposer.sugg_box !== 'undefined' && activeComposer.sugg_box != null && activeComposer.sugg_box.style.display != "flex"){
+          activeComposer.sugg_box.style.display = "flex"
         }
         const tweet = text
         const related = nlp.getRelated(tweet, tweets);
