@@ -1,6 +1,16 @@
 "use strict";
 
-
+  const editorClass = "DraftEditor-editorContainer";
+  const textFieldClass = 'span[data-text="true"]';
+  const trendText = '[aria-label="Timeline: Trending now"]';
+  const w_period = 500;
+  let tweets = null;
+  let activeDiv = null;
+  let activeComposer = {composer: null, sugg_box: null, observer: null, mode: null}
+  let composers = []
+  let home_sugg = null
+  let observers = []
+  
   //somehow this isn't a native method
   Array.prototype.contains = function(obj) {
     var i = this.length;
@@ -12,27 +22,16 @@
     return false;
   }
 
+  
+  function onWinResize(){if(activeComposer.sugg_box)showSuggBox(activeComposer)}
 
-function main()
-{
-  chrome.runtime.onMessage.addListener(onMessage);
-  const editorClass = "DraftEditor-editorContainer";
-  const textFieldClass = 'span[data-text="true"]';
-  const trendText = '[aria-label="Timeline: Trending now"]';
-  const w_period = 500;
-  let tweets = null;
-  let activeDiv = null;
-  let activeComposer = {composer: null, sugg_box: null, observer: null, mode: null}
-  let composers = []
-  let home_sugg = null
-
-  window.addEventListener('resize', ()=>{if(activeComposer.sugg_box)showSuggBox(activeComposer)})
-  window.onload = () => {
-    //scanForTweets();
-    setUpListeningComposeClick();
-    setUpTrendsListener();
+  async function loadOptions(){
+    chrome.storage.local.get(["options"], r =>{
+      if (typeof r.options !== "undefined"){
+        options = r.options
+      }
+    })
   }
-  history.pushState = ()=>{if(activeComposer.sugg_box)showSuggBox(activeComposer)}
 
   async function getTweets() {
     const processTweets = function(ts){
@@ -80,29 +79,33 @@ function main()
         me.disconnect()
       }
     });
+    observers.push(observer)
     observer.observe(document, { subtree: true, childList: true});
     return observer
+  }
+
+  function onFocusIn(e){
+    var divs = document.getElementsByClassName(editorClass)
+    for (var div of divs){
+      if(e.target && div.contains(e.target)){
+        textBoxFocused(div)
+      }
+    }
+  }
+  function onFocusOut(e){
+    var divs = document.getElementsByClassName(editorClass)
+    for (var div of divs){
+      if(e.target && div.contains(e.target)){
+        textBoxUnfocused(div)
+      }
+    }
   }
 
   // EVENT DELEGATION CRL, EVENT BUBBLING FTW
   function setUpListeningComposeClick(){
     console.log("event listeners added")
-    document.addEventListener('focusin',function(e){
-      var divs = document.getElementsByClassName(editorClass)
-      for (var div of divs){
-        if(e.target && div.contains(e.target)){
-          textBoxFocused(div)
-        }
-      }
-    });
-    document.addEventListener('focusout',function(e){
-      var divs = document.getElementsByClassName(editorClass)
-      for (var div of divs){
-        if(e.target && div.contains(e.target)){
-          textBoxUnfocused(div)
-        }
-      }
-    });
+    document.addEventListener('focusin',onFocusIn);
+    document.addEventListener('focusout',onFocusOut);
   }
 
   // given composer found by editorClass = "DraftEditor-editorContainer",
@@ -224,7 +227,7 @@ function main()
     h3.setAttribute("class","suggTitle");
     sugg_box.appendChild(h3)
     var p = document.createElement("p");
-    p.innerHTML = "Type something to get related tweets :)"
+    p.textContent = "Type something to get related tweets :)"
     sugg_box.appendChild(p);
     return sugg_box
   }
@@ -577,9 +580,9 @@ function main()
     if (tweets.length < 1 ){
       let message = ""
       if(text == ''){
-        var message = "Type something to get related tweets :)"
+        message = "Type something to get related tweets :)"
       } else{
-        var message = "No matching tweets yet!"
+        message = "No matching tweets yet!"
       }
       var p = document.createElement("p");
       p.innerHTML = message
@@ -609,6 +612,20 @@ function main()
     }
     return true
   }
+
+function main()
+{
+  chrome.runtime.onMessage.addListener(onMessage);
+
+  window.addEventListener('resize', onWinResize)
+  window.onload = () => {
+    //scanForTweets();
+    loadOptions()
+    setUpListeningComposeClick();
+    setUpTrendsListener();
+  }
+  history.pushState = ()=>{if(activeComposer.sugg_box)showSuggBox(activeComposer)}
+  
 }
 
 
@@ -627,13 +644,22 @@ then the most extension API methods in the content script cease to work (includi
 [X] Option 2: Unload the previous content script on content script insertion
 - When a connection with the background page is important to your content script, then you have to implement a proper unloading routine, and set up some events to unload the previous content script when the content script is inserted back via chrome.tabs.executeScript.
 
-
+all this is done when a new contentscript is created, sends a DOM event that is heard by other contentscripts
+*/
 
 
 function destructor() {
+  console.log("DESTROYING")
   // Destruction is needed only once
   document.removeEventListener(destructionEvent, destructor);
   // Tear down content script: Unbind events, clear timers, restore DOM, etc.
+  document.removeEventListener('focusin',onFocusIn);
+  document.removeEventListener('focusout',onFocusOut);
+  window.removeEventListener('resize', onWinResize);
+  chrome.runtime.onMessage.removeListener(onMessage);
+  for (obs of observers){
+    obs.disconnect()
+  }
   chrome.tabs.query({ currentWindow: true, active: true }, (tabs) => chrome.tabs.reload(tabId));
 }
 
@@ -641,7 +667,7 @@ var destructionEvent = 'destructmyextension_' + chrome.runtime.id;
 // Unload previous content script if needed
 document.dispatchEvent(new CustomEvent(destructionEvent));
 document.addEventListener(destructionEvent, destructor);
-*/
 
+chrome.runtime.connect().onDisconnect.addListener(destructor)
 
 main();
