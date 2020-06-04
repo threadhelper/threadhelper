@@ -3,6 +3,7 @@
     --main-bg-color: #192734;
     --main-txt-color: #ffffff;
     --main-border-color: #38444d;
+    --neutral-color: #697882;
   }
 }
 @media (prefers-color-scheme: light) {
@@ -10,6 +11,7 @@
     --main-bg-color: white;
     --main-txt-color: black;
     --main-border-color: #e1e8ed;
+    --neutral-color: #697882;
   }
 }
 @media (prefers-color-scheme: no-preference) {
@@ -17,6 +19,7 @@
     --main-bg-color: white;
     --main-txt-color: black;
     --main-border-color: #e1e8ed;
+    --neutral-color: #697882;
   }
 }
 
@@ -127,15 +130,15 @@
 }
 
 .th-header-username {
-  color: #697882;
+  color: var(--netural-color);
 }
 
 .th-header-time {
-  color: #697882;
+  color: var(--netural-color);
 }
 
 .th-reply {
-  color: #697882;
+  color: var(--netural-color);
 }
 
 .th-text {
@@ -207,21 +210,21 @@
 .th-quote-header-username {
   padding-left: 5px;
   padding-right: 5px;
-  color: #697882;
+  color: var(--netural-color);
 }
 
 .th-header-dot {
-  color: #697882;
+  color: var(--netural-color);
 }
 
 .th-quote-header-time {
   padding-left: 5px;
-  color: #697882;
+  color: var(--netural-color);
 }
 
 .th-quote-reply {
   padding-top: 3px;
-  color: #697882;
+  color: var(--netural-color);
 }
 
 .th-quote-content {
