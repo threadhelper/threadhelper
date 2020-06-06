@@ -10,6 +10,7 @@
   let composers = []
   let home_sugg = null
   let observers = []
+  let options = {}
   
   //somehow this isn't a native method
   Array.prototype.contains = function(obj) {
@@ -184,7 +185,7 @@
     mode = getMode()
     if (mode == "home"){
       //insert a little space bc of the title
-      sugg_box.setAttribute("class", 'suggestionBox_home');
+      sugg_box.setAttribute("class", 'suggestionBox sug_home');
       var trending_block = document.querySelector(trendText)
       if(typeof trending_block !== 'undefined' && trending_block != null)
       {
@@ -207,7 +208,7 @@
         console.log("trying to append dummy")
         document.body.append(dummyUI[0])
       }
-      sugg_box.setAttribute("class", 'suggestionBox_compose');
+      sugg_box.setAttribute("class", 'suggestionBox sug_compose');
       var sideBar = $("#suggestionContainer")
       sideBar.append(sugg_box,sideBar)
     }
@@ -300,7 +301,7 @@
     }
 
     var text = ''
-    console.log("daddy: ", daddy)
+    //console.log("daddy: ", daddy)
     for (var ch of daddy.children){
       text += ch.textContent + ' '
     }
@@ -310,7 +311,7 @@
   /** Updates the tweetlist when user types */
   function onChange(mutationRecords) {
     const text = getTextFromMutation(mutationRecords)
-    console.log("CHANGE! text is:", text, "; in element: ", mutationRecords[0].target);
+    //console.log("CHANGE! text is:", text, "; in element: ", mutationRecords[0].target);
     if(tweets != null && typeof text != "undefined" && text != null && text.trim() != ''){
       if(tweets.length>0){
         var box = activeComposer.sugg_box
@@ -324,7 +325,7 @@
       }
     }
     else{
-      console.log("no tweets")
+      //console.log("no tweets")
       if (typeof activeComposer.sugg_box !== 'undefined'){
         renderTweets([], text);
       }
@@ -613,6 +614,42 @@
     return true
   }
 
+
+const light_theme = "rgb(255, 255, 255)"
+const dim_theme = "rgb(21, 32, 43)"
+const black_theme = "rgb(0, 0, 0)"
+
+
+function setTheme(){
+  let root = document.documentElement;
+  let bg_color = document.body.style["background-color"]
+
+  
+  console.log("setting theme", bg_color)
+  switch(bg_color){
+    case light_theme:
+      root.style.setProperty('--main-bg-color', "#f5f8fa");
+      root.style.setProperty('--main-txt-color', "black");
+      root.style.setProperty('--main-border-color', "#e1e8ed");
+      break;
+    case dim_theme:
+      root.style.setProperty('--main-bg-color', "#192734");
+      root.style.setProperty('--main-txt-color', "white");
+      root.style.setProperty('--main-border-color', "#38444d");
+      break;
+    case black_theme:
+      root.style.setProperty('--main-bg-color', "black");
+      root.style.setProperty('--main-txt-color', "white");
+      root.style.setProperty('--main-border-color', "#2f3336");
+      break;
+    default:
+      root.style.setProperty('--main-bg-color', "#f5f8fa");
+      root.style.setProperty('--main-txt-color', "black");
+      root.style.setProperty('--main-border-color', "#e1e8ed");
+      break;
+  }
+}
+
 function main()
 {
   chrome.runtime.onMessage.addListener(onMessage);
@@ -620,11 +657,17 @@ function main()
   window.addEventListener('resize', onWinResize)
   window.onload = () => {
     //scanForTweets();
+    document.addEventListener(destructionEvent, destructor);
+    setTheme()
     loadOptions()
     setUpListeningComposeClick();
     setUpTrendsListener();
   }
-  history.pushState = ()=>{if(activeComposer.sugg_box)showSuggBox(activeComposer)}
+  window.onpopstate = ()=>{
+    console.log("url changed")
+    setTheme()
+    if(activeComposer.sugg_box)showSuggBox(activeComposer)
+  }
   
 }
 
@@ -649,7 +692,6 @@ all this is done when a new contentscript is created, sends a DOM event that is 
 
 
 function destructor() {
-  console.log("DESTROYING")
   // Destruction is needed only once
   document.removeEventListener(destructionEvent, destructor);
   // Tear down content script: Unbind events, clear timers, restore DOM, etc.
@@ -657,17 +699,19 @@ function destructor() {
   document.removeEventListener('focusout',onFocusOut);
   window.removeEventListener('resize', onWinResize);
   chrome.runtime.onMessage.removeListener(onMessage);
-  for (obs of observers){
-    obs.disconnect()
+  for (let obs of observers){
+    if (obs != null) obs.disconnect()
   }
-  chrome.tabs.query({ currentWindow: true, active: true }, (tabs) => chrome.tabs.reload(tabId));
+  console.log("DESTROYED")
+  //chrome.tabs.query({ currentWindow: true, active: true }, (tabs) => chrome.tabs.reload(tabId));
 }
 
 var destructionEvent = 'destructmyextension_' + chrome.runtime.id;
 // Unload previous content script if needed
 document.dispatchEvent(new CustomEvent(destructionEvent));
-document.addEventListener(destructionEvent, destructor);
+//document.addEventListener(destructionEvent, destructor);
 
-chrome.runtime.connect().onDisconnect.addListener(destructor)
 
+let port = chrome.runtime.connect()
+//port.onDisconnect.addListener(destructor)
 main();

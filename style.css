@@ -1,9 +1,8 @@
-@media (prefers-color-scheme: dark) {
+/*@media (prefers-color-scheme: dark) {
   :root {
     --main-bg-color: #192734;
     --main-txt-color: #ffffff;
     --main-border-color: #38444d;
-    --neutral-color: #697882;
   }
 }
 @media (prefers-color-scheme: light) {
@@ -11,7 +10,6 @@
     --main-bg-color: white;
     --main-txt-color: black;
     --main-border-color: #e1e8ed;
-    --neutral-color: #697882;
   }
 }
 @media (prefers-color-scheme: no-preference) {
@@ -19,47 +17,42 @@
     --main-bg-color: white;
     --main-txt-color: black;
     --main-border-color: #e1e8ed;
-    --neutral-color: #697882;
   }
+}*/
+:root{
+  --netural-color: #697882;
 }
-
 .suggTitle{
   color: var(--main-txt-color);
   margin-bottom: 8px;
 }
 
-.suggestionBox_home {
-  background-color: #f5f8fa;
-  overflow-y: scroll;
-  border-radius: 5px;
-  padding: 0px 20px 15px 20px;
+.suggestionBox{
+  background-color: var(--main-bg-color);
+  color: var(--main-txt-color);
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     Ubuntu, "Helvetica Neue", sans-serif;
   line-height: 1.3125;
   font-size: 13px;
-  height: 90vh;
-  width: 100%;
-  border-radius: 14px;
-  margin-bottom: 20px;
+  overflow-y: scroll;
   display: flex;
   flex-direction: column;
+
+}
+.sug_home {
+  margin-bottom: 20px;
+  border-radius: 14px;
+  padding: 0px 20px 15px 20px;
+  width: 100%;
+  height: 90vh;
 }
 
-.suggestionBox_compose {
-  background-color: var(--main-bg-color);
+.sug_compose {
   margin: 20px 10px 20px 10px;
-  color: var(--main-txt-color);
-  overflow-y: scroll;
   border-radius: 5px;
   padding: 8px 20px 20px 20px;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    Ubuntu, "Helvetica Neue", sans-serif;
-  line-height: 1.3125;
-  font-size: 13px;
   pointer-events: auto;
   flex-grow: 1;
-  display: flex;
-  flex-direction: column;
 }
 
 .dummyContainer {
@@ -235,7 +228,7 @@
 
 .th-unavailable {
   background-color: #f5f8fa;
-  color: #657786;
+  color: var(--netural-color);
 }
 
 .th-quote-content-main {
