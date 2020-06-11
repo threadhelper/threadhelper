@@ -75,69 +75,34 @@ $(document).ready(function() {
   // });
 
   $("#updateTweets").click(function() {
-    const username = $("#username").val();
-    chrome.storage.local.set({ username: username }, function() {
-      console.log("username stored")
-    })
     const message = {
       type: "update",
-      username: username
     };
     $("#notif").html(`Loading tweets...`)
 
-    function onCompletion() {
-      console.log("query completed");
-      chrome.storage.local.get(["tweets","tweets_meta"], r =>{
-        $("#notif").html(`Getting tweets`);
-      });
-    }
-    chrome.runtime.sendMessage(message, onCompletion);
+    chrome.runtime.sendMessage(message);
   });
 
   // TODO: You shouldn't be able to click download until you have an auth
   // TODO: fix bug where it takes two clicks for tweets to update
   $("#downloadTimeline").click(function() {
-    const username = $("#username").val();
-    chrome.storage.local.set({ username: username }, function() {
-      console.log("username stored")
-    })
     const message = {
-      type: "load",
-      username: username
+      type: "timeline",
     };
     $("#notif").html(`Loading tweets...`)
-
-    function onCompletion() {
-      console.log("query completed");
-      chrome.storage.local.get(["tweets","tweets_meta"], r =>{
-        $("#notif").html(`Getting tweets`);
-      });
-    }
-    chrome.runtime.sendMessage(message, onCompletion);
+    chrome.runtime.sendMessage(message);
   });
 
   
   // TODO: You shouldn't be able to click download until you have an auth
   // TODO: fix bug where it takes two clicks for tweets to update
   $("#downloadArchive").click(function() {
-    const username = $("#username").val();
-    chrome.storage.local.set({ username: username }, function() {
-      console.log("username stored")
-    })
     const message = {
       type: "load_archive",
-      username: username
     };
     $("#notif").html(`Loading tweets...`)
-    function onCompletion() {
-      console.log("query completed");
-      chrome.storage.local.get(["arch_tweets","arch_tweets_meta"], r =>{
-        $("#notif").html(`Got tweets, locally saved!`);
-        if (typeof r.tweets_meta !== 'undefined'){
-        }
-      });
-    }
-    chrome.runtime.sendMessage(message, onCompletion);
+    
+    chrome.runtime.sendMessage(message);
   });
 
 

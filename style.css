@@ -58,7 +58,7 @@
   z-index: 1;
 
     
-  width: 120px;
+  width: 200px;
   top: 110%;
   left: 100%;
   margin-left: -20px; /*  Use half of the width (120/2 = 60), to center the tooltip */

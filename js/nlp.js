@@ -36,9 +36,9 @@ const nlp = (function() {
 
   //** Find related tweets */
   function getRelated(tweet_text, tweets, n_tweets = 20) {
-    if (index == null){
-      index = makeIndex(tweets)
-    }
+    //if (index == null){
+    index = makeIndex(tweets)
+    //}
     var results = index.search(tweet_text, {
       fields: {
           text: {boost: 3},

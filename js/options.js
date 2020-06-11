@@ -19,7 +19,9 @@ const objectMap = (obj, fn) =>
 function prettify(obj){
   let pretty = ''
   if (obj != null){
-    if (obj["since_time"])obj["since_time"] = new Date(obj["since_time"]);
+    if (obj["since_time"])obj["since_time"] = (new Date(obj["since_time"])).toLocaleString();
+    if (obj["max_time"])obj["max_time"] = (new Date(obj["max_time"])).toLocaleString();
+    if (obj["last_update"])obj["last_update"] = (new Date(obj["last_update"])).toLocaleString();
     pretty = JSON.stringify(obj, null, 4)
   }
   return pretty
@@ -39,7 +41,7 @@ let options_template = {
   getArchive: {
     type: "checkbox", 
     value: false,
-    description: "Get archive (experimental, will attempt to get all user tweets)"
+    description: "Get archive (experimental, will attempt to get all user tweets. May take a while and make your browser slower.)"
   }
 }
 
@@ -155,9 +157,9 @@ function buildPage(options_template){
     document.body.appendChild(document.createElement("br"))
   }
   //append archive monitor
-  let lib = displayLibrary()
-  document.body.appendChild(lib)
-  document.body.appendChild(document.createElement("br"))
+  // let lib = displayLibrary()
+  // document.body.appendChild(lib)
+  // document.body.appendChild(document.createElement("br"))
   
   //append save button
   let save_div = document.createElement("div");

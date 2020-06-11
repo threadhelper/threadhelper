@@ -28,6 +28,22 @@ function getData(key) {
   });
 }
 
+//returns a promise that gets from chrome local storage 
+function setData(key_vals) {
+  return new Promise(function(resolve, reject) {
+    chrome.storage.local.set(key_vals, function(items) {
+      if (chrome.runtime.lastError) {
+        console.error(chrome.runtime.lastError.message);
+        reject(chrome.runtime.lastError.message);
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+
+let tabId = null
+
 function getTabId(){
   return new Promise(function(resolve, reject) {
     chrome.tabs.query({active: true, currentWindow: true}, function(tabs){
@@ -197,7 +213,7 @@ class Auth {
 
   // tries to reload page to get a new auth
   async getNew(){
-    let tabId = await getTabId()
+    let tabId = tabId == null ? await getTabId() : tabId
     var reload_ok = confirm("I'll have to reload the page to get my authorization token :)");
     if (reload_ok){
       chrome.tabs.reload(tabId);
@@ -219,7 +235,7 @@ class Auth {
     //let _user_info = await this.testAuth()
     // if it's good, store it
     chrome.storage.local.set({ auth: auth_params }, function() {
-      console.log("auth stored")
+      //console.log("auth stored")
       //console.log(auth)
     })
     // if(await auth.testAuth()){
@@ -260,7 +276,7 @@ window.onload = () => {loadOptions()}
   async function processHeaders(headers){
     // on mac there's a bug where updateAuth is called befor auth is defined,
     // so this is checking that
-    console.log("processing headers")
+    // console.log("processing headers")
     if (typeof auth  === 'undefined'){
       console.log("auth was undefined, for some reason, gonna define it and do nothing else")
       auth = new Auth();
@@ -276,7 +292,7 @@ window.onload = () => {loadOptions()}
       }
     }
     if (csrfToken && authorization && csrfToken != "null" && authorization != "null"){
-      console.log("updatingAuth")
+      //console.log("updatingAuth")
       auth.updateAuth(csrfToken,authorization)
     }
     else{
@@ -286,39 +302,41 @@ window.onload = () => {loadOptions()}
 
 
 //** Handles messages sent from popup or content scripts */
-async function onMessage(m, sender, sendResponse) {
+async function onMessage(m, sender) {
   console.log("message received:", m);
   let auth_good = null
   switch (m.type) {
+    case "cs-created":
+      tabId = tabId == null ? await getTabId() : tabId
+      break;
 
     case "saveOptions":
       loadOptions()
-      sendResponse()
       break;
 
     case "update":
       auth_good = await auth.testAuth()
       if(await auth_good != null){
         console.log("auth good", auth_good)
-        updateTweets(m, sendResponse, );
+        updateTweets(m);
       }
       else{
         console.log("auth bad, loadin")
         auth_good = await auth.getAuth()
-        if (auth_good) updateTweets(m, sendResponse, "update")
+        if (auth_good) updateTweets(m, "update")
       }
       break;
 
-    case "load":
+    case "timeline":
       auth_good = await auth.testAuth()
       if(await auth_good != null){
         console.log("auth good", auth_good)
-        updateTweets(m, sendResponse, "timeline");
+        updateTweets(m, "timeline");
       }
       else{
         console.log("auth bad, loadin")
         auth_good = await auth.getAuth()
-        if (auth_good) updateTweets(m, sendResponse, "timeline")
+        if (auth_good) updateTweets(m, "timeline")
       }
       break;
 
@@ -326,29 +344,30 @@ async function onMessage(m, sender, sendResponse) {
       auth_good = await auth.testAuth()
       if(auth_good  != null){
         console.log("auth good", auth_good)
-        updateTweets(m, sendResponse, "archive");
+        updateTweets(m, "archive");
       }
       else{
         console.log("auth bad, loadin")
         auth_good = await auth.getAuth()
-        if (auth_good) updateTweets(m, sendResponse, "archive")
+        if (auth_good) updateTweets(m, "archive")
       }
       break;
 
     case "clear":
       // clear storage
       console.log("clearing storage")
-      clearStorage(sendResponse)
+      clearStorage()
       break;
   }
-  return true;
+  return //Promise.resolve('done');
+  ;
 }
 
 
 //clears storage of tweets, tweets meta info, and auth
-function clearStorage(sendResponse){
+function clearStorage(){
   chrome.storage.local.remove(["tweets","tweets_meta"/*,"auth"*/],function(){
-    sendResponse()
+    messageCS({type: "storage-clear"})
     var error = chrome.runtime.lastError;
        if (error) {
            console.error(error);
@@ -357,67 +376,54 @@ function clearStorage(sendResponse){
    return true
 }
 
-function updateTweets(m, sendResponse, update_type = "update"){
+
+async function messageCS(m){
+  let id = tabId == null ? await getTabId() : tabId
+  console.log("sending message to cs tab ", id)
+  chrome.tabs.sendMessage(id, m)
+}
+
+
+function updateTweets(m, update_type = "update"){
   //console.log("updating tweets");
+  messageCS({type: "tweets-loading"})
   chrome.storage.local.get(["tweets", "tweets_meta"], r =>{
-    var since_id = null
-    var max_id = null
+    let since_id = null
+    let since_date = null
+    let max_id = null
+    let max_date = null
     if (typeof r.tweets_meta !== 'undefined' && typeof r.tweets_meta.since_id !== 'undefined'  && r.tweets_meta.since_id != null && typeof r.tweets_meta.max_id !== 'undefined'  && r.tweets_meta.max_id != null){
       since_id = r.tweets_meta.since_id
       max_id = r.tweets_meta.max_id
+      max_date = formatDate(new Date(r.tweets_meta.max_time))
+      since_date = formatDate(new Date(r.tweets_meta.since_time))
+      
     }
     switch(update_type){
       case "update":
-      updateQuery(auth, m.username, since_id).then((tweets)=>{
-        if (tweets.length > 0){
-          var tweets_meta = makeTweetsMeta(tweets)
-          chrome.tabs.query({active: true, currentWindow: true}, function(tabs){
-            if (tabs != null && tabs.length < 1 && typeof tabs[0] !== 'undefined'){
-              chrome.tabs.sendMessage(tabs[0].id, {type: "tweets-done"}, function(response) {
-          })}
-          });
+        updateQuery(auth, since_id).then((tweets)=>{
+          if (tweets.length > 0){
+            var tweets_meta = makeTweetsMeta(tweets)
           }
-          else{
-          console.log("didn't load any tweets!")
-          sendResponse();
-          }
-      })
-      break;
+        })
+        break;
       case "timeline":
-      timelineQuery(auth, m.username, max_id, since_id).then(function(tweets) {
-        if (tweets.length > 0){
-          var tweets_meta = makeTweetsMeta(tweets)
-          chrome.tabs.query({active: true, currentWindow: true}, function(tabs){
-            if (tabs != null && tabs.length < 1 && typeof tabs[0] !== 'undefined'){
-              chrome.tabs.sendMessage(tabs[0].id, {type: "tweets-done"}, function(response) {
-          })}
-          });
-        }
-        else{
-          console.log("didn't load any tweets!")
-          sendResponse();
-        }
-      });
-      break;
+        timelineQuery(auth, max_id).then(function(tweets) {
+          if (tweets.length > 0){
+            var tweets_meta = makeTweetsMeta(tweets)
+          }
+        });
+        break;
       case "archive":
-      archiveQuery(auth, m.username).then((tweets)=>{
-        if (tweets.length > 0){
-          var tweets_meta = makeTweetsMeta(tweets)
-          chrome.tabs.query({active: true, currentWindow: true}, function(tabs){
-            if (tabs != null && tabs.length < 1 && typeof tabs[0] !== 'undefined'){
-              chrome.tabs.sendMessage(tabs[0].id, {type: "tweets-done"}, function(response) {
-          })}
-          });
+        archiveQuery(auth, max_date).then((tweets)=>{
+          if (tweets.length > 0){
+            var tweets_meta = makeTweetsMeta(tweets)
           }
-          else{
-          console.log("didn't load any tweets!")
-          sendResponse();
-          }
-      })
-      break;
-    }
-  });
-  return true
+        })
+        break;
+      }
+    });
+  messageCS({type: "tweets-done"})
 }
 
 
@@ -425,8 +431,11 @@ function makeTweetsMeta(tweets){
   var tweets_meta = {
     count: tweets.length, 
     max_id: tweets[tweets.length - 1].id, 
+    max_time: tweets[tweets.length - 1].time,
     since_id: tweets[0].id, 
-    since_time: tweets[0].time}
+    since_time: tweets[0].time,
+    last_updated: (new Date()).getTime()
+  }
   return tweets_meta
 }
 
@@ -443,6 +452,22 @@ function handleError(err){
       console.log(err)
   }
 }
+
+
+// removes duplicate tweets
+function removeDuplicates(myArr, prop ='id') {
+  return myArr.filter((obj, pos, arr) => {
+      return arr.map(mapObj => mapObj[prop]).indexOf(obj[prop]) === pos;
+  });
+}
+
+// filter to get only tweets by user
+function filterUserTweets(ts){
+  return ts.filter(t=>{
+    return t.user.screen_name == user_info.screen_name
+  })
+}
+
 
 function toTweet(entry) {
   // entry.entities.media is not present if media is not present, hence we need to populate those
@@ -513,48 +538,31 @@ function getAccountCreated(user){
 }
 
 
+// Convert request results to tweets and save them
+// TODO  : deal with archive RTs which are listed as by the retweeter and not by the original author
 async function saveTweets(res, arch=false){
   //let new_tweets = arch ? res.map(toTweetArch) : res.map(toTweet);
+  //res = filterUserTweets(res)
   let new_tweets = res.map(toTweet);
   let all_tweets = []
   if (new_tweets.length > 0){
     // console.log("new_tweets",new_tweets)
     // load all tweets
-    chrome.storage.local.get(["tweets"], r =>{
-      // console.log("getting tweets from storage")
-      // console.log("storage request",r)
-      if (typeof r.tweets!=="undefined" && r.tweets != null){
-        // console.log("rtweets",r.tweets)
-        //all_tweets = r.tweets
-        all_tweets = all_tweets.concat(r.tweets)
-      }
-      // console.log("all_tweets after adding OLD",all_tweets)
-      all_tweets = all_tweets.concat(new_tweets)
-      // console.log("all_tweets after adding NEW",all_tweets)
-      let tweets_meta = makeTweetsMeta(all_tweets)
-      // append new tweets and store all tweets'
-      if (arch){
-        chrome.storage.local.set({ tweets_arch: all_tweets, tweets_meta_arch: tweets_meta}, function() {
-          console.log(`added ${new_tweets.length} arch tweets to storage metadata:`, tweets_meta)
-          // send message to contentscript to get tweets
-          chrome.tabs.query({active: true, currentWindow: true}, function(tabs){
-            if (tabs != null && tabs.length < 1 && typeof tabs[0] !== 'undefined'){
-              chrome.tabs.sendMessage(tabs[0].id, {type: "tweets-loaded"}, function(response) {})}
-          });
-        });
-      }
-      else
-      {
-        chrome.storage.local.set({ tweets: all_tweets, tweets_meta: tweets_meta}, function() {
-          console.log(`added ${new_tweets.length} tweets to storage metadata:`, tweets_meta)
-          // send message to contentscript to get tweets
-          chrome.tabs.query({active: true, currentWindow: true}, function(tabs){
-            if (tabs != null && tabs.length < 1 && typeof tabs[0] !== 'undefined'){
-              chrome.tabs.sendMessage(tabs[0].id, {type: "tweets-loaded"}, function(response) {})}
-          });
-        });
-      } 
-    });
+    let tweets = await getData("tweets")
+    all_tweets = all_tweets.concat(new_tweets)
+    if (typeof tweets!=="undefined" && tweets != null){
+      // console.log("rtweets",r.tweets)
+      //all_tweets = r.tweets
+      all_tweets = all_tweets.concat(tweets)
+    }
+    // console.log("all_tweets after adding OLD",all_tweets)
+    all_tweets = removeDuplicates(all_tweets)
+    // console.log("all_tweets after adding NEW",all_tweets)
+    let tweets_meta = makeTweetsMeta(all_tweets)
+    // append new tweets and store all tweets'
+    let data = arch ? { tweets_arch: all_tweets, tweets_meta_arch: tweets_meta} : {tweets: all_tweets, tweets_meta: tweets_meta}
+    await setData(data)
+    messageCS({type: "tweets-loaded"})
   }
   else{
     console.log("No new tweets!",res)
@@ -565,7 +573,7 @@ async function saveTweets(res, arch=false){
 
 
 //to call when we have tweets and wish to update just with the lates
-async function updateQuery(auth, username, since_id = null, count = 3000, include_rts = true) {
+async function updateQuery(auth, since_id = null, count = 3000, include_rts = true) {
   let stop = false
   const init = {
     credentials: "include",
@@ -580,7 +588,7 @@ async function updateQuery(auth, username, since_id = null, count = 3000, includ
   var since = since_id != null ? `&since_id=${since_id}` : ''
   since_id = 0
   var url = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}${since}&count=${count}&include_rts=${include_rts}`
-  const stop_condition = (res,tweets) => {return (tweets.length < count && res.length > 1) || stop}
+  const stop_condition = (res,tweets) => {return tweets.length >= count || !(res != null) || res.length < 1 || stop}
   do
   {
     console.log(`GET: ${url}`)
@@ -614,18 +622,19 @@ async function updateQuery(auth, username, since_id = null, count = 3000, includ
       url = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}&count=${count}&since=${since_id}&include_rts=${include_rts}`
       console.log(res);
     }
-  }  while(stop_condition(res,tweets))
+  }  while(! stop_condition(res,tweets))
   return tweets
 }
 
 
 
-async function timelineQuery(auth, username, max_id = null, since_id = null, count = 3000, include_rts = true) {
-  console.log("making complete query")
+async function timelineQuery(auth, max_id = null, count = 3000, include_rts = true) {
+  //console.log("making complete query")
   var tweets = []
   let res = []
   var max = max_id != null ? `&since_id=${max_id}` : ''
-  max_id = max_id == null ? -1 : max_id
+  var username = user_info.screen_name
+  max_id = max_id == null ? -1 : max_id;
   //var since = since_id != null ? `&since_id=${since_id}` : ''
   //since_id = since_id == null ? 0 : since_id
   var url = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}${max}&count=${count}&include_rts=${include_rts}`
@@ -636,7 +645,7 @@ async function timelineQuery(auth, username, max_id = null, since_id = null, cou
       "x-csrf-token": auth.csrfToken
     }
   };
-  const stop_condition = (res,tweets) => {return tweets.length < count && res.length > 1}
+  const stop_condition = (res,tweets) => {return tweets.length >= count || !(res != null) || res.length < 1}
   do
   {
     console.log(`GET: ${url}`)
@@ -649,8 +658,9 @@ async function timelineQuery(auth, username, max_id = null, since_id = null, cou
       break;
     }
     if (res.length <= 0 || res ==null){
-      console.log("max id: ", max_id, "since id: ", since_id )
-      throw new Error("res is empty or null")
+      //throw new Error("res is empty")
+      console.log("res is empty")
+      break;
     } 
     else
     {
@@ -661,10 +671,11 @@ async function timelineQuery(auth, username, max_id = null, since_id = null, cou
       
       let since = ''
       // max_id is the max of the next request, so if we received a lower id than max_id, use the new one 
-      max_id = res[res.length - 1].id < max_id || max_id == -1 ? res[res.length - 1].id : max_id
+      let batch_max = res[res.length - 1].id
+      max_id = (batch_max < max_id || max_id == -1) ? batch_max : max_id
       url = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}&count=${count}&max_id=${max_id}${since}&include_rts=${include_rts}`
     }
-  } while(stop_condition(res,tweets))
+  } while(! stop_condition(res,tweets))
   console.log(tweets)
   return tweets
 }
@@ -673,23 +684,30 @@ async function timelineQuery(auth, username, max_id = null, since_id = null, cou
 // Get ALL the tweets in reverse chronological order. Ambitious. Basically iterate through dates. Save earliest and latest dates in meta.
 // experiments show twitter only serves max ~50 tweets per day and you can't specify smaller intervals than 1 day
 // so we're stuck with getting at most 50 random tweets from each day
-async function archiveQuery(auth, username, count = 200, since_date = "2018-01-01", until_date = formatDate(), include_rts = true){
-  console.log("making archive query")
+async function archiveQuery(auth, arch_until = formatDate(), count = 200000, include_rts = true){
+  //console.log("making archive query")
+  const nDays = (n) =>{return n * 24 * 60 * 60 * 1000}
+  const max_n_reqs = 180;
   var tweets = []
   var users = []
   let res = []
-  var arch_since = new Date(since_date); //only a placeholder for setting account creation date by consulting a tweet
-  var arch_until = new Date(until_date);
-  var since = new Date(until_date);
-  var until = new Date(until_date);
-  const nDays = (n) =>{return n * 24 * 60 * 60 * 1000}
-  const nd = 5
+  let username = user_info.screen_name
+  var since = new Date(arch_until);
+  let arch_since = new Date(user_info.created_at);
+  var until = new Date(arch_until);
+  arch_until = arch_until==null ? new Date() : new Date(arch_until);
+  
+  // max days we can fit in 180 requests?
+  // day span divided by 180 to know how many days to ask per request
+  const nd = Math.min(5,Math.ceil(Math.floor((arch_until.getTime() - arch_since.getTime())/nDays(1)) / max_n_reqs))
+
   since.setTime(since.getTime() - nDays(nd))
+  // console.log("creation", new Date(user_info.created_at))
   // console.log("since", since)
-  // console.log("since date", since_date)
+  // console.log("since date", arch_since)
   // console.log("since formatted", formatDate(since))
   // console.log("until", until)
-  // console.log("until date", until_date)
+  // console.log("until date", arch_until)
   // console.log("until formatted", formatDate(until))
 
   const init = {
@@ -699,7 +717,7 @@ async function archiveQuery(auth, username, count = 200, since_date = "2018-01-0
       "x-csrf-token": auth.csrfToken
     }
   };
-  const outer_stop_condition = (since, arch=arch_since) => {return since.getTime() <= arch.getTime() }
+  const outer_stop_condition = (since, arch=arch_since) => {return since.getTime() <= arch_since.getTime() }
   do
   {
       var query = escape(`from:${username} since:${formatDate(since)} until:${formatDate(until)}`);	  
@@ -719,14 +737,14 @@ async function archiveQuery(auth, username, count = 200, since_date = "2018-01-0
           //let user_tweets = res_tweets.filter(t=>{return t.username==username;}).map(t=>{t.user=users.find(u=>{return u.id == t.user_id}); return t})
           let user_tweets = res_tweets.map(t=>{t.user=users.find(u=>{return u.id == t.user_id}); return t})
           console.log("user tweets", user_tweets)
-          let new_tweets = await saveTweets(user_tweets,true);
+          let new_tweets = await saveTweets(user_tweets/*,true*/);
           console.log("new tweets (after saving)", user_tweets)
           tweets = tweets.concat(new_tweets)
           console.log(new_tweets)
           //if (arch_since == 0) arch_since = getAccountCreated(users[0])
 
-          console.log(`GET: ${url}`)
-          console.log(`loaded ${tweets.length} tweets`, tweets)
+          //console.log(`GET: ${url}`)
+          console.log(`received total ${tweets.length} tweets`);
         }
       }
       catch(err){
