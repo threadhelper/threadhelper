@@ -373,7 +373,7 @@ function updateTweets(m, sendResponse, update_type = "update"){
           var tweets_meta = makeTweetsMeta(tweets)
           chrome.tabs.query({active: true, currentWindow: true}, function(tabs){
             if (tabs != null && tabs.length < 1 && typeof tabs[0] !== 'undefined'){
-              chrome.tabs.sendMessage(tabs[0].id, {type: "tweets-loaded"}, function(response) {
+              chrome.tabs.sendMessage(tabs[0].id, {type: "tweets-done"}, function(response) {
           })}
           });
           }
@@ -389,7 +389,7 @@ function updateTweets(m, sendResponse, update_type = "update"){
           var tweets_meta = makeTweetsMeta(tweets)
           chrome.tabs.query({active: true, currentWindow: true}, function(tabs){
             if (tabs != null && tabs.length < 1 && typeof tabs[0] !== 'undefined'){
-              chrome.tabs.sendMessage(tabs[0].id, {type: "tweets-loaded"}, function(response) {
+              chrome.tabs.sendMessage(tabs[0].id, {type: "tweets-done"}, function(response) {
           })}
           });
         }
@@ -405,7 +405,7 @@ function updateTweets(m, sendResponse, update_type = "update"){
           var tweets_meta = makeTweetsMeta(tweets)
           chrome.tabs.query({active: true, currentWindow: true}, function(tabs){
             if (tabs != null && tabs.length < 1 && typeof tabs[0] !== 'undefined'){
-              chrome.tabs.sendMessage(tabs[0].id, {type: "tweets-loaded"}, function(response) {
+              chrome.tabs.sendMessage(tabs[0].id, {type: "tweets-done"}, function(response) {
           })}
           });
           }
@@ -598,7 +598,6 @@ async function updateQuery(auth, username, since_id = null, count = 3000, includ
     } 
     else
     {
-      console.log(`received total ${tweets.length} tweets`);
       if (since_id < res[0].id){
         since_id = res[0].id
       } else{
@@ -606,6 +605,7 @@ async function updateQuery(auth, username, since_id = null, count = 3000, includ
         break;
       }
       tweets = tweets.concat(res)
+      console.log(`received total ${tweets.length} tweets so far`);
       let new_tweets = await saveTweets(res);
       // pass since_id again only if we got more recent tweets
       //since = since_id >= res[0].id ? '' : `&since_id=${since_id}`

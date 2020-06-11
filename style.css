@@ -22,6 +22,63 @@
 :root{
   --netural-color: #697882;
 }
+
+
+.sync_icon{
+  float:left;
+  height: 10px; 
+  width: 10px;
+  border-radius: 50%;
+  top:5%;
+  margin-top:5px;
+  position: relative;
+}
+
+.synced {
+  background-color: rgb(0,200,0); 
+}
+
+.unsynced{
+  background-color: rgb(200,100,0); 
+}
+
+/* Tooltip text */
+.sync_icon .tooltiptext {
+  visibility: hidden;
+  width: 120px;
+  background-color:var(--main-txt-color);;
+  color: var(--main-bg-color);;
+  text-align: center;
+  font-weight: 100;
+  padding: 5px 0;
+  border-radius: 6px;
+ 
+  /* Position the tooltip text - see examples below! */
+  position: absolute;
+  z-index: 1;
+
+    
+  width: 120px;
+  top: 110%;
+  left: 100%;
+  margin-left: -20px; /*  Use half of the width (120/2 = 60), to center the tooltip */
+}
+
+.sync_icon .tooltiptext::after {
+  content: " ";
+  position: absolute;
+  bottom: 100%;  /* At the top of the tooltip */
+  left: 10px;
+  margin-left: 0px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent transparent black transparent;
+}
+/* Show the tooltip text when you mouse over the tooltip container */
+.sync_icon:hover .tooltiptext {
+  visibility: visible;
+}
+
 .suggTitle{
   color: var(--main-txt-color);
   margin-bottom: 8px;

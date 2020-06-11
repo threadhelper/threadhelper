@@ -11,6 +11,7 @@
   let home_sugg = null
   let observers = []
   let options = {}
+  let db_synced = false
   
   //somehow this isn't a native method
   Array.prototype.contains = function(obj) {
@@ -35,19 +36,21 @@
   }
 
   async function getTweets() {
-    const processTweets = function(ts){
+    const processTweets = function(ts,meta){
       if (typeof ts !== 'undefined' && ts != null){
         //tweets = ts.map(t => ({...t, bag:nlp.toBag(t.text)}))
         tweets = ts
         console.log(ts);
+        let sync_message = `Holding ${meta.count} tweets. \n Last updated ${(new Date(meta.since_time)).toLocaleString()}`
+        setSyncStatus(true, sync_message)
       }else{
         console.log("got no tweets")
         return null
       }
     }
-    chrome.storage.local.get(["tweets"], r =>{
+    chrome.storage.local.get(["tweets","tweets_meta"], r =>{
       console.log("getting tweets from storage")
-      processTweets(r.tweets)
+      processTweets(r.tweets, r.tweets_meta)
     });
   }
 
@@ -226,6 +229,16 @@
     var h3 = document.createElement('h3')
     h3.textContent = "Thread Helper"
     h3.setAttribute("class","suggTitle");
+
+    let sync_icon = document.createElement('span')
+    let sync_class = db_synced ? 'sync_icon synced' : 'sync_icon unsynced';
+    sync_icon.setAttribute("class", sync_class);
+    let tooltiptext = document.createElement('span')
+    tooltiptext.innerHTML = "Info about sync"
+    tooltiptext.setAttribute("class", 'tooltiptext');
+
+    sync_icon.appendChild(tooltiptext)
+    h3.appendChild(sync_icon)
     sugg_box.appendChild(h3)
     var p = document.createElement("p");
     p.textContent = "Type something to get related tweets :)"
@@ -596,8 +609,16 @@
     }
   }
 
-  //||||||| RENDER CITY STOPS HERE |||||||
+  //||||||| RENDER CITY NOW LEAVING |||||||
 
+  function setSyncStatus(sync, message='sync info'){
+    let si = document.getElementsByClassName("sync_icon")
+    let classes = sync ? 'sync_icon synced' : 'sync_icon unsynced'
+    for (let s of si){  
+      s.setAttribute("class", classes);
+      s.firstChild.innerText = message
+    }
+  }
   //** Handles messages sent from background or popup */
   function onMessage(m, sender, sendResponse) {
     console.log("message received:", m);
@@ -606,7 +627,8 @@
         sendResponse({ data: 'pong' });
         break;
       case "tweets-loaded":
-        console.log("tweets loaded, getting tweets")
+        //console.log("tweets loaded, getting tweets")
+        setSyncStatus(true)
         getTweets()
         sendResponse()
         break;

@@ -49,7 +49,7 @@ function buildButton(){
 }
 
 function buildPage(buttons_template){
-  document.body.appendChild(buildNameField())
+  //document.body.appendChild(buildNameField())
   document.body.appendChild(document.createElement("br"))
   // append all options
   for (var [key, value] of Object.entries(buttons_template)) {
@@ -66,7 +66,7 @@ $(document).ready(function() {
 
   // auto load username
   let stored_username = null
-  getData("user_info").then(()=>{username = r.screen_name; document.getElementById("username").value = username})
+  getData("user_info").then((r)=>{username = r.screen_name; /*document.getElementById("username").value = username}*/)
   
   // chrome.storage.local.get(["username"], r =>{
   //   stored_username = r.username; 
