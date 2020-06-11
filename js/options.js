@@ -1,6 +1,7 @@
 
 window.onload = () =>{
   console.log("window loaded")
+  buildPage(options_template)
   document.getElementById("save").onclick = saveOptions
   displayLibrary()
   showValues()
@@ -13,14 +14,35 @@ const objectMap = (obj, fn) =>
     )
   )
 
-let options = {}
-// for (let ch of checkboxes) {
-//     ch.onchange = () => {
-//         if(ch.checked){
+// for pretty printing
 
-//         }
-//     }
-// }
+function prettify(obj){
+  let pretty = ''
+  if (obj != null){
+    if (obj["since_time"])obj["since_time"] = new Date(obj["since_time"]);
+    pretty = JSON.stringify(obj, null, 4)
+  }
+  return pretty
+}
+
+
+let options = {
+  
+}
+
+let options_template = {
+  getRetweets: {
+    type: "checkbox", 
+    value: true, 
+    description: "Search over my retweets in addition to my tweets."
+  },
+  getArchive: {
+    type: "checkbox", 
+    value: false,
+    description: "Get archive (experimental, will attempt to get all user tweets)"
+  }
+}
+
 
 
 function showValues(){
@@ -90,14 +112,63 @@ function getOptionFields(){
 
 //displays meta info about tweets in storage
 function displayLibrary(){
-  let div = document.getElementById("library")
-  chrome.storage.local.get(["tweets_meta"], r =>{
-    var p = document.createElement("p");
-    p.textContent = r.tweets_meta != null ?  r.tweets_meta : "No tweets_meta"
+  //let lib = document.getElementById("library")
+  let lib = document.createElement("div");
+  lib.id = 'library'
+  let params = ["tweets", "tweets_meta", "tweets_arch", "tweets_meta_arch"]
+  chrome.storage.local.get(params, r =>{
+    for (param of params){
+      let details = document.createElement("details");
+      //details.style = "text-indent: 50px;"
+      let summary = document.createElement("summary");
+      summary.textContent = param
+      let t_div = document.createElement("div");
+      t_div.style = "white-space: pre-wrap;"
+      t_div.textContent = r.tweets_meta != null ?  prettify(r[param]) : `No ${param}`
+      details.appendChild(summary);
+      details.appendChild(t_div);
+      lib.appendChild(details);
+    }
     //typeof r.tweets_meta !== 'undefined' && 
-    div.appendChild(p);
   })
+  return lib
 }
+
+function buildOption(key, value){
+  let label = document.createElement("label");
+  let input = document.createElement("input");
+  let description = document.createElement("span");
+  description.textContent = value.description
+  input.type = value.type
+  input.id = key
+  if (value.type == "checked") {input.checked = value.value}
+  label.appendChild(input)
+  label.appendChild(description)
+  return label
+}
+
+function buildPage(options_template){
+  // append all options
+  for (var [key, value] of Object.entries(options_template)) {
+    let label = buildOption(key,value)
+    document.body.appendChild(label)
+    document.body.appendChild(document.createElement("br"))
+  }
+  //append archive monitor
+  let lib = displayLibrary()
+  document.body.appendChild(lib)
+  document.body.appendChild(document.createElement("br"))
+  
+  //append save button
+  let save_div = document.createElement("div");
+  save_div.id = "status"
+  let save_button = document.createElement("button");
+  save_button.id = "save"
+  save_button.textContent = "Save"
+  save_div.appendChild(save_button)
+  document.body.appendChild(save_div)
+  document.body.appendChild(document.createElement("br"))
+} 
 
 function saveOptions() {
   const now = (new Date()).getTime()
