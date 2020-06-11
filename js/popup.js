@@ -66,7 +66,7 @@ $(document).ready(function() {
 
   // auto load username
   let stored_username = null
-  getData("user_info").then((r)=>{username = r.screen_name; /*document.getElementById("username").value = username}*/)
+  getData("user_info").then((r)=>{username = r.screen_name; /*document.getElementById("username").value = username*/})
   
   // chrome.storage.local.get(["username"], r =>{
   //   stored_username = r.username; 
