@@ -1,14 +1,14 @@
 "use strict";
 
 let buttons_template = {
-  updateTweets: {
-    name: "update Tweets"
-  },
-  downloadTimeline: {
-    name: "get Tweets"
-  },
+  // updateTweets: {
+  //   name: "update Tweets"
+  // },
+  // downloadTimeline: {
+  //   name: "get Tweets"
+  // },
   downloadArchive: {
-    name: "get Archive"
+    name: "Get Archive (experimental)"
   },
   clearButton: {
     name: "Clear Storage"
@@ -39,13 +39,16 @@ function buildNameField(){
 function buildOption(key, value){
   let butt = document.createElement("button");
   butt.id = key
-
   butt.textContent = value.name
   return butt
 }
 
-function buildButton(){
-  
+function buildCancel(key, value){
+  let butt = document.createElement("button");
+  butt.id = key.concat("Cancel")
+  butt.textContent = "Cancel"
+  butt.style.display = "none"
+  return butt
 }
 
 function buildPage(buttons_template){
@@ -55,6 +58,9 @@ function buildPage(buttons_template){
   for (var [key, value] of Object.entries(buttons_template)) {
     let butt = buildOption(key,value)
     document.body.appendChild(butt)
+    if (key == "downloadArchive"){
+      document.body.appendChild(buildCancel(key, value))
+    }
     document.body.appendChild(document.createElement("br"))
   }
 }
@@ -78,35 +84,39 @@ $(document).ready(function() {
     const message = {
       type: "update",
     };
-    $("#notif").html(`Loading tweets...`)
-
     chrome.runtime.sendMessage(message);
   });
 
   // TODO: You shouldn't be able to click download until you have an auth
-  // TODO: fix bug where it takes two clicks for tweets to update
   $("#downloadTimeline").click(function() {
     const message = {
       type: "timeline",
     };
-    $("#notif").html(`Loading tweets...`)
+    $(this) = 
     chrome.runtime.sendMessage(message);
   });
 
   
   // TODO: You shouldn't be able to click download until you have an auth
-  // TODO: fix bug where it takes two clicks for tweets to update
   $("#downloadArchive").click(function() {
     const message = {
       type: "load_archive",
     };
-    $("#notif").html(`Loading tweets...`)
-    
     chrome.runtime.sendMessage(message);
+    $("#downloadArchiveCancel")[0].style.display = "block"
+    $(this)[0].style.display = "none"
   });
-
+  
+  $("#downloadArchiveCancel").click(function(  ){
+    const message = {
+      type: "interrupt-query",
+    };
+    chrome.runtime.sendMessage(message);
+    $(this)[0].style.display = 'none'
+    $("#downloadArchive")[0].style.display = 'block'
+  })
 
   $("#clearButton").click(function() {
-    chrome.runtime.sendMessage({ type: "clear" }, ()=>{$("#notif").html(`Cleared storage.`);});
+    chrome.runtime.sendMessage({ type: "clear" });
   });
 });

@@ -284,7 +284,7 @@
 }
 
 .th-unavailable {
-  background-color: #f5f8fa;
+  background-color: var(--main-background-color);
   color: var(--netural-color);
 }
 

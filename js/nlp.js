@@ -12,9 +12,11 @@ const nlp = (function() {
     "mentions"
   ]
   var index = null;
-  return { getRelated: getRelated };
+  let tweets = []
+  return { getRelated: getRelated, makeIndex: makeIndex };
 
-  function makeIndex(tweets){
+  async function makeIndex(_tweets){
+    tweets = _tweets
     console.log("making index")
     var index = elasticlunr(function () {
       this.setRef('num');
@@ -35,10 +37,10 @@ const nlp = (function() {
   }
 
   //** Find related tweets */
-  function getRelated(tweet_text, tweets, n_tweets = 20) {
-    //if (index == null){
-    index = makeIndex(tweets)
-    //}
+  async function getRelated(tweet_text, n_tweets = 20) {
+    if (index == null){
+      index = await makeIndex(tweets)
+    }
     var results = index.search(tweet_text, {
       fields: {
           text: {boost: 3},

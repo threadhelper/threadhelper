@@ -7,6 +7,10 @@ let user_info = {}
 
 let options = {}
 
+let interrupt_query = false
+
+let tabId = null
+
 function setUserInfo(res){
   user_info = res
   chrome.storage.local.set({ user_info: user_info }, function() {
@@ -42,7 +46,7 @@ function setData(key_vals) {
   });
 }
 
-let tabId = null
+
 
 function getTabId(){
   return new Promise(function(resolve, reject) {
@@ -352,6 +356,9 @@ async function onMessage(m, sender) {
         if (auth_good) updateTweets(m, "archive")
       }
       break;
+    case "interrupt-query":
+      interrupt_query = true;
+      break;
 
     case "clear":
       // clear storage
@@ -405,6 +412,7 @@ function updateTweets(m, update_type = "update"){
           if (tweets.length > 0){
             var tweets_meta = makeTweetsMeta(tweets)
           }
+          messageCS({type: "tweets-done", update_type: update_type})
         })
         break;
       case "timeline":
@@ -412,6 +420,7 @@ function updateTweets(m, update_type = "update"){
           if (tweets.length > 0){
             var tweets_meta = makeTweetsMeta(tweets)
           }
+          messageCS({type: "tweets-done", update_type: update_type})
         });
         break;
       case "archive":
@@ -419,11 +428,12 @@ function updateTweets(m, update_type = "update"){
           if (tweets.length > 0){
             var tweets_meta = makeTweetsMeta(tweets)
           }
+          messageCS({type: "tweets-done", update_type: update_type})
         })
         break;
       }
     });
-  messageCS({type: "tweets-done"})
+  
 }
 
 
@@ -476,8 +486,8 @@ function toTweet(entry) {
   if (entry != null){
     tweet = {
       // Basic info.
-      //id: entry.id_str,
-      id: entry.id,
+      id: entry.id_str,
+      //id: entry.id,
       text: entry.full_text || entry.text,
       name: entry.user.name,
       username: entry.user.screen_name,
@@ -546,18 +556,14 @@ async function saveTweets(res, arch=false){
   let new_tweets = res.map(toTweet);
   let all_tweets = []
   if (new_tweets.length > 0){
-    // console.log("new_tweets",new_tweets)
     // load all tweets
     let tweets = await getData("tweets")
     all_tweets = all_tweets.concat(new_tweets)
     if (typeof tweets!=="undefined" && tweets != null){
-      // console.log("rtweets",r.tweets)
       //all_tweets = r.tweets
       all_tweets = all_tweets.concat(tweets)
     }
-    // console.log("all_tweets after adding OLD",all_tweets)
     all_tweets = removeDuplicates(all_tweets)
-    // console.log("all_tweets after adding NEW",all_tweets)
     let tweets_meta = makeTweetsMeta(all_tweets)
     // append new tweets and store all tweets'
     let data = arch ? { tweets_arch: all_tweets, tweets_meta_arch: tweets_meta} : {tweets: all_tweets, tweets_meta: tweets_meta}
@@ -570,10 +576,9 @@ async function saveTweets(res, arch=false){
   return new_tweets
 }
 
-
-
 //to call when we have tweets and wish to update just with the lates
 async function updateQuery(auth, since_id = null, count = 3000, include_rts = true) {
+  interrupt_query = false
   let stop = false
   const init = {
     credentials: "include",
@@ -613,7 +618,7 @@ async function updateQuery(auth, since_id = null, count = 3000, include_rts = tr
         break;
       }
       tweets = tweets.concat(res)
-      console.log(`received total ${tweets.length} tweets so far`);
+      //console.log(`received total ${tweets.length} tweets so far`);
       let new_tweets = await saveTweets(res);
       // pass since_id again only if we got more recent tweets
       //since = since_id >= res[0].id ? '' : `&since_id=${since_id}`
@@ -625,8 +630,6 @@ async function updateQuery(auth, since_id = null, count = 3000, include_rts = tr
   }  while(! stop_condition(res,tweets))
   return tweets
 }
-
-
 
 async function timelineQuery(auth, max_id = null, count = 3000, include_rts = true) {
   //console.log("making complete query")
@@ -666,7 +669,7 @@ async function timelineQuery(auth, max_id = null, count = 3000, include_rts = tr
     {
       tweets = tweets.concat(res)
       console.log(`received total ${tweets.length} tweets`);
-      console.log(res);
+      //console.log(res);
       let new_tweets = await saveTweets(res);
       
       let since = ''
@@ -676,10 +679,8 @@ async function timelineQuery(auth, max_id = null, count = 3000, include_rts = tr
       url = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}&count=${count}&max_id=${max_id}${since}&include_rts=${include_rts}`
     }
   } while(! stop_condition(res,tweets))
-  console.log(tweets)
   return tweets
 }
-
 
 // Get ALL the tweets in reverse chronological order. Ambitious. Basically iterate through dates. Save earliest and latest dates in meta.
 // experiments show twitter only serves max ~50 tweets per day and you can't specify smaller intervals than 1 day
@@ -702,14 +703,7 @@ async function archiveQuery(auth, arch_until = formatDate(), count = 200000, inc
   const nd = Math.min(5,Math.ceil(Math.floor((arch_until.getTime() - arch_since.getTime())/nDays(1)) / max_n_reqs))
 
   since.setTime(since.getTime() - nDays(nd))
-  // console.log("creation", new Date(user_info.created_at))
-  // console.log("since", since)
-  // console.log("since date", arch_since)
-  // console.log("since formatted", formatDate(since))
-  // console.log("until", until)
-  // console.log("until date", arch_until)
-  // console.log("until formatted", formatDate(until))
-
+  
   const init = {
     credentials: "include",
     headers: {
@@ -717,7 +711,7 @@ async function archiveQuery(auth, arch_until = formatDate(), count = 200000, inc
       "x-csrf-token": auth.csrfToken
     }
   };
-  const outer_stop_condition = (since, arch=arch_since) => {return since.getTime() <= arch_since.getTime() }
+  const outer_stop_condition = (since, arch=arch_since) => {return (since.getTime() <= arch_since.getTime()) || interrupt_query }
   do
   {
       var query = escape(`from:${username} since:${formatDate(since)} until:${formatDate(until)}`);	  
@@ -726,7 +720,6 @@ async function archiveQuery(auth, arch_until = formatDate(), count = 200000, inc
       try
       {
         res = await fetch(url,init).then(x => x.json())
-        console.log(res.globalObjects)
         var res_tweets = Object.values(res.globalObjects.tweets)
         if (res_tweets.length == 0 || res_tweets == null){
           console.log("res is empty or empty")
@@ -736,14 +729,10 @@ async function archiveQuery(auth, arch_until = formatDate(), count = 200000, inc
           users = Object.values(res.globalObjects.users)
           //let user_tweets = res_tweets.filter(t=>{return t.username==username;}).map(t=>{t.user=users.find(u=>{return u.id == t.user_id}); return t})
           let user_tweets = res_tweets.map(t=>{t.user=users.find(u=>{return u.id == t.user_id}); return t})
-          console.log("user tweets", user_tweets)
           let new_tweets = await saveTweets(user_tweets/*,true*/);
-          console.log("new tweets (after saving)", user_tweets)
           tweets = tweets.concat(new_tweets)
+          
           console.log(new_tweets)
-          //if (arch_since == 0) arch_since = getAccountCreated(users[0])
-
-          //console.log(`GET: ${url}`)
           console.log(`received total ${tweets.length} tweets`);
         }
       }
@@ -755,6 +744,5 @@ async function archiveQuery(auth, arch_until = formatDate(), count = 200000, inc
     since.setTime(until.getTime() - nDays(nd)) 
   } 
   while(!outer_stop_condition(since));
-
   return tweets
 }

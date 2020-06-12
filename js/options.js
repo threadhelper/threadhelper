@@ -41,7 +41,7 @@ let options_template = {
   getArchive: {
     type: "checkbox", 
     value: false,
-    description: "Get archive (experimental, will attempt to get all user tweets. May take a while and make your browser slower.)"
+    description: "Get archive (will attempt to get ALL user tweets. May take a while and make your browser slower.)"
   }
 }
 

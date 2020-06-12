@@ -1,20 +1,47 @@
 "use strict";
 
+const url_regex = /(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})/;
+// We use this to find the tweet editor
 const editorClass = "DraftEditor-editorContainer";
+// We use this to detect changes in the text of a tweet being composed
 const textFieldClass = 'span[data-text="true"]';
+// We use this to find the spot to place the sugg box in the home screen
 const trendText = '[aria-label="Timeline: Trending now"]';
-const w_period = 500;
+// Holds the tweets to search over
 let tweets = null;
-let activeDiv = null;
-let activeComposer = {composer: null, sugg_box: null, observer: null, mode: null}
-let composers = []
-let home_sugg = null
-let observers = []
-let db_sync = {synced: false, msg: "No tweets yet..." }
+let tweets_meta = null
+// Options
 let options = {}
+// User info
 let user_info = {}
+// Hold the active context of tweeting/sugg_box
+let activeComposer = {composer: null, sugg_box: null, observer: null, mode: null}
+// Hold the underlying home sugg_box
+let home_sugg = null
+// Holds observers for eventual destruction
+let observers = []
+// Holds sync status
+/* 
+Sync:
+- synced: No new tweets
+- unsynced: There may be new tweets
+Status:
+- empty: No tweets
+- new: Just latest few tweets
+- timeline: got all getttable timeline tweets
+- archive: got tweets from archive
+*/
+let sync_status = {
+  EMPTY: "empty",
+  UPDATE: "update",
+  TIMELINE: "timeline",
+  ARCHIVE: "archive"
+}
+let db_sync = {synced: false, status:sync_status.EMPTY, msg: "No tweets yet..." }
+// Whether a request is already halfway through
 let mid_request = false
-
+// Whether the timeline has been gotten 
+let has_timeline = false
 
 
 //somehow this isn't a native method
@@ -28,8 +55,19 @@ Array.prototype.contains = function(obj) {
   return false;
 }
 
+function getData(key) {
+  return new Promise(function(resolve, reject) {
+    chrome.storage.local.get(key, function(items) {
+      if (chrome.runtime.lastError) {
+        console.error(chrome.runtime.lastError.message);
+        reject(chrome.runtime.lastError.message);
+      } else {
+        resolve(items[key]);
+      }
+    });
+  });
+}
 
-function onWinResize(){if(activeComposer.sugg_box)showSuggBox(activeComposer)}
 
 async function loadOptions(){
   chrome.storage.local.get(["options"], r =>{
@@ -46,6 +84,24 @@ async function loadUserInfo(){
   })
 }
 
+function clearTweets(){
+  console.log("clearing tweets")
+  tweets = null
+  tweets_meta = null
+  user_info = {}
+}
+
+function makeTweetsMeta(tweets){
+  var tweets_meta = {
+    count: tweets.length, 
+    max_id: tweets[tweets.length - 1].id, 
+    max_time: tweets[tweets.length - 1].time,
+    since_id: tweets[0].id, 
+    since_time: tweets[0].time,
+    last_updated: (new Date()).getTime()
+  }
+  return tweets_meta
+}
 
 // filter to get only tweets by user
 function filterUserTweets(ts){
@@ -56,37 +112,40 @@ function filterUserTweets(ts){
     })
   }
   else{
-    console.log('dont have user info or screen name')
+    //console.log('dont have user info or screen name')
   }
   return _filtered
 }
 
+function tweetsEmpty(tweets){
+  return !(typeof ts !== 'undefined') || tweets == null || tweets.length < 1
+}
+
+
 // gets tweets from storage
 async function getTweets(from_message=false) {
   loadUserInfo()
-  const processTweets = function(ts){
-    if (typeof ts !== 'undefined' && ts != null){
-      //tweets = ts.map(t => ({...t, bag:nlp.toBag(t.text)}))
-      if (!options.getRetweets){
-        ts = filterUserTweets(ts)
-      }
-      tweets = ts
-      if(!from_message){
-        setSyncStatus(true, "Tweets loaded.")
-      }
-      console.log("got tweets",ts);
-    }else{
-      console.log("contentscript got no tweets")
-      if(!from_message){
-        setSyncStatus(false, "No tweets yet...")
-      }
-      return null
+  var meta = await getData("tweets_meta")
+  var ts = await getData("tweets")
+  
+  if (typeof ts !== 'undefined' && ts != null){
+    if (!options.getRetweets){
+      ts = filterUserTweets(ts)
+      meta = makeTweetsMeta(ts)
     }
+    //if collection change, make a new index
+    if(tweetsEmpty(tweets) || (ts.length > 0 && tweets.length != ts.length && tweets != ts)){
+      tweets = ts
+      tweets_meta = meta
+      nlp.makeIndex(tweets)
+    }
+    if(!from_message) setSyncStatus(true, "Tweets loaded.", sync_status.TIMELINE)
+    return tweets
+  }else{
+    if(!from_message) setSyncStatus(false, "No tweets yet...", sync_status.EMPTY)
+    if(tweetsEmpty(tweets)) msgBG({type: "timeline"})
+    return null
   }
-  chrome.storage.local.get(["tweets","tweets_meta"], r =>{
-    console.log("contentscript getting tweets from storage")
-    processTweets(r.tweets)
-  });
 }
 
 // Modes: home, compose, something else?
@@ -94,7 +153,7 @@ function getMode(){
   var pageURL = window.location.href
   var home = 'https://twitter.com/home'
   var compose = 'https://twitter.com/compose/tweet'
-
+  
   console.log("mode is " + pageURL)
   if (pageURL.indexOf(home) > -1){
     return 'home'
@@ -128,7 +187,6 @@ function onFocusIn(e){
   for (var div of divs){
     if(e.target && div.contains(e.target)){
       textBoxFocused(div)
-      if (!mid_request) askBGUpdate()
     }
   }
 }
@@ -154,6 +212,7 @@ function getTextField(compose_box){
   //return compose_box.firstElementChild.firstElementChild.firstElementChild.firstElementChild
   return compose_box.firstElementChild.firstElementChild
 }
+function onWinResize(){if(activeComposer.sugg_box)showSuggBox(activeComposer)}
 
 function textBoxUnfocused(compose_box){
   //console.log("text box focus out")
@@ -174,6 +233,7 @@ function textBoxFocused(compose_box){
   console.log("text box focus in!")
   // if the clicked composer is different from previous active composer and elligible
   if (compose_box != activeComposer.composer && getMode() != "other"){
+    if (!mid_request) msgBG()
     if (activeComposer.mode != "home") killComposer(activeComposer)
     var composer = setUpBox(compose_box)
     //if suggestion box was created, add logger
@@ -190,7 +250,7 @@ function setUpAfterResize(){
 }
 
 function setUpBox(compose_box){
-  console.log("setting up suggestion box")
+  //console.log("setting up suggestion box")
   var mode = getMode();
   var composer = new Object()
   var sugg_box = null
@@ -234,7 +294,7 @@ function placeBox(sugg_box, mode){
       home_sugg = sugg_box
     }
     else{
-      console.log("didn't place box, couldn't find trends block")
+      //console.log("didn't place box, couldn't find trends block")
     }
   }
   else if(mode == "compose"){
@@ -258,20 +318,24 @@ function placeBox(sugg_box, mode){
   }
 }
 
-function buildBoxHeader(){
-  var h3 = document.createElement('h3')
-  h3.textContent = "Thread Helper"
-  h3.setAttribute("class","suggTitle");
-
+function buildSyncIcon(){
   let sync_icon = document.createElement('span')
   let sync_class = db_sync.synced ? 'sync_icon synced' : 'sync_icon unsynced';
   sync_icon.setAttribute("class", sync_class);
   let tooltiptext = document.createElement('span')
   tooltiptext.innerHTML = db_sync.msg
   tooltiptext.setAttribute("class", 'tooltiptext');
-
   sync_icon.appendChild(tooltiptext)
-  h3.appendChild(sync_icon)
+  sync_icon.onclick = ()=>{console.log("Metadata:",tweets_meta); console.log("User info:", user_info)}
+  return sync_icon
+}
+
+
+function buildBoxHeader(){
+  var h3 = document.createElement('h3')
+  h3.textContent = "Thread Helper"
+  h3.setAttribute("class","suggTitle");
+  h3.appendChild(buildSyncIcon())
   return h3
 }
 /** buildBox creates the 'Thread Helper' html elements */
@@ -363,7 +427,7 @@ function getTextFromMutation(mutationRecords){
 }
 
 /** Updates the tweetlist when user types */
-function onChange(mutationRecords) {
+async function onChange(mutationRecords) {
   const text = getTextFromMutation(mutationRecords)
   //console.log("CHANGE! text is:", text, "; in element: ", mutationRecords[0].target);
   if(tweets != null && typeof text != "undefined" && text != null && text.trim() != ''){
@@ -373,9 +437,15 @@ function onChange(mutationRecords) {
       if(typeof activeComposer.sugg_box !== 'undefined' && activeComposer.sugg_box != null && activeComposer.sugg_box.style.display != "flex"){
         activeComposer.sugg_box.style.display = "flex"
       }
-      const tweet = text
-      const related = nlp.getRelated(tweet, tweets);
+      const tweet = text.replace(url_regex, "")
+      // let start = (new Date()).getTime()
+      const related = await nlp.getRelated(tweet);
+      // let end = (new Date()).getTime()
+      // console.log(`${text} search took ${(end-start)/1000}s`)
+      // start = (new Date()).getTime()
       renderTweets([...new Set(related)]);
+      // end = (new Date()).getTime()
+      // console.log(`render tweets took ${(end-start)/1000}s`)
     }
   }
   else{
@@ -649,17 +719,19 @@ function renderTweets(tweets, text = '') {
 
 //||||||| RENDER CITY NOW LEAVING |||||||
 
-function setSyncStatus(sync, message='Sync Info:'){
+function setSyncStatus(sync, message='Sync Info:', status = null){
   chrome.storage.local.get(["tweets_meta"], r =>{
+    let si = document.getElementsByClassName("sync_icon")
+    db_sync.synced = sync == null ? db_sync.synced : sync;
+    db_sync.status = status == null ? db_sync.status : status;
+    let classes = db_sync.synced ? 'sync_icon synced' : 'sync_icon unsynced'
+    message = message.concat(` \n${db_sync.status}. \n`)
     if (r.tweets_meta != null){
       message = message.concat(` \nHolding ${r.tweets_meta.count} tweets. \nLast updated ${(new Date(r.tweets_meta.last_updated)).toLocaleString()}`)
     } else{
       message = message.concat(` \nHolding ${0} tweets.`)
     }
-    let si = document.getElementsByClassName("sync_icon")
-    db_sync.synced = sync;
-    db_sync.msg = message
-    let classes = db_sync.synced ? 'sync_icon synced' : 'sync_icon unsynced'
+    db_sync.msg = message;
     for (let s of si){  
       s.setAttribute("class", classes);
       s.firstChild.innerText = db_sync.msg
@@ -680,15 +752,16 @@ function onMessage(m, sender) {
       mid_request = true
       //console.log("tweets loaded, getting tweets")
       getTweets(true)
-      setSyncStatus(false, "Tweets partially loaded...")
+      setSyncStatus(null, "Tweets partially loaded...")
       break;
     case "tweets-done":
       mid_request = false
-      setSyncStatus(true, "Tweets loaded.")
+      setSyncStatus(true, "Tweets loaded.", m.update_type)
       break;
     case "storage-clear":
       //let sync_message = `Holding ${meta.count} tweets. \n Last updated ${(new Date(meta.since_time)).toLocaleString()}`
-      setSyncStatus(false, `No tweets yet...`)
+      clearTweets()
+      setSyncStatus(false, `No tweets yet...`, sync_status.EMPTY)
       break;
   }
   return true
@@ -705,7 +778,7 @@ function setTheme(){
   let bg_color = document.body.style["background-color"]
 
   
-  console.log("setting theme", bg_color)
+  //console.log("setting theme", bg_color)
   switch(bg_color){
     case light_theme:
       root.style.setProperty('--main-bg-color', "#f5f8fa");
@@ -730,9 +803,10 @@ function setTheme(){
   }
 }
 
-function askBGUpdate(){
-  let message = {type: "update"}
+function msgBG(msg = null){
+  let message = msg == null ? {type: "update"} : msg
   chrome.runtime.sendMessage(message);
+  console.log("messaging BG", message)
 }
 
 function main()
@@ -750,7 +824,7 @@ function main()
     setUpTrendsListener();
   }
   window.onpopstate = ()=>{
-    console.log("url changed")
+    //console.log("url changed")
     setTheme()
     if(activeComposer.sugg_box)showSuggBox(activeComposer)
   }
