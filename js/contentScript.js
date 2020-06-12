@@ -332,11 +332,14 @@ function buildSyncIcon(){
 
 
 function buildBoxHeader(){
+  let headerDiv = document.createElement('div')
+  headerDiv.setAttribute("class", "suggHeader")
   var h3 = document.createElement('h3')
   h3.textContent = "Thread Helper"
   h3.setAttribute("class","suggTitle");
-  h3.appendChild(buildSyncIcon())
-  return h3
+  headerDiv.appendChild(buildSyncIcon())
+  headerDiv.appendChild(h3)
+  return headerDiv
 }
 /** buildBox creates the 'Thread Helper' html elements */
 function buildBox() {
@@ -815,14 +818,15 @@ function main()
 
   window.addEventListener('resize', onWinResize)
   window.onload = () => {
-    //scanForTweets();
-    setTheme();
     document.addEventListener(destructionEvent, destructor);
     chrome.runtime.sendMessage({type:"cs-created"});
     loadOptions();
     setUpListeningComposeClick();
     setUpTrendsListener();
   }
+  $(document).ready(function() {
+    setTheme()
+  })
   window.onpopstate = ()=>{
     //console.log("url changed")
     setTheme()
