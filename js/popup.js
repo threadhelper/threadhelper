@@ -7,8 +7,14 @@ let buttons_template = {
   // downloadTimeline: {
   //   name: "get Tweets"
   // },
-  downloadArchive: {
-    name: "Get Archive (experimental)"
+  loadArchive: {
+    name: "Load Archive"
+  },
+  saveArchive: {
+    name: "Save Archive"
+  },
+  downloadHistory: {
+    name: "Get History (experimental)"
   },
   clearButton: {
     name: "Clear Storage"
@@ -51,15 +57,24 @@ function buildCancel(key, value){
   return butt
 }
 
+
 function buildPage(buttons_template){
   //document.body.appendChild(buildNameField())
   document.body.appendChild(document.createElement("br"))
   // append all options
   for (var [key, value] of Object.entries(buttons_template)) {
     let butt = buildOption(key,value)
-    document.body.appendChild(butt)
-    if (key == "downloadArchive"){
-      document.body.appendChild(buildCancel(key, value))
+    switch(key){
+      case "downloadHistory":
+        document.body.appendChild(butt) 
+        document.body.appendChild(buildCancel(key, value))
+        break;
+      case "loadArchive":
+        document.body.appendChild(butt)
+        //document.body.appendChild(setUpLoadArchive())
+        break;
+      default:
+        document.body.appendChild(butt)
     }
     document.body.appendChild(document.createElement("br"))
   }
@@ -87,6 +102,22 @@ $(document).ready(function() {
     chrome.runtime.sendMessage(message);
   });
 
+  $("#loadArchive").click(function() {
+    const message = {
+      type: "loadArchive",
+    };
+    
+    chrome.runtime.sendMessage(message);
+  });
+
+  $("#saveArchive").click(function() {
+    const message = {
+      type: "saveArchive",
+    };
+    chrome.runtime.sendMessage(message);
+  });
+  
+
   // TODO: You shouldn't be able to click download until you have an auth
   $("#downloadTimeline").click(function() {
     const message = {
@@ -98,16 +129,16 @@ $(document).ready(function() {
 
   
   // TODO: You shouldn't be able to click download until you have an auth
-  $("#downloadArchive").click(function() {
+  $("#downloadHistory").click(function() {
     const message = {
-      type: "load_archive",
+      type: "load_history",
     };
     chrome.runtime.sendMessage(message);
     $("#downloadArchiveCancel")[0].style.display = "block"
     $(this)[0].style.display = "none"
   });
   
-  $("#downloadArchiveCancel").click(function(  ){
+  $("#downloadHistoryCancel").click(function(  ){
     const message = {
       type: "interrupt-query",
     };

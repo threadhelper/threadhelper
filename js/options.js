@@ -2,7 +2,7 @@
 window.onload = () =>{
   console.log("window loaded")
   buildPage(options_template)
-  document.getElementById("save").onclick = saveOptions
+  setUpListeners()
   displayLibrary()
   showValues()
   } 
@@ -45,7 +45,16 @@ let options_template = {
   }
 }
 
-
+let actions_template = {
+  saveOptions: {
+    name: "Save Options",
+    description:""
+  },
+  clearButton: {
+    name: "Clear Storage",
+    description:"(ATTENTION) This deletes all the tweet information you have stored in Thread Helper."
+  }
+}
 
 function showValues(){
   chrome.storage.local.get(["options"], r =>{
@@ -149,6 +158,26 @@ function buildOption(key, value){
   return label
 }
 
+
+function buildButton(key, value){
+  let div = document.createElement("div");
+  div.id = key.concat("Div")
+  let butt = document.createElement("button");
+  butt.id = key
+  butt.textContent = value.name
+  div.appendChild(butt)
+  return div
+}
+
+function buildCancel(key, value){
+  let butt = document.createElement("button");
+  butt.id = key.concat("Cancel")
+  butt.textContent = "Cancel"
+  butt.style.display = "none"
+  return butt
+}
+
+
 function buildPage(options_template){
   // append all options
   for (var [key, value] of Object.entries(options_template)) {
@@ -161,34 +190,67 @@ function buildPage(options_template){
   // document.body.appendChild(lib)
   // document.body.appendChild(document.createElement("br"))
   
-  //append save button
-  let save_div = document.createElement("div");
-  save_div.id = "status"
-  let save_button = document.createElement("button");
-  save_button.id = "save"
-  save_button.textContent = "Save"
-  save_div.appendChild(save_button)
-  document.body.appendChild(save_div)
-  document.body.appendChild(document.createElement("br"))
+  
+  for (var [key, value] of Object.entries(actions_template)) {
+    let butt = buildButton(key,value)
+    document.body.appendChild(butt)
+    document.body.appendChild(document.createElement("br"))
+  }
 } 
 
-function saveOptions() {
-  const now = (new Date()).getTime()
-  let options_meta = {lastUpdated: now}
-  let new_options = {}
-  const checkboxes = getOptionFields()
-  for (ch of checkboxes){
-    //const option_name = ch.id
-    new_options[ch.id] = ch.checked
-  }
-  chrome.storage.local.set({options: new_options, options_meta: options_meta}, function() {
-    const message = {
-      type: "saveOptions",
-    };
-    chrome.runtime.sendMessage(message, ()=>{console.log("options set", new_options)});
-    chrome.storage.local.get(["options"], r =>{
-      console.log('set ', r.options);});
-    //chrome.tabs.query({ currentWindow: true, active: true }, (tabs) => chrome.tabs.reload(tabs[0].id));
-  })
-}
+// function saveOptions() {
+//   let savebutt = document.getElementById("saveOptions")
+//   const now = (new Date()).getTime()
+//   let options_meta = {lastUpdated: now}
+//   let new_options = {}
+//   const checkboxes = getOptionFields()
+//   for (ch of checkboxes){
+//     //const option_name = ch.id
+//     new_options[ch.id] = ch.checked
+//   }
+//   chrome.storage.local.set({options: new_options, options_meta: options_meta}, function() {
+//     const message = {
+//       type: "saveOptions",
+//     };
+//     chrome.runtime.sendMessage(message, ()=>{console.log("options set", new_options)});
+//     chrome.storage.local.get(["options"], r =>{
+//       console.log('set ', r.options);});
+//       savebutt.textContent = "Saved!"
+//       setTimeout(function() {
+//         savebutt.textContent("Save Options")
+//         }, 2000)
+//     //chrome.tabs.query({ currentWindow: true, active: true }, (tabs) => chrome.tabs.reload(tabs[0].id));
+//   })
+// }
 
+function setUpListeners(){
+  document.getElementById("saveOptions").onclick(function() {
+      let savebutt = document.getElementById("saveOptions")
+      const now = (new Date()).getTime()
+      let options_meta = {lastUpdated: now}
+      let new_options = {}
+      const checkboxes = getOptionFields()
+      for (ch of checkboxes){
+        //const option_name = ch.id
+        new_options[ch.id] = ch.checked
+      }
+      chrome.storage.local.set({options: new_options, options_meta: options_meta}, function() {
+        const message = {
+          type: "saveOptions",
+        };
+        chrome.runtime.sendMessage(message, ()=>{console.log("options set", new_options)});
+        chrome.storage.local.get(["options"], r =>{
+          console.log('set ', r.options);});
+          savebutt.textContent = "Saved!"
+          setTimeout(function() {
+            savebutt.textContent("Save Options")
+            }, 2000)
+        //chrome.tabs.query({ currentWindow: true, active: true }, (tabs) => chrome.tabs.reload(tabs[0].id));
+      })
+    });
+
+  document.getElementById("clearButton").click(function() {
+      chrome.runtime.sendMessage({ type: "clear" });
+    });
+
+}

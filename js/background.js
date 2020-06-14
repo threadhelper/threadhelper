@@ -318,6 +318,23 @@ async function onMessage(m, sender) {
       loadOptions()
       break;
 
+    case "loadArchive":
+      messageCS({type: "loadArchive"})
+      // console.log(await nlp.getRelated("meme magic"))
+      // console.log("archive loading", archive_tweets.slice(0,50))
+      break;
+    
+    case "tempArchiveStored":
+      updateTweets(m, "archive");
+      break;
+
+    case "saveArchive":
+      messageCS({type: "save_archive"})
+      // console.log(await nlp.getRelated("meme magic"))
+      // console.log("archive loading", archive_tweets.slice(0,50))
+      break;
+      
+
     case "update":
       auth_good = await auth.testAuth()
       if(await auth_good != null){
@@ -344,7 +361,7 @@ async function onMessage(m, sender) {
       }
       break;
 
-    case "load_archive":
+    case "load_history":
       auth_good = await auth.testAuth()
       if(auth_good  != null){
         console.log("auth good", auth_good)
@@ -399,6 +416,7 @@ function updateTweets(m, update_type = "update"){
     let since_date = null
     let max_id = null
     let max_date = null
+    let tweets_meta = null
     if (typeof r.tweets_meta !== 'undefined' && typeof r.tweets_meta.since_id !== 'undefined'  && r.tweets_meta.since_id != null && typeof r.tweets_meta.max_id !== 'undefined'  && r.tweets_meta.max_id != null){
       since_id = r.tweets_meta.since_id
       max_id = r.tweets_meta.max_id
@@ -407,27 +425,25 @@ function updateTweets(m, update_type = "update"){
       
     }
     switch(update_type){
+      case "archive":
+        getData("temp_archive").then((temp_archive) => {
+          saveTweets(temp_archive, update_type).then(()=>{
+            messageCS({type: "tweets-done", update_type: update_type})
+          })
+        })
+        break;
       case "update":
         updateQuery(auth, since_id).then((tweets)=>{
-          if (tweets.length > 0){
-            var tweets_meta = makeTweetsMeta(tweets)
-          }
           messageCS({type: "tweets-done", update_type: update_type})
         })
         break;
       case "timeline":
         timelineQuery(auth, max_id).then(function(tweets) {
-          if (tweets.length > 0){
-            var tweets_meta = makeTweetsMeta(tweets)
-          }
           messageCS({type: "tweets-done", update_type: update_type})
         });
         break;
-      case "archive":
+      case "history":
         archiveQuery(auth, max_date).then((tweets)=>{
-          if (tweets.length > 0){
-            var tweets_meta = makeTweetsMeta(tweets)
-          }
           messageCS({type: "tweets-done", update_type: update_type})
         })
         break;
@@ -478,6 +494,68 @@ function filterUserTweets(ts){
   })
 }
 
+
+
+// specifically for converting tweets from twitter archive
+function archToTweet(entry) {
+  // entry.entities.media is not present if media is not present, hence we need to populate those
+  // fields only if media is present. Same with quote.
+  let tweet = null
+  entry = entry.tweet
+  if (entry != null){
+    try{
+    tweet = {
+      // Basic info.
+      id: entry.id_str,
+      //id: entry.id,
+      text: entry.full_text || entry.text,
+      name: user_info.name,
+      username: user_info.screen_name,
+      profile_image: user_info.profile_image_url_https,
+      time: new Date(entry.created_at).getTime(),
+      // Replies/mentions.
+      reply_to: entry.in_reply_to_screen_name, // null if not present.
+      mentions: entry.entities.user_mentions.map(x => ({username: x.screen_name, indices: x.indices})),
+      // URLs.
+      urls: entry.entities.urls.map(x => ({current_text: x.url, display: x.display_url, expanded: x.expanded_url})),
+      // Media.
+      has_media: typeof entry.entities.media !== "undefined",
+      media: null,
+      // Quote info.
+      has_quote: entry.is_quote_status,
+      is_quote_up: typeof entry.quoted_status !== "undefined",
+      quote: null,
+    }
+    // Add media info.
+    if (tweet.has_media) {
+      tweet.media = entry.entities.media.map(x => ({current_text: x.url, url: x.media_url_https}))
+    }
+    // Add full quote info.
+    if (tweet.has_quote && tweet.is_quote_up) {
+      tweet.quote = {
+        // Basic info.
+        text: entry.quoted_status.text,
+        name: entry.quoted_status.user.name,
+        username: entry.quoted_status.user.screen_name,
+        time: new Date(entry.quoted_status.created_at).getTime(),
+        profile_image: entry.quoted_status.user.profile_image_url_https,
+        // Replies/mentions.
+        reply_to: entry.quoted_status.in_reply_to_screen_name,
+        mentions: entry.quoted_status.entities.user_mentions.map(x => ({username: x.screen_name, indices: x.indices})),
+        // URLs.
+        urls: entry.quoted_status.entities.urls.map(x => ({current_text: x.url, display: x.display_url, expanded: x.expanded_url})),
+        has_media: typeof entry.quoted_status.entities.media !== "undefined",
+        media: null,
+      }
+      if (tweet.quote.has_media) {
+        tweet.quote.media = entry.quoted_status.entities.media.map(x => ({current_text: x.url, url: x.media_url_https}))
+      }
+    }} catch(e){
+      console.log("failed", entry)
+    }
+  }
+  return tweet
+}
 
 function toTweet(entry) {
   // entry.entities.media is not present if media is not present, hence we need to populate those
@@ -547,26 +625,54 @@ function getAccountCreated(user){
   return new Date(user.created_at)
 }
 
+// TODO: maximal efficiency would consider the origin with the old tweets but that's more than I want to do
+function priorityConcat(_old, _new, update_type = "update"){
+  let overwrite = (sub,dom,dom_meta) => {
+    //I only want sub with id > dom.since_id and sub with id < dom.max_id
+    let cap = sub.slice(0,sub.reverse().findIndex((t)=>{return t.id > dom_meta.since_id}))
+    let shoes = sub.slice(sub.findIndex((t)=>{return t.id < dom_meta.max_id}),(sub.length - 1))
+    return cap.concat(dom).concat(shoes)
+  }
+  let priority = {
+    timeline: 5,
+    update: 4, //there are reasons for update to be higher priority than timeline (deleted recent tweets) but like this is more efficient
+    archive: 3,
+    old: 2,
+    history: 1
+  }
+  let new_tweets = []
+  let old_meta = makeTweetsMeta(_old)
+  let new_meta = makeTweetsMeta(_new)
+  if (priority[update_type] > priority.old){
+    //.reverse()
+    new_tweets = overwrite(_old, _new, new_meta)
+  } else{
+    new_tweets = overwrite(_new, _old, old_meta)
+  }
+  return new_tweets
+}
 
 // Convert request results to tweets and save them
 // TODO  : deal with archive RTs which are listed as by the retweeter and not by the original author
-async function saveTweets(res, arch=false){
-  //let new_tweets = arch ? res.map(toTweetArch) : res.map(toTweet);
-  //res = filterUserTweets(res)
-  let new_tweets = res.map(toTweet);
+async function saveTweets(res, update_type = "update"){
+  let arch = update_type == "archive"
+  let new_tweets = arch ? res.map(archToTweet) : res.map(toTweet);
   let all_tweets = []
   if (new_tweets.length > 0){
     // load all tweets
     let tweets = await getData("tweets")
-    all_tweets = all_tweets.concat(new_tweets)
-    if (typeof tweets!=="undefined" && tweets != null){
-      //all_tweets = r.tweets
-      all_tweets = all_tweets.concat(tweets)
-    }
+    
+    
+    // all_tweets = all_tweets.concat(new_tweets)
+    // if (typeof tweets!=="undefined" && tweets != null){
+    //   all_tweets = all_tweets.concat(tweets)
+    // }
+  
+    all_tweets = priorityConcat(tweets, new_tweets, update_type = "update")
     all_tweets = removeDuplicates(all_tweets)
     let tweets_meta = makeTweetsMeta(all_tweets)
     // append new tweets and store all tweets'
-    let data = arch ? { tweets_arch: all_tweets, tweets_meta_arch: tweets_meta} : {tweets: all_tweets, tweets_meta: tweets_meta}
+    let data = {tweets: all_tweets, tweets_meta: tweets_meta}
     await setData(data)
     messageCS({type: "tweets-loaded"})
   }

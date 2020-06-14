@@ -35,6 +35,7 @@ let sync_status = {
   EMPTY: "empty",
   UPDATE: "update",
   TIMELINE: "timeline",
+  HISTORY: "history",
   ARCHIVE: "archive"
 }
 let db_sync = {synced: false, status:sync_status.EMPTY, msg: "No tweets yet..." }
@@ -75,6 +76,7 @@ async function loadOptions(){
       options = r.options
     }
   })
+  return options
 }
 async function loadUserInfo(){
   chrome.storage.local.get(["user_info"], r =>{
@@ -82,6 +84,7 @@ async function loadUserInfo(){
       user_info = r.user_info
     }
   })
+  return user_info
 }
 
 function clearTweets(){
@@ -102,6 +105,7 @@ function makeTweetsMeta(tweets){
   }
   return tweets_meta
 }
+
 
 // filter to get only tweets by user
 function filterUserTweets(ts){
@@ -137,7 +141,10 @@ async function getTweets(from_message=false) {
     if(tweetsEmpty(tweets) || (ts.length > 0 && tweets.length != ts.length && tweets != ts)){
       tweets = ts
       tweets_meta = meta
+      let prev_msg = showConsoleMessage("Just a moment, making an index of your tweets...")
+      console.log()
       nlp.makeIndex(tweets)
+      showConsoleMessage(prev_msg)
     }
     if(!from_message) setSyncStatus(true, "Tweets loaded.", sync_status.TIMELINE)
     return tweets
@@ -330,7 +337,7 @@ function buildSyncIcon(){
   return sync_icon
 }
 
-
+// Builds the header: Currently title and sync light
 function buildBoxHeader(){
   let headerDiv = document.createElement('div')
   headerDiv.setAttribute("class", "suggHeader")
@@ -341,6 +348,25 @@ function buildBoxHeader(){
   headerDiv.appendChild(h3)
   return headerDiv
 }
+
+// Builds a display for notifications
+function buildBoxConsole(){
+  let consoleDiv = document.createElement('div')
+  consoleDiv.setAttribute("class", "suggConsole")
+  consoleDiv.setAttribute("id", "suggConsole")
+  consoleDiv.innerHTML = "Type something to get related tweets :)"
+  return consoleDiv
+}
+
+// Show a message in console, returns old message (presumably for interrupts and stuff like that)
+// TODO: Consoles could be separate but right now they're all the same. Could lead to confusion in the future
+function showConsoleMessage(message){
+  let consoleDivs = document.getElementsByClassName("suggConsole")
+  let old_msg = consoleDivs[0].innerHTML
+  for(let consoleDiv of consoleDivs) consoleDiv.innerHTML = message;
+  return old_msg
+}
+
 /** buildBox creates the 'Thread Helper' html elements */
 function buildBox() {
   var sugg_box = null;
@@ -348,9 +374,7 @@ function buildBox() {
   sugg_box.setAttribute("aria-label", 'suggestionBox');
   
   sugg_box.appendChild(buildBoxHeader())
-  var p = document.createElement("p");
-  p.textContent = "Type something to get related tweets :)"
-  sugg_box.appendChild(p);
+  sugg_box.appendChild(buildBoxConsole())
   return sugg_box
 }
 
@@ -441,14 +465,9 @@ async function onChange(mutationRecords) {
         activeComposer.sugg_box.style.display = "flex"
       }
       const tweet = text.replace(url_regex, "")
-      // let start = (new Date()).getTime()
-      const related = await nlp.getRelated(tweet);
-      // let end = (new Date()).getTime()
-      // console.log(`${text} search took ${(end-start)/1000}s`)
-      // start = (new Date()).getTime()
-      renderTweets([...new Set(related)]);
-      // end = (new Date()).getTime()
-      // console.log(`render tweets took ${(end-start)/1000}s`)
+
+      nlp.getRelated(tweet).then((related)=>{renderTweets([...new Set(related)])});
+      // renderTweets([...new Set(related)]);
     }
   }
   else{
@@ -695,13 +714,12 @@ function renderQuote(quote, parent_has_media) {
 
 //** Build the html for a set of tweets */
 function renderTweets(tweets, text = '') {
-  //console.log("rendering tweets")
-  //var resultsDiv = document.querySelector('[aria-label="suggestionBox"]');
   var resultsDiv = activeComposer.sugg_box
-  while (resultsDiv.firstChild) {
-    resultsDiv.removeChild(resultsDiv.firstChild);
+  let children = resultsDiv.children
+  while (children.length > 2) {
+    resultsDiv.removeChild(children[children.length - 1]);
+    children = resultsDiv.children
   }
-  resultsDiv.appendChild(buildBoxHeader());
   if (tweets.length < 1 ){
     let message = ""
     if(text == ''){
@@ -709,9 +727,7 @@ function renderTweets(tweets, text = '') {
     } else{
       message = "No matching tweets yet!"
     }
-    var p = document.createElement("p");
-    p.innerHTML = message
-    resultsDiv.appendChild(p);
+    showConsoleMessage(message)
   }
   const textTarget = $('span[data-text="true"]');
   for (let t of tweets) {
@@ -741,11 +757,69 @@ function setSyncStatus(sync, message='Sync Info:', status = null){
     }
   }); 
 }
+
+
+
+
+function importArchive() {
+  let result = this.result.replace(/^[a-z0-9A-Z\.]* = /, "");
+
+  var importedTweetArchive = JSON.parse(result);
+  //here is your imported data, and from here you should know what to do with it (save it to some storage, etc.)
+  console.log(importedTweetArchive)
+  //document.getElementById("loadArchive").value = ''; //make sure to clear input value after every import, iideally name wouldn't be  hardcoded
+
+  chrome.storage.local.set({temp_archive: importedTweetArchive}, function() {
+    console.log("temp tweet archive stored", user_info)
+    msgBG({type:"tempArchiveStored"})
+  })
+}
+
+function setUpLoadArchive(){
+  var x = document.createElement("input");
+    let file = {}
+    let idx = 0
+      x.setAttribute("type", "file");
+      x.setAttribute("id", "hidden_load_archive");
+      //x.accept=".json,.js,.zip" ;
+      x.webkitdirectory = true;
+      x.style.display = "none"
+      x.addEventListener("change", (e) => {
+        var files = e.target.files, reader = new FileReader();
+        reader.onload = importArchive;
+        for (let i = 0; i < files.length; i++){
+          if(files[i].name == "tweet.js"){ file = files[i]; idx = i; break;}
+        }
+        console.log("files length", files.length)
+        //if(idx <= files.length) 
+        reader.readAsText(files[idx]);  
+      }, false);
+    document.body.appendChild(x)
+  return x
+}
+
 //** Handles messages sent from background or popup */
-function onMessage(m, sender) {
+async function onMessage(m, sender) {
   console.log("message received:", m);
   switch (m.type) {
     case "ping":
+      break;
+    case "loadArchive":
+      //create an input DOM element
+      let hidden = document.getElementById("hidden_load_archive")
+      hidden.click()
+      // user_info = user_info != null ? user_info : (await loadUserInfo());
+      // let pretweets = archive_tweets.slice(0,50);
+      // console.log("pre tweet", pretweets)
+      // let archTweets = archive_tweets.slice(0,50).map((archToTweet));
+      // console.log("archive loading", archTweets)
+      break;
+    case "saveArchive":
+      let fileName = "threadhelper_archive.json";
+      let data = JSON.stringify([tweets, tweets_meta], undefined, 4)
+      console.log("saving", data)
+      var blob = new Blob([data], {type: "text/plain;charset=utf-8", name: fileName});
+      saveAs(blob, fileName);
       break;
     case "tweets-loading":
       mid_request = true
@@ -820,12 +894,13 @@ function main()
   window.onload = () => {
     document.addEventListener(destructionEvent, destructor);
     chrome.runtime.sendMessage({type:"cs-created"});
-    loadOptions();
     setUpListeningComposeClick();
     setUpTrendsListener();
   }
   $(document).ready(function() {
     setTheme()
+    loadOptions();
+    setUpLoadArchive()
   })
   window.onpopstate = ()=>{
     //console.log("url changed")
