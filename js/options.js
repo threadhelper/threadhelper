@@ -224,7 +224,9 @@ function buildPage(options_template){
 // }
 
 function setUpListeners(){
-  document.getElementById("saveOptions").onclick(function() {
+  (document.getElementById("saveOptions")).addEventListener('click', saveOptions);
+  (document.getElementById("clearButton")).addEventListener('click', () => {chrome.runtime.sendMessage({ type: "clear" });});
+  function saveOptions() {
       let savebutt = document.getElementById("saveOptions")
       const now = (new Date()).getTime()
       let options_meta = {lastUpdated: now}
@@ -238,19 +240,14 @@ function setUpListeners(){
         const message = {
           type: "saveOptions",
         };
-        chrome.runtime.sendMessage(message, ()=>{console.log("options set", new_options)});
+        chrome.runtime.sendMessage(message);
         chrome.storage.local.get(["options"], r =>{
           console.log('set ', r.options);});
           savebutt.textContent = "Saved!"
           setTimeout(function() {
-            savebutt.textContent("Save Options")
+            savebutt.textContent = "Save Options"
             }, 2000)
         //chrome.tabs.query({ currentWindow: true, active: true }, (tabs) => chrome.tabs.reload(tabs[0].id));
       })
-    });
-
-  document.getElementById("clearButton").click(function() {
-      chrome.runtime.sendMessage({ type: "clear" });
-    });
-
+  }
 }

@@ -11,6 +11,8 @@ let interrupt_query = false
 
 let tabId = null
 
+let midRequest = false
+
 function setUserInfo(res){
   user_info = res
   chrome.storage.local.set({ user_info: user_info }, function() {
@@ -83,6 +85,7 @@ async function loadOptions(){
   chrome.storage.local.get(["options"], r =>{
     if (typeof r.options !== "undefined"){
       options = r.options
+      console.log("options loaded!")
     }
   })
 }
@@ -410,46 +413,52 @@ async function messageCS(m){
 
 function updateTweets(m, update_type = "update"){
   //console.log("updating tweets");
-  messageCS({type: "tweets-loading"})
-  chrome.storage.local.get(["tweets", "tweets_meta"], r =>{
-    let since_id = null
-    let since_date = null
-    let max_id = null
-    let max_date = null
-    let tweets_meta = null
-    if (typeof r.tweets_meta !== 'undefined' && typeof r.tweets_meta.since_id !== 'undefined'  && r.tweets_meta.since_id != null && typeof r.tweets_meta.max_id !== 'undefined'  && r.tweets_meta.max_id != null){
-      since_id = r.tweets_meta.since_id
-      max_id = r.tweets_meta.max_id
-      max_date = formatDate(new Date(r.tweets_meta.max_time))
-      since_date = formatDate(new Date(r.tweets_meta.since_time))
-      
-    }
-    switch(update_type){
-      case "archive":
-        getData("temp_archive").then((temp_archive) => {
-          saveTweets(temp_archive, update_type).then(()=>{
-            messageCS({type: "tweets-done", update_type: update_type})
+  messageCS({type: "tweets-loading", update_type: update_type})
+  if (!midRequest){
+    midRequest = true
+    chrome.storage.local.get(["tweets", "tweets_meta"], r =>{
+      let since_id = null
+      let since_date = null
+      let max_id = null
+      let max_date = null
+      let tweets_meta = null
+      if (typeof r.tweets_meta !== 'undefined' && typeof r.tweets_meta.since_id !== 'undefined'  && r.tweets_meta.since_id != null && typeof r.tweets_meta.max_id !== 'undefined'  && r.tweets_meta.max_id != null){
+        since_id = r.tweets_meta.since_id
+        max_id = r.tweets_meta.max_id
+        max_date = formatDate(new Date(r.tweets_meta.max_time))
+        since_date = formatDate(new Date(r.tweets_meta.since_time))
+        
+      }
+      switch(update_type){
+        case "archive":
+          getData("temp_archive").then((temp_archive) => {
+            saveTweets(temp_archive, update_type).then(()=>{
+              messageCS({type: "tweets-done", update_type: update_type})
+              midRequest = false
+            })
           })
-        })
-        break;
-      case "update":
-        updateQuery(auth, since_id).then((tweets)=>{
-          messageCS({type: "tweets-done", update_type: update_type})
-        })
-        break;
-      case "timeline":
-        timelineQuery(auth, max_id).then(function(tweets) {
-          messageCS({type: "tweets-done", update_type: update_type})
-        });
-        break;
-      case "history":
-        archiveQuery(auth, max_date).then((tweets)=>{
-          messageCS({type: "tweets-done", update_type: update_type})
-        })
-        break;
+          break;
+        case "update":
+          updateQuery(auth, since_id).then((tweets)=>{
+            messageCS({type: "tweets-done", update_type: update_type})
+            midRequest = false
+          })
+          break;
+        case "timeline":
+          timelineQuery(auth, max_id).then(function(tweets) {
+            messageCS({type: "tweets-done", update_type: update_type})
+            midRequest = false
+          });
+          break;
+        case "history":
+          archiveQuery(auth, max_date).then((tweets)=>{
+            messageCS({type: "tweets-done", update_type: update_type})
+            midRequest = false
+          })
+          break;
       }
     });
-  
+  }
 }
 
 
@@ -513,6 +522,7 @@ function archToTweet(entry) {
       username: user_info.screen_name,
       profile_image: user_info.profile_image_url_https,
       time: new Date(entry.created_at).getTime(),
+      human_time: new Date(entry.created_at).toLocaleString(),
       // Replies/mentions.
       reply_to: entry.in_reply_to_screen_name, // null if not present.
       mentions: entry.entities.user_mentions.map(x => ({username: x.screen_name, indices: x.indices})),
@@ -571,6 +581,7 @@ function toTweet(entry) {
       username: entry.user.screen_name,
       profile_image: entry.user.profile_image_url_https,
       time: new Date(entry.created_at).getTime(),
+      human_time: new Date(entry.created_at).toLocaleString(),
       // Replies/mentions.
       reply_to: entry.in_reply_to_screen_name, // null if not present.
       mentions: entry.entities.user_mentions.map(x => ({username: x.screen_name, indices: x.indices})),
@@ -629,8 +640,14 @@ function getAccountCreated(user){
 function priorityConcat(_old, _new, update_type = "update"){
   let overwrite = (sub,dom,dom_meta) => {
     //I only want sub with id > dom.since_id and sub with id < dom.max_id
-    let cap = sub.slice(0,sub.reverse().findIndex((t)=>{return t.id > dom_meta.since_id}))
+    let reverse_sub = sub.slice().reverse()
+    // start looking in reverse because it's supposed to be faster
+    let cap = sub.slice(0,(sub.length - 1) - reverse_sub.findIndex((t)=>{return t.id > dom_meta.since_id}))
     let shoes = sub.slice(sub.findIndex((t)=>{return t.id < dom_meta.max_id}),(sub.length - 1))
+    // console.log("OVERWRITE")
+    // console.log(cap)
+    // console.log(dom)
+    // console.log(shoes)
     return cap.concat(dom).concat(shoes)
   }
   let priority = {
@@ -664,16 +681,18 @@ async function saveTweets(res, update_type = "update"){
     
     
     // all_tweets = all_tweets.concat(new_tweets)
-    // if (typeof tweets!=="undefined" && tweets != null){
-    //   all_tweets = all_tweets.concat(tweets)
-    // }
+    if (typeof tweets!=="undefined" && tweets != null){
+      all_tweets = priorityConcat(tweets, new_tweets, update_type = "update")
+    } else {
+      all_tweets = new_tweets
+    }
   
-    all_tweets = priorityConcat(tweets, new_tweets, update_type = "update")
     all_tweets = removeDuplicates(all_tweets)
     let tweets_meta = makeTweetsMeta(all_tweets)
     // append new tweets and store all tweets'
     let data = {tweets: all_tweets, tweets_meta: tweets_meta}
     await setData(data)
+    console.log("Saved!",data)
     messageCS({type: "tweets-loaded"})
   }
   else{
@@ -731,7 +750,7 @@ async function updateQuery(auth, since_id = null, count = 3000, include_rts = tr
       //since = ''
       // max_id is the max of the next request, so if we received a lower id than max_id, use the new one 
       url = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}&count=${count}&since=${since_id}&include_rts=${include_rts}`
-      console.log(res);
+      //console.log(res);
     }
   }  while(! stop_condition(res,tweets))
   return tweets

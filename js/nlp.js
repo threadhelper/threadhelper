@@ -18,7 +18,7 @@ const nlp = (function() {
   async function makeIndex(_tweets){
     tweets = _tweets
     console.log("making index")
-    var index = elasticlunr(function () {
+    var _index = elasticlunr(function () {
       this.setRef('num');
       for (var field_name of tweet_fields){
         this.addField(field_name);
@@ -31,9 +31,10 @@ const nlp = (function() {
         doc[f] = tweet[f]
       }
       doc["num"] = num
-      index.addDoc(doc)
+      _index.addDoc(doc)
     }
-    return index
+    index = _index
+    return _index
   }
 
   //** Find related tweets */

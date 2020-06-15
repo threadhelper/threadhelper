@@ -141,10 +141,12 @@ async function getTweets(from_message=false) {
     if(tweetsEmpty(tweets) || (ts.length > 0 && tweets.length != ts.length && tweets != ts)){
       tweets = ts
       tweets_meta = meta
-      let prev_msg = showConsoleMessage("Just a moment, making an index of your tweets...")
-      console.log()
+      let prev_msg = ''
+      if (document.getElementsByClassName("suggConsole").length > 0) {
+        prev_msg = showConsoleMessage("Just a moment, making an index of your tweets...")
+      }
       nlp.makeIndex(tweets)
-      showConsoleMessage(prev_msg)
+      if (document.getElementsByClassName("suggConsole").length > 0) showConsoleMessage(prev_msg)
     }
     if(!from_message) setSyncStatus(true, "Tweets loaded.", sync_status.TIMELINE)
     return tweets
@@ -240,7 +242,8 @@ function textBoxFocused(compose_box){
   console.log("text box focus in!")
   // if the clicked composer is different from previous active composer and elligible
   if (compose_box != activeComposer.composer && getMode() != "other"){
-    if (!mid_request) msgBG()
+    //if (!mid_request) msgBG()
+    msgBG({type: "update"})
     if (activeComposer.mode != "home") killComposer(activeComposer)
     var composer = setUpBox(compose_box)
     //if suggestion box was created, add logger
@@ -337,6 +340,18 @@ function buildSyncIcon(){
   return sync_icon
 }
 
+function buildArchIcon(){
+  let msg = '<span>Upload your Twitter Archive here. <a href="https://twitter.com/settings/your_twitter_data">Download an archive of your data</a>, extract it and select the resulting folder.</span>';
+  let arch_icon = document.createElement('span')
+  arch_icon.setAttribute("class", "arch_icon");
+  let tooltiptext = document.createElement('span')
+  tooltiptext.innerHTML = msg
+  tooltiptext.setAttribute("class", 'tooltiptext');
+  arch_icon.appendChild(tooltiptext)
+  arch_icon.onclick = ()=>{(document.getElementById("hidden_load_archive")).click()}
+  return arch_icon
+}
+
 // Builds the header: Currently title and sync light
 function buildBoxHeader(){
   let headerDiv = document.createElement('div')
@@ -346,6 +361,7 @@ function buildBoxHeader(){
   h3.setAttribute("class","suggTitle");
   headerDiv.appendChild(buildSyncIcon())
   headerDiv.appendChild(h3)
+  headerDiv.appendChild(buildArchIcon())
   return headerDiv
 }
 
@@ -362,8 +378,11 @@ function buildBoxConsole(){
 // TODO: Consoles could be separate but right now they're all the same. Could lead to confusion in the future
 function showConsoleMessage(message){
   let consoleDivs = document.getElementsByClassName("suggConsole")
-  let old_msg = consoleDivs[0].innerHTML
-  for(let consoleDiv of consoleDivs) consoleDiv.innerHTML = message;
+  let old_msg = ''
+  for(let consoleDiv of consoleDivs) {
+    old_msg = consoleDiv.innerHTML
+    consoleDiv.innerHTML = message;
+  }
   return old_msg
 }
 
@@ -373,6 +392,7 @@ function buildBox() {
   sugg_box = document.createElement('div');   //create a div
   sugg_box.setAttribute("aria-label", 'suggestionBox');
   
+  sugg_box.appendChild(setUpLoadArchive())
   sugg_box.appendChild(buildBoxHeader())
   sugg_box.appendChild(buildBoxConsole())
   return sugg_box
@@ -715,20 +735,30 @@ function renderQuote(quote, parent_has_media) {
 //** Build the html for a set of tweets */
 function renderTweets(tweets, text = '') {
   var resultsDiv = activeComposer.sugg_box
-  let children = resultsDiv.children
-  while (children.length > 2) {
-    resultsDiv.removeChild(children[children.length - 1]);
-    children = resultsDiv.children
+  for (let child of resultsDiv.children){
+    if (child.className == "th-tweet-container") {resultsDiv.removeChild(child);}
+    else{
+      console.log("Not a tweet", child)
+    }
   }
-  if (tweets.length < 1 ){
-    let message = ""
+  let children = resultsDiv.children
+  while (children.length > 3) {
+    console.log("removing child", children)
+    children = resultsDiv.children
+    resultsDiv.removeChild(children[children.length -1]);
+  }
+  let message = ''
+  // Header and hidden load button
+  if (tweets.length < 1){
     if(text == ''){
       message = "Type something to get related tweets :)"
     } else{
       message = "No matching tweets yet!"
     }
-    showConsoleMessage(message)
+  } else{
+    message = "Found these:"
   }
+  showConsoleMessage(message)
   const textTarget = $('span[data-text="true"]');
   for (let t of tweets) {
     const tweetDiv = renderTweet(t, textTarget);
@@ -785,6 +815,8 @@ function setUpLoadArchive(){
       x.webkitdirectory = true;
       x.style.display = "none"
       x.addEventListener("change", (e) => {
+        mid_request = true
+        setSyncStatus(false, `Loading tweets...`)
         var files = e.target.files, reader = new FileReader();
         reader.onload = importArchive;
         for (let i = 0; i < files.length; i++){
@@ -794,7 +826,6 @@ function setUpLoadArchive(){
         //if(idx <= files.length) 
         reader.readAsText(files[idx]);  
       }, false);
-    document.body.appendChild(x)
   return x
 }
 
@@ -803,16 +834,6 @@ async function onMessage(m, sender) {
   console.log("message received:", m);
   switch (m.type) {
     case "ping":
-      break;
-    case "loadArchive":
-      //create an input DOM element
-      let hidden = document.getElementById("hidden_load_archive")
-      hidden.click()
-      // user_info = user_info != null ? user_info : (await loadUserInfo());
-      // let pretweets = archive_tweets.slice(0,50);
-      // console.log("pre tweet", pretweets)
-      // let archTweets = archive_tweets.slice(0,50).map((archToTweet));
-      // console.log("archive loading", archTweets)
       break;
     case "saveArchive":
       let fileName = "threadhelper_archive.json";
@@ -900,7 +921,6 @@ function main()
   $(document).ready(function() {
     setTheme()
     loadOptions();
-    setUpLoadArchive()
   })
   window.onpopstate = ()=>{
     //console.log("url changed")

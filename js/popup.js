@@ -7,18 +7,18 @@ let buttons_template = {
   // downloadTimeline: {
   //   name: "get Tweets"
   // },
-  loadArchive: {
-    name: "Load Archive"
-  },
-  saveArchive: {
-    name: "Save Archive"
-  },
+  // loadArchive: {
+  //   name: "Load Archive"
+  // },
+  // saveArchive: {
+  //   name: "Save Archive"
+  // },
   downloadHistory: {
     name: "Get History (experimental)"
   },
-  clearButton: {
-    name: "Clear Storage"
-  }
+  // clearButton: {
+  //   name: "Clear Storage"
+  // }
 }
 
 function getData(key) {

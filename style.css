@@ -31,6 +31,12 @@
   margin-right: 5px;
   position: relative;
 }
+.arch_icon{
+  height: 10px; 
+  width: 10px;
+  position: relative;
+  background-color: rgb(200,0,200); 
+}
 
 .synced {
   background-color: rgb(0,200,0); 
@@ -41,11 +47,11 @@
 }
 
 /* Tooltip text */
-.sync_icon .tooltiptext {
+/*.sync_icon*/ .tooltiptext {
   visibility: hidden;
   width: 120px;
-  background-color:var(--main-txt-color);;
-  color: var(--main-bg-color);;
+  background-color:var(--main-txt-color);
+  color: var(--main-bg-color);
   text-align: center;
   font-weight: 100;
   padding: 5px 0;
@@ -54,15 +60,13 @@
   /* Position the tooltip text - see examples below! */
   position: absolute;
   z-index: 1;
-
-    
   width: 200px;
   top: 110%;
   left: 100%;
   margin-left: -20px; /*  Use half of the width (120/2 = 60), to center the tooltip */
 }
 
-.sync_icon .tooltiptext::after {
+/*.sync_icon*/ .tooltiptext::after {
   content: " ";
   position: absolute;
   bottom: 100%;  /* At the top of the tooltip */
@@ -70,18 +74,23 @@
   margin-left: 0px;
   border-width: 5px;
   border-style: solid;
-  border-color: transparent transparent black transparent;
+  border-color: transparent transparent var(--main-txt-color);
 }
 /* Show the tooltip text when you mouse over the tooltip container */
 .sync_icon:hover .tooltiptext {
   visibility: visible;
 }
 
+/* Show the tooltip text when you mouse over the tooltip container */
+.arch_icon:hover .tooltiptext {
+  visibility: visible;
+}
+
 .suggHeader{
   display: flex;
-  align-items: center;
   margin-top: 15px;
   margin-bottom: 10px;
+  justify-content: space-around;
 }
 
 
