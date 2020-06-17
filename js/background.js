@@ -19,7 +19,6 @@ class Utils {
   
   get tabId(){return this._tabId}
   set tabId(tabId){
-    Utils.setData({lastTab: tabId}).then(()=>{console.log("set last tab", tabId)}); 
     this._tabId = tabId}
   
 
@@ -181,17 +180,11 @@ class Utils {
     });
     //
     Utils.getTwitterTabIds().then(tids=>{
-      utils.removeData("lastTab")
       console.log("reloading twitter tabs", tids)
       for (let tid of tids){
         chrome.tabs.reload(tid);
       }
     })
-    // Utils.getData("lastTab").then(tid=>{
-    //   utils.removeData("lastTab")
-    //   console.log("reloading last tab", tid)
-    //   chrome.tabs.reload(tid);
-    // })
   }
 
     
@@ -446,7 +439,6 @@ class TweetWiz{
     return new_tweets
   }
 
-
   // Convert request results to tweets and save them
   // TODO  : deal with archive RTs which are listed as by the retweeter and not by the original author
   static async saveTweets(res, update_type = "update"){
@@ -483,7 +475,6 @@ class TweetWiz{
     }
     return new_tweets
   }
-
   
   // removes duplicate tweets
   static removeDuplicates(myArr, prop ='id') {
@@ -565,6 +556,197 @@ class TweetWiz{
         console.log(err)
     }
   }
+
+  /* Updates tweets in 4 different ways
+  update: gets tweets from the most recent in storage to now
+  timeline: gets all 3200 tweets from timeline
+  history: searches every date since you created your account for your tweets
+  archive: loads from local downloaded twitter archive
+  */
+  async updateTweets(m, update_type = "update"){
+    utils.msgCS({type: "tweets-loading", update_type: update_type})
+    let tweets = []
+    if (!this.midRequest){
+      this.midRequest = true
+
+      //let tweets = await getData("tweets")
+      let meta = await Utils.getData("tweets_meta")
+
+      if (meta != null) {
+        this.tweets_meta = meta
+      }else{
+        this.tweets_meta = this.getMetaData()
+      }
+      if(update_type == "update" && !this.tweets_meta.has_timeline) update_type = "timeline"
+      switch(update_type){
+        case "archive":
+          Utils.getData("temp_archive").then((temp_archive) => {
+            TweetWiz.saveTweets(temp_archive, update_type).then((_tweets)=>{
+              tweets = _tweets
+              utils.msgCS({type: "tweets-done", update_type: update_type})
+              wiz.midRequest = false
+            })
+          })
+          utils.removeData(["temp_archive"])
+          break;
+        case "update":
+          this.query(auth, this.tweets_meta, "update").then((_tweets)=>{
+            tweets = _tweets
+            utils.msgCS({type: "tweets-done", update_type: update_type})
+            wiz.midRequest = false
+          })
+          break;
+        case "timeline":
+          this.query(auth, this.tweets_meta, "timeline").then(function(_tweets) {
+            tweets = _tweets
+            utils.msgCS({type: "tweets-done", update_type: update_type})
+            Utils.updateData("tweets_meta", {has_timeline:true})
+            wiz.midRequest = false
+          });
+          break;
+        case "history":
+          this.query(auth, this.tweets_meta, "history").then((_tweets)=>{
+            tweets = _tweets
+            utils.msgCS({type: "tweets-done", update_type: update_type})
+            wiz.midRequest = false
+          })
+          break;
+      }
+    console.log(`done with ${update_type}`, tweets)
+    }
+    return tweets
+  }
+       
+  //to call when we have tweets and wish to update just with the lates
+  async query(auth, meta = null, query_type = "update", count = 3000) {
+    //start by defining common variables
+    this.interrupt_query = false
+    meta = meta != null ? meta : this.tweets_meta
+    let vars ={}
+    let include_rts = utils.options.getRetweets != null ? utils.options.getRetweets : true//TODO investigate why these are coming up undefined
+    const init = {
+      credentials: "include",
+      headers: {
+        authorization: auth.authorization,
+        "x-csrf-token": auth.csrfToken
+      }
+    };
+    var username = this.user_info.screen_name
+    var tweets = []
+    var users = []
+    let res = []
+    let url = ''
+    let stop = false
+
+    let new_tweets = []
+    
+    // Container for a dynamic set of variables dependent on query_type
+    
+    // Defining functions for setup phase
+    let setup ={
+      update: (vars)=>{
+        vars.since = meta.since_id != null ? `&since_id=${meta.since_id}` : ''
+        vars.since_id = 0
+        vars.url = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}${vars.since}&count=${count}&include_rts=${include_rts}`
+        vars.stop_condition = (res,tweets) => {return tweets.length >= count || !(res != null) || res.length < 1 || stop}
+        return vars
+      },
+      timeline: (vars)=>{
+        vars.max = meta.max_id != null ? `&since_id=${meta.max_id}` : ''
+        vars.max_id = meta.max_id == null ? -1 : meta.max_id;
+        vars.url = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}${vars.max}&count=${count}&include_rts=${include_rts}`
+        vars.stop_condition = (res,tweets) => {return tweets.length >= count || !(res != null) || res.length < 1 || stop}
+        return vars
+      },
+      history: (vars)=>{
+        vars.nDays = (n) =>{return n * 24 * 60 * 60 * 1000}
+        vars.max_n_reqs = 180;      
+        vars.arch_until = metaUtils.formatDate()
+        vars.since = new Date(vars.arch_until);
+        vars.arch_since = new Date(this.user_info.created_at);
+        vars.until = new Date(vars.arch_until);
+        vars.arch_until = vars.arch_until==null ? new Date() : new Date(vars.arch_until);
+        
+        // max days we can fit in 180 requests?
+        // day span divided by 180 to know how many days to ask per request
+        vars.nd = Math.min(5,Math.ceil(Math.floor((vars.arch_until.getTime() - vars.arch_since.getTime())/nDays(1)) / vars.max_n_reqs))
+        vars.since.setTime(vars.since.getTime() - vars.nDays(nd))
+        vars.stop_condition = (since, arch=arch_since) => {return (vars.since.getTime() <= vars.arch_since.getTime()) || this.interrupt_query }
+        vars.query = escape(`from:${username} since:${Utils.formatDate(vars.since)} until:${Utils.formatDate(vars.until)}`);	  
+        vars.url = `https://api.twitter.com/2/search/adaptive.json?q=${vars.query}&count=${count}&tweet_mode=extended`;
+        return vars
+      },
+    }
+
+    // Functions for Treat phase, treating the request respense
+    let treat ={
+      update: async (vars)=>{
+        if (vars.since_id < res[0].id){
+          vars.since_id = res[0].id
+        } else{
+          stop = true
+        }
+        vars.url = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}&count=${count}&since=${vars.since_id}&include_rts=${include_rts}`    
+        return vars
+      },
+      timeline: async (vars)=>{
+        tweets = tweets.concat(new_tweets)
+        // console.log(`received total ${tweets.length} tweets`);
+        // console.log("actual query results:", res);
+        
+        // max_id is the max of the next request, so if we received a lower id than max_id, use the new one 
+        let batch_max = res[res.length - 1].id
+        vars.max_id = (batch_max < vars.max_id || vars.max_id == -1) ? batch_max : vars.max_id
+        vars.url = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}&count=${count}&max_id=${vars.max_id}&include_rts=${include_rts}`
+        return vars
+      },
+      history: async (vars)=>{
+        var res_tweets = Object.values(res.globalObjects.tweets)
+        if (res_tweets.length == 0 || res_tweets == null){// console.log("res is empty or empty")
+        }
+        else
+        {
+          users = Object.values(res.globalObjects.users)
+          let user_tweets = res_tweets.map(t=>{t.user=users.find(u=>{return u.id == t.user_id}); return t})
+          
+          console.log(new_tweets)
+          console.log(`received total ${tweets.length} tweets`);
+        }
+        vars.until.setTime(vars.until.getTime() - vars.nDays(vars.nd)) 
+        vars.since.setTime(vars.until.getTime() - vars.nDays(vars.nd)) 
+        vars.url = `https://api.twitter.com/2/search/adaptive.json?q=${vars.query}&count=${count}&tweet_mode=extended`;
+        return vars
+      },
+    }
+
+    // Prep phase of query, defining variables, defining url for query
+    vars = setup[query_type](vars)
+    console.log(vars)
+    // Query loop
+    do
+      {
+        try
+        {
+          console.log(`GET: ${vars.url}`)
+          res = await fetch(vars.url,init).then(x => x.json())
+        }
+        catch(err){
+          TweetWiz.handleError(err)
+        }
+        if (res.length <= 0 || res ==null){
+          //throw new Error("res is empty")
+          console.log("res is empty")
+          break;
+        } else{ 
+          //modifies new_tweets
+          vars = await treat[query_type](vars)
+          new_tweets = await TweetWiz.saveTweets(res, query_type);
+          tweets = tweets.concat(new_tweets)
+        }
+      }while(!vars.stop_condition(res,tweets))
+    return tweets
+  }
+
 }
 
 
@@ -592,7 +774,7 @@ async function onMessage(m, sender) {
       break;
     
     case "tempArchiveStored":
-      updateTweets(m, "archive");
+      wiz.updateTweets(m, "archive");
       break;
 
     case "saveArchive":
@@ -604,12 +786,12 @@ async function onMessage(m, sender) {
       auth_good = await auth.testAuth()
       if(await auth_good != null){
         console.log("auth good", auth_good)
-        updateTweets(m);
+        wiz.updateTweets(m);
       }
       else{
         console.log("auth bad, loadin")
         auth_good = await auth.getAuth()
-        if (auth_good) updateTweets(m, "update")
+        if (auth_good) wiz.updateTweets(m, "update")
       }
       break;
 
@@ -617,12 +799,12 @@ async function onMessage(m, sender) {
       auth_good = await auth.testAuth()
       if(await auth_good != null){
         console.log("auth good", auth_good)
-        updateTweets(m, "timeline");
+        wiz.updateTweets(m, "timeline");
       }
       else{
         console.log("auth bad, loadin")
         auth_good = await auth.getAuth()
-        if (auth_good) updateTweets(m, "timeline")
+        if (auth_good) wiz.updateTweets(m, "timeline")
       }
       break;
 
@@ -630,12 +812,12 @@ async function onMessage(m, sender) {
       auth_good = await auth.testAuth()
       if(auth_good  != null){
         console.log("auth good", auth_good)
-        updateTweets(m, "archive");
+        wiz.updateTweets(m, "archive");
       }
       else{
         console.log("auth bad, loadin")
         auth_good = await auth.getAuth()
-        if (auth_good) updateTweets(m, "archive")
+        if (auth_good) wiz.updateTweets(m, "archive")
       }
       break;
     case "interrupt-query":
@@ -651,191 +833,8 @@ async function onMessage(m, sender) {
 }
 
 
-async function updateTweets(m, update_type = "update"){
-  utils.msgCS({type: "tweets-loading", update_type: update_type})
-  let tweets = []
-  if (!wiz.midRequest){
-    wiz.midRequest = true
-
-    //let tweets = await getData("tweets")
-    let meta = await Utils.getData("tweets_meta")
-
-    if (meta != null) {
-      wiz.tweets_meta = meta
-    }else{
-      wiz.tweets_meta = wiz.getMetaData()
-    }
-    if(update_type == "update" && !wiz.tweets_meta.has_timeline) update_type = "timeline"
-    switch(update_type){
-      case "archive":
-        Utils.getData("temp_archive").then((temp_archive) => {
-          TweetWiz.saveTweets(temp_archive, update_type).then((_tweets)=>{
-            tweets = _tweets
-            utils.msgCS({type: "tweets-done", update_type: update_type})
-            wiz.midRequest = false
-          })
-        })
-        utils.removeData(["temp_archive"])
-        break;
-      case "update":
-        query(auth, wiz.tweets_meta, "update").then((_tweets)=>{
-          tweets = _tweets
-          utils.msgCS({type: "tweets-done", update_type: update_type})
-          wiz.midRequest = false
-        })
-        break;
-      case "timeline":
-        query(auth, wiz.tweets_meta, "timeline").then(function(_tweets) {
-          tweets = _tweets
-          utils.msgCS({type: "tweets-done", update_type: update_type})
-          Utils.updateData("tweets_meta", {has_timeline:true})
-          wiz.midRequest = false
-        });
-        break;
-      case "history":
-        query(auth, wiz.tweets_meta, "history").then((_tweets)=>{
-          tweets = _tweets
-          utils.msgCS({type: "tweets-done", update_type: update_type})
-          wiz.midRequest = false
-        })
-        break;
-    }
-  console.log(`done with ${update_type}`, tweets)
-  }
-  return tweets
-}
    
-      
-//to call when we have tweets and wish to update just with the lates
-async function query(auth, meta = null, query_type = "update", count = 3000) {
-  //start by defining common variables
-  wiz.interrupt_query = false
-  meta = meta != null ? meta : wiz.tweets_meta
-  let vars ={}
-  let include_rts = utils.options.getRetweets != null ? utils.options.getRetweets : true//TODO investigate why these are coming up undefined
-  const init = {
-    credentials: "include",
-    headers: {
-      authorization: auth.authorization,
-      "x-csrf-token": auth.csrfToken
-    }
-  };
-  var username = wiz.user_info.screen_name
-  var tweets = []
-  var users = []
-  let res = []
-  let url = ''
-  let stop = false
-
-  let new_tweets = []
-  
-  // Container for a dynamic set of variables dependent on query_type
-  
-  // Defining functions for setup phase
-  let setup ={
-    update: (vars)=>{
-      vars.since = meta.since_id != null ? `&since_id=${meta.since_id}` : ''
-      vars.since_id = 0
-      vars.url = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}${vars.since}&count=${count}&include_rts=${include_rts}`
-      vars.stop_condition = (res,tweets) => {return tweets.length >= count || !(res != null) || res.length < 1 || stop}
-      return vars
-    },
-    timeline: (vars)=>{
-      vars.max = meta.max_id != null ? `&since_id=${meta.max_id}` : ''
-      vars.max_id = meta.max_id == null ? -1 : meta.max_id;
-      vars.url = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}${vars.max}&count=${count}&include_rts=${include_rts}`
-      vars.stop_condition = (res,tweets) => {return tweets.length >= count || !(res != null) || res.length < 1 || stop}
-      return vars
-    },
-    history: (vars)=>{
-      vars.nDays = (n) =>{return n * 24 * 60 * 60 * 1000}
-      vars.max_n_reqs = 180;      
-      vars.arch_until = metaUtils.formatDate()
-      vars.since = new Date(vars.arch_until);
-      vars.arch_since = new Date(wiz.user_info.created_at);
-      vars.until = new Date(vars.arch_until);
-      vars.arch_until = vars.arch_until==null ? new Date() : new Date(vars.arch_until);
-      
-      // max days we can fit in 180 requests?
-      // day span divided by 180 to know how many days to ask per request
-      vars.nd = Math.min(5,Math.ceil(Math.floor((vars.arch_until.getTime() - vars.arch_since.getTime())/nDays(1)) / vars.max_n_reqs))
-      vars.since.setTime(vars.since.getTime() - vars.nDays(nd))
-      vars.stop_condition = (since, arch=arch_since) => {return (vars.since.getTime() <= vars.arch_since.getTime()) || wiz.interrupt_query }
-      vars.query = escape(`from:${username} since:${Utils.formatDate(vars.since)} until:${Utils.formatDate(vars.until)}`);	  
-      vars.url = `https://api.twitter.com/2/search/adaptive.json?q=${vars.query}&count=${count}&tweet_mode=extended`;
-      return vars
-    },
-  }
-
-  // Functions for Treat phase, treating the request respense
-  let treat ={
-    update: async (vars)=>{
-      if (vars.since_id < res[0].id){
-        vars.since_id = res[0].id
-      } else{
-        stop = true
-      }
-      vars.url = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}&count=${count}&since=${vars.since_id}&include_rts=${include_rts}`    
-      return vars
-    },
-    timeline: async (vars)=>{
-      tweets = tweets.concat(new_tweets)
-      // console.log(`received total ${tweets.length} tweets`);
-      // console.log("actual query results:", res);
-      
-      // max_id is the max of the next request, so if we received a lower id than max_id, use the new one 
-      let batch_max = res[res.length - 1].id
-      vars.max_id = (batch_max < vars.max_id || vars.max_id == -1) ? batch_max : vars.max_id
-      vars.url = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}&count=${count}&max_id=${vars.max_id}&include_rts=${include_rts}`
-      return vars
-    },
-    history: async (vars)=>{
-      var res_tweets = Object.values(res.globalObjects.tweets)
-      if (res_tweets.length == 0 || res_tweets == null){// console.log("res is empty or empty")
-      }
-      else
-      {
-        users = Object.values(res.globalObjects.users)
-        let user_tweets = res_tweets.map(t=>{t.user=users.find(u=>{return u.id == t.user_id}); return t})
-        
-        console.log(new_tweets)
-        console.log(`received total ${tweets.length} tweets`);
-      }
-      vars.until.setTime(vars.until.getTime() - vars.nDays(vars.nd)) 
-      vars.since.setTime(vars.until.getTime() - vars.nDays(vars.nd)) 
-      vars.url = `https://api.twitter.com/2/search/adaptive.json?q=${vars.query}&count=${count}&tweet_mode=extended`;
-      return vars
-    },
-  }
-
-  // Prep phase of query, defining variables, defining url for query
-  vars = setup[query_type](vars)
-  console.log(vars)
-  // Query loop
-  do
-    {
-      try
-      {
-        console.log(`GET: ${vars.url}`)
-        res = await fetch(vars.url,init).then(x => x.json())
-      }
-      catch(err){
-        TweetWiz.handleError(err)
-      }
-      if (res.length <= 0 || res ==null){
-        //throw new Error("res is empty")
-        console.log("res is empty")
-        break;
-      } else{ 
-        //modifies new_tweets
-        vars = await treat[query_type](vars)
-        new_tweets = await TweetWiz.saveTweets(res,update_type);
-        tweets = tweets.concat(new_tweets)
-      }
-    }while(!vars.stop_condition(res,tweets))
-  return tweets
-}
-
+ 
 
 function main(){
   chrome.runtime.onMessage.addListener(onMessage);
@@ -856,27 +855,26 @@ function main(){
   // Basically every time we change tabs or the tab url is updated, update tabId and send msg to CS
   chrome.tabs.onActivated.addListener( function(activeInfo){
     chrome.tabs.get(activeInfo.tabId, function(tab){
-      let y = tab.url;
-      if (y.match(twitter_url)) {
-        console.log("you are here: "+y);
-        utils.tabId = tab.id
-        utils.msgCS({type:"tab-activate", url:y, cs_id: tab.id})
+      //console.log("tab", tab)
+      try{
+        let url = tab.url;
+        if (url.match(twitter_url)) {
+          utils.tabId = tab.id
+          utils.msgCS({type:"tab-activate", url:url, cs_id: tab.id})
+        }
+      }catch(e){
+        console.log(e)
       }
     });
   });
   chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
     if (tab.active && change.url) {
       if (change.url.match(twitter_url)){
-        console.log("you are here: "+change.url);
         utils.tabId = tab.id
         utils.msgCS({type:"tab-change-url", url:change.url, cs_id: tab.id})
       }
     }
   });
-
-
-
-
   window.onload = () => {utils.loadOptions()}
 }
 
