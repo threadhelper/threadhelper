@@ -9,7 +9,17 @@ const textFieldClass = 'span[data-text="true"]';
 const trendText = '[aria-label="Timeline: Trending now"]';
 // Holds the tweets to search over
 let tweets = null;
-let tweets_meta = null
+let tweets_meta = {
+  count: 0, 
+  max_id: null, 
+  max_time: null,
+  since_id: null, 
+  since_time: null,
+  last_updated: null,
+  has_archive: false,
+  has_timeline: false,
+}
+
 // Options
 let options = {}
 // User info
@@ -43,7 +53,7 @@ let db_sync = {synced: false, status:sync_status.EMPTY, msg: "No tweets yet..." 
 let mid_request = false
 // Whether the timeline has been gotten 
 let has_timeline = false
-
+let current_url = ''
 
 //somehow this isn't a native method
 Array.prototype.contains = function(obj) {
@@ -94,18 +104,19 @@ function clearTweets(){
   user_info = {}
 }
 
-function makeTweetsMeta(tweets){
-  var tweets_meta = {
+function makeTweetsMeta(tweets, update_type = "update"){
+  var meta = {
     count: tweets.length, 
     max_id: tweets[tweets.length - 1].id, 
     max_time: tweets[tweets.length - 1].time,
     since_id: tweets[0].id, 
     since_time: tweets[0].time,
-    last_updated: (new Date()).getTime()
+    last_updated: (new Date()).getTime(),
+    has_archive: tweets_meta.has_archive || update_type == "archive",
+    has_timeline: tweets_meta.has_timeline || update_type == "timeline",
   }
   return tweets_meta
 }
-
 
 // filter to get only tweets by user
 function filterUserTweets(ts){
@@ -125,13 +136,28 @@ function tweetsEmpty(tweets){
   return !(typeof ts !== 'undefined') || tweets == null || tweets.length < 1
 }
 
+// sets sync status
+function handleNewTweets(from_message){  
+  // make sync icon green
+  if(!from_message) setSyncStatus(true, "Tweets loaded.", sync_status.TIMELINE)
+
+  // make archive icon invisible if we already have the archive
+  let icons = document.getElementsByClassName("arch_icon")
+  for (let i of icons){
+    if (tweets_meta.has_archive) {
+      i.style.display = "none";
+    }else{
+      i.style.display = "block";
+    }
+  }
+}
 
 // gets tweets from storage
 async function getTweets(from_message=false) {
   loadUserInfo()
-  var meta = await getData("tweets_meta")
+  var meta = {}
+  tweets_meta = await getData("tweets_meta")
   var ts = await getData("tweets")
-  
   if (typeof ts !== 'undefined' && ts != null){
     if (!options.getRetweets){
       ts = filterUserTweets(ts)
@@ -148,7 +174,7 @@ async function getTweets(from_message=false) {
       nlp.makeIndex(tweets)
       if (document.getElementsByClassName("suggConsole").length > 0) showConsoleMessage(prev_msg)
     }
-    if(!from_message) setSyncStatus(true, "Tweets loaded.", sync_status.TIMELINE)
+    handleNewTweets(from_message)
     return tweets
   }else{
     if(!from_message) setSyncStatus(false, "No tweets yet...", sync_status.EMPTY)
@@ -175,7 +201,7 @@ function getMode(){
   }
 }
 
-
+// Sets up a listener for the Recent Trends block
 function setUpTrendsListener(){
   console.log("adding trends logger")
   var observer = new MutationObserver((mutationRecords, me) => {
@@ -238,12 +264,14 @@ function textBoxUnfocused(compose_box){
 function textBoxFocused(compose_box){
   if (tweets == null){
     getTweets()
+  } else{
+    msgBG({type: "update"})
   }
   console.log("text box focus in!")
   // if the clicked composer is different from previous active composer and elligible
   if (compose_box != activeComposer.composer && getMode() != "other"){
     //if (!mid_request) msgBG()
-    msgBG({type: "update"})
+    console.log(tweets )
     if (activeComposer.mode != "home") killComposer(activeComposer)
     var composer = setUpBox(compose_box)
     //if suggestion box was created, add logger
@@ -291,7 +319,7 @@ function setUpBox(compose_box){
 }
 
 function placeBox(sugg_box, mode){
-  setTheme();
+  //setTheme();
   mode = getMode()
   if (mode == "home"){
     //insert a little space bc of the title
@@ -341,9 +369,14 @@ function buildSyncIcon(){
 }
 
 function buildArchIcon(){
-  let msg = '<span>Upload your Twitter Archive here. <a href="https://twitter.com/settings/your_twitter_data">Download an archive of your data</a>, extract it and select the resulting folder.</span>';
+  let msg = '<span>Click here to upload your Twitter Archive here. <a href="https://twitter.com/settings/your_twitter_data">Download an archive of your data</a>, extract it and select the resulting folder.</span>';
   let arch_icon = document.createElement('span')
   arch_icon.setAttribute("class", "arch_icon");
+  let span = document.createElement('button')
+  span.textContent = " (load archive)"
+  arch_icon.appendChild(span)
+  if(tweets_meta.has_archive) arch_icon.style.display = "none";
+
   let tooltiptext = document.createElement('span')
   tooltiptext.innerHTML = msg
   tooltiptext.setAttribute("class", 'tooltiptext');
@@ -357,7 +390,9 @@ function buildBoxHeader(){
   let headerDiv = document.createElement('div')
   headerDiv.setAttribute("class", "suggHeader")
   var h3 = document.createElement('h3')
-  h3.textContent = "Thread Helper"
+  let span = document.createElement('span')
+  span.textContent = "Thread Helper"
+  h3.appendChild(span)
   h3.setAttribute("class","suggTitle");
   headerDiv.appendChild(buildSyncIcon())
   headerDiv.appendChild(h3)
@@ -738,12 +773,10 @@ function renderTweets(tweets, text = '') {
   for (let child of resultsDiv.children){
     if (child.className == "th-tweet-container") {resultsDiv.removeChild(child);}
     else{
-      console.log("Not a tweet", child)
     }
   }
   let children = resultsDiv.children
   while (children.length > 3) {
-    console.log("removing child", children)
     children = resultsDiv.children
     resultsDiv.removeChild(children[children.length -1]);
   }
@@ -802,6 +835,7 @@ function importArchive() {
   chrome.storage.local.set({temp_archive: importedTweetArchive}, function() {
     console.log("temp tweet archive stored", user_info)
     msgBG({type:"tempArchiveStored"})
+    (document.getElementById("hidden_load_archive")).value = null;
   })
 }
 
@@ -830,10 +864,11 @@ function setUpLoadArchive(){
 }
 
 //** Handles messages sent from background or popup */
-async function onMessage(m, sender) {
+async function onMessage(m) {
   console.log("message received:", m);
   switch (m.type) {
-    case "ping":
+    case "saveOptions":
+      Utils.loadOptions()
       break;
     case "saveArchive":
       let fileName = "threadhelper_archive.json";
@@ -861,6 +896,14 @@ async function onMessage(m, sender) {
       clearTweets()
       setSyncStatus(false, `No tweets yet...`, sync_status.EMPTY)
       break;
+    case "tab-activate":
+      current_url = m.url
+      break;
+    case "tab-change-url":
+      current_url = m.url
+      setTheme()  
+      if(activeComposer.sugg_box)showSuggBox(activeComposer)
+      break;  
   }
   return true
 }
@@ -914,11 +957,11 @@ function main()
   window.addEventListener('resize', onWinResize)
   window.onload = () => {
     document.addEventListener(destructionEvent, destructor);
-    chrome.runtime.sendMessage({type:"cs-created"});
     setUpListeningComposeClick();
     setUpTrendsListener();
   }
   $(document).ready(function() {
+    msgBG({type:"cs-created"})
     setTheme()
     loadOptions();
   })
@@ -927,7 +970,6 @@ function main()
     setTheme()
     if(activeComposer.sugg_box)showSuggBox(activeComposer)
   }
-  
 }
 
 
@@ -968,7 +1010,8 @@ function destructor() {
 var destructionEvent = 'destructmyextension_' + chrome.runtime.id;
 // Unload previous content script if needed
 document.dispatchEvent(new CustomEvent(destructionEvent));
-//document.addEventListener(destructionEvent, destructor);
+
+document.addEventListener(destructionEvent, destructor);
 
 
 let port = chrome.runtime.connect()

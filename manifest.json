@@ -1,7 +1,7 @@
 {
   "name": "Thread Helper",
   "version": "1.0",
-  "description": "Self-thread helper",
+  "description": "Thread past tweets with your new ones as you write them.",
   "permissions": [
     "activeTab",
     "declarativeContent",
@@ -16,7 +16,7 @@
   "content_scripts": [
     {
       "matches": ["https://*.twitter.com/*"],
-      "js": ["js/jquery-3.4.1.slim.js", "js/nlp.js", "js/elasticlunr.js","js/FileSaver.js", /*"js/tweet.js",*/ "js/contentScript.js"],
+      "js": ["js/jquery-3.4.1.slim.js", "js/nlp.js", "js/elasticlunr.js","js/FileSaver.js", "js/contentScript.js"],
       "css": ["style.css"]
     }
   ],
