@@ -26,6 +26,7 @@ class Utils {
   static updateData(key, key_vals){
     this.getData(key).then(val=>{
       for (let k of Object.keys(key_vals)){
+        val = val != null ? val : wiz.getMetaData()
         val[k] = key_vals[k]
       }
       let objset = {}
@@ -122,7 +123,7 @@ class Utils {
     //let tabId = await Utils.getTabId()
     try{
     chrome.tabs.sendMessage(this.tabId, m)
-    console.log("sending message to cs tab ", m)
+    //console.log("sending message to cs tab ", m)
     } catch(e){
     console.log(e)
     }
@@ -356,6 +357,9 @@ class TweetWiz{
     this.midRequest = false
     this.interrupt_query = false
     this.tweets_meta = TweetWiz.makeTweetsMeta(null)
+    
+    this.user_queue = []
+    this.profile_pics = {} //username: url
   }
 
   //get user_info(){return this.user_info}
@@ -418,7 +422,7 @@ class TweetWiz{
       // console.log("CAP", cap)
       // console.log("DOM", dom)
       // console.log("SHOES", shoes)
-      console.log(`OVERWRITTEN ${overlap_n} tweets`)
+      //console.log(`OVERWRITTEN ${overlap_n} tweets`)
       return cap.concat(dom).concat(shoes)
     }
     let priority = {
@@ -460,7 +464,7 @@ class TweetWiz{
       } else {
         all_tweets = new_tweets
       }
-    
+
       all_tweets = TweetWiz.removeDuplicates(all_tweets)
       wiz.tweets_meta = TweetWiz.makeTweetsMeta(all_tweets, update_type)
       console.log(update_type)
@@ -485,34 +489,91 @@ class TweetWiz{
     return unique_arr
   }
 
+  // static async getProfilePics(screen_name){
+  //   const init = {
+  //     credentials: "include",
+  //     headers: {
+  //       authorization: auth.authorization,
+  //       "x-csrf-token": auth.csrfToken
+  //     }
+  //   };
+  //   let url = (name)=>{return `https://api.twitter.com/1.1/users/show.json?screen_name=${name}`}
+  //   let pic = ''
+  //   let obj = {}
+
+  //   let screen_name = this.user_queue.pop()
+  //   while (screen_name != null){
+  //     try{
+  //       res = await fetch(url,init).then(x => x.json())
+  //       pic =  res.profile_image_url_https
+  //     } catch(e){
+  //       pic =  null
+  //     }
+  //     if(pic){
+  //       this.profile_pics.push({screen_name: pic})
+  //     }
+  //   }
+
+  //   utils.getData("tweets").then((tweets)=>{
+      
+  //   })
+  // }
+
   static toTweet(entry, arch = false){
-    console.log("user info:", wiz.user_info)
-    let tweet = null;
+    let tweet = {};
+
     entry = arch ? entry.tweet : entry;
+    
+    let re = /RT @([a-zA-Z0-9_]+).*/
+    let rt_tag = /RT @([a-zA-Z0-9_]+:)/
+    let default_pic_url = 'https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png'
     if (entry != null){
-      tweet = {
-        // Basic info.
-        id: entry.id_str,
-        //id: entry.id,
-        text: entry.full_text || entry.text,
-        name: arch ? wiz.user_info.name : entry.user.name,
-        username: arch ? wiz.user_info.screen_name : entry.user.screen_name,
-        profile_image: arch ? wiz.user_info.profile_image_url_https : entry.user.profile_image_url_https,
-        time: new Date(entry.created_at).getTime(),
-        human_time: new Date(entry.created_at).toLocaleString(),
-        // Replies/mentions.
-        reply_to: entry.in_reply_to_screen_name, // null if not present.
-        mentions: entry.entities.user_mentions.map(x => ({username: x.screen_name, indices: x.indices})),
-        // URLs.
-        urls: entry.entities.urls.map(x => ({current_text: x.url, display: x.display_url, expanded: x.expanded_url})),
-        // Media.
-        has_media: typeof entry.entities.media !== "undefined",
-        media: null,
-        // Quote info.
-        has_quote: entry.is_quote_status,
-        is_quote_up: typeof entry.quoted_status !== "undefined",
-        quote: null,
+      //Handing retweets in archive
+      if(arch){
+        let rt = re.exec(entry.full_text);  
+        // console.log(entry.full_text)
+        // console.log(rt)
+        //tweet contents
+        tweet.username = rt != null ? rt[1] : wiz.user_info.name
+        tweet.text = rt != null ? entry.full_text.replace(rt_tag,'') : entry.full_text
+        if(tweet.username == wiz.user_info.screen_name){
+           rt = null
+        } else{
+          wiz.user_queue.push(tweet.username)
+        }
+        try{
+          tweet.name = rt != null ? entry.entities.user_mentions.find(t=>{return t.screen_name.toLowerCase() == tweet.username.toLowerCase()}).name : wiz.user_info.screen_name
+        } catch(e){
+          console.log("ERRORRRRRRRR")
+          console.log(tweet); console.log(entry);
+        }
+        tweet.profile_image = rt != null ? default_pic_url : wiz.user_info.profile_image_url_https
+      }else{
+        let is_rt = entry.retweeted
+        if(is_rt) entry = entry.retweeted_status != null ? entry.retweeted_status : entry;
+        //tweet contents
+        tweet.username = entry.user.screen_name
+        tweet.name = entry.user.name
+        tweet.text = entry.full_text || entry.text
+        tweet.profile_image = entry.user.profile_image_url_https
       }
+      // Basic info, same for everyone
+        tweet.id = entry.id_str
+        // tweet.id = entry.id,
+        tweet.time = new Date(entry.created_at).getTime()
+        tweet.human_time = new Date(entry.created_at).toLocaleString()
+        // Replies/mentions.
+        tweet.reply_to = entry.in_reply_to_screen_name != null ? entry.in_reply_to_screen_name : null // null if not present.
+        tweet.mentions = entry.entities.user_mentions.map(x => ({username: x.screen_name, indices: x.indices}))
+        // URLs.
+        tweet.urls = entry.entities.urls.map(x => ({current_text: x.url, display: x.display_url, expanded: x.expanded_url}))
+        // Media.
+        tweet.has_media = typeof entry.entities.media !== "undefined"
+        tweet.media = null
+        // Quote info.
+        tweet.has_quote = entry.is_quote_status
+        tweet.is_quote_up = typeof entry.quoted_status !== "undefined"
+        tweet.quote = null
       // Add media info.
       if (tweet.has_media) {
         tweet.media = entry.entities.media.map(x => ({current_text: x.url, url: x.media_url_https}))
@@ -583,11 +644,12 @@ class TweetWiz{
           Utils.getData("temp_archive").then((temp_archive) => {
             TweetWiz.saveTweets(temp_archive, update_type).then((_tweets)=>{
               tweets = _tweets
-              utils.msgCS({type: "tweets-done", update_type: update_type})
               wiz.midRequest = false
+              utils.removeData(["temp_archive"])
+              utils.msgCS({type: "tweets-done", update_type: update_type})
+              console.log("archive done!")
             })
           })
-          utils.removeData(["temp_archive"])
           break;
         case "update":
           this.query(auth, this.tweets_meta, "update").then((_tweets)=>{
@@ -690,9 +752,6 @@ class TweetWiz{
         return vars
       },
       timeline: async (vars)=>{
-        tweets = tweets.concat(new_tweets)
-        // console.log(`received total ${tweets.length} tweets`);
-        // console.log("actual query results:", res);
         
         // max_id is the max of the next request, so if we received a lower id than max_id, use the new one 
         let batch_max = res[res.length - 1].id
@@ -708,9 +767,6 @@ class TweetWiz{
         {
           users = Object.values(res.globalObjects.users)
           let user_tweets = res_tweets.map(t=>{t.user=users.find(u=>{return u.id == t.user_id}); return t})
-          
-          console.log(new_tweets)
-          console.log(`received total ${tweets.length} tweets`);
         }
         vars.until.setTime(vars.until.getTime() - vars.nDays(vars.nd)) 
         vars.since.setTime(vars.until.getTime() - vars.nDays(vars.nd)) 
@@ -742,11 +798,13 @@ class TweetWiz{
           vars = await treat[query_type](vars)
           new_tweets = await TweetWiz.saveTweets(res, query_type);
           tweets = tweets.concat(new_tweets)
+          console.log(`received total ${tweets.length} tweets`);
+          console.log("actual query results:", res);
+        
         }
       }while(!vars.stop_condition(res,tweets))
     return tweets
   }
-
 }
 
 
@@ -766,12 +824,6 @@ async function onMessage(m, sender) {
       utils.loadOptions()
       utils.msgCS({type:"saveOptions"})
       break;
-
-    case "loadArchive":
-      utils.msgCS({type: "loadArchive"})
-      // console.log(await nlp.getRelated("meme magic"))
-      // console.log("archive loading", archive_tweets.slice(0,50))
-      break;
     
     case "tempArchiveStored":
       wiz.updateTweets(m, "archive");
@@ -781,7 +833,6 @@ async function onMessage(m, sender) {
       utils.msgCS({type: "save_archive"})
       break;
       
-
     case "update":
       auth_good = await auth.testAuth()
       if(await auth_good != null){

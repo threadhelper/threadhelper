@@ -3,7 +3,7 @@ window.onload = () =>{
   console.log("window loaded")
   buildPage(options_template)
   setUpListeners()
-  displayLibrary()
+  //displayLibrary()
   showValues()
   } 
 

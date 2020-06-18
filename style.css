@@ -135,6 +135,8 @@
   align-items: center;
   /*justify-content: space-around;*/
   justify-content: left;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu, "Helvetica Neue", sans-serif;
+  font-size: 13px;
 }
 
 
