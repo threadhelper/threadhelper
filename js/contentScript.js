@@ -222,7 +222,7 @@ class UI {
   
   // The .composer parameter of the composer
   textBoxFocused(compose_box){
-    if (wiz.getTweets() == null){
+    if (Object.keys(wiz.getTweets()).length < 1){
       wiz.loadTweets()
     } else{
       dutils.msgBG({type: "update"})
@@ -491,48 +491,42 @@ class UI {
     return text
   }
 
-  /** Updates the tweetlist when user types */
-  async onChange(mutationRecords) {
-    const text = ui.getTextFromMutation(mutationRecords)
-    //console.log("CHANGE! text is:", text, "; in element: ", mutationRecords[0].target);
-    if(wiz.getTweets() != null && typeof text != "undefined" && text != null && text.trim() != ''){
-      //this.current_res = []
-      if(wiz.getTweets().length>0){
-        var box = ui.activeComposer.sugg_box
-        //const box = document.`querySelector('[aria-label="suggestionBox"]')
-        if(typeof ui.activeComposer.sugg_box !== 'undefined' && ui.activeComposer.sugg_box != null && ui.activeComposer.sugg_box.style.display != "flex"){
-          ui.activeComposer.sugg_box.style.display = "flex"
-        }
-        const tweet = text.replace(wutils.url_regex, "")
-
-        nlp.getRelated(tweet).then((related)=>{
-          ui.current_res = [...new Set(related)]
-          ren.renderTweets([...new Set(related)])
-        });
-      }
-    }
-    else{
-      //console.log("no tweets")
-      if (typeof ui.activeComposer.sugg_box !== 'undefined'){
-        ren.renderTweets([], text);
-      }
-    }
-  }
-
   //** Attach a mutation observer to a div */
   addLogger(div) {
     console.log("adding logger")
-    var observer = new MutationObserver(this.onChange);
+    var observer = new MutationObserver(onChange);
     observer.observe(div, { characterData: true, subtree: true, childList: true }); //attribute: true
     return observer
   }
+}
 
-  /////////////////////////////////////////
-  /////////////////////////////////////////
-  //|||||||| COMPOSER CITY NOW LEAVING ||||
-  /////////////////////////////////////////
-  /////////////////////////////////////////
-
+/** Updates the tweetlist when user types */
+async function onChange(mutationRecords) {
+  const text = ui.getTextFromMutation(mutationRecords)
+  console.log("CHANGE! text is:", text, "; in element: ", mutationRecords[0].target);
+  //console.log(wiz.getTweets())
+  if(wiz.getTweets() != null && typeof text != "undefined" && text != null && text.trim() != ''){
+    //this.current_res = []
+    if(Object.keys(wiz.getTweets()).length>0){
+      var box = ui.activeComposer.sugg_box
+      //const box = document.`querySelector('[aria-label="suggestionBox"]')
+      if(typeof ui.activeComposer.sugg_box !== 'undefined' && ui.activeComposer.sugg_box != null && ui.activeComposer.sugg_box.style.display != "flex"){
+        ui.activeComposer.sugg_box.style.display = "flex"
+      }
+      const tweet = text.replace(wutils.url_regex, "")
+      nlp.getRelated(tweet, wiz.getTweets()).then((related)=>{
+        ui.current_res = [...new Set(related)]
+        console.log(ui.current_res)
+        ren.renderTweets([...new Set(related)])
+      });
+    }
+  }
+  else{
+    console.log("no tweets")
+    if (typeof ui.activeComposer.sugg_box !== 'undefined'){
+      ren.renderTweets([], text);
+    }
+  }
 }
 
 class Renderer {
@@ -543,7 +537,12 @@ class Renderer {
 
     
   renderTweet(tweet, textTarget) {
-    let tweetLink = `https://twitter.com/${tweet.username}/status/${tweet.id}`
+    let tweetLink = `https://twitter.com/${"undefined"}/status/${tweet.id}`
+    try{
+      tweetLink = `https://twitter.com/${tweet.username}/status/${tweet.id}`
+    } catch(e){
+      console.log("ERROR",tweet)
+    }
     let timeDiff = this.getTimeDiff(tweet.time)
     let reply_text = this.getReplyText(tweet.reply_to, tweet.mentions)
     let text = this.reformatText(tweet.text, tweet.reply_to, tweet.mentions, tweet.urls, tweet.media)
@@ -794,7 +793,7 @@ class Renderer {
 class TweetWiz{
   constructor(){
     // Holds the tweets to search over
-    this.tweets_list = null;
+    this.tweets_dict = {};
     this.tweets_meta = {
       count: 0, 
       max_id: null, 
@@ -814,7 +813,7 @@ class TweetWiz{
   }
 
   getTweets(){
-    return this.tweets_list
+    return this.tweets_dict
   }
     
   async loadUserInfo(){
@@ -836,14 +835,17 @@ class TweetWiz{
   makeTweetsMeta(tweets, update_type = "update"){
     let meta = {}
     if (tweets != null){
+      let len = Object.keys(tweets).length - 1
+      let first_key = Object.keys(tweets)[0]
+      let last_key = Object.keys(tweets)[len]
       meta = {
-        count: tweets.length, 
-        max_id: tweets[tweets.length - 1].id, 
-        max_time: tweets[tweets.length - 1].time,
-        since_id: tweets[0].id, 
-        since_time: tweets[0].time,
+        count: len, 
+        max_id: tweets[last_key].id, 
+        max_time: tweets[last_key].time,
+        since_id: tweets[first_key].id, 
+        since_time: tweets[first_key].time,
         last_updated: (new Date()).getTime(),
-        has_archive: update_type == "archive" ||wiz.tweets_meta.has_archive ,
+        has_archive: update_type == "archive" || wiz.tweets_meta.has_archive ,
         has_timeline: wiz.tweets_meta.has_timeline, //update_type == "timeline"
       }
     } else{
@@ -862,20 +864,17 @@ class TweetWiz{
   }
   // filter to get only tweets by user
   filterUserTweets(ts){
-    let _filtered = ts
-    if (this.user_info != null && this.user_info.screen_name != null){
-      _filtered = ts.filter(t=>{
-        return t.username == this.user_info.screen_name
-      })
-    }
-    else{
-      //console.log('dont have user info or screen name')
-    }
+    let key_vals = Object.entries(ts)
+
+    const _filtered = Object.fromEntries(
+      key_vals.filter(key_val => key_val[1].username == this.user_info.screen_name)
+    )
     return _filtered
   }
   
-  tweetsEmpty(){
-    return !(typeof this.tweets_list !== 'undefined') || this.tweets_list == null || this.tweets_list.length < 1
+  tweetsEmpty(tweets=null){
+    tweets = tweets != null ? tweets : this.tweets_dict
+    return !(typeof tweets !== 'undefined') || tweets == null || Object.keys(tweets).length < 1
   }
   
   // sets sync status
@@ -894,29 +893,46 @@ class TweetWiz{
     }
   }
 
+  // Compute ites that are different between 2 dicts of tweets
+  getNewTweets(old_t,new_t){
+    console.log("getnewtweets")
+    let old_keys = old_t != null ? Object.keys(old_t) : []
+    let new_key_vals = Object.entries(new_t)
+    const _filtered = Object.fromEntries(
+      new_key_vals.filter(key_val => {return !old_keys.includes(key_val[0])})
+    )
+    return _filtered
+  }
+
   // gets tweets from storage
   async loadTweets(from_message=false) {
     this.loadUserInfo()
-    var meta = {}
+    let meta = {}
     this.tweets_meta = await dutils.getData("tweets_meta")
-    var ts = await dutils.getData("tweets")
-    if (typeof ts !== 'undefined' && ts != null){
+    let tweets_stored = await dutils.getData("tweets")
+    // console.log("tweets_meta", this.tweets_meta)
+    // console.log("tweets_stored", tweets_stored)
+    
+    if (typeof tweets_stored !== 'undefined' && tweets_stored != null){
+      // If we shouldn't search over retweets
       if (!dutils.options.getRetweets){
-        ts = this.filterUserTweets(ts)
-        meta = this.makeTweetsMeta(ts)
+        tweets_stored = this.filterUserTweets(tweets_stored)
+        meta = wiz.makeTweetsMeta(tweets_stored)
       }
-      //if collection change, make a new index
-      if(this.tweetsEmpty() || (ts.length > 0 && this.tweets_list.length != ts.length && this.tweets_list != ts)){
-        this.tweets_list = ts
-        this.tweets_meta = meta
+      let new_tweets = this.getNewTweets(this.tweets_dict, tweets_stored)
+      // console.log("new tweets", new_tweets)
+      
+      if(Object.keys(new_tweets).length > 0){
+        this.tweets_dict = Object.assign(this.tweets_dict, tweets_stored)
         let prev_msg = ''
+        // store previous message and show loading msg
         if (document.getElementsByClassName("suggConsole").length > 0) {
           prev_msg = ui.showConsoleMessage("Just a moment, making an index of your tweets...")
         }
-        nlp.makeIndex(this.tweets_list)
-        if (document.getElementsByClassName("suggConsole").length > 0) ui.showConsoleMessage(prev_msg)
+        //add new tweets to index and replace message
+        nlp.addToIndex(new_tweets).then(()=>{if (document.getElementsByClassName("suggConsole").length > 0) ui.showConsoleMessage(prev_msg)})
+        this.handleNewTweets(from_message)
       }
-      this.handleNewTweets(from_message)
       return this.tweets
     }else{
       if(!from_message) this.setSyncStatus(false, "No tweets yet...", ui.sync_status.EMPTY)

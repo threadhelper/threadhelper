@@ -382,14 +382,17 @@ class TweetWiz{
   static makeTweetsMeta(tweets, update_type = "update"){
     let meta = {}
     if (tweets != null){
+      let len = Object.keys(tweets).length - 1
+      let first_key = Object.keys(tweets)[0]
+      let last_key = Object.keys(tweets)[len]
       meta = {
-        count: tweets.length, 
-        max_id: tweets[tweets.length - 1].id, 
-        max_time: tweets[tweets.length - 1].time,
-        since_id: tweets[0].id, 
-        since_time: tweets[0].time,
+        count: len, 
+        max_id: tweets[last_key].id, 
+        max_time: tweets[last_key].time,
+        since_id: tweets[first_key].id, 
+        since_time: tweets[first_key].time,
         last_updated: (new Date()).getTime(),
-        has_archive: update_type == "archive" ||wiz.tweets_meta.has_archive ,
+        has_archive: update_type == "archive" || wiz.tweets_meta.has_archive ,
         has_timeline: wiz.tweets_meta.has_timeline, //update_type == "timeline"
       }
     } else{
@@ -433,12 +436,14 @@ class TweetWiz{
       history: 1
     }
     let new_tweets = []
-    let old_meta = TweetWiz.makeTweetsMeta(_old, update_type)
-    let new_meta = TweetWiz.makeTweetsMeta(_new, update_type)
+    //let old_meta = TweetWiz.makeTweetsMeta(_old, update_type)
+    // let new_meta = TweetWiz.makeTweetsMeta(_new, update_type)
     if (priority[update_type] > priority.old){
-      new_tweets = overwrite(_old, _new, new_meta)
+      //new_tweets = overwrite(_old, _new, new_meta)
+      new_tweets = Object.assign(_old, _new)
     } else{
-      new_tweets = overwrite(_new, _old, old_meta)
+      //new_tweets = overwrite(_new, _old, old_meta)
+      new_tweets = Object.assign(_new, _old)
     }
     return new_tweets
   }
@@ -448,24 +453,25 @@ class TweetWiz{
   static async saveTweets(res, update_type = "update"){
     console.log(`${update_type} saveTweets res`, res);
     let arch = update_type == "archive"
-    let toTweet = (t)=>{return TweetWiz.toTweet(t,false)}
-    let archToTweet = (t)=>{return TweetWiz.toTweet(t,true)}
-    let new_tweets = arch ? res.map(archToTweet) : res.map(toTweet);
-    let all_tweets = []
-    if (new_tweets.length > 0){
+    let toTweet = (t)=>{let tweet = TweetWiz.toTweet(t,false); return [tweet.id, tweet]}
+    let archToTweet = (t)=>{let tweet = TweetWiz.toTweet(t,true); return [tweet.id, tweet]}
+    let new_tweet_list = arch ? res.map(archToTweet) : res.map(toTweet);
+    let new_tweets = Object.fromEntries(new_tweet_list)
+    let all_tweets = {}
+    if (Object.keys(new_tweets).length > 0){
       // load all tweets
       let old_tweets = await Utils.getData("tweets")
-      old_tweets = old_tweets != null ? old_tweets : []
+      old_tweets = old_tweets != null ? old_tweets : {}
 
       
       // all_tweets = all_tweets.concat(new_tweets)
-      if (typeof old_tweets !== "undefined" && old_tweets != null && old_tweets.length > 0){
+      if (typeof old_tweets !== "undefined" && old_tweets != null && Object.keys(old_tweets).length > 0){
         all_tweets = TweetWiz.priorityConcat(old_tweets, new_tweets)
       } else {
         all_tweets = new_tweets
       }
 
-      all_tweets = TweetWiz.removeDuplicates(all_tweets)
+      //all_tweets = TweetWiz.removeDuplicates(all_tweets)
       wiz.tweets_meta = TweetWiz.makeTweetsMeta(all_tweets, update_type)
       console.log(update_type)
       // append new tweets and store all tweets'
@@ -520,6 +526,7 @@ class TweetWiz{
   // }
 
   static toTweet(entry, arch = false){
+    let return_tweet = {}
     let tweet = {};
 
     entry = arch ? entry.tweet : entry;
@@ -626,7 +633,7 @@ class TweetWiz{
   */
   async updateTweets(m, update_type = "update"){
     utils.msgCS({type: "tweets-loading", update_type: update_type})
-    let tweets = []
+    let tweets = {}
     if (!this.midRequest){
       this.midRequest = true
 
@@ -694,13 +701,13 @@ class TweetWiz{
       }
     };
     var username = this.user_info.screen_name
-    var tweets = []
+    var tweets = {}
     var users = []
     let res = []
     let url = ''
     let stop = false
 
-    let new_tweets = []
+    let new_tweets = {}
     
     // Container for a dynamic set of variables dependent on query_type
     
@@ -710,14 +717,14 @@ class TweetWiz{
         vars.since = meta.since_id != null ? `&since_id=${meta.since_id}` : ''
         vars.since_id = 0
         vars.url = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}${vars.since}&count=${count}&include_rts=${include_rts}`
-        vars.stop_condition = (res,tweets) => {return tweets.length >= count || !(res != null) || res.length < 1 || stop}
+        vars.stop_condition = (res,tweets) => {return Object.keys(tweets).length >= count || !(res != null) || res.length < 1 || stop}
         return vars
       },
       timeline: (vars)=>{
         vars.max = meta.max_id != null ? `&since_id=${meta.max_id}` : ''
         vars.max_id = meta.max_id == null ? -1 : meta.max_id;
         vars.url = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}${vars.max}&count=${count}&include_rts=${include_rts}`
-        vars.stop_condition = (res,tweets) => {return tweets.length >= count || !(res != null) || res.length < 1 || stop}
+        vars.stop_condition = (res,tweets) => {return Object.keys(tweets).length >= count || !(res != null) || res.length < 1 || stop}
         return vars
       },
       history: (vars)=>{
@@ -797,7 +804,7 @@ class TweetWiz{
           //modifies new_tweets
           vars = await treat[query_type](vars)
           new_tweets = await TweetWiz.saveTweets(res, query_type);
-          tweets = tweets.concat(new_tweets)
+          tweets = Object.assign(tweets,new_tweets)
           console.log(`received total ${tweets.length} tweets`);
           console.log("actual query results:", res);
         
