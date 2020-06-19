@@ -71,7 +71,7 @@ const nlp = (function() {
       boolean: "OR",
       expand: true
     });
-    // console.log(index)
+    console.log("index size:",index.documentStore.length)
     // console.log(results)
     return results.slice(0,n_tweets).map((x)=>{return tweets[x.ref]})
   }

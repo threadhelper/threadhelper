@@ -106,7 +106,7 @@ class wUtils {
     var home = 'https://twitter.com/home'
     var compose = 'https://twitter.com/compose/tweet'
     
-    console.log("mode is " + pageURL)
+    // console.log("mode is " + pageURL)
     if (pageURL.indexOf(home) > -1){
       return 'home'
     }
@@ -516,7 +516,7 @@ async function onChange(mutationRecords) {
       const tweet = text.replace(wutils.url_regex, "")
       nlp.getRelated(tweet, wiz.getTweets()).then((related)=>{
         ui.current_res = [...new Set(related)]
-        console.log(ui.current_res)
+        // console.log(ui.current_res)
         ren.renderTweets([...new Set(related)])
       });
     }
