@@ -33,9 +33,6 @@
 }
 .arch_icon{
   right: 0%;
-  /*height: 10px; 
-  width: 10px;
-  background-color: rgb(107, 23, 107); */
   position: relative;
   color: var(--neutral-color);
 }
@@ -94,33 +91,32 @@
 /*For archive loading button*/
 .arch_icon .tooltiptext {
   visibility: hidden;
-  width: 120px;
-  background-color:var(--main-txt-color);
+  position: absolute;
+  width: 200%;
+  left: 0px;
+  background-color: var(--main-txt-color);
   color: var(--main-bg-color);
-  text-align: center;
+  text-align: center;  
   font-weight: 100;
   padding: 5px 0;
   border-radius: 6px;
- 
-  /* Position the tooltip text - see examples below! */
-  position: absolute;
-  z-index: 1;
-  width: 200px;
   top: 110%;
   right: 100%;
-  margin-right: -20px; /*  Use half of the width (120/2 = 60), to center the tooltip */
+  z-index: 1;
 }
+
 
 .arch_icon .tooltiptext::after {
   content: " ";
   position: absolute;
   bottom: 100%;  /* At the top of the tooltip */
-  right: 10px;
+  right: 75%;
   margin-right: 0px;
   border-width: 5px;
   border-style: solid;
   border-color: transparent transparent var(--main-txt-color);
 }
+
 
 /* Show the tooltip text when you mouse over the tooltip container */
 .arch_icon:hover .tooltiptext {
@@ -167,6 +163,11 @@
   flex-direction: column;
   margin-top: 5px;
 }
+
+a, a:visited {
+  color: #1b95e0
+}
+
 .sug_home {
   margin-bottom: 20px;
   border-radius: 14px;
@@ -185,23 +186,23 @@
 
 
 /* width */
-::-webkit-scrollbar {
+suggestionBox ::-webkit-scrollbar {
   width: 10px;
 }
 
 /* Track */
-::-webkit-scrollbar-track {
+suggestionBox ::-webkit-scrollbar-track {
   background: var(--main-bg-color);
 }
 
 /* Handle */
-::-webkit-scrollbar-thumb {
-  background: var(--main-txt-color);
+suggestionBox ::-webkit-scrollbar-thumb {
+  background: var(--neutral-color);
 }
 
 /* Handle on hover */
-::-webkit-scrollbar-thumb:hover {
-  background: var(--neutral-color);
+suggestionBox ::-webkit-scrollbar-thumb:hover {
+  background: var(--main-txt-color);
 }
 
 .dummyContainer {
@@ -272,15 +273,15 @@
 }
 
 .th-header-username {
-  color: var(--netural-color);
+  color: var(--neutral-color);
 }
 
 .th-header-time {
-  color: var(--netural-color);
+  color: var(--neutral-color);
 }
 
 .th-reply {
-  color: var(--netural-color);
+  color: var(--neutral-color);
 }
 
 .th-text {
@@ -352,21 +353,21 @@
 .th-quote-header-username {
   padding-left: 5px;
   padding-right: 5px;
-  color: var(--netural-color);
+  color: var(--neutral-color);
 }
 
 .th-header-dot {
-  color: var(--netural-color);
+  color: var(--neutral-color);
 }
 
 .th-quote-header-time {
   padding-left: 5px;
-  color: var(--netural-color);
+  color: var(--neutral-color);
 }
 
 .th-quote-reply {
   padding-top: 3px;
-  color: var(--netural-color);
+  color: var(--neutral-color);
 }
 
 .th-quote-content {
@@ -377,7 +378,7 @@
 
 .th-unavailable {
   background-color: var(--main-background-color);
-  color: var(--netural-color);
+  color: var(--neutral-color);
 }
 
 .th-quote-content-main {

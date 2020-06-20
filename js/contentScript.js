@@ -377,7 +377,7 @@ class UI {
   }
 
   buildArchIcon(){
-    let msg = '<span>Click here to upload your Twitter Archive here. <a href="https://twitter.com/settings/your_twitter_data">Download an archive of your data</a>, extract it and select the resulting folder.</span>';
+    let msg = '<span>Click here to upload your Twitter Archive here. <a href="https://twitter.com/settings/your_twitter_data">Download an archive of your data</a>, extract it and select data/tweet.js.</span>';
     let arch_icon = document.createElement('span')
     arch_icon.setAttribute("class", "arch_icon");
     let span = document.createElement('button')
@@ -1046,7 +1046,8 @@ class TweetWiz{
       return this.tweets
     }else{
       if(!from_message) this.setSyncStatus(false, "No tweets yet...", ui.sync_status.EMPTY)
-      if(this.tweetsEmpty()) dutils.msgBG({type: "timeline"})
+      // if(this.tweetsEmpty()) dutils.msgBG({type: "timeline"})
+      if(this.tweetsEmpty()) dutils.msgBG()
       return null
     }
   }

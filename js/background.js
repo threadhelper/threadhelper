@@ -123,7 +123,7 @@ class Utils {
     //let tabId = await Utils.getTabId()
     try{
     chrome.tabs.sendMessage(this.tabId, m)
-    //console.log("sending message to cs tab ", m)
+    console.log("sending message to cs tab ", m)
     } catch(e){
     //console.log(e)
     }
@@ -554,10 +554,13 @@ class TweetWiz{
     // After storing again, delete the profile pics
     Utils.getData("tweets").then((tweets)=>{
       for (let key_val of Object.entries(this.pic_tweet_queue)){
-        tweets[key_val[0]].profile_image = Object.keys(this.profile_pics).includes(key_val[1]) ? this.profile_pics[key_val[1]] : this.profile_pics[key_val[1]]
+        // tweets[key_val[0]].profile_image = Object.keys(this.profile_pics).includes(key_val[1]) ? this.profile_pics[key_val[1]] : this.profile_pics[key_val[1]]
+        tweets[key_val[0]].profile_image =  this.profile_pics[key_val[1]]
       }
       Utils.setData({tweets:tweets}).then(()=>{
         this.profile_pics = {}
+        this.user_queue = []
+        this.pic_tweet_queue = {}
         console.log("done setting profile pics")
       })
     })
@@ -895,6 +898,7 @@ async function onMessage(m, sender) {
       
     case "update":
       auth_good = await auth.testAuth()
+      if (Object.keys(wiz.pic_tweet_queue).length > 0) wiz.getProfilePics()
       if(await auth_good != null){
         //console.log("auth good", auth_good)
         wiz.updateTweets(m);

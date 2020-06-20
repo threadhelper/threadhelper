@@ -3,7 +3,6 @@
   "version": "1.0",
   "description": "Thread past tweets with your new ones as you write them.",
   "permissions": [
-    "activeTab",
     "declarativeContent",
     "storage",
     "tabs",

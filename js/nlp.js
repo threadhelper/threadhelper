@@ -83,11 +83,16 @@ const nlp = (function() {
       boolean: "OR",
       expand: true
     });
+
     console.log("index size:",index.documentStore.length)
     // console.log(results)
     let end = (new Date()).getTime()
     console.log(`Searching ${tweet_text} took ${(end-start)/1000}s`)
-    return results.slice(0,n_tweets).map((x)=>{return tweets[x.ref]})
+    let resultTweets = res=>{return res.slice(0,n_tweets).map((x)=>{return tweets[x.ref]})} // get tweets from docs
+    let getLatest =  ()=>{let keys = Object.keys(tweets); return (keys.slice(keys.length - n_tweets, keys.length).map(k=>{return tweets[k]})).reverse()}
+    // if no results, get latest tweets
+    let related = results.length > 0 ? resultTweets(results) : getLatest()
+    return related
   }
 
 })();
