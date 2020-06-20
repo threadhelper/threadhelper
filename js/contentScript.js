@@ -594,7 +594,7 @@ async function onChange(mutationRecords) {
 
 
 async function updateWithSearch(text){
-  let isTextValid = (text) => {return typeof text != "undefined" && text != null && text.trim() != ''}
+  let isTextValid = (text) => {return typeof text != "undefined" && text != null /*&& text.trim() != ''*/}
   if(wiz.getTweets() != null && isTextValid(text)){
     //this.current_res = []
     if(Object.keys(wiz.getTweets()).length>0){
@@ -984,7 +984,8 @@ class TweetWiz{
   handleNewTweets(from_message){  
     // make sync icon green
     if(!from_message) this.setSyncStatus(true, "Tweets loaded.", ui.sync_status.TIMELINE)
-
+    // This only deals with the case where the tweets are gotten for the first time after loading, so we could limit this more.
+    updateWithSearch(wutils.getTextField(wutils.getFirstComposeBox()).textContent)
     // make archive icon invisible if we already have the archive
     let icons = document.getElementsByClassName("arch_icon")
     for (let i of icons){
@@ -1031,7 +1032,8 @@ class TweetWiz{
       // console.log("new tweets", new_tweets)
       
       if(Object.keys(new_tweets).length > 0){
-        this.tweets_dict = Object.assign(this.tweets_dict, tweets_stored)
+        //this.tweets_dict = Object.assign(this.tweets_dict, tweets_stored)
+        this.tweets_dict = tweets_stored
         let prev_msg = ''
         // store previous message and show loading msg
         if (document.getElementsByClassName("suggConsole").length > 0) {
@@ -1122,9 +1124,10 @@ async function onMessage(m) {
       wiz.loadTweets(true)
       wiz.setSyncStatus(null, "Tweets partially loaded...")
       break;
-    case "tweets-done":
-      //console.log("message received:", m);
-      wiz.mid_request = false
+      case "tweets-done":
+        //console.log("message received:", m);
+        wiz.mid_request = false
+        wiz.loadTweets(true)
       wiz.setSyncStatus(true, "Tweets loaded.", m.update_type)
       if (m.update_type == "archive") ui.toggleArchIcon("none")
       break;

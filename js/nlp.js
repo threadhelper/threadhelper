@@ -11,8 +11,8 @@ const nlp = (function() {
     "reply_to",
     "mentions"
   ]
-  var index = null;
-  let tweets = []
+  let index = null; 
+  let tweets = {}; // keeping a local copy of tweets for sorting. This can be done in contentscript instead
   return { getRelated: getRelated, makeIndex: makeIndex, addToIndex:addToIndex, getIndex:getIndex, loadIndex:loadIndex};
 
   function getIndex(){
@@ -20,10 +20,12 @@ const nlp = (function() {
   }
 
   function loadIndex(_index){
+    console.log("loaded index")
     index = _index
   }
 
   async function makeIndex(_tweets){
+    tweets = _tweets
     let start = (new Date()).getTime()
     console.log("making index", _tweets)
     var _index = elasticlunr(function () {
@@ -52,6 +54,8 @@ const nlp = (function() {
       makeIndex(_tweets)
     }
     else{
+      // add new tweets to tweets and sort it
+      tweets = sortTweets(Object.assign(tweets,_tweets))
       for (const [id, tweet] of Object.entries(tweets)){
         var doc = {}
         for (var f of tweet_fields){
@@ -63,6 +67,14 @@ const nlp = (function() {
     console.log("added to index", _tweets)
     }
     return index
+  }
+
+  function sortTweets(tweetDict){
+    let keys = Object.keys(tweetDict)
+    let comp = (b,a)=>{return a.localeCompare(b,undefined,{numeric: true})}
+    let skeys = keys.sort(comp)
+    let stobj = Object.fromEntries(skeys.map((k)=>{return[k,tweetDict[k]]}))
+    return stobj
   }
 
   //** Find related tweets */
@@ -89,9 +101,15 @@ const nlp = (function() {
     let end = (new Date()).getTime()
     console.log(`Searching ${tweet_text} took ${(end-start)/1000}s`)
     let resultTweets = res=>{return res.slice(0,n_tweets).map((x)=>{return tweets[x.ref]})} // get tweets from docs
-    let getLatest =  ()=>{let keys = Object.keys(tweets); return (keys.slice(keys.length - n_tweets, keys.length).map(k=>{return tweets[k]})).reverse()}
+
+    let keys = Object.keys(tweets)
+    let comp = (b,a)=>{return a.localeCompare(b,undefined,{numeric: true})} //sorts from highest to lowest (most recent to latest)
+    let skeys = keys.sort(comp)
+    let getLatest =  ()=>{return (keys.slice(0, n_tweets).map(k=>{return tweets[k]}))}
     // if no results, get latest tweets
     let related = results.length > 0 ? resultTweets(results) : getLatest()
+    // console.log("nlp tweets", Object.keys(tweets).reverse())
+    // console.log("nlp results", related)
     return related
   }
 

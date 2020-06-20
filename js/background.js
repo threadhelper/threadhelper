@@ -420,21 +420,6 @@ class TweetWiz{
     
   // TODO: maximal efficiency would consider the origin with the old tweets but that's more than I want to do
   static priorityConcat(_old, _new, update_type = "update"){
-    let overwrite = (sub,dom,dom_meta) => {
-      //I only want sub with id > dom.since_id and sub with id < dom.max_id
-      let reverse_sub = sub.slice().reverse()
-      // start looking in reverse because it's supposed to be faster
-      let overlap_n = (reverse_sub.findIndex((t)=>{return t.id > dom_meta.since_id}))
-      let cap = sub.slice(0,(sub.length - 1) - overlap_n)
-      let shoes = sub.slice((sub.findIndex((t)=>{return t.id < dom_meta.max_id})),(sub.length - 1))
-      // console.log("OVERWRITE")
-      // console.log("SUB", sub)
-      // console.log("CAP", cap)
-      // console.log("DOM", dom)
-      // console.log("SHOES", shoes)
-      //console.log(`OVERWRITTEN ${overlap_n} tweets`)
-      return cap.concat(dom).concat(shoes)
-    }
     let priority = {
       timeline: 5,
       update: 4, //there are reasons for update to be higher priority than timeline (deleted recent tweets) but like this is more efficient
@@ -443,18 +428,23 @@ class TweetWiz{
       history: 1
     }
     let new_tweets = []
-    //let old_meta = TweetWiz.makeTweetsMeta(_old, update_type)
-    // let new_meta = TweetWiz.makeTweetsMeta(_new, update_type)
     if (priority[update_type] > priority.old){
-      //new_tweets = overwrite(_old, _new, new_meta)
       new_tweets = Object.assign(_old, _new)
     } else{
-      //new_tweets = overwrite(_new, _old, old_meta)
       new_tweets = Object.assign(_new, _old)
     }
+    if (update_type != "update") newtweets = wiz.sortTweets(new_tweets)
     return new_tweets
   }
 
+  // newest (largest id) first
+  sortTweets(tweetDict){
+    let keys = Object.keys(tweetDict)
+    let comp = (b,a)=>{return a.localeCompare(b,undefined,{numeric: true})}
+    let skeys = keys.sort(comp)
+    let stobj = Object.fromEntries(skeys.map((k)=>{return[k,tweetDict[k]]}))
+    return stobj
+  }
 
   // Convert request results to tweets and save them
   // TODO  : deal with archive RTs which are listed as by the retweeter and not by the original author
@@ -462,9 +452,9 @@ class TweetWiz{
     // Mapping results to tweets
     //console.log(`${update_type} saveTweets res`, res);
     let arch = update_type == "archive"
-    let isResNew = (re)=>{return (parseInt(re[0].id_str) > parseInt(wiz.tweets_meta.since_id))} 
+    let isResNew = (re)=>{return (re[0].id_str.localeCompare(wiz.tweets_meta.since_id, undefined,{numeric:true}) > 0) } 
     if (update_type == "update" && !isResNew(res)){
-      //console.log("canceled save")
+      console.log("canceled save")
       return {}
     }
     //console.log("Res", res)
@@ -556,6 +546,7 @@ class TweetWiz{
       for (let key_val of Object.entries(this.pic_tweet_queue)){
         // tweets[key_val[0]].profile_image = Object.keys(this.profile_pics).includes(key_val[1]) ? this.profile_pics[key_val[1]] : this.profile_pics[key_val[1]]
         tweets[key_val[0]].profile_image =  this.profile_pics[key_val[1]]
+        tweets = this.sortTweets(tweets)
       }
       Utils.setData({tweets:tweets}).then(()=>{
         this.profile_pics = {}
