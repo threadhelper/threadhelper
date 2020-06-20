@@ -272,15 +272,15 @@
 }
 
 .th-header-username {
-  color: var(--netural-color);
+  color: var(--neutral-color);
 }
 
 .th-header-time {
-  color: var(--netural-color);
+  color: var(--neutral-color);
 }
 
 .th-reply {
-  color: var(--netural-color);
+  color: var(--neutral-color);
 }
 
 .th-text {
@@ -352,21 +352,21 @@
 .th-quote-header-username {
   padding-left: 5px;
   padding-right: 5px;
-  color: var(--netural-color);
+  color: var(--neutral-color);
 }
 
 .th-header-dot {
-  color: var(--netural-color);
+  color: var(--neutral-color);
 }
 
 .th-quote-header-time {
   padding-left: 5px;
-  color: var(--netural-color);
+  color: var(--neutral-color);
 }
 
 .th-quote-reply {
   padding-top: 3px;
-  color: var(--netural-color);
+  color: var(--neutral-color);
 }
 
 .th-quote-content {
@@ -377,7 +377,7 @@
 
 .th-unavailable {
   background-color: var(--main-background-color);
-  color: var(--netural-color);
+  color: var(--neutral-color);
 }
 
 .th-quote-content-main {
