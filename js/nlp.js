@@ -13,9 +13,18 @@ const nlp = (function() {
   ]
   var index = null;
   let tweets = []
-  return { getRelated: getRelated, makeIndex: makeIndex, addToIndex:addToIndex };
+  return { getRelated: getRelated, makeIndex: makeIndex, addToIndex:addToIndex, getIndex:getIndex, loadIndex:loadIndex};
+
+  function getIndex(){
+    return index
+  }
+
+  function loadIndex(_index){
+    index = _index
+  }
 
   async function makeIndex(_tweets){
+    let start = (new Date()).getTime()
     console.log("making index", _tweets)
     var _index = elasticlunr(function () {
       this.setRef('id');
@@ -33,6 +42,8 @@ const nlp = (function() {
       _index.addDoc(doc)
     }
     index = _index
+    let end = (new Date()).getTime()
+    console.log(`Making index took ${(end-start)/1000}s`)
     return _index
   }
 
@@ -56,6 +67,7 @@ const nlp = (function() {
 
   //** Find related tweets */
   async function getRelated(tweet_text, tweets, n_tweets = 20) {
+    let start = (new Date()).getTime()
     if (index == null){
       index = await makeIndex(tweets)
     }
@@ -73,6 +85,8 @@ const nlp = (function() {
     });
     console.log("index size:",index.documentStore.length)
     // console.log(results)
+    let end = (new Date()).getTime()
+    console.log(`Searching ${tweet_text} took ${(end-start)/1000}s`)
     return results.slice(0,n_tweets).map((x)=>{return tweets[x.ref]})
   }
 
