@@ -220,8 +220,9 @@ class UI {
     this.activeComposer = {composer: null, sugg_box: null, observer: null, mode: null}
     // Hold the underlying home sugg_box
     this.home_sugg = null
-
     this.current_res = []
+    this.current_query = '' //last edited test in any compose box
+    this.console_msg = ''
 
     //this.last_mode = wutils.getMode()
     
@@ -269,7 +270,8 @@ class UI {
   // When a text box is focused
   composeBoxFocused(compose_box){
     if (Object.keys(wiz.getTweets()).length < 1){
-      wiz.loadTweets()
+      //wiz.loadTweets()
+      console.log("text box focused, no tweets", wiz.getTweets())
     } else{
       dutils.msgBG({type: "update"})
     }
@@ -365,7 +367,7 @@ class UI {
     tooltiptext.innerHTML = wiz.db_sync.msg
     tooltiptext.setAttribute("class", 'tooltiptext');
     sync_icon.appendChild(tooltiptext)
-    sync_icon.onclick = ()=>{console.log("Metadata:",wiz.tweets_meta); console.log("User info:", wiz.user_info); console.log("Results:", ui.current_res); wiz.loadTweets()}
+    sync_icon.onclick = ()=>{console.log("Metadata:",wiz.tweets_meta); console.log("User info:", wiz.user_info); console.log("Results:", ui.current_res); dutils.msgBG({type:"update"})}
     return sync_icon
   }
 
@@ -588,6 +590,7 @@ class UI {
 async function onChange(mutationRecords) {
   const text = ui.getTextFromMutation(mutationRecords)
   //console.log("CHANGE! text is:", text, "; in element: ", mutationRecords[0].target);
+  ui.current_query = text
   updateWithSearch(text)
   
 }
@@ -596,7 +599,6 @@ async function onChange(mutationRecords) {
 async function updateWithSearch(text){
   let isTextValid = (text) => {return typeof text != "undefined" && text != null /*&& text.trim() != ''*/}
   if(wiz.getTweets() != null && isTextValid(text)){
-    //this.current_res = []
     if(Object.keys(wiz.getTweets()).length>0){
       var box = ui.activeComposer.sugg_box
       //const box = document.`querySelector('[aria-label="suggestionBox"]')
@@ -606,11 +608,7 @@ async function updateWithSearch(text){
       const tweet = text.replace(wutils.url_regex, "")
       nlp.getRelated(tweet, wiz.getTweets()).then((related)=>{
         ui.current_res = [...new Set(related)]
-        // console.log(ui.current_res)
-        let start = (new Date()).getTime()
         ren.renderTweets([...new Set(related)])
-        let end = (new Date()).getTime()
-        console.log(`Rendering ${text} took ${(end-start)/1000}s`)
       });
       
     }
@@ -897,6 +895,9 @@ class TweetWiz{
   constructor(){
     // Holds the tweets to search over
     this.tweets_dict = {};
+    dutils.getData("tweets").then((tweets)=>{
+      this.tweets_dict = tweets;
+    })
     this.tweets_meta = {
       count: 0, 
       max_id: null, 
@@ -907,8 +908,12 @@ class TweetWiz{
       has_archive: false,
       has_timeline: false,
     }
+    dutils.getData("tweets_meta").then((tweets)=>{
+      this.tweets_meta = tweets;
+    })
     // User info
     this.user_info = {}
+    this.loadUserInfo()
     // holds sync state between CS and BG
     this.db_sync = {synced: false, status:ui.sync_status.EMPTY, msg: "No tweets yet..." }
     // Whether a request is already halfway through
@@ -920,10 +925,8 @@ class TweetWiz{
   }
     
   async loadUserInfo(){
-    chrome.storage.local.get(["user_info"], r =>{
-      if (typeof r.user_info !== "undefined"){
-        this.user_info = r.user_info
-      }
+    dutils.getData("user_info").then((info)=>{
+      this.user_info = info
     })
     return this.user_info
   }
@@ -984,8 +987,8 @@ class TweetWiz{
   handleNewTweets(from_message){  
     // make sync icon green
     if(!from_message) this.setSyncStatus(true, "Tweets loaded.", ui.sync_status.TIMELINE)
-    // This only deals with the case where the tweets are gotten for the first time after loading, so we could limit this more.
-    updateWithSearch(wutils.getTextField(wutils.getFirstComposeBox()).textContent)
+    // Update default state of sidebar with newest tweets
+    updateWithSearch(ui.current_query)
     // make archive icon invisible if we already have the archive
     let icons = document.getElementsByClassName("arch_icon")
     for (let i of icons){
@@ -1010,68 +1013,84 @@ class TweetWiz{
 
   // gets tweets from storage
   async loadTweets(from_message=false) {
-    this.loadUserInfo()
-    let meta = {}
-    dutils.getData("index").then(_index=>{
-      if(_index != null){
-        nlp.loadIndex(_index)
-      }
-    })
-    this.tweets_meta = await dutils.getData("tweets_meta")
-    let tweets_stored = await dutils.getData("tweets")
+    let start = (new Date()).getTime()
+    dutils.getData("tweets_meta").then(meta=>{wiz.tweets_meta = meta})
+    let staged = await dutils.getData("staged_tweets")
+    dutils.setData({stagedTweets:{}})
+    
     // console.log("tweets_meta", this.tweets_meta)
     // console.log("tweets_stored", tweets_stored)
-    
-    if (typeof tweets_stored !== 'undefined' && tweets_stored != null){
-      // If we shouldn't search over retweets
-      if (!dutils.options.getRetweets){
-        tweets_stored = this.filterUserTweets(tweets_stored)
-        meta = wiz.makeTweetsMeta(tweets_stored)
-      }
-      let new_tweets = this.getNewTweets(this.tweets_dict, tweets_stored)
-      // console.log("new tweets", new_tweets)
-      
-      if(Object.keys(new_tweets).length > 0){
-        //this.tweets_dict = Object.assign(this.tweets_dict, tweets_stored)
-        this.tweets_dict = tweets_stored
-        let prev_msg = ''
-        // store previous message and show loading msg
-        if (document.getElementsByClassName("suggConsole").length > 0) {
-          prev_msg = ui.showConsoleMessage("Just a moment, making an index of your tweets...")
-        }
-        //add new tweets to index and replace message
-        nlp.addToIndex(new_tweets).then(()=>{if (document.getElementsByClassName("suggConsole").length > 0) ui.showConsoleMessage(prev_msg)}).then((_index)=>{
-          dutils.setData({index: _index})
-        })
-        this.handleNewTweets(from_message)
-      }
-      return this.tweets
-    }else{
-      if(!from_message) this.setSyncStatus(false, "No tweets yet...", ui.sync_status.EMPTY)
+    let end = (new Date()).getTime()
+    console.log(`Loading tweets in CS took ${(end-start)/1000}s`)
+    if (!(staged != null) || Object.keys(staged).length <= 0){
+      //if(!from_message) this.setSyncStatus(false, "No tweets yet...", ui.sync_status.EMPTY)
       // if(this.tweetsEmpty()) dutils.msgBG({type: "timeline"})
-      if(this.tweetsEmpty()) dutils.msgBG()
+      //if(this.tweetsEmpty()) dutils.msgBG()
       return null
     }
+    
+    start = (new Date()).getTime()
+
+    // If we shouldn't search over retweets
+    if (!dutils.options.getRetweets){
+      staged = this.filterUserTweets(staged)
+      wiz.tweets_meta = wiz.makeTweetsMeta(staged)
+    }
+    
+    
+    // Assign tweets to local db 
+    console.log("Staged tweets being loaded", staged)
+    //let new_tweets = this.getNewTweets(this.tweets_dict, staged)
+    this.tweets_dict = Object.assign(this.tweets_dict, staged)
+    
+    // Remove tweets we loaded from 
+
+
+    // store previous message and show loading msg
+    let prev_msg = ''
+    if (document.getElementsByClassName("suggConsole").length > 0) {
+      prev_msg = ui.showConsoleMessage("Just a moment, making an index of your tweets...")
+    }
+
+    end = (new Date()).getTime()
+    console.log(`Processing tweets in CS took ${(end-start)/1000}s`)
+
+    start = (new Date()).getTime()
+
+    //add new tweets to index and replace message
+    nlp.addToIndex(staged).then(()=>{
+      if (document.getElementsByClassName("suggConsole").length > 0) {
+        ui.showConsoleMessage(prev_msg)
+      }
+    }).then((_index)=>{
+          dutils.setData({index: _index})
+      }
+    )
+
+    this.handleNewTweets(from_message)
+    end = (new Date()).getTime()
+    console.log(`Adding tweets to index took ${(end-start)/1000}s`)
+    
+    return this.tweets
+    
   }
 
   setSyncStatus(sync, message='Sync Info:', status = null){
-    chrome.storage.local.get(["tweets_meta"], r =>{
-      let si = document.getElementsByClassName("sync_icon")
-      this.db_sync.synced = sync == null ? this.db_sync.synced : sync;
-      this.db_sync.status = status == null ? this.db_sync.status : status;
-      let classes = this.db_sync.synced ? 'sync_icon synced' : 'sync_icon unsynced'
-      message = message.concat(` \n${this.db_sync.status}. \n`)
-      if (r.tweets_meta != null){
-        message = message.concat(` \nHolding ${r.tweets_meta.count} tweets. \nLast updated ${(new Date(r.tweets_meta.last_updated)).toLocaleString()}`)
-      } else{
-        message = message.concat(` \nHolding ${0} tweets.`)
-      }
-      this.db_sync.msg = message;
-      for (let s of si){  
-        s.setAttribute("class", classes);
-        s.firstChild.innerText = this.db_sync.msg
-      }
-    }); 
+    let si = document.getElementsByClassName("sync_icon")
+    this.db_sync.synced = sync == null ? this.db_sync.synced : sync;
+    this.db_sync.status = status == null ? this.db_sync.status : status;
+    let classes = this.db_sync.synced ? 'sync_icon synced' : 'sync_icon unsynced'
+    //message = message.concat(` \n${this.db_sync.status}. \n`)
+    if (wiz.tweets_meta != null){
+      message = message.concat(` \nHolding ${wiz.tweets_meta.count} tweets. \nLast updated ${(new Date(wiz.tweets_meta.last_updated)).toLocaleString()}`)
+    } else{
+      message = message.concat(` \nHolding ${0} tweets.`)
+    }
+    this.db_sync.msg = message;
+    for (let s of si){  
+      s.setAttribute("class", classes);
+      s.firstChild.innerText = this.db_sync.msg
+    }
   }
 
   // Parses json and stores in temp to be processed by BG
@@ -1096,9 +1115,35 @@ class TweetWiz{
 
 
 
-
-
-
+// changes: each has oldValue and newValue
+// area: could be sync local or managed
+async function onStorageChanged(changes, area){
+  if (area != 'local') return null 
+  let oldVal = {}
+  let newVal = {}
+  let changedItems = Object.keys(changes)
+  for(let item of changedItems){
+    oldVal = changes[item].oldValue
+    newVal = changes[item].newValue
+    if (oldVal == newVal) break;
+    console.log(`${item} changed in storage`)
+    switch(item){
+      case "tweets":
+        break;
+      case "tweets_meta":
+        break;
+      case "user_info":
+        wiz.user_info = changes[item];
+        break;
+      case "staged_tweets":
+        wiz.setSyncStatus(false, `Loading tweets...`)
+        wiz.loadTweets(true)
+        break;
+      default:
+        break;
+    }
+}
+}
 
 //** Handles messages sent from background or popup */
 async function onMessage(m) {
@@ -1116,20 +1161,23 @@ async function onMessage(m) {
       break;
     case "tweets-loading":
       wiz.mid_request = true
-      wiz.setSyncStatus(false, `Loading tweets...`)
       break;
-      case "tweets-loaded":
+      case "tweets-saved":
       wiz.mid_request = true
       //console.log("tweets loaded, getting tweets")
-      wiz.loadTweets(true)
-      wiz.setSyncStatus(null, "Tweets partially loaded...")
+      // wiz.loadTweets(true)
+      //wiz.setSyncStatus(null, "Tweets partially loaded...")
       break;
-      case "tweets-done":
-        //console.log("message received:", m);
-        wiz.mid_request = false
-        wiz.loadTweets(true)
+    case "tweets-done":
+      //console.log("message received:", m);
+      wiz.mid_request = false
+      // wiz.loadTweets(true)
       wiz.setSyncStatus(true, "Tweets loaded.", m.update_type)
       if (m.update_type == "archive") ui.toggleArchIcon("none")
+      break;
+    case "new-tweets":
+      break;
+    case "load-user-info":
       break;
     case "storage-clear":
       //let sync_message = `Holding ${meta.count} tweets. \n Last updated ${(new Date(meta.since_time)).toLocaleString()}`
@@ -1156,6 +1204,7 @@ async function onMessage(m) {
 function main()
 {
   chrome.runtime.onMessage.addListener(onMessage);
+  chrome.storage.onChanged.addListener(onStorageChanged);
 
   window.addEventListener('resize', wutils.onWinResize)
   window.onload = () => {
@@ -1165,8 +1214,10 @@ function main()
   }
   $(document).ready(function() {
     dutils.msgBG({type:"cs-created"})
+    dutils.msgBG({type:"timeline"})
     wutils.setTheme()
     dutils.loadOptions();
+    
   })
   window.onpopstate = ()=>{
     wutils.setTheme()

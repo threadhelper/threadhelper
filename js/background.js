@@ -23,14 +23,19 @@ class Utils {
   
 
   //gets data and changes its attributes that match key_vals, then setts it
-  static updateData(key, key_vals){
+  static async updateData(key, key_vals){
+    let objset = {}
     this.getData(key).then(val=>{
-      for (let k of Object.keys(key_vals)){
-        val = val != null ? val : wiz.getMetaData()
-        val[k] = key_vals[k]
+      if (val !=null){
+        val = Object.assign(val,key_vals)
+        objset[key] = val
+      } else{
+        objset[key] = key_vals
       }
-      let objset = {}
-      objset[key] = val
+      // for (let k of Object.keys(key_vals)){
+      //   val = val != null ? val : wiz.getMetaData()
+      //   val[k] = key_vals[k]
+      // }
       this.setData(objset)
     })
   }
@@ -123,7 +128,7 @@ class Utils {
     //let tabId = await Utils.getTabId()
     try{
     chrome.tabs.sendMessage(this.tabId, m)
-    console.log("sending message to cs tab ", m)
+    // console.log("sending message to cs tab ", m)
     } catch(e){
     //console.log(e)
     }
@@ -353,11 +358,14 @@ class Auth {
 // For all functions related with tweets and getting them
 class TweetWiz{
   constructor() {
-    this.user_info = {}
-    Utils.getData("user_info").then((info)=>{this.user_info = info})
+    this._user_info = {}
+    Utils.getData("user_info").then((info)=>{this.user_info = info != null ? info : {}})
     this.midRequest = false
     this.interrupt_query = false
+    this.tweets_dict = {}
     this.tweets_meta = TweetWiz.makeTweetsMeta(null)
+    this.tweet_ids = []
+    Utils.getData("tweets").then((tweets)=>{this.tweets = tweets != null ? tweets : {}})
     this.users = {}
 
     this.user_queue = [] // user ids to be scraped
@@ -365,8 +373,42 @@ class TweetWiz{
     this.profile_pics = {} //id: {"name" "screen_name" "id_str"}
   }
 
-  //get user_info(){return this.user_info}
-  //set user_info(user_info){this.user_info = user_info}
+  
+  get user_info(){return this._user_info}
+  // set the value of our user  info, and if it's new, set it in storage
+  set user_info(user_info){
+    if (user_info != this._user_info)
+      this._user_info = user_info
+      Utils.setData({user_info:this._user_info}).then(()=>{utils.msgCS({type:"load-user-info"})})
+      
+  }
+  
+  get tweets(){return this.tweets_dict}
+  // set the value of our tweet_dict/database, and if it's new, set it in storage
+  set tweets(_tweets){
+    console.log("setting", _tweets)
+    if (_tweets  != null ){
+      if (_tweets != this.tweets_dict){
+        this.tweets_dict = _tweets
+        this.tweets_meta = TweetWiz.makeTweetsMeta(this.tweets_dict)
+        this.tweet_ids = Object.keys(this.tweets_dict)
+        Utils.setData({tweets:this.tweets_dict, tweets_meta:this.tweets_meta}).then(()=>{
+          console.log("set tweets!", this.tweets_dict)
+          console.log("set tweets!", this.tweets_meta)
+          utils.msgCS({type: "tweets-saved"})
+        })
+      }else{
+        console.log("nothing to add to ", Object.keys(this.tweets_dict).length)
+      }
+    }
+    else{
+      throw("TRYING SETTING WIZ TWEETS WITH UNDEFINED VALUE")
+    }
+  }
+
+  //get tweets_meta(){return this.tweets_meta}
+  //set tweets_meta(tweets_meta){this.tweets_meta = tweets_meta}
+
 
 
   // get interrupt_query(){return this.interrupt_query}
@@ -375,32 +417,44 @@ class TweetWiz{
   //get midRequest(){return this.midRequest}
   //set midRequest(midRequest){this.midRequest = midRequest}
   
-  //get tweets_meta(){return this.tweets_meta}
-  //set tweets_meta(tweets_meta){this.tweets_meta = tweets_meta}
 
   // getUserInfo(){
   //   return this.user_info != null ? this.user_info : TweetWiz.makeTweetsMeta(null)
   // }
   
+  getTweets(){
+    return this.tweets_dict
+  }
+
   getMetaData(){
     return this.tweets_meta != null ? this.tweets_meta : TweetWiz.makeTweetsMeta(null)
   }
 
+  async loadUserInfo(){
+    Utils.getData("user_info").then((info)=>{this.user_info = info})
+    return this.user_info
+  }
+
   static makeTweetsMeta(tweets, update_type = "update"){
     let meta = {}
+    
+
     if (tweets != null){
-      let len = Object.keys(tweets).length - 1
-      let first_key = Object.keys(tweets)[0]
-      let last_key = Object.keys(tweets)[len]
-      meta = {
-        count: len, 
-        max_id: tweets[last_key].id, 
-        max_time: tweets[last_key].time,
-        since_id: tweets[first_key].id, 
-        since_time: tweets[first_key].time,
-        last_updated: (new Date()).getTime(),
-        has_archive: update_type == "archive" || wiz.tweets_meta.has_archive ,
-        has_timeline: wiz.tweets_meta.has_timeline, //update_type == "timeline"
+      console.log("tweets", tweets)
+      if (Object.keys(tweets).length>0){
+        let len = Object.keys(tweets).length - 1
+        let first_key = Object.keys(tweets)[0]
+        let last_key = Object.keys(tweets)[len]
+        meta = {
+          count: len, 
+          max_id: tweets[last_key].id, 
+          max_time: tweets[last_key].time,
+          since_id: tweets[first_key].id, 
+          since_time: tweets[first_key].time,
+          last_updated: (new Date()).getTime(),
+          has_archive: update_type == "archive" || wiz.tweets_meta.has_archive ,
+          has_timeline: wiz.tweets_meta.has_timeline, //update_type == "timeline"
+        }
       }
     } else{
       meta = {
@@ -419,7 +473,7 @@ class TweetWiz{
 
     
   // TODO: maximal efficiency would consider the origin with the old tweets but that's more than I want to do
-  static priorityConcat(_old, _new, update_type = "update"){
+  static joinTweets(_old, _new, update_type = "update"){
     let priority = {
       timeline: 5,
       update: 4, //there are reasons for update to be higher priority than timeline (deleted recent tweets) but like this is more efficient
@@ -433,7 +487,8 @@ class TweetWiz{
     } else{
       new_tweets = Object.assign(_new, _old)
     }
-    if (update_type != "update") newtweets = wiz.sortTweets(new_tweets)
+    if (update_type != "update") new_tweets = wiz.sortTweets(new_tweets)
+
     return new_tweets
   }
 
@@ -446,51 +501,64 @@ class TweetWiz{
     return stobj
   }
 
+
+  // gets the difference between old and new in dict form
+  getNewTweets(old_t,new_t){
+    //console.log("getnewtweets")
+    let old_keys = old_t != null ? Object.keys(old_t) : []
+    let new_key_vals = Object.entries(new_t)
+    const _filtered = Object.fromEntries(
+      new_key_vals.filter(key_val => {return !old_keys.includes(key_val[0])})
+    )
+    return _filtered
+  }
+
   // Convert request results to tweets and save them
   // TODO  : deal with archive RTs which are listed as by the retweeter and not by the original author
   async saveTweets(res, update_type = "update"){
-    // Mapping results to tweets
-    //console.log(`${update_type} saveTweets res`, res);
-    let arch = update_type == "archive"
-    let isResNew = (re)=>{return (re[0].id_str.localeCompare(wiz.tweets_meta.since_id, undefined,{numeric:true}) > 0) } 
-    if (update_type == "update" && !isResNew(res)){
+    // In the case of an update query, check whether the most recent result is newer than our current set of tweets as 
+    // let isResNew = (re)=>{return (re[0].id_str.localeCompare(wiz.tweets_meta.since_id, undefined,{numeric:true}) >= 0)}
+    // let isResNew = (re)=>{return (re[0].id_str.localeCompare(wiz.tweets_meta.since_id, undefined,{numeric:true}) >= 0)}
+    // If res is new 
+    res = res.filter(r=>{return !this.tweet_ids.includes(r.id_str)})
+    if (update_type == "update" && res.length < 1){
       console.log("canceled save")
       return {}
+    } else{
+      console.log("Res", res)
+      // console.log("this ids", this.tweet_ids)
     }
-    //console.log("Res", res)
     //console.log("meta", wiz.tweets_meta)
-
+    
+    // Mapping results to tweets
+    let arch = update_type == "archive"
     let toTweet = (t)=>{let tweet = TweetWiz.toTweet(t,false); return [tweet.id, tweet]}
     let archToTweet = (t)=>{let tweet = TweetWiz.toTweet(t,true); return [tweet.id, tweet]}
     let new_tweet_list = arch ? res.map(archToTweet) : res.map(toTweet);
     let new_tweets = Object.fromEntries(new_tweet_list)
     let all_tweets = {}
-    // Is res new 
 
-    // For updates, only update if its new, waste of resources doing the
-    if (Object.keys(new_tweets).length > 0){
-      // load all tweets
-      let old_tweets = await Utils.getData("tweets")
-      old_tweets = old_tweets != null ? old_tweets : {}      
-      // all_tweets = all_tweets.concat(new_tweets)
-      if (typeof old_tweets !== "undefined" && old_tweets != null && Object.keys(old_tweets).length > 0){
-        all_tweets = TweetWiz.priorityConcat(old_tweets, new_tweets)
-      } else {
-        all_tweets = new_tweets
-      }
+    // Update staging area with new tweets and tell CS to load
+    Utils.updateData("staged_tweets", new_tweets)
 
-      //all_tweets = TweetWiz.removeDuplicates(all_tweets)
-      wiz.tweets_meta = TweetWiz.makeTweetsMeta(all_tweets, update_type)
-      // console.log(update_type)
-      // append new tweets and store all tweets'
-      let data = {tweets: all_tweets, tweets_meta: wiz.tweets_meta}
-      await Utils.setData(data)
-      //console.log("Saved!",data)
-      utils.msgCS({type: "tweets-loaded"})
-    }
-    else{
-      //console.log("No new tweets!",res)
-    }
+    // load storage tweets
+    // if(!(this.tweets != null) || Object.keys(this.tweets)<=0) {
+    //   let t = await Utils.getData("tweets"); 
+    //   this.tweets = t != null ? t : {}; 
+    // }
+    console.log("bout to set wiz tweets", [this.tweets, new_tweets])
+    let t = Object.assign({},this.tweets)
+    this.tweets = TweetWiz.joinTweets(t, new_tweets)
+
+    //all_tweets = TweetWiz.removeDuplicates(all_tweets)
+    // wiz.tweets_meta = TweetWiz.makeTweetsMeta(all_tweets, update_type)
+    // console.log(update_type)
+    // append new tweets and store all tweets'
+    // let data = {tweets: all_tweets, tweets_meta: wiz.tweets_meta}
+    // await Utils.setData(data)
+    // wiz.tweets = all_tweets
+    //console.log("Saved!",data)
+    // utils.msgCS({type: "tweets-loaded"})
     return new_tweets
   }
   
@@ -532,9 +600,15 @@ class TweetWiz{
           console.log(e)
           console.log("error looking users up", ids)
         }
-          
+        
         //Basically add new profile pics to the profile pic holder
-        this.profile_pics = Object.assign(this.profile_pics, Object.fromEntries(res.map(u=>{return [u.id_str, u.profile_image_url_https]})))
+        try{
+          this.profile_pics = Object.assign(this.profile_pics, Object.fromEntries(res.map(u=>{return [u.id_str, u.profile_image_url_https]})))
+        } catch(e){
+          console.log(res)
+          console.log(e)
+          throw("ERROR GETTING PROFILE PICS")
+        }
         this.users = Object.assign(this.users, Object.fromEntries(res.map(u=>{return [u.id_str, u]})))
         //console.log(pic)
         // do whatever
@@ -569,19 +643,19 @@ class TweetWiz{
     let default_pic_url = 'https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png'
     try{
       if (entry != null){
+        tweet.id = entry.id_str
         //Handing retweets in archive
         if(arch){
           let rt = re.exec(entry.full_text);  
-          // console.log(entry.full_text)
-          // console.log(rt)
           //tweet contents
           tweet.username = rt != null ? rt[1] : wiz.user_info.screen_name
           tweet.text = rt != null ? entry.full_text.replace(rt_tag,'') : entry.full_text
-          rt = null
+          // If I'm tweeting/retweeting myself
           if(tweet.username == wiz.user_info.screen_name){
             tweet.name = wiz.user_info.name
             tweet.profile_image = wiz.user_info.profile_image_url_https
           } 
+          // if I'm retweeting someone else
           else{
             tweet.profile_image = default_pic_url
             try{
@@ -589,6 +663,7 @@ class TweetWiz{
               tweet.name = author != null ? author.name : tweet.username
               wiz.user_queue.push(author.id_str)
               wiz.pic_tweet_queue[entry.id_str] = author.id_str
+              tweet.retweeted = true
             } catch(e){
               console.log("ERRORRRRRRRR", e)
               console.log("RT match",rt)
@@ -598,16 +673,20 @@ class TweetWiz{
             //console.log(tweet); console.log(entry);
           }
         }else{
-          let is_rt = entry.retweeted
-          if(is_rt) entry = entry.retweeted_status != null ? entry.retweeted_status : entry;
+          tweet.retweeted = entry.retweeted
+          tweet.id = entry.id_str
+          if(tweet.retweeted){
+            if(entry.retweeted_status != null) tweet.orig_id = entry.retweeted_status.id_str
+             entry = entry.retweeted_status != null ? entry.retweeted_status : entry;
+            }
           //tweet contents
           tweet.username = entry.user.screen_name
           tweet.name = entry.user.name
           tweet.text = entry.full_text || entry.text
           tweet.profile_image = entry.user.profile_image_url_https
+          
         }
-        // Basic info, same for everyone
-          tweet.id = entry.id_str
+          // Basic info, same for everyone
           // tweet.id = entry.id,
           tweet.time = new Date(entry.created_at).getTime()
           tweet.human_time = new Date(entry.created_at).toLocaleString()

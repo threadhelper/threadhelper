@@ -25,9 +25,9 @@ const nlp = (function() {
   }
 
   async function makeIndex(_tweets){
-    tweets = _tweets
+    tweets = sortTweets(_tweets)
     let start = (new Date()).getTime()
-    console.log("making index", _tweets)
+    console.log("making index...")
     var _index = elasticlunr(function () {
       this.setRef('id');
       for (var field_name of tweet_fields){
@@ -55,7 +55,8 @@ const nlp = (function() {
     }
     else{
       // add new tweets to tweets and sort it
-      tweets = sortTweets(Object.assign(tweets,_tweets))
+      Object.assign(tweets,_tweets)
+      // tweets = tweets = sortTweets(tweets)
       for (const [id, tweet] of Object.entries(tweets)){
         var doc = {}
         for (var f of tweet_fields){
@@ -78,10 +79,10 @@ const nlp = (function() {
   }
 
   //** Find related tweets */
-  async function getRelated(tweet_text, tweets, n_tweets = 20) {
+  async function getRelated(tweet_text, _tweets, n_tweets = 20) {
     let start = (new Date()).getTime()
     if (index == null){
-      index = await makeIndex(tweets)
+      index = await makeIndex(_tweets)
     }
     //results are of the format {ref, doc}
     var results = index.search(tweet_text, {
@@ -98,13 +99,11 @@ const nlp = (function() {
 
     console.log("index size:",index.documentStore.length)
     // console.log(results)
+    let resultTweets = res=>{return res.slice(0,n_tweets).map((x)=>{return tweets[x.ref]})} // get tweets from docs
     let end = (new Date()).getTime()
     console.log(`Searching ${tweet_text} took ${(end-start)/1000}s`)
-    let resultTweets = res=>{return res.slice(0,n_tweets).map((x)=>{return tweets[x.ref]})} // get tweets from docs
-
+    
     let keys = Object.keys(tweets)
-    let comp = (b,a)=>{return a.localeCompare(b,undefined,{numeric: true})} //sorts from highest to lowest (most recent to latest)
-    let skeys = keys.sort(comp)
     let getLatest =  ()=>{return (keys.slice(0, n_tweets).map(k=>{return tweets[k]}))}
     // if no results, get latest tweets
     let related = results.length > 0 ? resultTweets(results) : getLatest()

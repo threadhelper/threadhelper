@@ -158,21 +158,27 @@
     Ubuntu, "Helvetica Neue", sans-serif;
   line-height: 1.3125;
   font-size: 13px;
+  overflow-x: hidden;
   overflow-y: scroll;
   display: flex;
   flex-direction: column;
   margin-top: 5px;
 }
 
-a, a:visited {
-  color: #1b95e0
+
+.tooltiptext a {
+  color: #1b95e0;
 }
+.tooltiptext a:visited {
+  color: #1b95e0;
+}
+
 
 .sug_home {
   margin-bottom: 20px;
   border-radius: 14px;
   padding: 0px 20px 15px 20px;
-  width: 100%;
+  width: 90%;
   height: 90vh;
 }
 
@@ -186,22 +192,22 @@ a, a:visited {
 
 
 /* width */
-suggestionBox ::-webkit-scrollbar {
+div.suggestionBox::-webkit-scrollbar {
   width: 10px;
 }
 
 /* Track */
-suggestionBox ::-webkit-scrollbar-track {
+div.suggestionBox::-webkit-scrollbar-track {
   background: var(--main-bg-color);
 }
 
 /* Handle */
-suggestionBox ::-webkit-scrollbar-thumb {
+div.suggestionBox::-webkit-scrollbar-thumb {
   background: var(--neutral-color);
 }
 
 /* Handle on hover */
-suggestionBox ::-webkit-scrollbar-thumb:hover {
+div.suggestionBox::-webkit-scrollbar-thumb:hover {
   background: var(--main-txt-color);
 }
 

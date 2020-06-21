@@ -1,7 +1,7 @@
 {
   "name": "Thread Helper",
-  "version": "1.0",
-  "description": "Thread past tweets with your new ones as you write them.",
+  "version": "0.1",
+  "description": "A helper for twitter threads. Find your related past tweets and quote them as you write.",
   "permissions": [
     "declarativeContent",
     "storage",
@@ -9,7 +9,7 @@
     "unlimitedStorage",
     "webRequest",
     "https://api.twitter.com/",
-    "cookies",
+    /*"cookies",*/
     "https://*.twitter.com/*"
   ],
   "content_scripts": [
