@@ -137,7 +137,7 @@ class Utils {
     
   //clears storage of tweets, tweets meta info, and auth
   clearStorage(){
-    this.removeData(["tweets","tweets_meta","index"]).then(()=>{
+    this.removeData(["tweets","tweets_meta","staged_tweets","index"]).then(()=>{
         this.msgCS({type: "storage-clear"}) 
         wiz.tweets_meta = TweetWiz.makeTweetsMeta(null)
       }
@@ -359,20 +359,22 @@ class Auth {
 class TweetWiz{
   constructor() {
     this._user_info = {}
-    Utils.getData("user_info").then((info)=>{this.user_info = info != null ? info : {}})
     this.midRequest = false
     this.interrupt_query = false
     this.tweets_dict = {}
     this.tweets_meta = TweetWiz.makeTweetsMeta(null)
     this.tweet_ids = []
-    Utils.getData("tweets").then((tweets)=>{this.tweets = tweets != null ? tweets : {}})
     this.users = {}
-
+    
     this.user_queue = [] // user ids to be scraped
     this.pic_tweet_queue = {} //tweet_id: user_id 
     this.profile_pics = {} //id: {"name" "screen_name" "id_str"}
   }
-
+  
+  init(){
+    Utils.getData("user_info").then((info)=>{this.user_info = info != null ? info : {}})
+    Utils.getData("tweets").then((tweets)=>{this.tweets = tweets != null ? tweets : {}})
+  }
   
   get user_info(){return this._user_info}
   // set the value of our user  info, and if it's new, set it in storage
@@ -393,9 +395,9 @@ class TweetWiz{
         this.tweets_meta = TweetWiz.makeTweetsMeta(this.tweets_dict)
         this.tweet_ids = Object.keys(this.tweets_dict)
         Utils.setData({tweets:this.tweets_dict, tweets_meta:this.tweets_meta}).then(()=>{
-          console.log("set tweets!", this.tweets_dict)
+          //console.log("set tweets!", this.tweets_dict)
           console.log("set tweets!", this.tweets_meta)
-          utils.msgCS({type: "tweets-saved"})
+          // utils.msgCS({type: "tweets-saved"})
         })
       }else{
         console.log("nothing to add to ", Object.keys(this.tweets_dict).length)
@@ -539,7 +541,7 @@ class TweetWiz{
     let all_tweets = {}
 
     // Update staging area with new tweets and tell CS to load
-    Utils.updateData("staged_tweets", new_tweets)
+    Utils.updateData("staged_tweets", new_tweets).then(console.log("updated staged with new tweets", new_tweets))
 
     // load storage tweets
     // if(!(this.tweets != null) || Object.keys(this.tweets)<=0) {
@@ -816,7 +818,8 @@ class TweetWiz{
   async query(auth, meta = null, query_type = "update", count = 3000) {
     //start by defining common variables
     this.interrupt_query = false
-    meta = meta != null ? meta : this.tweets_meta
+    // meta = meta != null ? meta : this.tweets_meta
+    meta = this.tweets_meta
     let vars ={}
     let include_rts = utils.options.getRetweets != null ? utils.options.getRetweets : true//TODO investigate why these are coming up undefined
     const init = {
@@ -951,6 +954,7 @@ async function onMessage(m, sender) {
     case "cs-created":
       let tid = sender.tab.id
       utils.tabId = tid
+      wiz.init()
       break;
 
     case "saveOptions":
@@ -960,10 +964,6 @@ async function onMessage(m, sender) {
     
     case "tempArchiveStored":
       wiz.updateTweets(m, "archive");
-      break;
-
-    case "saveArchive":
-      utils.msgCS({type: "save_archive"})
       break;
       
     case "update":

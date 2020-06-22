@@ -65,7 +65,7 @@ const nlp = (function() {
         doc["id"] = id
         index.addDoc(doc)
       }
-    console.log("added to index", _tweets)
+    console.log("added to index", Object.keys(tweets).length)
     }
     return index
   }
@@ -97,18 +97,14 @@ const nlp = (function() {
       expand: true
     });
 
-    console.log("index size:",index.documentStore.length)
-    // console.log(results)
     let resultTweets = res=>{return res.slice(0,n_tweets).map((x)=>{return tweets[x.ref]})} // get tweets from docs
     let end = (new Date()).getTime()
-    console.log(`Searching ${tweet_text} took ${(end-start)/1000}s`)
+    // console.log(`Searching ${tweet_text} took ${(end-start)/1000}s`)
     
     let keys = Object.keys(tweets)
     let getLatest =  ()=>{return (keys.slice(0, n_tweets).map(k=>{return tweets[k]}))}
     // if no results, get latest tweets
     let related = results.length > 0 ? resultTweets(results) : getLatest()
-    // console.log("nlp tweets", Object.keys(tweets).reverse())
-    // console.log("nlp results", related)
     return related
   }
 

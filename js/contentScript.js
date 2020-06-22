@@ -432,7 +432,7 @@ class UI {
         x.style.display = "none"
         x.addEventListener("change", (e) => {
           wiz.mid_request = true
-          wiz.setSyncStatus(false, `Loading tweets...`)
+          wiz.updateSyncStatus(false, `Loading tweets...`)
           var files = e.target.files, reader = new FileReader();
           reader.onload = wiz.importArchive;
           for (let i = 0; i < files.length; i++){
@@ -456,7 +456,7 @@ class UI {
         x.style.display = "none"
         x.addEventListener("change", (e) => {
           wiz.mid_request = true
-          wiz.setSyncStatus(false, `Loading tweets...`)
+          wiz.updateSyncStatus(false, `Loading tweets...`)
           var files = e.target.files, reader = new FileReader();
           reader.onload = wiz.importArchive;
           for (let i = 0; i < files.length; i++){
@@ -893,29 +893,32 @@ class Renderer {
 
 class TweetWiz{
   constructor(){
-    // Holds the tweets to search over
-    this.tweets_dict = {};
-    dutils.getData("tweets").then((tweets)=>{
-      this.tweets_dict = tweets;
-    })
-    this.tweets_meta = {
-      count: 0, 
-      max_id: null, 
-      max_time: null,
-      since_id: null, 
-      since_time: null,
-      last_updated: null,
+    // holds sync state between CS and BG
+    this.db_sync = {
+      synced: false,
       has_archive: false,
-      has_timeline: false,
+      has_timeline: false,  
+      msg: "No tweets yet..." 
     }
-    dutils.getData("tweets_meta").then((tweets)=>{
-      this.tweets_meta = tweets;
+    // Holds the tweets to search over
+    this.tweets_meta = this.makeTweetsMeta(null)
+    // dutils.getData("tweets_meta").then((meta)=>{
+    //   this.tweets_meta = meta != null ? meta : this.tweets_meta;
+    // })
+    this.tweets_dict = {};
+    //Load all tweets, if they're empty send a message asking for a timeline query
+    this.loadAllTweets().then(_tweets=>{
+      if(_tweets != null && Object.keys(_tweets)>0) {
+        console.log("Loaded tweets from storage", this.tweets_meta)
+        this.updateSyncStatus(true, "Tweets loaded.")
+      } else{
+        console.log("No tweets in storage, asking for timeline query")
+        dutils.msgBG({type:"timeline"})
+      }
     })
     // User info
     this.user_info = {}
     this.loadUserInfo()
-    // holds sync state between CS and BG
-    this.db_sync = {synced: false, status:ui.sync_status.EMPTY, msg: "No tweets yet..." }
     // Whether a request is already halfway through
     this.mid_request = false
   }
@@ -986,18 +989,18 @@ class TweetWiz{
   // sets sync status
   handleNewTweets(from_message){  
     // make sync icon green
-    if(!from_message) this.setSyncStatus(true, "Tweets loaded.", ui.sync_status.TIMELINE)
+    if(!from_message) this.updateSyncStatus(true, "Tweets loaded.", ui.sync_status.TIMELINE)
     // Update default state of sidebar with newest tweets
     updateWithSearch(ui.current_query)
     // make archive icon invisible if we already have the archive
-    let icons = document.getElementsByClassName("arch_icon")
-    for (let i of icons){
-      if (this.tweets_meta.has_archive) {
-        i.style.display = "none";
-      }else{
-        i.style.display = "block";
-      }
-    }
+    // let icons = document.getElementsByClassName("arch_icon")
+    // for (let i of icons){
+    //   if (this.tweets_meta.has_archive) {
+    //     i.style.display = "none";
+    //   }else{
+    //     i.style.display = "block";
+    //   }
+    // }
   }
 
   // Compute ites that are different between 2 dicts of tweets
@@ -1011,26 +1014,39 @@ class TweetWiz{
     return _filtered
   }
 
-  // gets tweets from storage
-  async loadTweets(from_message=false) {
-    let start = (new Date()).getTime()
+  // Gets new staged tweets from onChange event, 
+  async loadTweets2(_tweets, from_message=false){
+    if (!(_tweets != null) || Object.keys(_tweets).length <= 0){
+      return null
+    }
+    // If we shouldn't search over retweets
+    if (!dutils.options.getRetweets){
+      _tweets = this.filterUserTweets(_tweets)
+    }
+    console.log("_tweets tweets being loaded", _tweets)
+    
+    // Assign tweets to local db, replacing repeated indices 
+    let new_tweets = this.getNewTweets(this.tweets_dict, _tweets) // Get only new tweets (already done in BG)
+    this.tweets_dict = Object.assign(this.tweets_dict, new_tweets)
+    this.tweets_meta = this.makeTweetsMeta(this.tweets_dict)
+    
+ 
+    this.addToIndex(new_tweets)
+    return this.tweets_dict
+  }
+
+  async loadTweets(from_message=false){
     dutils.getData("tweets_meta").then(meta=>{wiz.tweets_meta = meta})
     let staged = await dutils.getData("staged_tweets")
     dutils.setData({stagedTweets:{}})
-    
-    // console.log("tweets_meta", this.tweets_meta)
-    // console.log("tweets_stored", tweets_stored)
-    let end = (new Date()).getTime()
-    console.log(`Loading tweets in CS took ${(end-start)/1000}s`)
+  
     if (!(staged != null) || Object.keys(staged).length <= 0){
-      //if(!from_message) this.setSyncStatus(false, "No tweets yet...", ui.sync_status.EMPTY)
+      //if(!from_message) this.updateSyncStatus(false, "No tweets yet...", ui.sync_status.EMPTY)
       // if(this.tweetsEmpty()) dutils.msgBG({type: "timeline"})
       //if(this.tweetsEmpty()) dutils.msgBG()
       return null
     }
     
-    start = (new Date()).getTime()
-
     // If we shouldn't search over retweets
     if (!dutils.options.getRetweets){
       staged = this.filterUserTweets(staged)
@@ -1043,44 +1059,84 @@ class TweetWiz{
     //let new_tweets = this.getNewTweets(this.tweets_dict, staged)
     this.tweets_dict = Object.assign(this.tweets_dict, staged)
     
-    // Remove tweets we loaded from 
-
-
-    // store previous message and show loading msg
-    let prev_msg = ''
-    if (document.getElementsByClassName("suggConsole").length > 0) {
-      prev_msg = ui.showConsoleMessage("Just a moment, making an index of your tweets...")
-    }
-
-    end = (new Date()).getTime()
-    console.log(`Processing tweets in CS took ${(end-start)/1000}s`)
-
-    start = (new Date()).getTime()
-
-    //add new tweets to index and replace message
-    nlp.addToIndex(staged).then(()=>{
-      if (document.getElementsByClassName("suggConsole").length > 0) {
-        ui.showConsoleMessage(prev_msg)
-      }
-    }).then((_index)=>{
-          dutils.setData({index: _index})
-      }
-    )
+    this.addToIndex(new_tweets)
 
     this.handleNewTweets(from_message)
     end = (new Date()).getTime()
     console.log(`Adding tweets to index took ${(end-start)/1000}s`)
     
-    return this.tweets
+    return this.tweets_dict
     
+
+  }
+  
+  
+  // gets all tweets from storage, called at page load
+  // automatically sets self.tweets_dict
+  async loadAllTweets(from_message=false) {
+    
+    // Get tweets from storage
+    //dutils.getData("tweets_meta").then(meta=>{wiz.tweets_meta = meta})
+    let start = (new Date()).getTime()
+    let all_tweets = await dutils.getData("tweets")
+    let end = (new Date()).getTime()
+    console.log(`Loading all stored tweets to CS took ${(end-start)/1000}s`)
+    
+    // console.log("tweets_meta", this.tweets_meta)
+    // console.log("tweets_stored", tweets_stored)
+
+
+    // if empty/undefined,
+    if (!(all_tweets != null) || Object.keys(all_tweets).length <= 0){
+      return {}
+    }
+    
+    
+    start = (new Date()).getTime()
+    // If we shouldn't search over retweets
+    if (!dutils.options.getRetweets) all_tweets = this.filterUserTweets(all_tweets)
+    // make meta in any case
+    this.tweets_meta = this.makeTweetsMeta(all_tweets)
+    
+    // Assign tweets to local db 
+    console.log("all_tweets tweets being loaded", all_tweets)
+    this.tweets_dict = all_tweets
+
+    
+    end = (new Date()).getTime()
+    console.log(`Processing tweets in CS took ${(end-start)/1000}s`)
+        
+    //add new tweets to index and replace message
+    this.addToIndex(all_tweets)
+
+    return this.tweets_dict
   }
 
-  setSyncStatus(sync, message='Sync Info:', status = null){
+  addToIndex(tweets){
+    let start = (new Date()).getTime()
+    // store previous message and show loading msg
+    let prev_msg = ''
+    if (document.getElementsByClassName("suggConsole").length > 0) {
+      prev_msg = ui.showConsoleMessage("Just a moment, making an index of your tweets...")
+    }
+    nlp.addToIndex(tweets).then((_index)=>{
+      dutils.setData({index: _index})
+      if (document.getElementsByClassName("suggConsole").length > 0) ui.showConsoleMessage(prev_msg)
+    })
+    let end = (new Date()).getTime()
+    console.log(`Adding tweets to index took ${(end-start)/1000}s`)
+  }
+
+  // Synced, or green, if db is up to date, which is the same as having the timeline
+  updateSyncStatus(message=null){
     let si = document.getElementsByClassName("sync_icon")
-    this.db_sync.synced = sync == null ? this.db_sync.synced : sync;
-    this.db_sync.status = status == null ? this.db_sync.status : status;
+
+    this.db_sync.msg = message == null ? this.db_sync.message : message
+    // measures     
+    this.db_sync.synced = this.tweets_meta.has_timeline; 
     let classes = this.db_sync.synced ? 'sync_icon synced' : 'sync_icon unsynced'
-    //message = message.concat(` \n${this.db_sync.status}. \n`)
+
+    if (wiz.tweets_meta.has_archive) message = message.concat("Archive loaded.")
     if (wiz.tweets_meta != null){
       message = message.concat(` \nHolding ${wiz.tweets_meta.count} tweets. \nLast updated ${(new Date(wiz.tweets_meta.last_updated)).toLocaleString()}`)
     } else{
@@ -1131,13 +1187,15 @@ async function onStorageChanged(changes, area){
       case "tweets":
         break;
       case "tweets_meta":
+        wiz.tweets_meta = newVal != null ? newVal : wiz.makeTweetsMeta(null)
         break;
       case "user_info":
-        wiz.user_info = changes[item];
+        wiz.user_info = newVal;
         break;
       case "staged_tweets":
-        wiz.setSyncStatus(false, `Loading tweets...`)
-        wiz.loadTweets(true)
+        if(newVal != null) wiz.updateSyncStatus(`Loading tweets...`)
+        // wiz.loadTweets(true)
+        wiz.loadTweets2(newVal, true).then(wiz.updateSyncStatus(`Loaded Tweets`))
         break;
       default:
         break;
@@ -1152,27 +1210,15 @@ async function onMessage(m) {
     case "saveOptions":
       dutils.loadOptions()
       break;
-    case "saveArchive":
-      let fileName = "threadhelper_archive.json";
-      let data = JSON.stringify([tweets, wiz.tweets_meta], undefined, 4)
-      //console.log("saving", data)
-      var blob = new Blob([data], {type: "text/plain;charset=utf-8", name: fileName});
-      saveAs(blob, fileName);
-      break;
     case "tweets-loading":
       wiz.mid_request = true
-      break;
-      case "tweets-saved":
-      wiz.mid_request = true
-      //console.log("tweets loaded, getting tweets")
-      // wiz.loadTweets(true)
-      //wiz.setSyncStatus(null, "Tweets partially loaded...")
       break;
     case "tweets-done":
       //console.log("message received:", m);
       wiz.mid_request = false
       // wiz.loadTweets(true)
-      wiz.setSyncStatus(true, "Tweets loaded.", m.update_type)
+      
+      wiz.updateSyncStatus("Up to date.")
       if (m.update_type == "archive") ui.toggleArchIcon("none")
       break;
     case "new-tweets":
@@ -1181,9 +1227,11 @@ async function onMessage(m) {
       break;
     case "storage-clear":
       //let sync_message = `Holding ${meta.count} tweets. \n Last updated ${(new Date(meta.since_time)).toLocaleString()}`
-      wiz.clearTweets()
-      wiz.setSyncStatus(false, `No tweets yet...`, ui.sync_status.EMPTY)
+      wiz.updateSyncStatus(`No tweets yet...`)
       ui.toggleArchIcon("flex")
+      wiz.clearTweets()
+      //after clear, automatically get timeline.
+      dutils.msgBG({type:"timeline"})
       break;
     case "tab-activate":
       wutils.current_url = m.url
@@ -1214,7 +1262,7 @@ function main()
   }
   $(document).ready(function() {
     dutils.msgBG({type:"cs-created"})
-    dutils.msgBG({type:"timeline"})
+    // dutils.msgBG({type:"timeline"})
     wutils.setTheme()
     dutils.loadOptions();
     
@@ -1278,5 +1326,5 @@ let dutils = new dUtils();
 let wutils = new wUtils();
 let ui = new UI();
 let ren = new Renderer();
-let wiz = new TweetWiz();
+let wiz = new TweetWiz(); //loads tweets
 main();
