@@ -139,7 +139,7 @@ class Utils {
   clearStorage(){
     this.removeData(["tweets","tweets_meta","staged_tweets","index"]).then(()=>{
         this.msgCS({type: "storage-clear"}) 
-        wiz.tweets_meta = TweetWiz.makeTweetsMeta(null)
+        wiz.tweets_meta = wiz.makeTweetsMeta(null)
       }
     )
     return true
@@ -362,7 +362,7 @@ class TweetWiz{
     this.midRequest = false
     this.interrupt_query = false
     this.tweets_dict = {}
-    this.tweets_meta = TweetWiz.makeTweetsMeta(null)
+    this.tweets_meta = this.makeTweetsMeta(null)
     this.tweet_ids = []
     this.users = {}
     
@@ -388,11 +388,11 @@ class TweetWiz{
   get tweets(){return this.tweets_dict}
   // set the value of our tweet_dict/database, and if it's new, set it in storage
   set tweets(_tweets){
-    console.log("setting", _tweets)
+    // console.log("setting", _tweets)
     if (_tweets  != null ){
       if (_tweets != this.tweets_dict){
         this.tweets_dict = _tweets
-        this.tweets_meta = TweetWiz.makeTweetsMeta(this.tweets_dict)
+        this.tweets_meta = this.makeTweetsMeta(this.tweets_dict)
         this.tweet_ids = Object.keys(this.tweets_dict)
         Utils.setData({tweets:this.tweets_dict, tweets_meta:this.tweets_meta}).then(()=>{
           //console.log("set tweets!", this.tweets_dict)
@@ -421,7 +421,7 @@ class TweetWiz{
   
 
   // getUserInfo(){
-  //   return this.user_info != null ? this.user_info : TweetWiz.makeTweetsMeta(null)
+  //   return this.user_info != null ? this.user_info : wiz.makeTweetsMeta(null)
   // }
   
   getTweets(){
@@ -429,7 +429,7 @@ class TweetWiz{
   }
 
   getMetaData(){
-    return this.tweets_meta != null ? this.tweets_meta : TweetWiz.makeTweetsMeta(null)
+    return this.tweets_meta != null ? this.tweets_meta : this.makeTweetsMeta(null)
   }
 
   async loadUserInfo(){
@@ -437,10 +437,8 @@ class TweetWiz{
     return this.user_info
   }
 
-  static makeTweetsMeta(tweets, update_type = "update"){
+  makeTweetsMeta(tweets, update_type = "update"){
     let meta = {}
-    
-
     if (tweets != null){
       console.log("tweets", tweets)
       if (Object.keys(tweets).length>0){
@@ -454,8 +452,8 @@ class TweetWiz{
           since_id: tweets[first_key].id, 
           since_time: tweets[first_key].time,
           last_updated: (new Date()).getTime(),
-          has_archive: update_type == "archive" || wiz.tweets_meta.has_archive ,
-          has_timeline: wiz.tweets_meta.has_timeline, //update_type == "timeline"
+          has_archive: update_type == "archive" || this.tweets_meta.has_archive ,
+          has_timeline: this.tweets_meta.has_timeline, //update_type == "timeline"
         }
       }
     } else{
@@ -489,7 +487,7 @@ class TweetWiz{
     } else{
       new_tweets = Object.assign(_new, _old)
     }
-    if (update_type != "update") new_tweets = wiz.sortTweets(new_tweets)
+    if (update_type != "update") new_tweets = this.sortTweets(new_tweets)
 
     return new_tweets
   }
@@ -523,7 +521,7 @@ class TweetWiz{
     // let isResNew = (re)=>{return (re[0].id_str.localeCompare(wiz.tweets_meta.since_id, undefined,{numeric:true}) >= 0)}
     // If res is new 
     res = res.filter(r=>{return !this.tweet_ids.includes(r.id_str)})
-    if (update_type == "update" && res.length < 1){
+    if (res.length < 1){
       console.log("canceled save")
       return {}
     } else{
@@ -548,12 +546,12 @@ class TweetWiz{
     //   let t = await Utils.getData("tweets"); 
     //   this.tweets = t != null ? t : {}; 
     // }
-    console.log("bout to set wiz tweets", [this.tweets, new_tweets])
+    // console.log("bout to set wiz tweets", [this.tweets, new_tweets])
     let t = Object.assign({},this.tweets)
     this.tweets = TweetWiz.joinTweets(t, new_tweets)
 
     //all_tweets = TweetWiz.removeDuplicates(all_tweets)
-    // wiz.tweets_meta = TweetWiz.makeTweetsMeta(all_tweets, update_type)
+    // wiz.tweets_meta = wiz.makeTweetsMeta(all_tweets, update_type)
     // console.log(update_type)
     // append new tweets and store all tweets'
     // let data = {tweets: all_tweets, tweets_meta: wiz.tweets_meta}
@@ -574,6 +572,7 @@ class TweetWiz{
   }
 
   async getProfilePics(){
+    console.log("getting profile pics")
     const init = {
       credentials: "include",
       headers: {

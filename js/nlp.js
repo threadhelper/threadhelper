@@ -20,8 +20,8 @@ const nlp = (function() {
   }
 
   function loadIndex(_index){
-    console.log("loaded index")
-    index = _index
+    console.log("loaded index from storage", _index)
+    index = elasticlunr.Index.load(_index)
   }
 
   async function makeIndex(_tweets){
@@ -57,7 +57,7 @@ const nlp = (function() {
       // add new tweets to tweets and sort it
       Object.assign(tweets,_tweets)
       // tweets = tweets = sortTweets(tweets)
-      for (const [id, tweet] of Object.entries(tweets)){
+      for (const [id, tweet] of Object.entries(_tweets)){
         var doc = {}
         for (var f of tweet_fields){
           doc[f] = tweet[f]

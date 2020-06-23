@@ -9,7 +9,6 @@
     "unlimitedStorage",
     "webRequest",
     "https://api.twitter.com/",
-    /*"cookies",*/
     "https://*.twitter.com/*"
   ],
   "content_scripts": [
