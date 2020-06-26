@@ -1,6 +1,6 @@
 {
   "name": "Thread Helper",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A helper for twitter threads. Find your related past tweets and quote them as you write.",
   "permissions": [
     "declarativeContent",
