@@ -20,8 +20,8 @@ const nlp = (function() {
   }
 
   function loadIndex(_index){
-    console.log("loaded index")
-    index = _index
+    console.log("loaded index from storage", _index)
+    index = elasticlunr.Index.load(_index)
   }
 
   async function makeIndex(_tweets){
@@ -56,8 +56,10 @@ const nlp = (function() {
     else{
       // add new tweets to tweets and sort it
       Object.assign(tweets,_tweets)
-      // tweets = tweets = sortTweets(tweets)
-      for (const [id, tweet] of Object.entries(tweets)){
+      console.time("sortTweets")
+      tweets = tweets = sortTweets(tweets)
+      console.timeEnd("sortTweets")
+      for (const [id, tweet] of Object.entries(_tweets)){
         var doc = {}
         for (var f of tweet_fields){
           doc[f] = tweet[f]
@@ -78,12 +80,20 @@ const nlp = (function() {
     return stobj
   }
 
+  function getNewTweets(old_t,new_t){
+    //console.log("getnewtweets")
+    let old_keys = old_t != null ? Object.keys(old_t) : []
+    let new_key_vals = Object.entries(new_t)
+    const _filtered = Object.fromEntries(
+      new_key_vals.filter(key_val => {return !old_keys.includes(key_val[0])})
+    )
+    return _filtered
+  }
+
   //** Find related tweets */
   async function getRelated(tweet_text, _tweets, n_tweets = 20) {
     let start = (new Date()).getTime()
-    if (index == null){
-      index = await makeIndex(_tweets)
-    }
+    if (Object.keys(tweets).length <= 0) tweets = sortTweets(_tweets)
     //results are of the format {ref, doc}
     var results = index.search(tweet_text, {
       fields: {

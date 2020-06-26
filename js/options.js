@@ -225,7 +225,14 @@ function buildPage(options_template){
 
 function setUpListeners(){
   (document.getElementById("saveOptions")).addEventListener('click', saveOptions);
-  (document.getElementById("clearButton")).addEventListener('click', () => {chrome.runtime.sendMessage({ type: "clear" });});
+  let clearbutt = document.getElementById("clearButton")
+  clearbutt.addEventListener('click', () => {
+    chrome.runtime.sendMessage({ type: "clear" });
+    clearbutt.textContent = "Cleared!"
+    setTimeout(function() {
+      clearbutt.textContent = "Clear Storage"
+      }, 2000)
+  });
   function saveOptions() {
       let savebutt = document.getElementById("saveOptions")
       const now = (new Date()).getTime()

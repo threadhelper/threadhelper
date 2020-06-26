@@ -131,7 +131,8 @@ $(document).ready(function() {
   // TODO: You shouldn't be able to click download until you have an auth
   $("#downloadHistory").click(function() {
     const message = {
-      type: "load_history",
+      type: "query",
+      query_type: "history"
     };
     chrome.runtime.sendMessage(message);
     $("#downloadArchiveCancel")[0].style.display = "block"
