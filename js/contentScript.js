@@ -17,7 +17,7 @@ String.prototype.replaceBetween = function(start, end, what) {
 };
 
 function msgBG(msg = null){
-  let message = msg == null ? {type: "update"} : msg
+  let message = msg == null ? {type:"query", query_type: "update"} : msg
   chrome.runtime.sendMessage(message);
   //console.log("messaging BG", message)
 }
@@ -26,7 +26,7 @@ function msgBG(msg = null){
 class dUtils {
   constructor() {
     // dutils.options
-    this.options = {}
+    this.options = {};
     this.loadOptions();
     // Holds observers for eventual destruction
   }
@@ -58,12 +58,13 @@ class dUtils {
   }
 
   async loadOptions(){
-    this.getData("options").then((options)=>{this.options = options})
+    this.getData("options").then((options)=>{this.options = options != null ? options : this.options})
     return this.options
   }
+  
 
   msgBG(msg = null){
-    let message = msg == null ? {type: "update"} : msg
+    let message = msg == null ? {type:"query", query_type: "update"} : msg
     chrome.runtime.sendMessage(message);
     //console.log("messaging BG", message)
   }
@@ -131,18 +132,21 @@ class wUtils {
     return document.getElementsByClassName(ui.editorClass)[0]
   }
 
+  
   // Sets up a listener for the Recent Trends block
   setUpTrendsListener(){
-    //console.log("adding trends logger")
-    var observer = new MutationObserver((mutationRecords, me) => {
+    let onTrendsReady = (mutationRecords, me) => {
       var trending_block = document.querySelector(ui.trendText)
       if (trending_block){
         var compose_box = this.getFirstComposeBox()
-        ui.composeBoxFocused(compose_box)
+        // ui.composeBoxFocused(compose_box)
+        ui.update()
         ui.showSuggBox(ui.activeComposer)
         me.disconnect()
       }
-    });
+    }
+    //console.log("adding trends logger")
+    var observer = new MutationObserver((mutationRecords, me)=>{onTrendsReady(mutationRecords, me)});
     this.observers.push(observer)
     observer.observe(document, { subtree: true, childList: true});
     return observer
@@ -167,11 +171,22 @@ class wUtils {
     }
   }
 
+  //When tweet buttons are clicked
+  onTweetButton(e){
+    var divs = document.querySelectorAll(ui.tweetButtonSelectors)
+    for (var div of divs){
+      if(e.target && div.contains(e.target)){
+        console.log("Tweet button pressed")
+        wiz.handlePost()
+      }
+    }
+  }
   // EVENT DELEGATION CRL, EVENT BUBBLING FTW
   setUpListeningComposeClick(){
     //console.log("event listeners added")
     document.addEventListener('focusin',this.onFocusIn);
     document.addEventListener('focusout',this.onFocusOut);
+    document.addEventListener('click',this.onTweetButton);
   }
 
   // given composer found by ui.editorClass = "DraftEditor-editorContainer",
@@ -195,6 +210,9 @@ class UI {
     this.textFieldClass = 'span[data-text="true"]';
     // We use this to find the spot to place the sugg box in the home screen
     this.trendText = '[aria-label="Timeline: Trending now"]';
+    //
+    this.tweetButtonSelectors = '[data-testid="tweetButtonInline"], [data-testid="tweetButton"]'
+
     /* Holds sync status
     Sync:
     - synced: No new tweets
@@ -212,11 +230,13 @@ class UI {
       HISTORY: "history",
       ARCHIVE: "archive"
     }
+    this.initSyncMsg = "Welcome to Thread Helper, scroll around for a bit."
     
     // Hold the active context of tweeting/sugg_box
     this.activeComposer = {composer: null, sugg_box: null, observer: null, mode: null}
     // Hold the underlying home sugg_box
     this.home_sugg = null
+    this.home_observer = null
     this.current_res = []
     this.current_query = '' //last edited test in any compose box
     this.console_msg = ''
@@ -228,57 +248,72 @@ class UI {
   ready(){
     return this.activeComposer.sugg_box != null
   }
-  // update ui
+  // refresh ui
+  // If not in compose, kill compose composer, if at home, setup box
   update(compose_box = null){
     //console.log("updating ui")
     let mode = wutils.getMode()
-    // If we're updating without selecting a compose box
-    if (compose_box == null){
-      //if we're not in compose mode, but the active composer/sugg_box is from compose
-      if(mode != "compose" && this.activeComposer.mode == "compose"){
+    // compose_box = compose_box != null ? compose_box : wutils.getFirstComposeBox()
+    switch(mode){
+      case "home":
+        // If we're updating without selecting a compose box
+        // if we're not in compose mode, but the active composer/sugg_box is from compose
         // Kill the compose composer
-        this.killComposer(this.activeComposer)
-        if(mode == "home"){
-          this.setUpBox(wutils.getFirstComposeBox())
-        }
-        //this.showSuggBox(this.activeComposer)
-      }
-    } 
-    //if we are updating by selecting a compose box
-    else{
-      if (compose_box != this.activeComposer.composer && mode != "other"){
-          if (this.activeComposer.mode != "home") this.killComposer(this.activeComposer)
+
+        // Called from url change, 
+        if (compose_box == null){
+          console.log("from url change (composebox is null")
+          if (this.activeComposer.composer != null) {this.killComposer(this.activeComposer)}
+          compose_box = wutils.getFirstComposeBox()
           this.setUpBox(compose_box)
-      }
-      else{
-        this.showSuggBox(this.activeComposer)
-      }
+        } else
+        // else if(this.activeComposer.composer == compose_box) {
+        //   this.showSuggBox(this.activeComposer)
+        // }
+        if (this.activeComposer.mode == "compose"){ 
+          console.log("active composer was compose-mode, and compose box is not null")
+          this.killComposer(this.activeComposer)
+          this.setUpBox(compose_box)
+        } 
+        // else if(this.activeComposer.composer == compose_box) {
+        //   this.showSuggBox(this.activeComposer)
+        // } else{
+        //   // home only has 1 composer
+        //   this.killComposer(this.activeComposer)
+        //   this.setUpBox(compose_box)
+        // }
+        break;
+      case "compose":
+        if (compose_box == null){
+          if (this.activeComposer.mode != "home")this.killComposer(this.activeComposer)
+          compose_box = wutils.getFirstComposeBox()
+          this.setUpBox(compose_box)
+        } else
+        if (compose_box != this.activeComposer.composer){
+          if (this.activeComposer.mode != "home")this.killComposer(this.activeComposer)
+          this.setUpBox(compose_box)
+        }
+        break;
+      default:
+        this.killComposer(this.activeComposer)
+        break;
     }
   }
-
-  
   
   // What to do when compose box becomes unfocused
   composeBoxUnfocused(compose_box){
     //console.log("text box focus out")
     // If the active composer is empty and unselected, kill
-    if (compose_box == this.activeComposer.composer && this.isComposeEmpty(this.activeComposer)){
-      if (this.activeComposer.mode != "home"){
-        //this.killComposer(this.activeComposer)
-      }
-    }
+    // if (compose_box == this.activeComposer.composer && this.isComposeEmpty(this.activeComposer)){
+    //   if (this.activeComposer.mode != "home"){
+    //     //this.killComposer(this.activeComposer)
+    //   }
+    // }
   }
   
-  // When a text box is focused
+  // When a text box is focused, needed for thread-screen scenario 
   composeBoxFocused(compose_box){
-    if (Object.keys(wiz.getTweets()).length < 1){
-      //wiz.loadTweets()
-      console.log("text box focused, no tweets", wiz.getTweets())
-    } else{
-      dutils.msgBG({type: "update"})
-    }
-    //console.log("text box focus in!")
-    // if the clicked composer is different from previous active composer and elligible
+    console.log("compose focused")
     this.update(compose_box)
   }
 
@@ -290,29 +325,36 @@ class UI {
     var mode = wutils.getMode();
     var composer = new Object()
     var sugg_box = null
+    var observer = null
+    let text_field = wutils.getTextField(compose_box)
+    if(wiz.tweets_meta.has_archive) this.toggleArchIcon("none");
+    
 
     // for the case on reload to home page, we don't need composebox as an argument, we can find it ourselves
     if (mode == "home" && this.home_sugg != null){
       sugg_box = this.home_sugg
+      if(this.home_observer != null){
+        observer = this.home_observer
+      } else{
+        this.home_observer = this.addLogger(text_field);
+        observer = this.home_observer
+      }
     }
     else{
       sugg_box = this.buildBox();
+      observer = this.addLogger(text_field);
+      if(mode == "home") this.home_observer = observer
     }
     if (sugg_box != null){
       this.placeBox(sugg_box,mode)
-      let text_field = wutils.getTextField(compose_box)
-      var observer = this.addLogger(text_field);
       composer.observer = observer;
       composer.composer = compose_box;
       composer.sugg_box = sugg_box;
       composer.mode = mode;
       this.activeComposer = composer;
-      updateWithSearch(text_field.textContent)
+      if(wiz.searchReady()) updateWithSearch(text_field.textContent)
       // console.log("box set up")
       // console.log(ui.activeComposer)
-    }
-    else{
-      //console.log("null box")
     }
   }
 
@@ -331,7 +373,7 @@ class UI {
         {
           var sideBar = trending_block.parentNode.parentNode.parentNode.parentNode.parentNode
           sideBar.insertBefore(sugg_box,sideBar.children[2])
-          ui.home_sugg = sugg_box
+          this.home_sugg = sugg_box
         }
         else{
           //console.log("didn't place box, couldn't find trends block")
@@ -375,14 +417,14 @@ class UI {
     let sync_class = wiz.db_sync ? 'sync_icon synced' : 'sync_icon unsynced';
     sync_icon.setAttribute("class", sync_class);
     let tooltiptext = document.createElement('span')
-    tooltiptext.innerHTML = "Sync icon initialized"
+    tooltiptext.innerHTML = wiz.updateSyncStatus(wiz.db_sync)
     tooltiptext.setAttribute("class", 'tooltiptext');
     sync_icon.appendChild(tooltiptext)
     sync_icon.onclick = ()=>{
       console.log("Metadata:",wiz.tweets_meta); 
       console.log("User info:", wiz.user_info); 
       console.log("Results:", ui.current_res); 
-      dutils.msgBG({type:"update"})
+      dutils.msgBG({type:"query", query_type: "update"})
       
       // myWorker.postMessage([3,9]);
       // console.log('Message posted to worker');    
@@ -516,7 +558,7 @@ class UI {
   // Makes composer.sugg_box visible and if it isn't contained in the page, it places it there
   // Does not create a new box element
   showSuggBox(composer){
-    if (typeof composer.sugg_box !== 'undefined' && composer.sugg_box != null){
+    if (composer.sugg_box != null){
       composer.sugg_box.style.display = "flex"
       if(!document.body.contains(composer.sugg_box)){
         this.placeBox(composer.sugg_box)
@@ -543,17 +585,14 @@ class UI {
 
   //usually ui.activeComposer
   killComposer(composer){
-    if (composer.mode == "home"){
-    }
-    else{
-      //{composer: null, sugg_box: null, observer: null, mode: null}
+    console.log("killing composer",composer)
+    if (composer.mode != "home"){
       composer.composer = null
-      if (typeof composer.sugg_box !== 'undefined' && composer.sugg_box != null){
+      if (composer.sugg_box != null){
         composer.sugg_box.remove()
         composer.sugg_box = null
       }
-      //ui.home_sugg = null;
-      if (typeof composer.observer !== 'undefined' && composer.observer != null){
+      if (composer.observer != null){
         composer.observer.disconnect()
         composer.observer = null
       }
@@ -596,15 +635,15 @@ class UI {
 
   //** Attach a mutation observer to a div */
   addLogger(div) {
-    //console.log("adding logger")
+    console.log("adding logger")
     var observer = new MutationObserver(onChange);
+    wutils.observers.push(observer)
     observer.observe(div, { characterData: true, subtree: true, childList: true }); //attribute: true
     return observer
   }
 
   
 }
-
 /** Updates the tweetlist when user types */
 async function onChange(mutationRecords) {
   const text = ui.getTextFromMutation(mutationRecords)
@@ -616,6 +655,7 @@ async function onChange(mutationRecords) {
 
 
 async function updateWithSearch(text){
+  if(!ui.ready()) return
   let isTextValid = (text) => {return typeof text != "undefined" && text != null /*&& text.trim() != ''*/}
   if(wiz.getTweets() != null && isTextValid(text)){
     if(Object.keys(wiz.getTweets()).length>0){
@@ -900,9 +940,9 @@ class Renderer {
       try{
         tweetDiv = this.renderTweet(t, textTarget);
       } catch(e){
-        console.log("RENDER TWEET ERROR",e)
         console.log(t)
         console.log(textTarget)
+        throw("RENDER TWEET ERROR",e)
       }
       resultsDiv.appendChild(tweetDiv);
     }
@@ -915,7 +955,7 @@ class TweetWiz{
     // holds sync state between CS and BG
     this._db_sync = false
     // Holds the tweets to search over
-    this.tweets_meta = this.makeTweetsMeta(null)
+    this._tweets_meta = this.makeTweetsMeta(null)
     // dutils.getData("tweets_meta").then((meta)=>{
     //   this.tweets_meta = meta != null ? meta : this.tweets_meta;
     // })
@@ -928,7 +968,7 @@ class TweetWiz{
         this.db_sync = true
       } else{
         console.log("No tweets in storage, asking for timeline query")
-        dutils.msgBG({type:"timeline"})
+        dutils.msgBG({type:"query", query_type: "timeline"})
         this.db_sync = false
       }
     })
@@ -940,12 +980,27 @@ class TweetWiz{
   }
 
   get db_sync(){
-    return this._db_sync
+    return this.tweets_meta.has_timeline
   }
 
   set db_sync(synced){
     this._db_sync = synced
     this.updateSyncStatus(synced)
+  }
+
+  get tweets_meta(){
+    return this._tweets_meta
+  }
+  set tweets_meta(meta){
+    console.log("set metadata ", meta)
+    this._tweets_meta = meta
+    //set ui icons
+    if (meta.has_archive){ui.toggleArchIcon("none")} else{ui.toggleArchIcon("flex")}
+    if (meta.has_timeline){this.db_sync = true; this.updateSyncStatus(true)} else{this.db_sync = false; this.updateSyncStatus(false)}
+  }
+
+  searchReady(){
+    return nlp.getIndex() != null
   }
 
   getTweets(){
@@ -963,11 +1018,11 @@ class TweetWiz{
     //console.log("clearing tweets")
     this.tweets_dict = {}
     this.tweets_meta = this.makeTweetsMeta()
-    this.db_sync = false
+    // this.db_sync = false
     this.user_info = {}
   }
    
-  makeTweetsMeta(tweets = null, update_type = "update"){
+  makeTweetsMeta(tweets = null, query_type = "update"){
     let meta = {}
     if (tweets == null) tweets = {}
     if (Object.keys(tweets).length > 0){
@@ -981,8 +1036,8 @@ class TweetWiz{
         since_id: tweets[first_key].id, 
         since_time: tweets[first_key].time,
         last_updated: (new Date()).getTime(),
-        has_archive: update_type == "archive" || this.tweets_meta.has_archive ,
-        has_timeline: this.tweets_meta.has_timeline, //update_type == "timeline"
+        has_archive: query_type == "archive" || this.tweets_meta.has_archive ,
+        has_timeline: this.tweets_meta.has_timeline,
       }
     } else{
       meta = {
@@ -1026,7 +1081,7 @@ class TweetWiz{
   }
 
   // Gets new staged tweets from onChange event, deals with retweets, adds to wiz elemtnts,creates the intex
-  async loadTweets2(_tweets){
+  async loadTweets(_tweets){
     // need to get the meta from storae because has_archive and has_timeline come from there
     let meta = await dutils.getData("tweets_meta")
     this.tweets_meta = meta != null ? meta : this.tweets_meta
@@ -1045,7 +1100,7 @@ class TweetWiz{
     let new_tweets = this.getNewTweets(this.tweets_dict, _tweets) // Get only new tweets (already done in BG)
     this.tweets_dict = Object.assign(this.tweets_dict, new_tweets)
     this.tweets_meta = this.makeTweetsMeta(this.tweets_dict)
-    this.db_sync = this.tweets_meta.has_timeline
+    // this.db_sync = this.tweets_meta.has_timeline
  
     this.addToIndex(new_tweets)
     return this.tweets_dict
@@ -1087,15 +1142,30 @@ class TweetWiz{
 
   async addToIndex(tweets){
     let start = (new Date()).getTime()
+    let index_ids = [] 
+
+    // If we have no index locally, get index from storage, if that's defined, load into nlp
     if(!(nlp.getIndex() != null)){
+      index_ids = await dutils.getData("index_ids")
+      index_ids = index_ids != null ? index_ids : []
       let index = await dutils.getData("index")
       if (index != null){
-        // console.log("CS loaded index from storage", index)
+        console.log("CS loaded index from storage", index)
         nlp.loadIndex(index)
-        return
+        // return
       }
     }
-
+    let isSetsEqual = (a, b) => a.size === b.size && [...a].every(value => b.has(value));
+    // if (isSetsEqual((new Set(index_ids)),(new Set(Object.keys(tweets))))) {
+    let missing_ids = Object.keys(tweets).filter(x=>{return !(index_ids.includes(x))})
+    if (missing_ids.length <= 0) {
+      console.log("tweets are in index")
+      return
+    } else{
+      console.log("tweets not in index", [index_ids, Object.keys(tweets)])
+      // index_ids = [... (new Set([...index_ids,...Object.keys(tweets)]))]
+      index_ids = missing_ids
+    }
     // store previous message and show loading msg
     let prev_msg = ''
     if (document.getElementsByClassName("suggConsole").length > 0) {
@@ -1103,8 +1173,8 @@ class TweetWiz{
     }
     nlp.addToIndex(tweets).then((_index)=>{
       let index_json = _index.toJSON()
-      console.log([_index, index_json])
-      dutils.setData({index: index_json})
+      console.log("setting index and index_ids", index_ids)
+      dutils.setData({index: index_json, index_ids: index_ids})
       if (document.getElementsByClassName("suggConsole").length > 0) ui.showConsoleMessage(prev_msg)
     })
     let end = (new Date()).getTime()
@@ -1112,21 +1182,30 @@ class TweetWiz{
     return
   }
 
+  //called when a new tweet is posted. 
+  handlePost(){
+    //asks BG for an update
+    let message = {type:"query", query_type: "update"}
+    dutils.msgBG(message)
+    // setTimeout(2000, ()=>{dutils.msgBG(message)})
+  }
+
   // Synced, or green, if db is up to date, which is the same as having the timeline
   updateSyncStatus(synced){
     let message = ''
-    console.log("Updating sync status", message)
+    synced = this.tweets_meta.has_timeline
+    console.log("Updating sync status", synced)
     // measures     
 
     if (this.tweets_meta.has_archive) message = message.concat("Archive loaded.")
     if (this.tweets_meta != null){
-      message = message.concat(` \nHolding ${this.tweets_meta.count} tweets. \nLast updated ${(new Date(this.tweets_meta.last_updated)).toLocaleString()}`)
+      message = message.concat(` Holding ${this.tweets_meta.count} tweets. \nLast updated ${(new Date(this.tweets_meta.last_updated)).toLocaleString()}`)
     } else{
-      message = message.concat(` \nHolding ${0} tweets.`)
+      message = message.concat(` Holding ${0} tweets.`)
     }
     //this.db_sync.msg = message;
     ui.updateSyncIcon(synced, message)
-    
+    return message
   }
   
 
@@ -1137,22 +1216,18 @@ class TweetWiz{
 
     var importedTweetArchive = JSON.parse(result);
     //here is your imported data, and from here you should know what to do with it (save it to some storage, etc.)
-    //console.log(importedTweetArchive)
+    console.log(importedTweetArchive)
     //document.getElementById("loadArchive").value = ''; //make sure to clear input value after every import, iideally name wouldn't be  hardcoded
 
     chrome.storage.local.set({temp_archive: importedTweetArchive}, function() {
-      //console.log("temp tweet archive stored")
-      let message = {type:"tempArchiveStored"}
+      console.log("temp tweet archive stored")
+      let message = {type:"query", query_type: "archive"}
       chrome.runtime.sendMessage(message);
       // console.log("messaging BG", message)
       (document.getElementById("hidden_load_archive")).value = null;
     })
   }
 }
-
-
-
-
 // changes: each has oldValue and newValue
 // area: could be sync local or managed
 async function onStorageChanged(changes, area){
@@ -1166,20 +1241,20 @@ async function onStorageChanged(changes, area){
     newVal = changes[item].newValue
     if (oldVal == newVal) break;
     switch(item){
-      case "tweets":
+      case "options": 
+        dutils.options = newVal != null ? newVal : dutils.options;
+      case "user_info":
+        wiz.user_info = newVal;
         break;
       case "tweets_meta":
         // wiz.tweets_meta = newVal != null ? newVal : wiz.makeTweetsMeta(null)
         break;
-      case "user_info":
-        wiz.user_info = newVal;
+      case "tweets":
         break;
       case "staged_tweets":
-        //if(newVal != null) wiz.updateSyncStatus(`Loading tweets...`)
         // process tweets
-        wiz.loadTweets2(newVal).then(()=>{
-          // wiz.updateSyncStatus(`Loaded Tweets`)
-          if(ui.ready()) updateWithSearch(ui.current_query)
+        wiz.loadTweets(newVal).then(()=>{
+         updateWithSearch(ui.current_query)
         })
         break;
       default:
@@ -1192,9 +1267,6 @@ async function onStorageChanged(changes, area){
 async function onMessage(m) {
   //console.log("message received:", m);
   switch (m.type) {
-    case "saveOptions":
-      dutils.loadOptions()
-      break;
     case "tweets-loading":
       wiz.mid_request = true
       wiz.db_sync = false
@@ -1203,31 +1275,22 @@ async function onMessage(m) {
       //console.log("message received:", m);
       wiz.mid_request = false
       // wiz.loadTweets(true)
-      wiz.db_sync = true
-      if (m.update_type == "archive") ui.toggleArchIcon("none")
-      break;
-    case "new-tweets":
-      break;
-    case "load-user-info":
+      // wiz.db_sync = true
       break;
     case "storage-clear":
       //let sync_message = `Holding ${meta.count} tweets. \n Last updated ${(new Date(meta.since_time)).toLocaleString()}`
-      // wiz.updateSyncStatus(`No tweets yet...`)
-      ui.toggleArchIcon("flex")
       wiz.clearTweets()
       //after clear, automatically get timeline.
-      dutils.msgBG({type:"timeline"})
+      // dutils.msgBG({type:"query", query_type: "timeline"})
       break;
     case "tab-activate":
       wutils.current_url = m.url
+      ui.update()
       break;
     case "tab-change-url":
       wutils.current_url = m.url
       wutils.setTheme()  
-      if(ui.activeComposer.sugg_box) {
-        ui.update()
-        ui.showSuggBox(ui.activeComposer)
-      }
+      if(ui.ready()) ui.update()
       break;  
   }
   return true
@@ -1258,16 +1321,16 @@ function main()
     //document.addEventListener(destructionEvent, destructor);
     wutils.setUpListeningComposeClick();
     wutils.setUpTrendsListener();
+    wutils.setTheme()
   }
   $(document).ready(function() {
     dutils.msgBG({type:"cs-created"})
-    // dutils.msgBG({type:"timeline"})
-    wutils.setTheme()
+    // wutils.setTheme()
   })
-  window.onpopstate = ()=>{
-    wutils.setTheme()
-    //if(ui.activeComposer.sugg_box) ui.showSuggBox(ui.activeComposer)
-  }
+  // window.onpopstate = ()=>{
+  //   wutils.setTheme()
+  //   //if(ui.activeComposer.sugg_box) ui.showSuggBox(ui.activeComposer)
+  // }
 
 }
 

@@ -9,6 +9,7 @@ class Utils {
     this.options = {}
     this.loadOptions()
     this._tabId = null
+    this.twitter_url = /https?:\/\/(www\.)?twitter.com\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/
   }
 
   // get options(){
@@ -21,9 +22,34 @@ class Utils {
   set tabId(tabId){
     this._tabId = tabId}
   
+  onTabActivated(activeInfo){
+    chrome.tabs.get(activeInfo.tabId, function(tab){
+      //console.log("tab", tab)
+      try{
+        let url = tab.url;
+        if (url.match(utils.twitter_url)) {
+          utils.tabId = tab.id
+          utils.msgCS({type:"tab-activate", url:url, cs_id: tab.id})
+        }
+      }catch(e){
+        console.log(e)
+      }
+    });
+  }
+  
+  onTabUpdated(tabId, change, tab){
+    if (tab.active && change.url) {
+      if (change.url.match(utils.twitter_url)){
+        utils.tabId = tab.id
+        utils.msgCS({type:"tab-change-url", url:change.url, cs_id: tab.id})
+      }
+    }
+  }
+  
+    
 
   //gets data and changes its attributes that match key_vals, then setts it
-  static async updateData(key, key_vals){
+  async updateData(key, key_vals){
     let objset = {}
     this.getData(key).then(val=>{
       if (val !=null){
@@ -41,7 +67,7 @@ class Utils {
   }
 
   //returns a promise that gets a value from chrome local storage 
-  static getData(key) {
+  getData(key) {
     return new Promise(function(resolve, reject) {
       chrome.storage.local.get(key, function(items) {
         if (chrome.runtime.lastError) {
@@ -55,7 +81,7 @@ class Utils {
   }
 
   //returns a promise that sets an object with key value pairs into chrome local storage 
-  static setData(key_vals) {
+  setData(key_vals) {
     return new Promise(function(resolve, reject) {
       chrome.storage.local.set(key_vals, function(items) {
         if (chrome.runtime.lastError) {
@@ -116,10 +142,8 @@ class Utils {
 
   // Loads options from storage
   async loadOptions(){
-    Utils.getData("options").then(opts=>{
-        if (typeof opts !== "undefined"){
-          this._options = opts
-        }
+    this.getData("options").then(opts=>{
+      this.options = opts != null ? opts : this.options
     })
   }
 
@@ -136,8 +160,8 @@ class Utils {
 
     
   //clears storage of tweets, tweets meta info, and auth
-  clearStorage(){
-    this.removeData(["tweets","tweets_meta","staged_tweets","index"]).then(()=>{
+  async clearStorage(){
+    this.removeData(["tweets","tweets_meta","staged_tweets","index","index_ids"]).then(()=>{
         this.msgCS({type: "storage-clear"}) 
         wiz.tweets_meta = wiz.makeTweetsMeta(null)
       }
@@ -145,14 +169,8 @@ class Utils {
     return true
   }
 
-  // called after reloading, checks if auth exists and if not
-  // can't send requests out of here bc sending requests sends a header and makes a feedback loop
+  // called every time headers are sent, if they contain the auth, take it and update our auth
   static async processHeaders(headers){
-    // on mac there's a bug where updateAuth is called befor auth is defined, so this is checking that
-    if (typeof auth  === 'undefined'){
-      //console.log("auth was undefined, for some reason, gonna define it and do nothing else")
-      auth = new Auth();
-    }
     let csrfToken = null
     let authorization = null
     for (let header of headers) {
@@ -163,6 +181,7 @@ class Utils {
       }
     }
     if (csrfToken && authorization && csrfToken != "null" && authorization != "null"){
+      // console.log(headers)
       auth.updateAuth(csrfToken,authorization)
     }
     else{
@@ -244,7 +263,7 @@ class Auth {
   async testAuth(){
     let auth = this;
     let _user_info = null;
-    if (this.isAuth() /*&& this.isFresh(auth)*/){
+    if (this.isAuth()){
       try
       {
         const init = {
@@ -257,15 +276,19 @@ class Auth {
         var uurl = `https://api.twitter.com/1.1/account/verify_credentials.json`
         //console.log("testing auth getting user info")
         let res = await fetch(uurl,init).then(x => x.json())//.catch(throw new Error("caught in fetch")) 
-        if(res != null)
+        if(!Object.keys(res).includes("errors"))
         {
-          Utils.setData({user_info: res})
+          utils.setData({user_info: res})
           wiz.user_info = res
           _user_info = res
           //console.log("auth is good")
+        } else{
+          _user_info = null
         }
       }
       catch(err){
+        console.log(res)
+        _user_info = null
           //console.log("auth is stale")
           //console.log(err)
       }
@@ -293,20 +316,15 @@ class Auth {
     let success = false
     let auth = this
     let fresh = false
-    //fresh = await auth.testAuth()
+    fresh = await auth.testAuth()
     // test if it's already a good auth
-    if (fresh){
-      //console.log("current auth fresh af")
-      success = true
-    }
+    if (fresh){      success = true    }
     // otherwise try to load from storage and test if it's good
     else{
-      //console.log("gonna load auth from storage")
-      let data = await Utils.getData("auth");
+      let data = await utils.getData("auth");
       if (data != null && data.csrfToken != null && data.authorization != null) auth.setParams(data)
 
       if (await auth.testAuth()){
-        //console.log("got it")
         success = true
       }
       // if it's not good, delete it from storage
@@ -349,8 +367,7 @@ class Auth {
 
     // set em
     this.setParams(auth_params)
-    chrome.storage.local.set({ auth: auth_params }, function() {
-    })
+    utils.setData({ auth: auth_params})
   }
 
 }
@@ -362,7 +379,7 @@ class TweetWiz{
     this.midRequest = false
     this.interrupt_query = false
     this.tweets_dict = {}
-    this.tweets_meta = this.makeTweetsMeta(null)
+    this._tweets_meta = this.makeTweetsMeta(null)
     this.tweet_ids = []
     this.users = {}
     
@@ -372,8 +389,9 @@ class TweetWiz{
   }
   
   init(){
-    Utils.getData("user_info").then((info)=>{this.user_info = info != null ? info : {}})
-    Utils.getData("tweets").then((tweets)=>{this.tweets = tweets != null ? tweets : {}})
+    utils.getData("user_info").then((info)=>{this.user_info = info != null ? info : {}})
+    utils.getData("tweets_meta").then((meta)=>{this.tweets_meta = meta != null ? meta : this._tweets_meta})
+    utils.getData("tweets").then((tweets)=>{this.tweets_dict = tweets != null ? tweets : {}})
   }
   
   get user_info(){return this._user_info}
@@ -381,8 +399,7 @@ class TweetWiz{
   set user_info(user_info){
     if (user_info != this._user_info)
       this._user_info = user_info
-      Utils.setData({user_info:this._user_info}).then(()=>{utils.msgCS({type:"load-user-info"})})
-      
+      utils.setData({user_info:this._user_info})
   }
   
   get tweets(){return this.tweets_dict}
@@ -394,10 +411,8 @@ class TweetWiz{
         this.tweets_dict = _tweets
         this.tweets_meta = this.makeTweetsMeta(this.tweets_dict)
         this.tweet_ids = Object.keys(this.tweets_dict)
-        Utils.setData({tweets:this.tweets_dict, tweets_meta:this.tweets_meta}).then(()=>{
-          //console.log("set tweets!", this.tweets_dict)
-          console.log("set tweets!", this.tweets_meta)
-          // utils.msgCS({type: "tweets-saved"})
+        utils.setData({tweets:this.tweets_dict}).then(()=>{
+          // console.log("set tweets!", this.tweets)
         })
       }else{
         console.log("nothing to add to ", Object.keys(this.tweets_dict).length)
@@ -408,8 +423,12 @@ class TweetWiz{
     }
   }
 
-  //get tweets_meta(){return this.tweets_meta}
-  //set tweets_meta(tweets_meta){this.tweets_meta = tweets_meta}
+  get tweets_meta(){return this._tweets_meta}
+  set tweets_meta(tweets_meta){
+    this._tweets_meta = tweets_meta
+    utils.setData({tweets_meta:this.tweets_meta}).then(()=>{
+    })
+  }
 
 
 
@@ -433,13 +452,14 @@ class TweetWiz{
   }
 
   async loadUserInfo(){
-    Utils.getData("user_info").then((info)=>{this.user_info = info})
+    utils.getData("user_info").then((info)=>{this.user_info = info})
     return this.user_info
   }
 
-  makeTweetsMeta(tweets, update_type = "update"){
+  makeTweetsMeta(tweets, query_type = "update"){
     let meta = {}
     if (tweets != null){
+      let has_archive = query_type == "archive" || this.tweets_meta.has_archive
       console.log("tweets", tweets)
       if (Object.keys(tweets).length>0){
         let len = Object.keys(tweets).length - 1
@@ -452,8 +472,8 @@ class TweetWiz{
           since_id: tweets[first_key].id, 
           since_time: tweets[first_key].time,
           last_updated: (new Date()).getTime(),
-          has_archive: update_type == "archive" || this.tweets_meta.has_archive ,
-          has_timeline: this.tweets_meta.has_timeline, //update_type == "timeline"
+          has_archive: has_archive,
+          has_timeline: this.tweets_meta.has_timeline, 
         }
       }
     } else{
@@ -473,7 +493,7 @@ class TweetWiz{
 
     
   // TODO: maximal efficiency would consider the origin with the old tweets but that's more than I want to do
-  static joinTweets(_old, _new, update_type = "update"){
+  static joinTweets(_old, _new, query_type = "update"){
     let priority = {
       timeline: 5,
       update: 4, //there are reasons for update to be higher priority than timeline (deleted recent tweets) but like this is more efficient
@@ -482,12 +502,12 @@ class TweetWiz{
       history: 1
     }
     let new_tweets = []
-    if (priority[update_type] > priority.old){
+    if (priority[query_type] > priority.old){
       new_tweets = Object.assign(_old, _new)
     } else{
       new_tweets = Object.assign(_new, _old)
     }
-    if (update_type != "update") new_tweets = this.sortTweets(new_tweets)
+    if (query_type != "update") new_tweets = this.sortTweets(new_tweets)
 
     return new_tweets
   }
@@ -515,23 +535,23 @@ class TweetWiz{
 
   // Convert request results to tweets and save them
   // TODO  : deal with archive RTs which are listed as by the retweeter and not by the original author
-  async saveTweets(res, update_type = "update"){
+  async saveTweets(res, query_type = "update"){
     // In the case of an update query, check whether the most recent result is newer than our current set of tweets as 
     // let isResNew = (re)=>{return (re[0].id_str.localeCompare(wiz.tweets_meta.since_id, undefined,{numeric:true}) >= 0)}
     // let isResNew = (re)=>{return (re[0].id_str.localeCompare(wiz.tweets_meta.since_id, undefined,{numeric:true}) >= 0)}
     // If res is new 
     res = res.filter(r=>{return !this.tweet_ids.includes(r.id_str)})
     if (res.length < 1){
-      console.log("canceled save")
+      console.log("canceled save", query_type)
       return {}
     } else{
-      console.log("Res", res)
+          console.log("Res", res)
       // console.log("this ids", this.tweet_ids)
     }
     //console.log("meta", wiz.tweets_meta)
     
     // Mapping results to tweets
-    let arch = update_type == "archive"
+    let arch = query_type == "archive"
     let toTweet = (t)=>{let tweet = TweetWiz.toTweet(t,false); return [tweet.id, tweet]}
     let archToTweet = (t)=>{let tweet = TweetWiz.toTweet(t,true); return [tweet.id, tweet]}
     let new_tweet_list = arch ? res.map(archToTweet) : res.map(toTweet);
@@ -539,26 +559,11 @@ class TweetWiz{
     let all_tweets = {}
 
     // Update staging area with new tweets and tell CS to load
-    Utils.updateData("staged_tweets", new_tweets).then(console.log("updated staged with new tweets", new_tweets))
+    utils.updateData("staged_tweets", new_tweets).then(console.log("updated staged with new tweets", [Object.keys(new_tweets).length, new_tweets]))
 
-    // load storage tweets
-    // if(!(this.tweets != null) || Object.keys(this.tweets)<=0) {
-    //   let t = await Utils.getData("tweets"); 
-    //   this.tweets = t != null ? t : {}; 
-    // }
-    // console.log("bout to set wiz tweets", [this.tweets, new_tweets])
     let t = Object.assign({},this.tweets)
     this.tweets = TweetWiz.joinTweets(t, new_tweets)
 
-    //all_tweets = TweetWiz.removeDuplicates(all_tweets)
-    // wiz.tweets_meta = wiz.makeTweetsMeta(all_tweets, update_type)
-    // console.log(update_type)
-    // append new tweets and store all tweets'
-    // let data = {tweets: all_tweets, tweets_meta: wiz.tweets_meta}
-    // await Utils.setData(data)
-    // wiz.tweets = all_tweets
-    //console.log("Saved!",data)
-    // utils.msgCS({type: "tweets-loaded"})
     return new_tweets
   }
   
@@ -617,13 +622,13 @@ class TweetWiz{
     // Gets tweets from storage to add to them
     // For each tweet without pic (which is why its in the queue), assign it its user's profile pic
     // After storing again, delete the profile pics
-    Utils.getData("tweets").then((tweets)=>{
+    utils.getData("tweets").then((tweets)=>{
       for (let key_val of Object.entries(this.pic_tweet_queue)){
         // tweets[key_val[0]].profile_image = Object.keys(this.profile_pics).includes(key_val[1]) ? this.profile_pics[key_val[1]] : this.profile_pics[key_val[1]]
         tweets[key_val[0]].profile_image =  this.profile_pics[key_val[1]]
         tweets = this.sortTweets(tweets)
       }
-      Utils.setData({tweets:tweets}).then(()=>{
+      utils.setData({tweets:tweets}).then(()=>{
         this.profile_pics = {}
         this.user_queue = []
         this.pic_tweet_queue = {}
@@ -748,8 +753,8 @@ class TweetWiz{
         //console.log("auth is bad, getting new")
         auth.getNew();
       default:
-        //console.log(err)
-    }
+      }
+    console.log(err)
   }
 
   /* Updates tweets in 4 different ways
@@ -758,57 +763,57 @@ class TweetWiz{
   history: searches every date since you created your account for your tweets
   archive: loads from local downloaded twitter archive
   */
-  async updateTweets(m, update_type = "update"){
-    utils.msgCS({type: "tweets-loading", update_type: update_type})
+  async updateTweets(m, query_type = "update"){
+    query_type = m.query_type
+    utils.msgCS({type: "tweets-loading", query_type: query_type})
     let tweets = {}
-    if (!this.midRequest){
-      this.midRequest = true
+    let meta = {}
+    // If mid request, stop now
+    if (this.midRequest){ return tweets }
+    this.midRequest = true
+    console.log("update requested", query_type)
+    // this.tweets_meta = await utils.getData("tweets_meta")
 
-      //let tweets = await getData("tweets")
-      this.tweets_meta = await Utils.getData("tweets_meta")
+    // If metadata is null or undefined, get a fresh canvas
+    if (!(this.tweets_meta != null))
+      this.tweets_meta = this.getMetaData()
+    // If we were asked for an update but don't have timeline, get timeline instead
+    if(query_type == "update" && !this.tweets_meta.has_timeline) query_type = "timeline"
+    //If we were asked for the archive
+    if(query_type == "archive"){
+      console.log("updateing archive")
+      utils.getData("temp_archive").then((temp_archive) => {
+        wiz.saveTweets(temp_archive, query_type).then((_tweets)=>{
+          tweets = _tweets
+          meta = wiz.tweets_meta
+          // set has_archive
+          meta.has_archive = true
+          wiz.tweets_meta = meta
+          console.log("SET HAS TIMELINE", wiz.tweets_meta)
+          // set has_archive
 
-      // If metadata is null or undefined, get a fresh canvas
-      if (!(this.tweets_meta != null))
-        this.tweets_meta = this.getMetaData()
-
-      if(update_type == "update" && !this.tweets_meta.has_timeline) update_type = "timeline"
-      switch(update_type){
-        case "archive":
-          Utils.getData("temp_archive").then((temp_archive) => {
-            wiz.saveTweets(temp_archive, update_type).then((_tweets)=>{
-              tweets = _tweets
-              wiz.midRequest = false
-              wiz.getProfilePics()
-              utils.removeData(["temp_archive"])
-              utils.msgCS({type: "tweets-done", update_type: update_type})
-              //console.log("archive done!")
-            })
-          })
-          break;
-        case "update":
-          this.query(auth, this.tweets_meta, "update").then((_tweets)=>{
-            tweets = _tweets
-            utils.msgCS({type: "tweets-done", update_type: update_type})
-            wiz.midRequest = false
-          })
-          break;
-        case "timeline":
-          this.query(auth, this.tweets_meta, "timeline").then(function(_tweets) {
-            tweets = _tweets
-            utils.msgCS({type: "tweets-done", update_type: update_type})
-            Utils.updateData("tweets_meta", {has_timeline:true})
-            wiz.midRequest = false
-          });
-          break;
-        case "history":
-          this.query(auth, this.tweets_meta, "history").then((_tweets)=>{
-            tweets = _tweets
-            utils.msgCS({type: "tweets-done", update_type: update_type})
-            wiz.midRequest = false
-          })
-          break;
-      }
-    //console.log(`done with ${update_type}`, tweets)
+          wiz.midRequest = false
+          wiz.getProfilePics()
+          utils.removeData(["temp_archive"])
+          utils.msgCS({type: "tweets-done", query_type: query_type})
+          //console.log("archive done!")
+        })
+      })
+    } else{
+      this.query(auth, this.tweets_meta, query_type).then((_tweets)=>{
+        tweets = _tweets
+        utils.msgCS({type: "tweets-done", query_type: query_type})
+        wiz.midRequest = false
+        switch(query_type){
+          case "timeline":
+            // utils.updateData("tweets_meta", {has_timeline:true})
+            meta = wiz.tweets_meta
+            meta.has_timeline = true
+            wiz.tweets_meta = meta
+            console.log("SET HAS TIMELINE", wiz.tweets_meta)
+            break;
+        }
+      })
     }
     return tweets
   }
@@ -878,8 +883,9 @@ class TweetWiz{
     // Functions for Treat phase, treating the request respense
     let treat ={
       update: async (vars)=>{
-        if (vars.since_id < res[0].id){
-          vars.since_id = res[0].id
+        let batch_since = res[0].id
+        if (vars.since_id < batch_since){
+          vars.since_id = batch_since
         } else{
           stop = true
         }
@@ -887,9 +893,12 @@ class TweetWiz{
         return vars
       },
       timeline: async (vars)=>{
-        
-        // max_id is the max of the next request, so if we received a lower id than max_id, use the new one 
         let batch_max = res[res.length - 1].id
+        if ((batch_max >= vars.max_id && vars.max_id != -1)){
+          console.log("stopping timeline query", wiz._tweets_meta)
+          stop = true
+        }
+        // max_id is the max of the next request, so if we received a lower id than max_id, use the new one 
         vars.max_id = (batch_max < vars.max_id || vars.max_id == -1) ? batch_max : vars.max_id
         vars.url = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}&count=${count}&max_id=${vars.max_id}&include_rts=${include_rts}`
         return vars
@@ -924,18 +933,23 @@ class TweetWiz{
         catch(err){
           TweetWiz.handleError(err)
         }
-        if (res.length <= 0 || res ==null){
+        if (res.length <= 0 || res == null){
           //throw new Error("res is empty")
           //console.log("res is empty")
           break;
         } else{ 
           //modifies new_tweets
-          vars = await treat[query_type](vars)
+          try{
+            vars = await treat[query_type](vars)
+          } catch(e){
+            console.log(res)
+            throw(e)
+          }
+          // console.log(res)
           new_tweets = await wiz.saveTweets(res, query_type);
           tweets = Object.assign(tweets,new_tweets)
           // console.log(`received total ${tweets.length} tweets`);
           // console.log("actual query results:", res);
-        
         }
       }while(!vars.stop_condition(res,tweets))
     return tweets
@@ -943,6 +957,36 @@ class TweetWiz{
 }
 
 
+
+// changes: each has oldValue and newValue
+// area: could be sync local or managed
+async function onStorageChanged(changes, area){
+  if (area != 'local') return null 
+  let oldVal = {}
+  let newVal = {}
+  let changedItems = Object.keys(changes)
+  for(let item of changedItems){
+    oldVal = changes[item].oldValue
+    newVal = changes[item].newValue
+    if (oldVal == newVal) break;
+    switch(item){
+      case "options":
+        utils.options = newVal != null ? newVal : utils.options;
+        chrome.tabs.reload(utils.tabId);
+        break;
+      case "temp_archive":
+        console.log("temp archive", newVal)
+        // let m = {type: "archive"}
+        // // m.tweet_archive = newVal //hacky but we already have the value, no sense "getting data" again (idk if it makes a difference in terms of time though)
+        // wiz.updateTweets(m, "archive"); 
+        // if (newVal != null){
+        // }
+        break;
+      default:
+        break;
+    }
+  }
+}
 
 
 //** Handles messages sent from popup or content scripts */
@@ -955,119 +999,108 @@ async function onMessage(m, sender) {
       utils.tabId = tid
       wiz.init()
       break;
-
-    case "saveOptions":
-      utils.loadOptions()
-      utils.msgCS({type:"saveOptions"})
-      break;
     
-    case "tempArchiveStored":
-      wiz.updateTweets(m, "archive");
+    case "temp-archive-stored":
+      wiz.updateTweets(m);
       break;
-      
-    case "update":
+
+    case "query":
       auth_good = await auth.testAuth()
-      if (Object.keys(wiz.pic_tweet_queue).length > 0) wiz.getProfilePics()
-      if(await auth_good != null){
+      if(auth_good != null){
         //console.log("auth good", auth_good)
         wiz.updateTweets(m);
       }
       else{
         //console.log("auth bad, loadin")
         auth_good = await auth.getAuth()
-        if (auth_good) wiz.updateTweets(m, "update")
+        if (auth_good) wiz.updateTweets(m)
       }
       break;
+      
+    // case "update":
+    //   auth_good = await auth.testAuth()
+    //   if (Object.keys(wiz.pic_tweet_queue).length > 0) wiz.getProfilePics()
+    //   if(auth_good != null){
+    //     //console.log("auth good", auth_good)
+    //     wiz.updateTweets(m);
+    //   }
+    //   else{
+    //     //console.log("auth bad, loadin")
+    //     auth_good = await auth.getAuth()
+    //     if (auth_good) wiz.updateTweets(m)
+    //   }
+    //   break;
 
-    case "timeline":
-      auth_good = await auth.testAuth()
-      if(await auth_good != null){
-        //console.log("auth good", auth_good)
-        wiz.updateTweets(m, "timeline");
-      }
-      else{
-        //console.log("auth bad, loadin")
-        auth_good = await auth.getAuth()
-        if (auth_good) wiz.updateTweets(m, "timeline")
-      }
-      break;
+    // case "timeline":
+    //   auth_good = await auth.testAuth()
+    //   if(auth_good != null){
+    //     console.log("auth good", auth_good)
+    //     wiz.updateTweets(m);
+    //   }
+    //   else{
+    //     //console.log("auth bad, loadin")
+    //     auth_good = await auth.getAuth()
+    //     if (auth_good) wiz.updateTweets(m)
+    //   }
+    //   break;
 
-    case "load_history":
-      auth_good = await auth.testAuth()
-      if(auth_good  != null){
-        //console.log("auth good", auth_good)
-        wiz.updateTweets(m, "archive");
-      }
-      else{
-        //console.log("auth bad, loadin")
-        auth_good = await auth.getAuth()
-        if (auth_good) wiz.updateTweets(m, "archive")
-      }
-      break;
+    // case "load-history":
+    //   auth_good = await auth.testAuth()
+    //   if(auth_good  != null){
+    //     //console.log("auth good", auth_good)
+    //     wiz.updateTweets(m);
+    //   }
+    //   else{
+    //     //console.log("auth bad, loadin")
+    //     auth_good = await auth.getAuth()
+    //     if (auth_good) wiz.updateTweets(m)
+    //   }
+    //   break;
     case "interrupt-query":
       wiz.interrupt_query = true;
       break;
 
     case "clear":
-      utils.clearStorage()
+      utils.clearStorage().then(()=>{
+        chrome.tabs.reload(utils.tabId);
+      })
       break;
   }
   return //Promise.resolve('done');
   ;
 }
-
-
-   
  
-
-function main(){
-  chrome.runtime.onMessage.addListener(onMessage);
-  chrome.runtime.onInstalled.addListener(Utils.onInstalled);
-  chrome.webRequest.onBeforeSendHeaders.addListener(
-    c => {
-      Utils.processHeaders(c.requestHeaders);
-    },
-    { urls: ["https://api.twitter.com/*"] },
-    ["requestHeaders"]
-  );
-  // chrome.runtime.onSuspend.addListener(async function() {
-  //   //console.log("Unloading.");
-  //   await setData({lastTab: utils.tabId})
-  // });
-  
-  
-  // Basically every time we change tabs or the tab url is updated, update tabId and send msg to CS
-  chrome.tabs.onActivated.addListener( function(activeInfo){
-    chrome.tabs.get(activeInfo.tabId, function(tab){
-      //console.log("tab", tab)
-      try{
-        let url = tab.url;
-        if (url.match(twitter_url)) {
-          utils.tabId = tab.id
-          utils.msgCS({type:"tab-activate", url:url, cs_id: tab.id})
-        }
-      }catch(e){
-        //console.log(e)
-      }
-    });
-  });
-  chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
-    if (tab.active && change.url) {
-      if (change.url.match(twitter_url)){
-        utils.tabId = tab.id
-        utils.msgCS({type:"tab-change-url", url:change.url, cs_id: tab.id})
-      }
-    }
-  });
-  window.onload = () => {utils.loadOptions()}
-}
 
 
 // INIT
 let utils = new Utils();
 let auth = new Auth();
 let wiz = new TweetWiz();
-let twitter_url = /https?:\/\/(www\.)?twitter.com\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/
-let regex = new RegExp(twitter_url);
+
+
+function main(){
+  chrome.runtime.onInstalled.addListener(Utils.onInstalled);
+  chrome.storage.onChanged.addListener(onStorageChanged);
+  chrome.runtime.onMessage.addListener(onMessage);
+  chrome.webRequest.onBeforeSendHeaders.addListener(
+    c => {
+      // on mac there's a bug where updateAuth is called before auth is defined, so this is checking that
+      // if (!( auth != 'undefined')){auth = new Auth();} 
+      Utils.processHeaders(c.requestHeaders);
+    },
+    { urls: ["https://api.twitter.com/*"] },
+    ["requestHeaders"]
+  );
+  // Basically every time we change tabs or the tab url is updated, update tabId and send msg to CS
+  chrome.tabs.onActivated.addListener(utils.onTabActivated);
+  chrome.tabs.onUpdated.addListener(utils.onTabUpdated);
+  // window.onload = () => {utils.loadOptions()}
+  // chrome.runtime.onSuspend.addListener(async function() {
+  //   //console.log("Unloading.");
+  //   await setData({lastTab: utils.tabId})
+  // });
+  
+  
+}
 
 main()
