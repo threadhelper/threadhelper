@@ -253,6 +253,7 @@ class UI {
   update(compose_box = null){
     //console.log("updating ui")
     let mode = wutils.getMode()
+    if(wiz.searchReady()) wiz.askUpdate()
     // compose_box = compose_box != null ? compose_box : wutils.getFirstComposeBox()
     switch(mode){
       case "home":
@@ -263,7 +264,9 @@ class UI {
         // Called from url change, 
         if (compose_box == null){
           console.log("from url change (composebox is null")
-          if (this.activeComposer.composer != null) {this.killComposer(this.activeComposer)}
+          if (this.activeComposer.composer != null) {
+            this.killComposer(this.activeComposer)
+          }
           compose_box = wutils.getFirstComposeBox()
           this.setUpBox(compose_box)
         } else
@@ -334,6 +337,7 @@ class UI {
     if (mode == "home" && this.home_sugg != null){
       sugg_box = this.home_sugg
       if(this.home_observer != null){
+        console.log("already have home observer")
         observer = this.home_observer
       } else{
         this.home_observer = this.addLogger(text_field);
@@ -597,6 +601,8 @@ class UI {
         composer.observer = null
       }
       composer.mode = null
+    } else{
+      this.home_observer = null
     }
   }
 
@@ -1162,7 +1168,7 @@ class TweetWiz{
       console.log("tweets are in index")
       return
     } else{
-      console.log("tweets not in index", [index_ids, Object.keys(tweets)])
+      // console.log("tweets not in index", [index_ids, Object.keys(tweets)])
       // index_ids = [... (new Set([...index_ids,...Object.keys(tweets)]))]
       index_ids = missing_ids
     }
@@ -1173,7 +1179,7 @@ class TweetWiz{
     }
     nlp.addToIndex(tweets).then((_index)=>{
       let index_json = _index.toJSON()
-      console.log("setting index and index_ids", index_ids)
+      // console.log("setting index and index_ids", index_ids)
       dutils.setData({index: index_json, index_ids: index_ids})
       if (document.getElementsByClassName("suggConsole").length > 0) ui.showConsoleMessage(prev_msg)
     })
@@ -1185,9 +1191,13 @@ class TweetWiz{
   //called when a new tweet is posted. 
   handlePost(){
     //asks BG for an update
+    askUpdate()
+    // setTimeout(2000, ()=>{dutils.msgBG(message)})
+  }
+
+  askUpdate(){
     let message = {type:"query", query_type: "update"}
     dutils.msgBG(message)
-    // setTimeout(2000, ()=>{dutils.msgBG(message)})
   }
 
   // Synced, or green, if db is up to date, which is the same as having the timeline
