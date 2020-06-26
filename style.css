@@ -171,10 +171,11 @@
 
 
 .sug_home {
+  box-sizing: border-box;
   margin-bottom: 20px;
   border-radius: 14px;
-  padding: 0px 20px 15px 20px;
-  width: 90%;
+  padding: 0px 15px 15px 15px;
+  width: 100%;
   height: 90vh;
 }
 
@@ -253,7 +254,7 @@ div.suggestionBox::-webkit-scrollbar-thumb:hover {
   flex-grow: 1;
   flex-direction: column;
   padding-left: 5px;
-  padding-right: 10px;
+  min-width: 0;
 }
 
 .th-plus-container {
@@ -272,14 +273,22 @@ div.suggestionBox::-webkit-scrollbar-thumb:hover {
 .th-header-name {
   font-weight: 700;
   font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 0 1 auto;
 }
 
 .th-header-username {
   color: var(--neutral-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 0 1 auto;
 }
 
 .th-header-time {
   color: var(--neutral-color);
+  flex: 1 0 auto;
 }
 
 .th-reply {
@@ -350,12 +359,19 @@ div.suggestionBox::-webkit-scrollbar-thumb:hover {
 .th-quote-header-name {
   padding-left: 5px;
   font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 0 1 auto;
 }
 
 .th-quote-header-username {
   padding-left: 5px;
   padding-right: 5px;
   color: var(--neutral-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 0 1 auto;
 }
 
 .th-header-dot {
@@ -365,6 +381,7 @@ div.suggestionBox::-webkit-scrollbar-thumb:hover {
 .th-quote-header-time {
   padding-left: 5px;
   color: var(--neutral-color);
+  flex: 1 0 auto;
 }
 
 .th-quote-reply {
