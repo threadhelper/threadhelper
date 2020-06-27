@@ -743,13 +743,17 @@ class Renderer {
       input.focus()
       // https://stackoverflow.com/questions/24115860/set-caret-position-at-a-specific-position-in-contenteditable-div
       // There will be multiple spans if multiple lines, so we get the last one to set caret to the end of the last line.
-      var text = $(input).find('span[data-text=true]').last()[0].firstChild
-      var range = document.createRange()
-      range.setStart(text, text.length)
-      range.setEnd(text, text.length)
-      var sel = window.getSelection()
-      sel.removeAllRanges()
-      sel.addRange(range)
+      let _span = $(input).find('span[data-text=true]').last()[0]
+      // If there's some writing on it, otherwise _span will be undefined
+      if (_span != null){
+        var text = _span.firstChild
+        var range = document.createRange()
+        range.setStart(text, text.length)
+        range.setEnd(text, text.length)
+        var sel = window.getSelection()
+        sel.removeAllRanges()
+        sel.addRange(range)
+      }
       copy.text("copied!")
       setTimeout(function() {
         copy.text("copy")
@@ -1190,8 +1194,10 @@ class TweetWiz{
 
   //called when a new tweet is posted. 
   handlePost(){
+    this.db_sync = false  // this currently makes syncicon orange even if we don't post a tweet
+    this.tweets_meta.has_timeline = false //only way bc currently setSyncStatus is based on has_tmieline rather than db_sync 
     //asks BG for an update
-    askUpdate()
+    wiz.askUpdate()
     // setTimeout(2000, ()=>{dutils.msgBG(message)})
   }
 
@@ -1264,7 +1270,7 @@ async function onStorageChanged(changes, area){
       case "staged_tweets":
         // process tweets
         wiz.loadTweets(newVal).then(()=>{
-         updateWithSearch(ui.current_query)
+          updateWithSearch(ui.current_query)
         })
         break;
       default:
