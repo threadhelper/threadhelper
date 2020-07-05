@@ -43,7 +43,7 @@ class dUtils {
           console.error(chrome.runtime.lastError.message);
           reject(chrome.runtime.lastError.message);
         } else {
-          console.log(items[key])
+          // console.log(items[key])
           resolve(items[key]);
         }
       });
@@ -166,7 +166,7 @@ class wUtils {
   
   // Sets up a listener for the Recent Trends block. Listens to changes in document's children and checks if it's what we want.
   setUpTrendsListener(){
-    console.log("adding trends logger")
+    // console.log("adding trends logger")
     var observer = new MutationObserver((mutationRecords, me)=>{ui.onTrendsReady(mutationRecords, me)});
     this.observers.push(observer)
     observer.observe(document, { subtree: true, childList: true});
@@ -174,7 +174,7 @@ class wUtils {
   }
 
   setUpSidebarRemovedListener(){
-    console.log("setting up sidebar removed listener")
+    // console.log("setting up sidebar removed listener")
     var observer = new MutationObserver((mutationRecords, me)=>{ui.onSidebarRemoved(mutationRecords, me)});
     this.observers.push(observer)
     let sidebarColumn = document.querySelector(ui.sideBarSelector)
@@ -278,7 +278,7 @@ class UI {
 	}
 
 	onTabActivate(url){
-    console.log("tab activate", url)
+    // console.log("tab activate", url)
 		wutils.current_url = window.location.href
 		// ui.updateSidebar()
 	}
@@ -292,7 +292,7 @@ class UI {
 		wutils.current_url = url
     let new_mode = wutils.getMode(wutils.current_url)
     this.manageSidebarPresence(old_mode,new_mode)
-    // this.refreshSidebars()
+    this.refreshSidebars()
 		wutils.setTheme()  
 		// if(ui.ready()) ui.updateSidebar()
 	}
@@ -310,19 +310,19 @@ class UI {
   // for refreshing properties withing sidebar: sync, archive, metadata
 	refreshSidebars(){
     let sidebars = document.getElementsByClassName('sugg_box')
-    this.updateSyncIcon(wiz.db_sync)
+    this.updateSyncIcon(wiz.sync)
     let isArch = wiz.has_archive ? 'none' : 'flex'
     this.toggleArchIcon(isArch)
     //search results
     let searchText = ''
-    // If we have an active composer (i.e. if we're writing)
+    // If we have an active composer, make a search (i.e. if we're writing)
     if (this.activeComposer){
       searchText = wutils.getTextField(this.activeComposer).textContent
       searchText = searchText != null ? searchText : ''
       dutils.msgBG({type:"search", query: searchText})
-      console.log("searching for", searchText)
-    } else{
-      console.log("showing latest tweets", searchText)
+      // console.log("searching for", searchText)
+    } else{ //just update with latest tweets
+      // console.log("showing latest tweets", searchText)
       let related = wiz.latest_tweets
       updateWithSearch(related)
       this.showConsoleMessage("Latest tweets:")
@@ -341,6 +341,10 @@ class UI {
     }
   }
 
+  activateComposeSidebar(){
+    this.activeSidebar = this.putSidebar('compose')
+  }
+
   activateHomeSidebar(){
     if (wutils.isSidebar('home')){
       this.activeSidebar = document.getElementsByClassName('sug_home')[0]
@@ -355,38 +359,35 @@ class UI {
         break;
       case 'compose':
         if (!wutils.isSidebar('compose')){
-          this.activeSidebar = this.putSidebar('compose')
+          this.activateComposeSidebar()
         }
         break;
       default:
-        wutils.setUpTrendsListener()
+        if(!wutils.isSidebar('home')){
+          wutils.setUpTrendsListener()
+        }else{
+          this.activateHomeSidebar()
+          this.refreshSidebars()
+        }
         break;
     }
   }
 
   manageSidebarPresence(old_mode,new_mode){
-    console.log("managing sidebar presence", [old_mode, new_mode])
+    // console.log("managing sidebar presence", [old_mode, new_mode])
     this.handleOldSidebar(old_mode)
     this.handleNewSidebar(new_mode)
-    console.log(this.activeSidebar)
+    console.log("sidebar managed", this.activeSidebar)
     return this.activeSidebar
   }
     
 	onTrendsReady(mutationRecords, me){
-		if(!wutils.isSidebar('home')){
-			var trending_block = document.querySelector(ui.trendText)
-			if (trending_block){
-				// var compose_box = wutils.getFirstComposeBox()
-        console.log("trends ready!")
-        this.activateHomeSidebar()
-        this.refreshSidebars()
-        wutils.setUpSidebarRemovedListener()
-				me.disconnect()
-			}
-    }
-    else{
-      console.log("already have sidebar")
-      // wutils.setUpSidebarRemovedListener()
+    var trending_block = document.querySelector(ui.trendText)
+    if (trending_block){
+      // var compose_box = wutils.getFirstComposeBox()
+      this.activateHomeSidebar()
+      this.refreshSidebars()
+      wutils.setUpSidebarRemovedListener()
       me.disconnect()
     }
 	}
@@ -399,7 +400,6 @@ class UI {
   
   // When a text box is focused, needed for thread-screen scenario 
   composeBoxFocused(compose_box){
-    console.log("compose focused")
     let text_field = wutils.getTextField(compose_box)
     this.activeComposer = compose_box
     this.activeLogger = this.addLogger(text_field)
@@ -410,7 +410,6 @@ class UI {
     for(let mutation of mutationRecords){
       for (let removed of mutation.removedNodes){
         if(removed.getAttribute('data-testid') == "sidebarColumn"){
-          console.log("sidebar removed")
           wutils.setUpTrendsListener()
         }
       }
@@ -477,7 +476,6 @@ class UI {
   }
 
   updateSyncIcon(synced, msg = null){
-    console.log()
     //message
     let message = msg != null ? msg : ''
     if (wiz.has_archive) message = message.concat("Archive loaded. ")
@@ -506,7 +504,7 @@ class UI {
 
   buildSyncIcon(){
     let sync_icon = document.createElement('span')
-    let sync_class = wiz.db_sync ? 'sync_icon synced' : 'sync_icon unsynced';
+    let sync_class = wiz.sync ? 'sync_icon synced' : 'sync_icon unsynced';
     sync_icon.setAttribute("class", sync_class);
     let tooltiptext = document.createElement('span')
     tooltiptext.setAttribute("class", 'tooltiptext');
@@ -588,7 +586,7 @@ class UI {
         x.style.display = "none"
         x.addEventListener("change", (e) => {
           wiz.mid_request = true
-          wiz.db_sync = false
+          wiz.sync = false
           var files = e.target.files, reader = new FileReader();
           reader.onload = wiz.importArchive;
           for (let i = 0; i < files.length; i++){
@@ -612,7 +610,7 @@ class UI {
         x.style.display = "none"
         x.addEventListener("change", (e) => {
           wiz.mid_request = true
-          wiz.db_sync = false
+          wiz.sync = false
           var files = e.target.files, reader = new FileReader();
           reader.onload = wiz.importArchive;
           for (let i = 0; i < files.length; i++){
@@ -626,32 +624,6 @@ class UI {
     return x
   }
 
-
-    
-  /////////////////////////////////////////
-  /////////////////////////////////////////
-  //|||||||| COMPOSER CITY STARTING ||||||||
-  /////////////////////////////////////////
-  /////////////////////////////////////////
-
-  //usually ui.activeComposer
-  killComposer(composer){
-    console.log("killing composer",composer)
-    if (composer.mode != "home"){
-      composer.composer = null
-      if (composer.sidebar != null){
-        composer.sidebar.remove()
-        composer.sidebar = null
-      }
-      if (composer.observer != null){
-        composer.observer.disconnect()
-        composer.observer = null
-      }
-      composer.mode = null
-    } else{
-      this.home_observer = null
-    }
-  }
 
   //checks whether composeBox is empty
   isComposeEmpty(comp){
@@ -701,7 +673,7 @@ class UI {
 // put semaphore here?
 async function onChange(mutationRecords) {
   const text = ui.getTextFromMutation(mutationRecords)
-  console.log("CHANGE! text is:", text, "; in element: ", mutationRecords[0].target);
+  // console.log("CHANGE! text is:", text, "; in element: ", mutationRecords[0].target);
   ui.current_query = text != null ? text : ''
   if(wutils.isSidebar('home') || wutils.isSidebar('compose')){
     const next_tweet = text.replace(wutils.url_regex, "")
@@ -722,8 +694,10 @@ async function updateWithSearch(related){
       related = wiz.latest_tweets
       ui.showConsoleMessage("None related. Latest tweets:")
     }
-    console.log("updating with search ",related)
-    ren.renderTweets([...new Set(related)])
+    try{ren.renderTweets([...new Set(related)])} catch(e){
+      console.log("updating with search ",related)
+      throw(e)
+    }
   }
   // if(!ui.ready()) return
   // let isTextValid = (text) => {return typeof text != "undefined" && text != null /*&& text.trim() != ''*/}
@@ -758,7 +732,7 @@ class TweetWiz{
     this.user_info = {}
     this.has_archive = false
     this.has_timeline = false
-    this.db_sync = false
+    this.sync = false
     this.tweets_meta = {}
     this.search_results = {}
 
@@ -766,39 +740,24 @@ class TweetWiz{
     this.tweets_dict = {};
 
     this.latest_tweets = []
-    //Load all tweets, if they're empty send a message asking for a timeline query
-    // this.loadAllTweets().then(_tweets=>{
-    //   console.log(_tweets)
-    //   if(_tweets != null && Object.keys(_tweets).length > 0) {
-    //     console.log("Loaded tweets from storage", this.tweets_meta)
-    //     this.db_sync = true
-    //   } else{
-    //     console.log("No tweets in storage, asking for timeline query")
-    //     dutils.msgBG({type:"query", query_type: "timeline"})
-    //     this.db_sync = false
-    //   }
-    // })
-    // User info
-    // this.loadUserInfo()
-    // Whether a request is already halfway through
   }
 
   init(){
     dutils.getData("user_info").then((info)=>{this.user_info = info != null ? info : {}})
     dutils.getData("has_archive").then((info)=>{this.has_archive = info != null ? info : false})
     dutils.getData("has_timeline").then((info)=>{this.has_timeline = info != null ? info : false})
-    dutils.getData("sync").then((info)=>{this.db_sync = info != null ? info : false})
+    dutils.getData("sync").then((info)=>{this.sync = info != null ? info : false})
     dutils.getData("tweets_meta").then((meta)=>{this.tweets_meta = meta != null ? meta : this.tweets_meta})
     dutils.getData("tweets").then((tweets)=>{this.tweets_dict = tweets != null ? tweets : {}})
     dutils.getData("latest_tweets").then((latest_tweets)=>{this.latest_tweets = latest_tweets != null ? latest_tweets : {}})
   }
 
-  // get db_sync(){
+  // get sync(){
   //   return this.tweets_meta.has_timeline
   // }
 
-  // set db_sync(synced){
-  //   this._db_sync = synced
+  // set sync(synced){
+  //   this._sync = synced
   // }
 
   // get tweets_meta(){
@@ -809,13 +768,13 @@ class TweetWiz{
   //   this._tweets_meta = meta
   //   //set ui icons
   //   if (meta.has_archive){ui.toggleArchIcon("none")} else{ui.toggleArchIcon("flex")}
-  //   if (meta.has_timeline){this.db_sync = true; this.updateSyncStatus(true)} else{this.db_sync = false; this.updateSyncStatus(false)}
+  //   if (meta.has_timeline){this.sync = true; this.updateSyncStatus(true)} else{this.sync = false; this.updateSyncStatus(false)}
   // }
 
   //called when a new tweet is posted. 
   handlePost(){
-    // this.db_sync = false  // this currently makes syncicon orange even if we don't post a tweet
-    // this.tweets_meta.has_timeline = false //only way bc currently setSyncStatus is based on has_tmieline rather than db_sync 
+    // this.sync = false  // this currently makes syncicon orange even if we don't post a tweet
+    // this.tweets_meta.has_timeline = false //only way bc currently setSyncStatus is based on has_tmieline rather than sync 
     //asks BG for an update
     wiz.askUpdate()
     // setTimeout(2000, ()=>{dutils.msgBG(message)})
@@ -828,6 +787,7 @@ class TweetWiz{
 
   // Parses json and stores in temp to be processed by BG
   importArchive(){
+    let start = (new Date()).getTime()
     let result = this.result.replace(/^[a-z0-9A-Z\.]* = /, "");
 
     var importedTweetArchive = JSON.parse(result);
@@ -842,6 +802,8 @@ class TweetWiz{
       // console.log("messaging BG", message)
       (document.getElementById("hidden_load_archive")).value = null;
     })
+    let end = (new Date()).getTime()
+    console.log(`Importing archive took ${(end-start)/1000}s`)
   }
 }
 
@@ -1144,12 +1106,12 @@ async function onStorageChanged(changes, area){
           ui.refreshSidebars()
 					break;
 				case "sync":
-          wiz.db_sync = newVal;
+          wiz.sync = newVal;
           ui.refreshSidebars()
 					break;
 				case "search_results":
           wiz.search_results = newVal;
-          console.log("search results: ",newVal)
+          // console.log("search results: ",newVal)
           ui.showConsoleMessage("Found these tweets")
           updateWithSearch(newVal)
           break;
