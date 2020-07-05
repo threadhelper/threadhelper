@@ -1,56 +1,18 @@
+(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 "use strict";
 
 // Stores auth and CSRF tokens once they are captured in the headers.
-// let idb = require('idb')
-// window.idb = require('idb')
+let idb = require('idb')
 
 // Utilities for interacting with storage, meta data, process headers, and act on install
 class Utils {
   constructor() {
-    this.db = {}
-    this.openDB()
     this.options = {}
     this.loadOptions()
     this._tabId = null
     this.twitter_url = /https?:\/\/(www\.)?twitter.com\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/
   }
 
-  async openDB(){
-    console.log("OPENING DB")
-    const db = await idb.openDB('ThreadHelper', 1, {
-      upgrade(db) {
-        console.log("version ",db.oldVersion)
-        let oldV = db.oldVersion != null ? db.oldVersion : 0
-        switch (oldV) {
-            case 0:
-                // Create a store of objects
-                const store1 = db.createObjectStore('tweets', {
-                    // The 'id' property of the object will be the key.
-                    keyPath: 'id',
-                    // If it isn't explicitly set, create a value by auto incrementing.
-                    // autoIncrement: true,
-                });
-                const store2 = db.createObjectStore('staged_tweets', {
-                  // The 'id' property of the object will be the key.
-                  keyPath: 'id',
-                  // If it isn't explicitly set, create a value by auto incrementing.
-                  // autoIncrement: true,
-                });
-                // Create an index on the 'date' property of the objects.
-                store1.createIndex('time', 'time');
-                store2.createIndex('time', 'time');
-              // a placeholder case so that the switch block will
-              // execute when the database is first created
-              // (oldVersion is 0)
-              break;
-            default:
-              break;
-          }
-      },
-    });
-    this.db = db
-    return db
-  }
   // get options(){
   //   return this._options
   // }
@@ -87,19 +49,8 @@ class Utils {
   
     
 
-  //gets data and changes its attributes that match key_vals, then sets it
+  //gets data and changes its attributes that match key_vals, then setts it
   async updateData(key, key_vals){
-    if(key == "tweets" || key == "staged_tweets"){
-      let storeName = 'tweets';      
-      const tx = this.db.transaction(storeName, 'readwrite');
-      const store = tx.objectStore('tweets');
-      let value = await this.db.get(storeName, key);
-      value = value != null ? value : {}
-      Object.assign(value,key_vals)
-      await store.put(value);
-      await tx.done;
-    }
-
     let objset = {}
     this.getData(key).then(val=>{
       if (val !=null){
@@ -117,22 +68,13 @@ class Utils {
   }
 
   //returns a promise that gets a value from chrome local storage 
-  async getData(key) {
-    let value = {}
-    if(key == "tweets" || key == "staged_tweets"){
-      let storeName = 'tweets';
-      value = await this.db.get(storeName, key);
-      // return value
-    }
-    // return value
-
+  getData(key) {
     return new Promise(function(resolve, reject) {
       chrome.storage.local.get(key, function(items) {
         if (chrome.runtime.lastError) {
           console.error(chrome.runtime.lastError.message);
           reject(chrome.runtime.lastError.message);
         } else {
-          console.log(items[key] == value)
           resolve(items[key]);
         }
       });
@@ -140,26 +82,7 @@ class Utils {
   }
 
   //returns a promise that sets an object with key value pairs into chrome local storage 
-  async setData(key_vals) {
-    for(let [key,val] of Object.entries(key_vals)){
-      if(key == "tweets" || key == "staged_tweets"){
-        let storeName = key;
-        const tx = this.db.transaction(storeName, 'readwrite');
-        const store = tx.objectStore(storeName);
-        let promises = []
-        try{
-        for(let [key_t,val_t] of Object.entries(val)){
-          promises.push(store.put(val_t));
-        }
-        promises.push(tx.done)
-          await Promise.all(promises)
-        } catch(e){
-          console.log(promises)
-          console.log(e)
-        }
-      }
-    }
-
+  setData(key_vals) {
     return new Promise(function(resolve, reject) {
       chrome.storage.local.set(key_vals, function(items) {
         if (chrome.runtime.lastError) {
@@ -187,27 +110,8 @@ class Utils {
       }); 
     });
   }
-
-      
-  //clears storage of tweets, tweets meta info, and auth
-  async clearStorage(){
-    for (let storeName of ["tweets", "staged_tweets"]){
-      const tx = this.db.transaction(storeName, 'readwrite');
-      const store = tx.objectStore(storeName);
-      await store.clear();
-      await tx.done;
-    }
-
-    this.removeData(["tweets","tweets_meta","staged_tweets","index","index_ids"]).then(()=>{
-        this.msgCS({type: "storage-clear"}) 
-        wiz.tweets_meta = wiz.makeTweetsMeta(null)
-      }
-    )
-    return true
-  }
-
   // gets all twitter tabs
-  getTwitterTabIds(){
+  static getTwitterTabIds(){
     return new Promise(function(resolve, reject) {
       chrome.tabs.query({url: "*://twitter.com/*", currentWindow: true}, function(tabs){
         if (chrome.runtime.lastError) {
@@ -223,7 +127,7 @@ class Utils {
   }
 
   // Gets the ID of the current tab
-  getActiveTabId(){
+  static getActiveTabId(){
     return new Promise(function(resolve, reject) {
       chrome.tabs.query({active: true, currentWindow: true}, function(tabs){
         if (chrome.runtime.lastError) {
@@ -246,7 +150,7 @@ class Utils {
 
   // Message content script  
   async msgCS(m){
-    //let tabId = await utils.getTabId()
+    //let tabId = await Utils.getTabId()
     try{
     chrome.tabs.sendMessage(this.tabId, m)
     // console.log("sending message to cs tab ", m)
@@ -255,8 +159,19 @@ class Utils {
     }
   }
 
+    
+  //clears storage of tweets, tweets meta info, and auth
+  async clearStorage(){
+    this.removeData(["tweets","tweets_meta","staged_tweets","index","index_ids"]).then(()=>{
+        this.msgCS({type: "storage-clear"}) 
+        wiz.tweets_meta = wiz.makeTweetsMeta(null)
+      }
+    )
+    return true
+  }
+
   // called every time headers are sent, if they contain the auth, take it and update our auth
-  async processHeaders(headers){
+  static async processHeaders(headers){
     let csrfToken = null
     let authorization = null
     for (let header of headers) {
@@ -275,7 +190,7 @@ class Utils {
     }
   }
 
-  onInstalled() {
+  static onInstalled() {
     //console.log("On Installed!")
     chrome.declarativeContent.onPageChanged.removeRules(undefined, function() {
       chrome.declarativeContent.onPageChanged.addRules([
@@ -290,7 +205,7 @@ class Utils {
       ]);
     });
     //
-    utils.getTwitterTabIds().then(tids=>{
+    Utils.getTwitterTabIds().then(tids=>{
       //console.log("reloading twitter tabs", tids)
       for (let tid of tids){
         chrome.tabs.reload(tid);
@@ -300,7 +215,7 @@ class Utils {
 
     
   // to format YYYY-MM-DD
-  formatDate(d = null){
+  static formatDate(d = null){
     d = d == null ? new Date() : d;
     return `${''+d.getFullYear()}-${(''+(d.getMonth()+1)).padStart(2,0)}-${(''+d.getDate()).padStart(2,0)}`
   }
@@ -638,24 +553,23 @@ class TweetWiz{
     
     // Mapping results to tweets
     let arch = query_type == "archive"
-    let toTweet = (t)=>{let tweet = wiz.toTweet(t,false); return [tweet.id, tweet]}
-    let archToTweet = (t)=>{let tweet = wiz.toTweet(t,true); return [tweet.id, tweet]}
+    let toTweet = (t)=>{let tweet = TweetWiz.toTweet(t,false); return [tweet.id, tweet]}
+    let archToTweet = (t)=>{let tweet = TweetWiz.toTweet(t,true); return [tweet.id, tweet]}
     let new_tweet_list = arch ? res.map(archToTweet) : res.map(toTweet);
     let new_tweets = Object.fromEntries(new_tweet_list)
     let all_tweets = {}
 
     // Update staging area with new tweets and tell CS to load
-    // utils.updateData("staged_tweets", new_tweets).then(console.log("updated staged with new tweets", [Object.keys(new_tweets).length, new_tweets]))
-    utils.setData({"staged_tweets": new_tweets}).then(console.log("updated staged with new tweets", [Object.keys(new_tweets).length, new_tweets]))
+    utils.updateData("staged_tweets", new_tweets).then(console.log("updated staged with new tweets", [Object.keys(new_tweets).length, new_tweets]))
 
     let t = Object.assign({},this.tweets)
-    this.tweets = wiz.joinTweets(t, new_tweets)
+    this.tweets = TweetWiz.joinTweets(t, new_tweets)
 
     return new_tweets
   }
   
   // removes duplicate tweets
-  removeDuplicates(myArr, prop ='id') {
+  static removeDuplicates(myArr, prop ='id') {
     let unique_arr = myArr
     if(myArr != null) unique_arr = myArr.filter((obj, pos, arr) => {
       return arr.map(mapObj => mapObj[prop]).indexOf(obj[prop]) === pos;
@@ -724,39 +638,7 @@ class TweetWiz{
     })
   }
 
-
-  /*TH tweet template:
-  tweet= {
-    username,
-    name,
-    text,
-    profile_image,
-    retweeted
-    time,
-    reply_to,
-    mentions,
-    urls,
-    has_media,
-    media,
-    has_quote,
-    quote,
-    is_quote_up,
-    quote:
-      text,
-      name,
-      username,
-      time,
-      profile_image,
-      // Replies/mentions.
-      reply_to,
-      mentions,
-      // URLs.
-      urls,
-      has_media,
-      media,
-  }
-  */
-  toTweet(entry, arch = false){
+  static toTweet(entry, arch = false){
     let return_tweet = {}
     let tweet = {};
 
@@ -795,7 +677,7 @@ class TweetWiz{
               console.log("tweet username",tweet.username)
               console.log(entry.entities.user_mentions)
             }
-            //console.log(tweet); console.log(entry); wiz
+            //console.log(tweet); console.log(entry);
           }
         }else{
           tweet.retweeted = entry.retweeted
@@ -814,7 +696,7 @@ class TweetWiz{
           // Basic info, same for everyone
           // tweet.id = entry.id,
           tweet.time = new Date(entry.created_at).getTime()
-          // tweet.human_time = new Date(entry.created_at).toLocaleString()
+          tweet.human_time = new Date(entry.created_at).toLocaleString()
           // Replies/mentions.
           tweet.reply_to = entry.in_reply_to_screen_name != null ? entry.in_reply_to_screen_name : null // null if not present.
           tweet.mentions = entry.entities.user_mentions.map(x => ({username: x.screen_name, indices: x.indices}))
@@ -862,7 +744,7 @@ class TweetWiz{
   }
     
   // Catches errors and sometimes reloads the page to get a new auth
-  handleError(err){
+  static handleError(err){
     //console.log("handling tweet query error")
     switch (err.code){
       case 353: //"This request requires a matching csrf cookie and header."
@@ -982,7 +864,7 @@ class TweetWiz{
       history: (vars)=>{
         vars.nDays = (n) =>{return n * 24 * 60 * 60 * 1000}
         vars.max_n_reqs = 180;      
-        vars.arch_until = metautils.formatDate()
+        vars.arch_until = metaUtils.formatDate()
         vars.since = new Date(vars.arch_until);
         vars.arch_since = new Date(this.user_info.created_at);
         vars.until = new Date(vars.arch_until);
@@ -993,7 +875,7 @@ class TweetWiz{
         vars.nd = Math.min(5,Math.ceil(Math.floor((vars.arch_until.getTime() - vars.arch_since.getTime())/nDays(1)) / vars.max_n_reqs))
         vars.since.setTime(vars.since.getTime() - vars.nDays(nd))
         vars.stop_condition = (since, arch=arch_since) => {return (vars.since.getTime() <= vars.arch_since.getTime()) || this.interrupt_query }
-        vars.query = escape(`from:${username} since:${utils.formatDate(vars.since)} until:${utils.formatDate(vars.until)}`);	  
+        vars.query = escape(`from:${username} since:${Utils.formatDate(vars.since)} until:${Utils.formatDate(vars.until)}`);	  
         vars.url = `https://api.twitter.com/2/search/adaptive.json?q=${vars.query}&count=${count}&tweet_mode=extended`;
         return vars
       },
@@ -1050,7 +932,7 @@ class TweetWiz{
           res = await fetch(vars.url,init).then(x => x.json())
         }
         catch(err){
-          wiz.handleError(err)
+          TweetWiz.handleError(err)
         }
         if (res.length <= 0 || res == null){
           //throw new Error("res is empty")
@@ -1135,7 +1017,46 @@ async function onMessage(m, sender) {
         if (auth_good) wiz.updateTweets(m)
       }
       break;
-    
+      
+    // case "update":
+    //   auth_good = await auth.testAuth()
+    //   if (Object.keys(wiz.pic_tweet_queue).length > 0) wiz.getProfilePics()
+    //   if(auth_good != null){
+    //     //console.log("auth good", auth_good)
+    //     wiz.updateTweets(m);
+    //   }
+    //   else{
+    //     //console.log("auth bad, loadin")
+    //     auth_good = await auth.getAuth()
+    //     if (auth_good) wiz.updateTweets(m)
+    //   }
+    //   break;
+
+    // case "timeline":
+    //   auth_good = await auth.testAuth()
+    //   if(auth_good != null){
+    //     console.log("auth good", auth_good)
+    //     wiz.updateTweets(m);
+    //   }
+    //   else{
+    //     //console.log("auth bad, loadin")
+    //     auth_good = await auth.getAuth()
+    //     if (auth_good) wiz.updateTweets(m)
+    //   }
+    //   break;
+
+    // case "load-history":
+    //   auth_good = await auth.testAuth()
+    //   if(auth_good  != null){
+    //     //console.log("auth good", auth_good)
+    //     wiz.updateTweets(m);
+    //   }
+    //   else{
+    //     //console.log("auth bad, loadin")
+    //     auth_good = await auth.getAuth()
+    //     if (auth_good) wiz.updateTweets(m)
+    //   }
+    //   break;
     case "interrupt-query":
       wiz.interrupt_query = true;
       break;
@@ -1159,14 +1080,14 @@ let wiz = new TweetWiz();
 
 
 function main(){
-  chrome.runtime.onInstalled.addListener(utils.onInstalled);
+  chrome.runtime.onInstalled.addListener(Utils.onInstalled);
   chrome.storage.onChanged.addListener(onStorageChanged);
   chrome.runtime.onMessage.addListener(onMessage);
   chrome.webRequest.onBeforeSendHeaders.addListener(
     c => {
       // on mac there's a bug where updateAuth is called before auth is defined, so this is checking that
       // if (!( auth != 'undefined')){auth = new Auth();} 
-      utils.processHeaders(c.requestHeaders);
+      Utils.processHeaders(c.requestHeaders);
     },
     { urls: ["https://api.twitter.com/*"] },
     ["requestHeaders"]
@@ -1184,3 +1105,288 @@ function main(){
 }
 
 main()
+},{"idb":2}],2:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, '__esModule', { value: true });
+
+var wrapIdbValue = require('./wrap-idb-value.js');
+
+/**
+ * Open a database.
+ *
+ * @param name Name of the database.
+ * @param version Schema version.
+ * @param callbacks Additional callbacks.
+ */
+function openDB(name, version, { blocked, upgrade, blocking, terminated } = {}) {
+    const request = indexedDB.open(name, version);
+    const openPromise = wrapIdbValue.wrap(request);
+    if (upgrade) {
+        request.addEventListener('upgradeneeded', (event) => {
+            upgrade(wrapIdbValue.wrap(request.result), event.oldVersion, event.newVersion, wrapIdbValue.wrap(request.transaction));
+        });
+    }
+    if (blocked)
+        request.addEventListener('blocked', () => blocked());
+    openPromise
+        .then((db) => {
+        if (terminated)
+            db.addEventListener('close', () => terminated());
+        if (blocking)
+            db.addEventListener('versionchange', () => blocking());
+    })
+        .catch(() => { });
+    return openPromise;
+}
+/**
+ * Delete a database.
+ *
+ * @param name Name of the database.
+ */
+function deleteDB(name, { blocked } = {}) {
+    const request = indexedDB.deleteDatabase(name);
+    if (blocked)
+        request.addEventListener('blocked', () => blocked());
+    return wrapIdbValue.wrap(request).then(() => undefined);
+}
+
+const readMethods = ['get', 'getKey', 'getAll', 'getAllKeys', 'count'];
+const writeMethods = ['put', 'add', 'delete', 'clear'];
+const cachedMethods = new Map();
+function getMethod(target, prop) {
+    if (!(target instanceof IDBDatabase &&
+        !(prop in target) &&
+        typeof prop === 'string')) {
+        return;
+    }
+    if (cachedMethods.get(prop))
+        return cachedMethods.get(prop);
+    const targetFuncName = prop.replace(/FromIndex$/, '');
+    const useIndex = prop !== targetFuncName;
+    const isWrite = writeMethods.includes(targetFuncName);
+    if (
+    // Bail if the target doesn't exist on the target. Eg, getAll isn't in Edge.
+    !(targetFuncName in (useIndex ? IDBIndex : IDBObjectStore).prototype) ||
+        !(isWrite || readMethods.includes(targetFuncName))) {
+        return;
+    }
+    const method = async function (storeName, ...args) {
+        // isWrite ? 'readwrite' : undefined gzipps better, but fails in Edge :(
+        const tx = this.transaction(storeName, isWrite ? 'readwrite' : 'readonly');
+        let target = tx.store;
+        if (useIndex)
+            target = target.index(args.shift());
+        const returnVal = await target[targetFuncName](...args);
+        if (isWrite)
+            await tx.done;
+        return returnVal;
+    };
+    cachedMethods.set(prop, method);
+    return method;
+}
+wrapIdbValue.replaceTraps((oldTraps) => ({
+    ...oldTraps,
+    get: (target, prop, receiver) => getMethod(target, prop) || oldTraps.get(target, prop, receiver),
+    has: (target, prop) => !!getMethod(target, prop) || oldTraps.has(target, prop),
+}));
+
+exports.unwrap = wrapIdbValue.unwrap;
+exports.wrap = wrapIdbValue.wrap;
+exports.deleteDB = deleteDB;
+exports.openDB = openDB;
+
+},{"./wrap-idb-value.js":3}],3:[function(require,module,exports){
+'use strict';
+
+const instanceOfAny = (object, constructors) => constructors.some((c) => object instanceof c);
+
+let idbProxyableTypes;
+let cursorAdvanceMethods;
+// This is a function to prevent it throwing up in node environments.
+function getIdbProxyableTypes() {
+    return (idbProxyableTypes ||
+        (idbProxyableTypes = [
+            IDBDatabase,
+            IDBObjectStore,
+            IDBIndex,
+            IDBCursor,
+            IDBTransaction,
+        ]));
+}
+// This is a function to prevent it throwing up in node environments.
+function getCursorAdvanceMethods() {
+    return (cursorAdvanceMethods ||
+        (cursorAdvanceMethods = [
+            IDBCursor.prototype.advance,
+            IDBCursor.prototype.continue,
+            IDBCursor.prototype.continuePrimaryKey,
+        ]));
+}
+const cursorRequestMap = new WeakMap();
+const transactionDoneMap = new WeakMap();
+const transactionStoreNamesMap = new WeakMap();
+const transformCache = new WeakMap();
+const reverseTransformCache = new WeakMap();
+function promisifyRequest(request) {
+    const promise = new Promise((resolve, reject) => {
+        const unlisten = () => {
+            request.removeEventListener('success', success);
+            request.removeEventListener('error', error);
+        };
+        const success = () => {
+            resolve(wrap(request.result));
+            unlisten();
+        };
+        const error = () => {
+            reject(request.error);
+            unlisten();
+        };
+        request.addEventListener('success', success);
+        request.addEventListener('error', error);
+    });
+    promise
+        .then((value) => {
+        // Since cursoring reuses the IDBRequest (*sigh*), we cache it for later retrieval
+        // (see wrapFunction).
+        if (value instanceof IDBCursor) {
+            cursorRequestMap.set(value, request);
+        }
+        // Catching to avoid "Uncaught Promise exceptions"
+    })
+        .catch(() => { });
+    // This mapping exists in reverseTransformCache but doesn't doesn't exist in transformCache. This
+    // is because we create many promises from a single IDBRequest.
+    reverseTransformCache.set(promise, request);
+    return promise;
+}
+function cacheDonePromiseForTransaction(tx) {
+    // Early bail if we've already created a done promise for this transaction.
+    if (transactionDoneMap.has(tx))
+        return;
+    const done = new Promise((resolve, reject) => {
+        const unlisten = () => {
+            tx.removeEventListener('complete', complete);
+            tx.removeEventListener('error', error);
+            tx.removeEventListener('abort', error);
+        };
+        const complete = () => {
+            resolve();
+            unlisten();
+        };
+        const error = () => {
+            reject(tx.error || new DOMException('AbortError', 'AbortError'));
+            unlisten();
+        };
+        tx.addEventListener('complete', complete);
+        tx.addEventListener('error', error);
+        tx.addEventListener('abort', error);
+    });
+    // Cache it for later retrieval.
+    transactionDoneMap.set(tx, done);
+}
+let idbProxyTraps = {
+    get(target, prop, receiver) {
+        if (target instanceof IDBTransaction) {
+            // Special handling for transaction.done.
+            if (prop === 'done')
+                return transactionDoneMap.get(target);
+            // Polyfill for objectStoreNames because of Edge.
+            if (prop === 'objectStoreNames') {
+                return target.objectStoreNames || transactionStoreNamesMap.get(target);
+            }
+            // Make tx.store return the only store in the transaction, or undefined if there are many.
+            if (prop === 'store') {
+                return receiver.objectStoreNames[1]
+                    ? undefined
+                    : receiver.objectStore(receiver.objectStoreNames[0]);
+            }
+        }
+        // Else transform whatever we get back.
+        return wrap(target[prop]);
+    },
+    set(target, prop, value) {
+        target[prop] = value;
+        return true;
+    },
+    has(target, prop) {
+        if (target instanceof IDBTransaction &&
+            (prop === 'done' || prop === 'store')) {
+            return true;
+        }
+        return prop in target;
+    },
+};
+function replaceTraps(callback) {
+    idbProxyTraps = callback(idbProxyTraps);
+}
+function wrapFunction(func) {
+    // Due to expected object equality (which is enforced by the caching in `wrap`), we
+    // only create one new func per func.
+    // Edge doesn't support objectStoreNames (booo), so we polyfill it here.
+    if (func === IDBDatabase.prototype.transaction &&
+        !('objectStoreNames' in IDBTransaction.prototype)) {
+        return function (storeNames, ...args) {
+            const tx = func.call(unwrap(this), storeNames, ...args);
+            transactionStoreNamesMap.set(tx, storeNames.sort ? storeNames.sort() : [storeNames]);
+            return wrap(tx);
+        };
+    }
+    // Cursor methods are special, as the behaviour is a little more different to standard IDB. In
+    // IDB, you advance the cursor and wait for a new 'success' on the IDBRequest that gave you the
+    // cursor. It's kinda like a promise that can resolve with many values. That doesn't make sense
+    // with real promises, so each advance methods returns a new promise for the cursor object, or
+    // undefined if the end of the cursor has been reached.
+    if (getCursorAdvanceMethods().includes(func)) {
+        return function (...args) {
+            // Calling the original function with the proxy as 'this' causes ILLEGAL INVOCATION, so we use
+            // the original object.
+            func.apply(unwrap(this), args);
+            return wrap(cursorRequestMap.get(this));
+        };
+    }
+    return function (...args) {
+        // Calling the original function with the proxy as 'this' causes ILLEGAL INVOCATION, so we use
+        // the original object.
+        return wrap(func.apply(unwrap(this), args));
+    };
+}
+function transformCachableValue(value) {
+    if (typeof value === 'function')
+        return wrapFunction(value);
+    // This doesn't return, it just creates a 'done' promise for the transaction,
+    // which is later returned for transaction.done (see idbObjectHandler).
+    if (value instanceof IDBTransaction)
+        cacheDonePromiseForTransaction(value);
+    if (instanceOfAny(value, getIdbProxyableTypes()))
+        return new Proxy(value, idbProxyTraps);
+    // Return the same value back if we're not going to transform it.
+    return value;
+}
+function wrap(value) {
+    // We sometimes generate multiple promises from a single IDBRequest (eg when cursoring), because
+    // IDB is weird and a single IDBRequest can yield many responses, so these can't be cached.
+    if (value instanceof IDBRequest)
+        return promisifyRequest(value);
+    // If we've already transformed this value before, reuse the transformed value.
+    // This is faster, but it also provides object equality.
+    if (transformCache.has(value))
+        return transformCache.get(value);
+    const newValue = transformCachableValue(value);
+    // Not all types are transformed.
+    // These may be primitive types, so they can't be WeakMap keys.
+    if (newValue !== value) {
+        transformCache.set(value, newValue);
+        reverseTransformCache.set(newValue, value);
+    }
+    return newValue;
+}
+const unwrap = (value) => reverseTransformCache.get(value);
+
+exports.instanceOfAny = instanceOfAny;
+exports.replaceTraps = replaceTraps;
+exports.reverseTransformCache = reverseTransformCache;
+exports.unwrap = unwrap;
+exports.wrap = wrap;
+
+},{}]},{},[1]);

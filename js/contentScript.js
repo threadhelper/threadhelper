@@ -1,6 +1,5 @@
 "use strict";
 
-
 //somehow this isn't a native method
 Array.prototype.contains = function(obj) {
   var i = this.length;
@@ -32,19 +31,51 @@ class dUtils {
   }
 
     
-  getData(key) {
+  
+  //returns a promise that gets a value from chrome local storage 
+  async getData(key) {
+    let value = {}
+    if(key == "tweets" || key == "staged_tweets"){
+      let storeName = 'tweets';
+      value = await this.db.get(storeName, key);
+      // return value
+    }
+    // return value
+
     return new Promise(function(resolve, reject) {
       chrome.storage.local.get(key, function(items) {
         if (chrome.runtime.lastError) {
           console.error(chrome.runtime.lastError.message);
           reject(chrome.runtime.lastError.message);
         } else {
+          console.log(items[key] == value)
           resolve(items[key]);
         }
       });
     });
   }
-  setData(key_vals) {
+
+  //returns a promise that sets an object with key value pairs into chrome local storage 
+  async setData(key_vals) {
+    for(let [key,val] of Object.entries(key_vals)){
+      if(key == "tweets" || key == "staged_tweets"){
+        let storeName = key;
+        const tx = this.db.transaction(storeName, 'readwrite');
+        const store = tx.objectStore(storeName);
+        let promises = []
+        try{
+        for(let [key_t,val_t] of Object.entries(val)){
+          promises.push(store.put(val_t));
+        }
+        promises.push(tx.done)
+          await Promise.all(promises)
+        } catch(e){
+          console.log(promises)
+          console.log(e)
+        }
+      }
+    }
+
     return new Promise(function(resolve, reject) {
       chrome.storage.local.set(key_vals, function(items) {
         if (chrome.runtime.lastError) {
@@ -56,6 +87,7 @@ class dUtils {
       });
     });
   }
+
 
   async loadOptions(){
     this.getData("options").then((options)=>{this.options = options != null ? options : this.options})
@@ -1269,9 +1301,9 @@ async function onStorageChanged(changes, area){
         break;
       case "staged_tweets":
         // process tweets
-        wiz.loadTweets(newVal).then(()=>{
-          updateWithSearch(ui.current_query)
-        })
+        // wiz.loadTweets(newVal).then(()=>{
+        //   updateWithSearch(ui.current_query)
+        // })
         break;
       default:
         break;
@@ -1292,12 +1324,16 @@ async function onMessage(m) {
       wiz.mid_request = false
       // wiz.loadTweets(true)
       // wiz.db_sync = true
+      let newVal = await dutils.getData("staged_tweets")
+      wiz.loadTweets(newVal).then(()=>{
+        updateWithSearch(ui.current_query)
+      })
       break;
     case "storage-clear":
       //let sync_message = `Holding ${meta.count} tweets. \n Last updated ${(new Date(meta.since_time)).toLocaleString()}`
       wiz.clearTweets()
       //after clear, automatically get timeline.
-      // dutils.msgBG({type:"query", query_type: "timeline"})
+      dutils.msgBG({type:"query", query_type: "timeline"})
       break;
     case "tab-activate":
       wutils.current_url = m.url

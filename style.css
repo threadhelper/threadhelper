@@ -145,6 +145,7 @@
 .suggTitle{
   color: var(--main-txt-color);
   margin: 0;
+  font-weight: 900;
 }
 
 .suggestionBox{

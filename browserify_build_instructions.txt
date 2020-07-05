@@ -1,0 +1,6 @@
+browserify bgImports.js > bundleBG.js
+browserify csImports.js > bundleCS.js
+
+don't forget to add the bundles to manifest.json
+
+git: I'm not including node_modules in git so do npm install in /js after cloning
