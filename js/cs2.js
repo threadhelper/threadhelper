@@ -660,7 +660,7 @@ class UI {
 
   //** Attach a mutation observer to a div */
   addLogger(div) {
-    console.log("adding logger")
+    // console.log("adding logger")
     var observer = new MutationObserver(onChange);
     wutils.observers.push(observer)
     observer.observe(div, { characterData: true, subtree: true, childList: true }); //attribute: true
@@ -734,7 +734,7 @@ class TweetWiz{
     this.has_timeline = false
     this.sync = false
     this.tweets_meta = {}
-    this.search_results = {}
+    this.search_results = []
 
     this.init()
     this.tweets_dict = {};
