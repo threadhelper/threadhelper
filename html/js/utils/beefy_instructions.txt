@@ -1,0 +1,23 @@
+
+
+High quality, free range JavaScript.
+A local development server that aims to make writing modular client-side apps with NPM + browserify fast and fun.
+
+INSTALL FROM
+NPMJS.ORG GITHUB
+How to use Beefy
+First, install node.js (this also installs NPM). Now you can install beefy and browserify:
+
+npm install beefy browserify -g
+The -g means you are installing both modules as global modules, which means you can use them directly from the command line. There is also a way to just bundle beefy along with your node module.
+
+Now make a file called foo.js that has some code in it that uses require() statements to load node modules, like this:
+
+var url = require('url')
+document.body.innerHTML = JSON.stringify(url.parse(window.location.href))
+Now start beefy:
+
+beefy foo.js
+This starts the beefy server on the default port of 9966. Open up localhost:9966 to see the code from foo.js running in your browser!
+
+Cow photo is from here

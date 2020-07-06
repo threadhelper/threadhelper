@@ -167,13 +167,10 @@ class wUtils {
   // Sets up a listener for the Recent Trends block. Listens to changes in document's children and checks if it's what we want.
   setUpTrendsListener(){
     // console.log("adding trends logger")
-    if(wutils.getMode() != "other"){
-      var observer = new MutationObserver((mutationRecords, me)=>{ui.onTrendsReady(mutationRecords, me)});
-      this.observers.push(observer)
-      observer.observe(document, { subtree: true, childList: true});
-      return observer
-    }
-    return
+    var observer = new MutationObserver((mutationRecords, me)=>{ui.onTrendsReady(mutationRecords, me)});
+    this.observers.push(observer)
+    observer.observe(document, { subtree: true, childList: true});
+    return observer
   }
 
   setUpSidebarRemovedListener(){
@@ -190,7 +187,7 @@ class wUtils {
     var divs = document.getElementsByClassName(ui.editorClass)
     for (var div of divs){
       if(e.target && div.contains(e.target)){
-        if(wutils.getMode() != "other") ui.composeBoxFocused(div)
+        ui.composeBoxFocused(div)
       }
     }
   }
@@ -199,7 +196,7 @@ class wUtils {
     var divs = document.getElementsByClassName(ui.editorClass)
     for (var div of divs){
       if(e.target && div.contains(e.target)){
-        if(wutils.getMode() != "other") ui.composeBoxUnfocused(div)
+        ui.composeBoxUnfocused(div)
       }
     }
   }
@@ -340,7 +337,7 @@ class UI {
 					c.remove()
         }
 				break;
-      default:
+        default:
     }
   }
 
@@ -358,7 +355,7 @@ class UI {
 
   handleNewSidebar(new_mode){
     switch(new_mode){
-      case 'other':
+      case 'others':
         break;
       case 'compose':
         if (!wutils.isSidebar('compose')){
@@ -679,13 +676,8 @@ async function onChange(mutationRecords) {
   // console.log("CHANGE! text is:", text, "; in element: ", mutationRecords[0].target);
   ui.current_query = text != null ? text : ''
   if(wutils.isSidebar('home') || wutils.isSidebar('compose')){
-    if(text == ''){
-      updateWithSearch(wiz.latest_tweets)
-      return
-    } else{
-      const next_tweet = text.replace(wutils.url_regex, "")
-      dutils.msgBG({type:"search", query: next_tweet})
-    }
+    const next_tweet = text.replace(wutils.url_regex, "")
+    dutils.msgBG({type:"search", query: next_tweet})
   }
 }
 
@@ -757,7 +749,7 @@ class TweetWiz{
     dutils.getData("sync").then((info)=>{this.sync = info != null ? info : false})
     dutils.getData("tweets_meta").then((meta)=>{this.tweets_meta = meta != null ? meta : this.tweets_meta})
     dutils.getData("tweets").then((tweets)=>{this.tweets_dict = tweets != null ? tweets : {}})
-    dutils.getData("latest_tweets").then((latest_tweets)=>{this.latest_tweets = latest_tweets != null ? latest_tweets : []})
+    dutils.getData("latest_tweets").then((latest_tweets)=>{this.latest_tweets = latest_tweets != null ? latest_tweets : {}})
   }
 
   // get sync(){
@@ -1114,7 +1106,6 @@ async function onStorageChanged(changes, area){
           ui.refreshSidebars()
 					break;
 				case "sync":
-          console.log("sync changed!")
           wiz.sync = newVal;
           ui.refreshSidebars()
 					break;

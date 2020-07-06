@@ -448,9 +448,8 @@ class Auth {
 // For all functions related to getting tweets
 class TweetWiz{
     constructor() {
-      this._inited = false
 			//request flow
-      this._midRequest = false
+      this.midRequest = false
 			this.interrupt_query = false
 			
 			//DB data
@@ -464,7 +463,7 @@ class TweetWiz{
 			this._has_archive = false
 			this._has_timeline = false
 			this._sync = false
-			// this._search_results= []
+			this._search_results= []
       this._latest_tweets = []
 
 			//profile pics
@@ -474,6 +473,7 @@ class TweetWiz{
     }
     
     init(){
+      this.sync = false
       utils.db.getAllKeys('tweets').then((ids)=>{this.tweet_ids = this.sortKeys(ids)})
       Promise.all(
       [utils.getData("user_info").then((info)=>{this.user_info = info != null ? info : {}}),
@@ -485,7 +485,7 @@ class TweetWiz{
       ]).then(
         ()=>{
           console.log("after wiz init")
-          wiz.inited = true
+          if (wiz.has_timeline) this.sync = true
         }
       )
 		}
@@ -510,35 +510,16 @@ class TweetWiz{
     set has_timeline(has_timeline){
       if (has_timeline != this._has_timeline)
         this._has_timeline = has_timeline
-        this.updateSync()
+        // this.sync = this.has_timeline
         utils.setData({has_timeline:this._has_timeline})
-    }
-    get inited(){return this._inited}
-    // set the value of our user  info, and if it's new, set it in storage
-    set inited(inited){
-      this._inited = inited
-      this.updateSync()
-    }
-    get midRequest(){return this._midRequest}
-    // set the value of our user  info, and if it's new, set it in storage
-    set midRequest(mid){
-      this._midRequest = mid
-      this.updateSync()
 		}
 		get sync(){return this._sync}
     // set the value of our user  info, and if it's new, set it in storage
     set sync(sync){
-      if (sync != this._sync){
+      if (sync != this._sync)
         this._sync = sync
-        console.log("setting sync to ", sync)
         utils.setData({sync:this._sync})
-      }
-    }
-    updateSync(){
-      this.sync = this.inited && nlp.inited && !this.midRequest && this.has_timeline && nlp.index != null
-      console.log("setting sync to ", this._sync)
-    }
-
+		}
     get tweets_meta(){return this._tweets_meta}
     set tweets_meta(tweets_meta){
       this._tweets_meta = tweets_meta
@@ -576,17 +557,14 @@ class TweetWiz{
     async setNewTweets(new_tweets){
       if(new_tweets != null){
         if(new_tweets.length <= 0) return
+        console.time("set new tweets")
         nlp.updateIndex(new_tweets)
-        console.time(`putDB`)
         utils.putDB(Object.values(new_tweets))
-        console.timeEnd(`putDB`)
-        console.time(`sort and getallkeys`)
-        utils.db.getAllKeys('tweets').then((keys)=>{
-          this.tweet_ids = this.sortKeys(keys)
-          this.tweets_meta = this.updateMeta(new_tweets)}
-          )
-        console.timeEnd(`sort and getallkeys`)
-        this.getLatestTweets().then((latest)=>{this.latest_tweets = latest})
+        let keys = Object.keys(new_tweets)
+        this.tweet_ids = this.sortKeys(await utils.db.getAllKeys('tweets'))
+        this.latest_tweets = await this.getLatestTweets()
+        this.tweets_meta = this.updateMeta(new_tweets)
+        console.time("set new tweets")
       }
     }
   
@@ -699,6 +677,7 @@ class TweetWiz{
     // Convert request results to tweets and save them
     // TODO  : deal with archive RTs which are listed as by the retweeter and not by the original author
     async saveTweets(res, query_type = "update"){
+      console.time("save tweets")
       // In the case of an update query, check whether the most recent result is newer than our current set of tweets as 
       // If res is new 
       res = res.filter(r=>{return !this.tweet_ids.includes(r.id_str)})
@@ -706,8 +685,6 @@ class TweetWiz{
         console.log("canceled save", query_type)
         return {}
       } 
-      console.time('toTweets')
-      // Takes relatively little time
       // Mapping results to tweets
       let arch = query_type == "archive"
       let toTweet = (t)=>{let tweet = wiz.toTweet(t,false); return [tweet.id, tweet]}
@@ -715,13 +692,11 @@ class TweetWiz{
       let new_tweet_list = arch ? res.map(archToTweet) : res.map(toTweet);
       let new_tweets = Object.fromEntries(new_tweet_list)
       let all_tweets = {}
-      console.timeEnd('toTweets')
-      
+  
       // Update staging area with new tweets and tell CS to load
-      console.time(`set new tweets ${Object.keys(new_tweets).length}`)
       this.setNewTweets(new_tweets)
-      console.timeEnd(`set new tweets ${Object.keys(new_tweets).length}`)
 
+      console.timeEnd("save tweets")
       return new_tweets
     }
     // removes duplicate tweets
@@ -1053,6 +1028,7 @@ class TweetWiz{
       do
       {
         console.time(`request`);
+        console.timeEnd(`request`);
         try
         {
           //console.log(`GET: ${vars.url}`)
@@ -1084,7 +1060,7 @@ class TweetWiz{
             // console.log("actual query results:", res);
           }
         }while(!vars.stop_condition(res,tweets))
-      console.timeEnd(`complete query`);
+      console.time(`complete query`);
       return tweets
     }
   
@@ -1096,6 +1072,7 @@ class TweetWiz{
     */
     async handleQuery(m, query_type = "update"){
       query_type = m.query_type
+      this.sync = false
       let tweets = {}
       let meta = {}
       // If mid request, stop now
@@ -1112,8 +1089,6 @@ class TweetWiz{
       if(query_type == "archive"){
         console.log("updating archive")
         utils.getData("temp_archive").then((temp_archive) => {
-          console.assert(temp_archive != null)
-          console.log("got temp_archive")
           console.time("out save tweets")
           wiz.saveTweets(temp_archive, query_type).then((_tweets)=>{
             // tweets = _tweets
@@ -1126,6 +1101,7 @@ class TweetWiz{
             utils.removeData(["temp_archive"])
             utils.msgCS({type: "tweets-done", query_type: query_type})
             console.log("archive done!")
+            if (wiz.has_timeline) wiz.sync = true
           })
           console.timeEnd("out save tweets")
         })
@@ -1137,9 +1113,11 @@ class TweetWiz{
           switch(query_type){
             case "timeline":
               this.has_timeline = true
+              wiz.sync = true
               console.log("SET HAS TIMELINE", wiz.tweets_meta)
               break;
             case "update":
+              wiz.sync = true
               break;
           }
         })
@@ -1151,7 +1129,6 @@ class TweetWiz{
 
 class NLP{
   constructor(){
-    this._inited = false
     this.tweet_fields = [
       "id",
       "text", 
@@ -1165,8 +1142,6 @@ class NLP{
     this._search_results = []
   }
 
-  
-
   get index(){return this._index}
   set index(_index){
     this._index = _index
@@ -1178,13 +1153,8 @@ class NLP{
     utils.setData({search_results: _search_results})
   }
 
-  get inited(){return this._inited}
-  set inited(inited){
-    this._inited = inited
-    wiz.updateSync()
-  }
-
   async init(){
+    wiz.sync = false
     let loaded = await this.loadIndex()
     if(loaded != null){
       this._index = loaded
@@ -1193,7 +1163,7 @@ class NLP{
       this.index = await this.makeIndex()
       console.log("Index initialized", this.index)
     }
-    this.inited = true
+    wiz.sync = true
   }
 
   async loadIndex(){
@@ -1224,8 +1194,7 @@ class NLP{
   }
 
   async addToIndex(_tweets){
-    console.time(`add ${Object.keys(_tweets).length} To Index`)
-
+    let start = (new Date()).getTime()
     for (const [id, tweet] of Object.entries(_tweets)){
       var doc = {}
       for (var f of nlp.tweet_fields){
@@ -1234,8 +1203,8 @@ class NLP{
       doc["id"] = id
       this.index.addDoc(doc)
     }
-
-    console.timeEnd(`add ${Object.keys(_tweets).length} To Index`)
+    let end = (new Date()).getTime()
+    console.log(`Adding ${Object.keys(_tweets).length} to index took ${(end-start)/1000}s`)
     return this.index
   }
 
@@ -1298,21 +1267,23 @@ class NLP{
   }
 
   async search(query, n_tweets = 20){
-    if(wiz.tweet_ids.length <= 0 || !(this.index != null)) throw("searching before tweets loaded")
+    if(wiz.tweet_ids.length <= 0) throw("searching before tweets loaded")
 
-    
+    let start = (new Date()).getTime()
+    console.time(`Searching ${query}`);
+
     // If query's empty just return latest 
     // let latest = wiz.getLatest(wiz.tweets, n_tweets)
     if (query == ''){
       return wiz.latest_tweets
     } else{
-      console.time(`Searching ${query}`);
       let results = await this.getRelated(query, n_tweets)
       // if no results, get latest tweets
       // let related = results.length > 0 ? resultTweets(results) : wiz.latest_tweets
       let related = await this.resultToTweets(results,n_tweets)
       
       this.search_results = related
+      let end = (new Date()).getTime()
       console.timeEnd(`Searching ${query}`);
       return related
     }
@@ -1346,14 +1317,14 @@ async function onStorageChanged(changes, area){
 
 //** Handles messages sent from popup or content scripts */
 async function onMessage(m, sender) {
-    console.log("message received:", m);
+    //console.log("message received:", m);
     let auth_good = null
     switch (m.type) {
       case "cs-created":
         let tid = sender.tab.id
         utils.tabId = tid
-        if(!wiz.inited) wiz.init()
-        if(!nlp.inited) nlp.init()
+        wiz.init()
+        nlp.init()
         break;
   
       case "query":
@@ -1383,7 +1354,6 @@ async function onMessage(m, sender) {
       case "clear":
         utils.clearStorage().then(()=>{
           try{
-            console.log("reloading")
             chrome.tabs.reload(utils.tabId);
           } catch(e){
             console.log("couldn't reload twitter tab. None open?")
