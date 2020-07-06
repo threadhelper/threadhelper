@@ -321,11 +321,10 @@ class UI {
     // If we have an active composer, make a search (i.e. if we're writing)
     if (this.activeComposer){
       searchText = wutils.getTextField(this.activeComposer).textContent
-      searchText = searchText != null ? searchText : ''
-      dutils.msgBG({type:"search", query: searchText})
-      // console.log("searching for", searchText)
+      requestSearch(searchText)
+      console.log("searching for", searchText)
     } else{ //just update with latest tweets
-      // console.log("showing latest tweets", searchText)
+      console.log("showing latest tweets", searchText)
       let related = wiz.latest_tweets
       updateWithSearch(related)
       this.showConsoleMessage("Latest tweets:")
@@ -474,7 +473,8 @@ class UI {
     
     sidebar.appendChild(this.setUpLoadArchive())
     sidebar.appendChild(this.buildBoxHeader())
-    sidebar.appendChild(this.buildBoxConsole())
+
+    sidebar.appendChild(this.buildSecondDiv())
     return sidebar
   }
 
@@ -555,6 +555,56 @@ class UI {
     return headerDiv
   }
 
+  buildSecondDiv(){
+    let div = document.createElement('div')
+    div.setAttribute("class", "suggSecondDiv")
+    div.setAttribute("id", "suggSecondDiv")
+    div.appendChild(this.buildBoxConsole())
+    div.appendChild(this.buildBoxOptions())
+    return div
+  }
+//
+  //all checkboxes for now
+  buildBoxOptions(){
+    let div = document.createElement('div')
+    div.class = "suggOptions"
+    let onToggleRTs = (cb)=>{
+      let checked = cb.checked
+      console.log("toggled get retweets", cb)
+      dutils.getData("options").then((options)=>{
+        options = options != null ? options : {}
+        options.getRetweets = checked; 
+        dutils.setData({options:options}).then(()=>{
+          console.log("updated get retweets to",checked)
+        })
+      })
+    }
+    let options = {
+      toggleRTs: {
+        description: "RT",
+        onclick: onToggleRTs,
+      },
+    }
+    for(let [key, val] of Object.entries(options)){
+      let span = document.createElement('span')
+      span.id = key
+      span.class = "suggOption"
+      span.style = "display:flex; align-items:center"
+
+      let description = document.createElement('span')
+      description.innerHTML = val.description
+
+      let checkbox = document.createElement('input')
+      checkbox.type = "checkbox"
+      checkbox.checked = dutils.options.getRetweets
+      checkbox.onclick = ()=>{val.onclick(checkbox)}
+
+      span.appendChild(description)
+      span.appendChild(checkbox)
+      div.appendChild(span)
+    }
+    return div
+  }
   // Builds a display for notifications
   buildBoxConsole(){
     let consoleDiv = document.createElement('div')
@@ -677,14 +727,21 @@ class UI {
 async function onChange(mutationRecords) {
   const text = ui.getTextFromMutation(mutationRecords)
   // console.log("CHANGE! text is:", text, "; in element: ", mutationRecords[0].target);
+  requestSearch(text)
+  
+}
+
+async function requestSearch(text){
   ui.current_query = text != null ? text : ''
   if(wutils.isSidebar('home') || wutils.isSidebar('compose')){
-    if(text == ''){
+    let next_tweet = text.replace(wutils.url_regex, "")
+    next_tweet = next_tweet.trim()
+    if(next_tweet == ''){
       updateWithSearch(wiz.latest_tweets)
       return
     } else{
-      const next_tweet = text.replace(wutils.url_regex, "")
       dutils.msgBG({type:"search", query: next_tweet})
+      return
     }
   }
 }
@@ -1102,6 +1159,7 @@ async function onStorageChanged(changes, area){
       switch(item){
         case "options": 
           dutils.options = newVal != null ? newVal : dutils.options;
+          // ui.refreshSidebars()
         case "user_info":
           wiz.user_info = newVal;
           break;
@@ -1120,12 +1178,14 @@ async function onStorageChanged(changes, area){
 					break;
 				case "search_results":
           wiz.search_results = newVal;
-          // console.log("search results: ",newVal)
+          console.log("search results: ",newVal)
           ui.showConsoleMessage("Found these tweets")
           updateWithSearch(newVal)
           break;
         case "latest_tweets":
+          console.log("new latest tweets", newVal)
           wiz.latest_tweets = newVal
+          ui.refreshSidebars()
           break;
         case "tweets_meta":
           // wiz.tweets_meta = newVal != null ? newVal : wiz.makeTweetsMeta(null)
@@ -1154,6 +1214,9 @@ async function onStorageChanged(changes, area){
       case "tab-change-url":
 				ui.onTabChangeUrl(m.url)
         break;  
+      case "toggled-retweets":
+        ui.refreshSidebars()
+        break;
     }
     return true
   }

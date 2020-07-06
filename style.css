@@ -148,6 +148,21 @@
   font-weight: 900;
 }
 
+.suggSecondDiv{
+  display:flex; 
+  justify-content:space-between;
+  align-items:center;
+}
+
+.suggOptions{
+
+}
+
+.suggOption{
+  display:flex; 
+  align-items:center
+}
+
 .suggestionBox{
   background-color: var(--main-bg-color);
   color: var(--main-txt-color);

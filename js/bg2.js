@@ -8,7 +8,7 @@ class Utils {
   constructor() {
     this.db = {}
     this.openDB()
-    this.options = {getRetweets: true, getArchive: false}
+    this._options = {getRetweets: true, getArchive: false}
     this.loadOptions()
     this._tabId = null
     this.twitter_url = /https?:\/\/(www\.)?twitter.com\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/
@@ -43,16 +43,26 @@ class Utils {
     this.db = db
     return db
   }
-  // get options(){
-  //   return this._options
-  // }
-  // set options(options){this._options = options}
   
   
   get tabId(){return this._tabId}
   set tabId(tabId){
     this._tabId = tabId}
   
+  get options(){return this._options}
+  set options(options){
+    if(this._options.getRetweets != options.getRetweets){
+      console.log("option getRetweets changed", options.getRetweets)
+      wiz.getLatestTweets().then((latest)=>{
+        wiz.latest_tweets = latest
+        utils.msgCS({type:"toggled-retweets"})
+      })
+
+    }
+    this._options = Object.assign(this._options,options)
+  }
+  
+
   onTabActivated(activeInfo){
     chrome.tabs.get(activeInfo.tabId, function(tab){
       //console.log("tab", tab)
@@ -183,7 +193,7 @@ class Utils {
   //clears storage of tweets, tweets meta info, and auth
   async clearStorage(){
     utils.db.clear('tweets')
-    this.removeData(["tweets","tweets_meta","latest_tweets","search_results", "index","index_ids","has_timeline","has_archive","sync"]).then(()=>{
+    this.removeData(["tweets","tweets_meta","latest_tweets","search_results","index","has_timeline","has_archive","sync"]).then(()=>{
         this.msgCS({type: "storage-clear"}) 
         wiz.tweets_meta = wiz.makeTweetsMeta(null)
       }
@@ -228,6 +238,7 @@ class Utils {
       this.options = opts != null ? opts : this.options
     })
   }
+
 
   // Message content script  
   async msgCS(m){
@@ -474,9 +485,10 @@ class TweetWiz{
     }
     
     init(){
-      utils.db.getAllKeys('tweets').then((ids)=>{this.tweet_ids = this.sortKeys(ids)})
       Promise.all(
-      [utils.getData("user_info").then((info)=>{this.user_info = info != null ? info : {}}),
+      [
+      utils.db.getAllKeys('tweets').then((ids)=>{this.tweet_ids = this.sortKeys(ids)}),
+      utils.getData("user_info").then((info)=>{this.user_info = info != null ? info : {}}),
       utils.getData("has_archive").then((info)=>{this.has_archive = info != null ? info : false}),
       utils.getData("has_timeline").then((info)=>{this.has_timeline = info != null ? info : false}),
       utils.getData("tweets_meta").then((meta)=>{this.tweets_meta = meta != null ? meta : this.makeTweetsMeta(null)}),
@@ -530,13 +542,12 @@ class TweetWiz{
     set sync(sync){
       if (sync != this._sync){
         this._sync = sync
-        console.log("setting sync to ", sync)
         utils.setData({sync:this._sync})
       }
     }
     updateSync(){
-      this.sync = this.inited && nlp.inited && !this.midRequest && this.has_timeline && nlp.index != null
-      console.log("setting sync to ", this._sync)
+      this.sync = wiz.inited && nlp.inited && !this.midRequest && this.has_timeline && nlp.index != null
+      console.trace("updating sync to ", this.sync)
     }
 
     get tweets_meta(){return this._tweets_meta}
@@ -551,26 +562,7 @@ class TweetWiz{
       utils.setData({latest_tweets:this.latest_tweets}).then(()=>{
       })
     }
-    // get tweets(){return this.tweets_dict}
-    // // set the value of our tweet_dict/database, and if it's new, set it in storage
-    // set tweets(_tweets){
-    //   // console.log("setting", _tweets)
-    //   if (_tweets  != null ){
-    //     if (_tweets != this.tweets_dict){
-    //       this.tweets_dict = _tweets
-    //       this.tweets_meta = this.makeTweetsMeta(this.tweets_dict)
-    //       this.tweet_ids = Object.keys(this.tweets_dict)
-    //       this.latest_tweets = this.getLatest(this.tweets)
-    //       utils.setData({tweets:this.tweets}).then(()=>{})
-          
-    //     }else{
-    //       console.log("nothing to add to ", Object.keys(this.tweets_dict).length)
-    //     }
-    //   }
-    //   else{
-    //     throw("TRYING SETTING WIZ TWEETS WITH UNDEFINED VALUE")
-    //   }
-    // }
+
 
 
     async setNewTweets(new_tweets){
@@ -599,9 +591,15 @@ class TweetWiz{
       // let keys = utils.db.getAllKeys('tweets')
       let keys = this.tweet_ids
       let latest = []
-      for (let k of keys.slice(0, n_tweets)){
+
+      for (let k of keys){
         let t = await utils.getDB(k)
-        latest.push(t)
+        if(utils.options.getRetweets){
+          latest.push(t)
+        } else{
+          if(t.username == this.user_info.screen_name) latest.push(t)
+        }
+        if(latest.length >= n_tweets) break;
       }
       // let latest = (keys.slice(0, n_tweets).map(k=>{return await utils.getDB(k)}))
       return latest
@@ -1162,6 +1160,8 @@ class NLP{
       "mentions"
     ]
     this._index = null; 
+    this._midSearch = false
+    this._nextSearch = null
     this._search_results = []
   }
 
@@ -1182,6 +1182,28 @@ class NLP{
   set inited(inited){
     this._inited = inited
     wiz.updateSync()
+  }
+
+  // when we leave a search, we check for the next one
+  get midSearch(){return this._midSearch}
+  set midSearch(midSearch){
+    this._midSearch = midSearch
+    if(!midSearch){
+      if(this.nextSearch != null){
+        this.search(this.nextSearch)
+      }
+    }
+  }
+
+  // if we're not searching, do that. if we're mid search, save the next search and it will be done asap
+  get nextSearch(){return this._nextSearch}
+  set nextSearch(nextSearch){
+    if(!this.midSearch && this.nextSearch != null){
+      this.search(nextSearch)
+      this._nextSearch = null
+    }else{
+      this._nextSearch = nextSearch
+    }
   }
 
   async init(){
@@ -1239,27 +1261,8 @@ class NLP{
     return this.index
   }
 
-  // filter to get only tweets by user
-  filterUserTweetsObj(ts){
-    // console.log("filtering out retweets", ts)
-    let key_vals = Object.entries(ts)
-
-    const _filtered = Object.fromEntries(
-      key_vals.filter(key_val => {return key_val[1].username == wiz.user_info.screen_name})
-    )
-    return _filtered
-  }
-
-  // filter to get only tweets by user
-  filterUserTweets(ts){
-    // console.log("filtering out retweets", ts)
-    const _filtered = ts.filter(t => {return t.username == wiz.user_info.screen_name})
-    return _filtered
-  }
-    
-
   getNewTweets(old_t,new_t){
-    //console.log("getnewtweets")
+    // console.log("getnewtweets")
     let old_keys = old_t != null ? Object.keys(old_t) : []
     let new_key_vals = Object.entries(new_t)
     const _filtered = Object.fromEntries(
@@ -1284,27 +1287,43 @@ class NLP{
       boolean: "OR",
       expand: true
     });
-    // console.log("bg search results:", results)
+    console.log("bg search results:", results)
     return results
   }
 
   async resultToTweets(results, n_tweets){
-    // if (utils.options.getRetweets) results = this.filterUserTweets(results)
+
     let related = []
-    for(let res of results.slice(0,n_tweets)){
-      related.push(await utils.getDB(res.ref,'tweets'))
-    }
+
+    for (let res of results){
+      if(utils.options.getRetweets){
+        related.push(await utils.getDB(res.ref,'tweets'))
+      } else{
+        if(res.doc.username == wiz.user_info.screen_name) related.push(await utils.getDB(res.ref,'tweets'))
+      }
+      if(related.length >= n_tweets) break;
+    }    
+    
+    console.log("results after filtering", related)
+    // for(let res of results.slice(0,n_tweets)){
+    //   related.push(await utils.getDB(res.ref,'tweets'))
+    // }
     return related
   }
 
-  async search(query, n_tweets = 20){
+  async search(_query, n_tweets = 20){
+    this.midSearch = true
+    let query =  _query.repeat(1) 
+    this.nextSearch = null
+    let return_related = []
     if(wiz.tweet_ids.length <= 0 || !(this.index != null)) throw("searching before tweets loaded")
 
     
     // If query's empty just return latest 
     // let latest = wiz.getLatest(wiz.tweets, n_tweets)
     if (query == ''){
-      return wiz.latest_tweets
+
+      return_related = wiz.latest_tweets
     } else{
       console.time(`Searching ${query}`);
       let results = await this.getRelated(query, n_tweets)
@@ -1314,8 +1333,10 @@ class NLP{
       
       this.search_results = related
       console.timeEnd(`Searching ${query}`);
-      return related
+      return_related = related
     }
+    this.midSearch = false
+    return return_related
   }
 
 }
@@ -1335,8 +1356,9 @@ async function onStorageChanged(changes, area){
       if (oldVal == newVal) break;
       switch(item){
         case "options":
+          console.log("options changed")
           utils.options = newVal != null ? newVal : utils.options;
-          chrome.tabs.reload(utils.tabId);
+          // chrome.tabs.reload(utils.tabId);
           break;
         default:
           break;
@@ -1369,7 +1391,8 @@ async function onMessage(m, sender) {
         break;
       
       case "search":
-        if(wiz.sync) nlp.search(m.query)
+        nlp.nextSearch = m.query
+        // if(wiz.sync) nlp.search(m.query)
         break;
       
       case "interrupt-query":

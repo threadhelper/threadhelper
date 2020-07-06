@@ -244,9 +244,6 @@ function setUpListeners(){
         new_options[ch.id] = ch.checked
       }
       chrome.storage.local.set({options: new_options, options_meta: options_meta}, function() {
-        const message = {
-          type: "saveOptions",
-        };
         chrome.runtime.sendMessage(message);
         chrome.storage.local.get(["options"], r =>{
           console.log('set ', r.options);});
