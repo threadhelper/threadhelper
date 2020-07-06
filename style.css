@@ -145,6 +145,22 @@
 .suggTitle{
   color: var(--main-txt-color);
   margin: 0;
+  font-weight: 900;
+}
+
+.suggSecondDiv{
+  display:flex; 
+  justify-content:space-between;
+  align-items:center;
+}
+
+.suggOptions{
+
+}
+
+.suggOption{
+  display:flex; 
+  align-items:center
 }
 
 .suggestionBox{

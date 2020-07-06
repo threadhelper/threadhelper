@@ -14,7 +14,7 @@
   "content_scripts": [
     {
       "matches": ["https://*.twitter.com/*"],
-      "js": ["js/jquery-3.4.1.slim.js", "js/nlp.js", "js/elasticlunr.js","js/FileSaver.js", "js/contentScript.js"],
+      "js": ["js/jquery-3.4.1.slim.js", "js/bundleCS.js","js/cs2.js"],
       "css": ["style.css"]
     }
   ],
@@ -26,7 +26,7 @@
   },
   "manifest_version": 2,
   "background": {
-    "scripts": ["js/background.js"]
+    "scripts": [ "js/bundleBG.js", "js/elasticlunr.js", "js/bg2.js", "js/tweet.js"]
   },
   "page_action": {
     "default_title": "Thread helper",
