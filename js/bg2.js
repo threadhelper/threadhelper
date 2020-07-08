@@ -21,22 +21,28 @@ class Utils {
         console.log("version ",db.oldVersion)
         let oldV = db.oldVersion != null ? db.oldVersion : 0
         switch (oldV) {
-            case 0:
-                // Create a store of objects
-                const store = db.createObjectStore('tweets', {
-                    // The 'id' property of the object will be the key.
-                    keyPath: 'id',
-                    // If it isn't explicitly set, create a value by auto incrementing.
-                    // autoIncrement: true,
-                });
-                // Create an index on the 'date' property of the objects.
-                store.createIndex('time', 'time');
-              // a placeholder case so that the switch block will
-              // execute when the database is first created
-              // (oldVersion is 0)
-              break;
-            default:
-              break;
+          case 0:
+            // Create a store of objects
+            const store = db.createObjectStore('tweets', {
+              // The 'id' property of the object will be the key.
+              keyPath: 'id',
+              // If it isn't explicitly set, create a value by auto incrementing.
+              // autoIncrement: true,
+            });
+            const misc = db.createObjectStore('misc', {
+              // The 'id' property of the object will be the key.
+              // keyPath: 'key',
+              // If it isn't explicitly set, create a value by auto incrementing.
+              // autoIncrement: true,
+            });
+            // Create an index on the 'date' property of the objects.
+            store.createIndex('time', 'time');
+            // a placeholder case so that the switch block will
+            // execute when the database is first created
+            // (oldVersion is 0)
+            break;
+          default:
+            break;
           }
       },
     });
@@ -144,7 +150,7 @@ class Utils {
         store.put(item)
       }
       promises.push(tx.done)
-      return Promise.all(promises)        
+      return await Promise.all(promises)        
     } catch(e){
       console.log(promises)
       throw(e)
@@ -566,19 +572,21 @@ class TweetWiz{
 
 
     async setNewTweets(new_tweets){
+      console.log("setting new tweets ", new_tweets)
       if(new_tweets != null){
         if(new_tweets.length <= 0) return
+        console.time(`updateIndex`)
         nlp.updateIndex(new_tweets)
+        console.timeEnd(`updateIndex`)
         console.time(`putDB`)
-        utils.putDB(Object.values(new_tweets))
+        await utils.putDB(Object.values(new_tweets))
         console.timeEnd(`putDB`)
         console.time(`sort and getallkeys`)
-        utils.db.getAllKeys('tweets').then((keys)=>{
-          this.tweet_ids = this.sortKeys(keys)
-          this.tweets_meta = this.updateMeta(new_tweets)}
-          )
+        let keys = await utils.db.getAllKeys('tweets')
+        this.tweet_ids = this.sortKeys(keys)
+        this.tweets_meta = this.updateMeta(new_tweets)
+        this.latest_tweets = await this.getLatestTweets()
         console.timeEnd(`sort and getallkeys`)
-        this.getLatestTweets().then((latest)=>{this.latest_tweets = latest})
       }
     }
   
@@ -921,7 +929,7 @@ class TweetWiz{
     } catch(e){
       console.log("error in totweet", e)
       console.log("error in totweet", entry)
-      return {}
+      throw(e)
     }
       return tweet
     }
@@ -959,7 +967,7 @@ class TweetWiz{
         }
       };
       var username = this.user_info.screen_name
-      var tweets = {}
+      var received_count = 0
       var users = []
       let res = []
       let url = ''
@@ -974,15 +982,16 @@ class TweetWiz{
         update: (vars)=>{
           vars.since = meta.since_id != null ? `&since_id=${meta.since_id}` : ''
           vars.since_id = 0
-          vars.url = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}${vars.since}&count=${count}&include_rts=${include_rts}`
-          vars.stop_condition = (res,tweets) => {return Object.keys(tweets).length >= count || !(res != null) || res.length < 1 || stop}
+          vars.url = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}&count=${count}${vars.since}&include_rts=${include_rts}`
+          vars.stop_condition = (res,received_count) => {return true ||received_count >= count || !(res != null) || res.length <= 1 || stop}
           return vars
         },
         timeline: (vars)=>{
-          vars.max = meta.max_id != null ? `&since_id=${meta.max_id}` : ''
+          // vars.max = meta.max_id != null ? `&since_id=${meta.max_id}` : ''
+          vars.max = meta.max_id != null ? `&max_id=${meta.max_id}` : ''
           vars.max_id = meta.max_id == null ? -1 : meta.max_id;
           vars.url = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}${vars.max}&count=${count}&include_rts=${include_rts}`
-          vars.stop_condition = (res,tweets) => {return Object.keys(tweets).length >= count || !(res != null) || res.length < 1 || stop}
+          vars.stop_condition = (res,received_count) => {return received_count >= count || !(res != null) || res.length < 1 || stop}
           return vars
         },
         history: (vars)=>{
@@ -1014,7 +1023,7 @@ class TweetWiz{
           } else{
             stop = true
           }
-          vars.url = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}&count=${count}&since=${vars.since_id}&include_rts=${include_rts}`    
+          vars.url = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}&count=${count}&since_id=${vars.since_id}&include_rts=${include_rts}`    
           return vars
         },
         timeline: async (vars)=>{
@@ -1050,11 +1059,12 @@ class TweetWiz{
       // Query loop
       do
       {
-        console.time(`request`);
         try
         {
-          //console.log(`GET: ${vars.url}`)
+          console.log(`GET: ${vars.url}`)
+            console.time(`request`);
             res = await fetch(vars.url,init).then(x => x.json())
+            console.timeEnd(`request`);
           }
           catch(err){
             TweetWiz.handleError(err)
@@ -1066,24 +1076,27 @@ class TweetWiz{
           } else{ 
             //modifies new_tweets
             try{
+              console.time(`treat request`);
+              received_count +=  res.length
               vars = await treat[query_type](vars)
+              console.log(res)
+              console.timeEnd(`treat request`);
             } catch(e){
               console.log(res)
               throw(e)
             }
-            console.timeEnd(`request`);
             // console.log(res)
             console.time("out save tweets")
             // new_tweets = await wiz.saveTweets(res, query_type);
-            new_tweets = wiz.saveTweets(res, query_type);
+            wiz.saveTweets(res, query_type);
             console.timeEnd("out save tweets")
             // tweets = Object.assign(tweets,new_tweets)
             // console.log(`received total ${tweets.length} tweets`);
             // console.log("actual query results:", res);
           }
-        }while(!vars.stop_condition(res,tweets))
+        }while(!vars.stop_condition(res,received_count))
       console.timeEnd(`complete query`);
-      return tweets
+      return 
     }
   
     /* Updates tweets in 4 different ways
@@ -1092,20 +1105,20 @@ class TweetWiz{
     history: searches every date since you created your account for your tweets
     archive: loads from local downloaded twitter archive
     */
-    async handleQuery(m, query_type = "update"){
-      query_type = m.query_type
-      let tweets = {}
-      let meta = {}
+    async handleQuery(query_type = "update"){
+      query_type = query_type
+      // let tweets = {}
+      // let meta = {}
       // If mid request, stop now
-      if (this.midRequest){ return tweets }
-      this.midRequest = true
+      if (wiz.midRequest || !wiz.inited || !nlp.inited){ return }
+      wiz.midRequest = true
       console.log("update requested", query_type)
   
       // If metadata is null or undefined, get a fresh canvas
-      if (!(this.tweets_meta != null))
-        this.tweets_meta = this.makeTweetsMeta(null)
+      if (!(wiz.tweets_meta != null))
+        wiz.tweets_meta = wiz.makeTweetsMeta(null)
       // If we were asked for an update but don't have timeline, get timeline instead
-      if(query_type == "update" && !this.has_timeline) query_type = "timeline"
+      if(query_type == "update" && !wiz.has_timeline) query_type = "timeline"
       //If we were asked for the archive
       if(query_type == "archive"){
         console.log("updating archive")
@@ -1128,13 +1141,13 @@ class TweetWiz{
           console.timeEnd("out save tweets")
         })
       } else{
-        this.query(auth, this.tweets_meta, query_type).then((_tweets)=>{
-          tweets = _tweets
+        wiz.query(auth, wiz.tweets_meta, query_type).then((_tweets)=>{
+          // tweets = _tweets
           utils.msgCS({type: "tweets-done", query_type: query_type})
           wiz.midRequest = false
           switch(query_type){
             case "timeline":
-              this.has_timeline = true
+              wiz.has_timeline = true
               console.log("SET HAS TIMELINE", wiz.tweets_meta)
               break;
             case "update":
@@ -1142,7 +1155,7 @@ class TweetWiz{
           }
         })
       }
-      return tweets
+      return
     }
         
 }
@@ -1169,8 +1182,11 @@ class NLP{
 
   get index(){return this._index}
   set index(_index){
+    console.time("setting index")
     this._index = _index
-    utils.setData({index: _index.toJSON()})
+    worker.postMessage({type:'setIndex', index_json:_index.toJSON()})
+    // utils.setData({index: _index.toJSON()}).then(()=>{console.timeEnd("setting index")})
+    
   }
   get search_results(){return this._search_results}
   set search_results(_search_results){
@@ -1188,8 +1204,9 @@ class NLP{
   get midSearch(){return this._midSearch}
   set midSearch(midSearch){
     this._midSearch = midSearch
-    if(!midSearch){
+    if(!midSearch && this.inited){
       if(this.nextSearch != null){
+        console.log("finished search, picking back up ", this.nextSearch)
         this.search(this.nextSearch)
       }
     }
@@ -1198,31 +1215,47 @@ class NLP{
   // if we're not searching, do that. if we're mid search, save the next search and it will be done asap
   get nextSearch(){return this._nextSearch}
   set nextSearch(nextSearch){
-    if(!this.midSearch && this.nextSearch != null){
-      this.search(nextSearch)
+    if(this.inited && !this.midSearch && this.nextSearch != null){
+      console.log("searching for ", nextSearch)
       this._nextSearch = null
+      this.search(nextSearch)
     }else{
+      console.log("waiting. busy for ", nextSearch)
       this._nextSearch = nextSearch
     }
   }
 
+
   async init(){
-    let loaded = await this.loadIndex()
-    if(loaded != null){
-      this._index = loaded
-      console.log("Index loaded", this.index)
-    } else{
-      this.index = await this.makeIndex()
-      console.log("Index initialized", this.index)
-    }
-    this.inited = true
+    worker.postMessage({type:'getIndex'})
+    // let loaded = await this.loadIndex()
+    // if(loaded != null){
+    //   this._index = loaded
+    //   console.log("Index loaded", this.index)
+    // } else{
+    //   this.index = await this.makeIndex()
+    //   console.log("Index initialized", this.index)
+    // }
+    // this.inited = true
   }
 
-  async loadIndex(){
-    let index_json = await utils.getData("index")
-    let _index = index_json != null ? elasticlunr.Index.load(index_json) : null
-    return _index
+  async onIndexLoaded(index_json){
+    let loaded =  index_json != null ? elasticlunr.Index.load(index_json) : null
+    if(loaded != null){
+      nlp._index = loaded
+      console.log("Index loaded", nlp.index)
+    } else{
+      nlp.index = await nlp.makeIndex()
+      console.log("Index initialized", nlp.index)
+    }
+    nlp.inited = true
   }
+
+  // async loadIndex(){
+  //   let index_json = await utils.getData("index")
+  //   let _index = index_json != null ? elasticlunr.Index.load(index_json) : null
+  //   return _index
+  // }
 
   async updateIndex(tweets){
     if (this.index == null){
@@ -1256,7 +1289,6 @@ class NLP{
       doc["id"] = id
       this.index.addDoc(doc)
     }
-
     console.timeEnd(`add ${Object.keys(_tweets).length} To Index`)
     return this.index
   }
@@ -1287,7 +1319,7 @@ class NLP{
       boolean: "OR",
       expand: true
     });
-    console.log("bg search results:", results)
+    // console.log("bg search results:", results)
     return results
   }
 
@@ -1304,7 +1336,7 @@ class NLP{
       if(related.length >= n_tweets) break;
     }    
     
-    console.log("results after filtering", related)
+    // console.log("results after filtering", related)
     // for(let res of results.slice(0,n_tweets)){
     //   related.push(await utils.getDB(res.ref,'tweets'))
     // }
@@ -1312,9 +1344,9 @@ class NLP{
   }
 
   async search(_query, n_tweets = 20){
-    this.midSearch = true
+    nlp.midSearch = true
     let query =  _query.repeat(1) 
-    this.nextSearch = null
+    nlp._nextSearch = null
     let return_related = []
     if(wiz.tweet_ids.length <= 0 || !(this.index != null)) throw("searching before tweets loaded")
 
@@ -1322,7 +1354,6 @@ class NLP{
     // If query's empty just return latest 
     // let latest = wiz.getLatest(wiz.tweets, n_tweets)
     if (query == ''){
-
       return_related = wiz.latest_tweets
     } else{
       console.time(`Searching ${query}`);
@@ -1331,11 +1362,12 @@ class NLP{
       // let related = results.length > 0 ? resultTweets(results) : wiz.latest_tweets
       let related = await this.resultToTweets(results,n_tweets)
       
-      this.search_results = related
       console.timeEnd(`Searching ${query}`);
       return_related = related
+      console.log("related",related)
     }
-    this.midSearch = false
+    nlp.midSearch = false
+    this.search_results = return_related
     return return_related
   }
 
@@ -1370,6 +1402,17 @@ async function onStorageChanged(changes, area){
 async function onMessage(m, sender) {
     console.log("message received:", m);
     let auth_good = null
+    let auth_wrapper = async function(func, arg){
+      auth_good = await auth.testAuth()
+      if(auth_good != null){
+        func(arg);
+      }
+      else{
+        //console.log("auth bad, loadin")
+        auth_good = await auth.getAuth()
+        if (auth_good) func(arg)
+      }
+    }
     switch (m.type) {
       case "cs-created":
         let tid = sender.tab.id
@@ -1379,20 +1422,15 @@ async function onMessage(m, sender) {
         break;
   
       case "query":
-        auth_good = await auth.testAuth()
-        if(auth_good != null){
-          wiz.handleQuery(m);
-        }
-        else{
-          //console.log("auth bad, loadin")
-          auth_good = await auth.getAuth()
-          if (auth_good) wiz.handleQuery(m)
-        }
+        auth_wrapper(wiz.handleQuery,m.query_type)
+        break;
+      
+      case "new-tweet":
+        auth_wrapper(wiz.handleQuery,'update')
         break;
       
       case "search":
         nlp.nextSearch = m.query
-        // if(wiz.sync) nlp.search(m.query)
         break;
       
       case "interrupt-query":
@@ -1419,8 +1457,32 @@ async function onMessage(m, sender) {
   }
    
 
-function main(){
+function initWorker(){
+  let worker = new Worker(chrome.extension.getURL('js/bundleWorker.js'));
+  worker.onmessage = onWorkerMessage
+  worker.onerror = onWorkerError
+  return worker
+}
 
+function onWorkerMessage(ev){
+  console.log("Messaged worker: ", ev.data)
+  switch(ev.data.type){
+    case 'getIndex':
+      console.log('got index', ev.data.index_json)
+      nlp.onIndexLoaded(ev.data.index_json)
+      break;
+    case 'setIndex':
+      console.log('set index', ev.data.index_json)
+      break;
+  }
+}
+
+function onWorkerError(err){
+  console.log(err.message, err.filename);
+  console.log(err);
+}
+
+function main(){
     chrome.runtime.onInstalled.addListener(utils.onInstalled);
     chrome.storage.onChanged.addListener(onStorageChanged);
     chrome.runtime.onMessage.addListener(onMessage);
@@ -1436,12 +1498,11 @@ function main(){
     // Basically every time we change tabs or the tab url is updated, update tabId and send msg to CS
     chrome.tabs.onActivated.addListener(utils.onTabActivated);
     chrome.tabs.onUpdated.addListener(utils.onTabUpdated);
-    
-    
   }
 
   let utils = new Utils();  
   let auth = new Auth();  
   let wiz = new TweetWiz();  
-  let nlp = new NLP();  
+  let nlp = new NLP();
+  let worker = initWorker()
   main()
