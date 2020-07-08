@@ -423,6 +423,7 @@ div.suggestionBox::-webkit-scrollbar-thumb:hover {
   display: flex;
   flex-direction: column;
   flex-grow: 1;
+  min-width: 0;
 }
 
 .th-quote-content-main-media {

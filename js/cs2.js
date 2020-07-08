@@ -1079,7 +1079,7 @@ class Renderer {
         <div class="th-quote-content">
           ${minimedia}
           <div class="th-quote-content-main">
-            <div class="th-quote-content-main-text">${text}</div>
+            <div class="th-text">${text}</div>
             ${mainmedia}
           </div>
         </div>
