@@ -243,6 +243,7 @@ div.suggestionBox::-webkit-scrollbar-thumb:hover {
   flex-grow: 1;
   flex-basis: 0;
   display: flex;
+  min-width: 0;
 }
 
 .th-tweet {
@@ -304,7 +305,7 @@ div.suggestionBox::-webkit-scrollbar-thumb:hover {
 
 .th-header-time {
   color: var(--neutral-color);
-  flex: 1 0 auto;
+  flex: 0 0 auto;
 }
 
 .th-reply {
@@ -313,6 +314,8 @@ div.suggestionBox::-webkit-scrollbar-thumb:hover {
 
 .th-text {
   padding-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .th-media {
