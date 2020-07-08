@@ -732,11 +732,12 @@ async function onChange(mutationRecords) {
 }
 
 async function requestSearch(text){
-  ui.current_query = text != null ? text : ''
+  let current_query = text != null ? text : '' 
+  ui.current_query = current_query
   if(wutils.isSidebar('home') || wutils.isSidebar('compose')){
-    let next_tweet = text.replace(wutils.url_regex, "")
+    let next_tweet = current_query.replace(wutils.url_regex, "")
     next_tweet = next_tweet.trim()
-    if(next_tweet == ''){
+    if(next_tweet.length <= 0){
       updateWithSearch(wiz.latest_tweets)
       return
     } else{
@@ -801,10 +802,10 @@ class TweetWiz{
     this.tweets_meta = {}
     this.search_results = []
 
-    this.init()
     this.tweets_dict = {};
-
+    
     this.latest_tweets = []
+    this.init()
   }
 
   init(){
@@ -838,11 +839,8 @@ class TweetWiz{
 
   //called when a new tweet is posted. 
   handlePost(){
-    // this.sync = false  // this currently makes syncicon orange even if we don't post a tweet
-    // this.tweets_meta.has_timeline = false //only way bc currently setSyncStatus is based on has_tmieline rather than sync 
-    //asks BG for an update
-    wiz.askUpdate()
-    // setTimeout(2000, ()=>{dutils.msgBG(message)})
+    dutils.msgBG({type:"new-tweet"})
+    ui.refreshSidebars()
   }
 
   askUpdate(){
