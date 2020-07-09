@@ -316,6 +316,7 @@ div.suggestionBox::-webkit-scrollbar-thumb:hover {
   padding-top: 2px;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: pre-wrap;
 }
 
 .th-media {
