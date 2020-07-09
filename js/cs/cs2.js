@@ -760,9 +760,13 @@ async function updateWithSearch(related){
       related = wiz.latest_tweets
       ui.showConsoleMessage("None related. Latest tweets:")
     }
-    try{ren.renderTweets([...new Set(related)])} catch(e){
-      console.log("updating with search ",related)
-      throw(e)
+    if (related.length > 0){
+      // maybe we should throw error instead of just filtering
+      related = related.filter(x=>{return x != null})
+      try{ren.renderTweets([...new Set(related)])} catch(e){
+        console.log("updating with search ",related)
+        throw(e)
+      }
     }
   }
   // if(!ui.ready()) return

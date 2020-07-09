@@ -1,5 +1,6 @@
-browserify bgImports.js > bundleBG.js
-browserify csImports.js > bundleCS.js
+browserify js/bg/bgImports.js > js/bg/bundleBG.js
+browserify js/cs/csImports.js > js/cs/bundleCS.js
+browserify js/worker/worker.js > js/worker/bundleWorker.js
 
 don't forget to add the bundles to manifest.json
 
