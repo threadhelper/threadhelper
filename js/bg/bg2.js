@@ -1,5 +1,7 @@
-"use strict";
+// "use strict";
 
+// import Auth from './auth.js'
+// import idb from './bundleBG.js'
 // let idb = require('idb')
 // window.idb = require('idb')
 
@@ -7,13 +9,15 @@
 class Utils {
   constructor() {
     this.db = {}
-    this.openDB()
     this._options = {getRetweets: true, getArchive: false}
-    this.loadOptions()
     this._tabId = null
     this.twitter_url = /https?:\/\/(www\.)?twitter.com\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/
   }
 
+  async init(){
+    await this.openDB()
+    await this.loadOptions()
+  }
   async openDB(){
     console.log("OPENING DB")
     const db = await idb.openDB('ThreadHelper', 1, {
@@ -190,15 +194,20 @@ class Utils {
 
       
   async clearDB(){
-    let storeName = "tweets"
-    const tx = this.db.transaction(storeName, 'readwrite');
-    const store = tx.objectStore(storeName);
-    await store.clear();
-    await tx.done;
+    let storeNames = ["tweets", "misc"]
+    for (let storeName of storeNames){
+      const tx = this.db.transaction(storeName, 'readwrite');
+      const store = tx.objectStore(storeName);
+      await store.clear();
+      await tx.done;
+    }
   }
   //clears storage of tweets, tweets meta info, and auth
   async clearStorage(){
-    utils.db.clear('tweets')
+    // utils.db.clear('tweets')
+    this.clearDB().then(()=>{
+      nlp.index = nlp.makeIndex()
+    })
     this.removeData(["tweets","tweets_meta","latest_tweets","search_results","index","has_timeline","has_archive","sync"]).then(()=>{
         this.msgCS({type: "storage-clear"}) 
         wiz.tweets_meta = wiz.makeTweetsMeta(null)
@@ -309,157 +318,6 @@ class Utils {
 
 }
 
-
-/*
-testAuth: checks if it's null, makes a request about current user
-getAuth: load or reload page
-updateAuth: turns headers into auth
-*/
-class Auth {
-  constructor(csrfToken = null, authorization = null, since = null) {
-    this.csrfToken = csrfToken;
-    this.authorization = authorization;
-    this.since = since
-    
-  }
-  
-  isAuth(){
-    let auth = this;
-    return ! (typeof auth === 'undefined' || auth.authorization == null || auth.csrfToken == null || auth.authorization == 'null' ||auth.csrfToken == 'null')
-  }
-  // is auth something rather than null and friend?
-  isFresh(stale_thresh=1){
-    // auths aren't explicitly expired, but I still don't exactly know what to do when the current one is bad and reloading doesn't get you a new one
-    let auth = this;
-    let fresh = false;
-    if (!auth.isAuth()){
-      //console.log("auth does not exist", auth)
-      return false
-    }
-    else{ 
-      var now = new Date()
-      var msPerH = 60 * 60 * 1000; // Number of milliseconds per day
-      //var stale_thresh = 0.05 //3m
-      var hours_past = (now.getTime() - auth.since) / msPerH;
-      if(hours_past <= stale_thresh) {
-        fresh = true
-      }
-    }
-    return fresh
-  }
-  //make a trivial request to make sure auth works
-  //returns false if not good, and user info if good
-  async testAuth(){
-    let auth = this;
-    let _user_info = null;
-    if (this.isAuth()){
-      try
-      {
-        const init = {
-          credentials: "include",
-          headers: {
-            authorization: auth.authorization,
-            "x-csrf-token": auth.csrfToken
-          }
-        };
-        var uurl = `https://api.twitter.com/1.1/account/verify_credentials.json`
-        //console.log("testing auth getting user info")
-        let res = await fetch(uurl,init).then(x => x.json())//.catch(throw new Error("caught in fetch")) 
-        if(!Object.keys(res).includes("errors"))
-        {
-          utils.setData({user_info: res})
-          wiz.user_info = res
-          _user_info = res
-          //console.log("auth is good")
-        } else{
-          _user_info = null
-        }
-      }
-      catch(err){
-        console.log(res)
-        _user_info = null
-          //console.log("auth is stale")
-          //console.log(err)
-      }
-    }
-    return _user_info
-  }
-
-  setParams(auth){
-    this.csrfToken = auth.csrfToken;
-    this.authorization = auth.authorization;
-    this.since = auth.since
-  }
-
-  getParams(){
-    return {csrfToken: this.csrfToken, authorization: this.authorization, since: this.since}
-  }
-
-
-  // check if good, tries to load, and reloads page if failed (to get an auth)
-  // auths are produced when application cookie isn't there
-  // reload will only work if cookie's missing
-  // 
-  async getAuth() {
-    //try to get from storage first
-    let success = false
-    let auth = this
-    let fresh = false
-    fresh = await auth.testAuth()
-    // test if it's already a good auth
-    if (fresh){      success = true    }
-    // otherwise try to load from storage and test if it's good
-    else{
-      let data = await utils.getData("auth");
-      if (data != null && data.csrfToken != null && data.authorization != null) auth.setParams(data)
-
-      if (await auth.testAuth()){
-        success = true
-      }
-      // if it's not good, delete it from storage
-      else{
-        //console.log("couldn't or is bad, getting new auth")
-        chrome.storage.local.remove(["auth"],function(){
-          var error = chrome.runtime.lastError;
-            if (error) {
-                console.error(error);
-            }
-          //console.log("deleted stored auth")
-        })
-        //chrome.cookies.remove("auth_token")
-        //chrome.cookies.getAll({domain: "twitter.com"/*, name:"auth"*/}, (r)=>{console.log("cookies",r)})
-        success = false
-        //finally reload page to get a new one
-        this.getNew();
-      }
-    }
-    return success
-  }
-
-  // tries to reload page to get a new auth
-  async getNew(){
-    var reload_ok = confirm("I'll have to reload the page to get my authorization token :)");
-    if (reload_ok){
-      chrome.tabs.reload(utils.tabId);
-    }
-  }
-
-  // Gets auth and csrf token Called before every request. Store only if expired.
-  async updateAuth(csrfToken, authorization) {
-    let auth_params = {}
-
-    // gather auth params
-    auth_params.csrfToken = csrfToken;
-    auth_params.authorization = authorization;
-    var now = new Date()
-    auth_params.since = now.getTime()
-
-    // set em
-    this.setParams(auth_params)
-    utils.setData({ auth: auth_params})
-  }
-
-}
 
 
 // For all functions related to getting tweets
@@ -575,18 +433,16 @@ class TweetWiz{
       console.log("setting new tweets ", new_tweets)
       if(new_tweets != null){
         if(new_tweets.length <= 0) return
-        console.time(`updateIndex`)
+
         nlp.updateIndex(new_tweets)
-        console.timeEnd(`updateIndex`)
-        console.time(`putDB`)
+
         await utils.putDB(Object.values(new_tweets))
-        console.timeEnd(`putDB`)
-        console.time(`sort and getallkeys`)
+
         let keys = await utils.db.getAllKeys('tweets')
+
         this.tweet_ids = this.sortKeys(keys)
         this.tweets_meta = this.updateMeta(new_tweets)
         this.latest_tweets = await this.getLatestTweets()
-        console.timeEnd(`sort and getallkeys`)
       }
     }
   
@@ -702,27 +558,33 @@ class TweetWiz{
       )
       return _filtered
     }
-    // Convert request results to tweets and save them
-    // TODO  : deal with archive RTs which are listed as by the retweeter and not by the original author
-    async saveTweets(res, query_type = "update"){
-      // In the case of an update query, check whether the most recent result is newer than our current set of tweets as 
-      // If res is new 
-      res = res.filter(r=>{return !this.tweet_ids.includes(r.id_str)})
-      if (res.length < 1){
-        console.log("canceled save", query_type)
-        return {}
-      } 
-      console.time('toTweets')
-      // Takes relatively little time
-      // Mapping results to tweets
-      let arch = query_type == "archive"
+
+
+    toTweets(res, arch = false){
       let toTweet = (t)=>{let tweet = wiz.toTweet(t,false); return [tweet.id, tweet]}
       let archToTweet = (t)=>{let tweet = wiz.toTweet(t,true); return [tweet.id, tweet]}
       let new_tweet_list = arch ? res.map(archToTweet) : res.map(toTweet);
       let new_tweets = Object.fromEntries(new_tweet_list)
-      let all_tweets = {}
-      console.timeEnd('toTweets')
+      return new_tweets
       
+    }
+    // Convert request results to tweets and save them
+    // TODO  : deal with archive RTs which are listed as by the retweeter and not by the original author
+    async saveTweets(res, query_type = "update"){
+      // In the case of an update query, check whether the most recent result is newer than our current set of tweets as 
+      // Keep only new tweets and return empty otherwise
+      res = res.filter(r=>{return !this.tweet_ids.includes(r.id_str)})
+      if (res.length < 1){
+        console.log("no new tweets to save", query_type)
+        return {}
+      } 
+      
+      // Takes relatively little time
+      // Mapping results to tweets
+      console.time('toTweets')
+      let arch = query_type == "archive"
+      let new_tweets = wiz.toTweets(res, arch)
+      console.timeEnd('toTweets')
       // Update staging area with new tweets and tell CS to load
       console.time(`set new tweets ${Object.keys(new_tweets).length}`)
       this.setNewTweets(new_tweets)
@@ -829,10 +691,12 @@ class TweetWiz{
         media,
     }
     */
-    toTweet(entry, arch = false){
+    toTweet(entry, arch = false, user_info = null){
       let return_tweet = {}
       let tweet = {};
-  
+      user_info = user_info != null ? user_info : wiz.user_info
+      let user_queue = []
+      let pic_tweet_queue = []
   
       entry = arch ? entry.tweet : entry;
       
@@ -849,9 +713,9 @@ class TweetWiz{
             tweet.username = rt != null ? rt[1] : wiz.user_info.screen_name
             tweet.text = rt != null ? entry.full_text.replace(rt_tag,'') : entry.full_text
             // If I'm tweeting/retweeting myself
-            if(tweet.username == wiz.user_info.screen_name){
-              tweet.name = wiz.user_info.name
-              tweet.profile_image = wiz.user_info.profile_image_url_https
+            if(tweet.username == user_info.screen_name){
+              tweet.name = user_info.name
+              tweet.profile_image = user_info.profile_image_url_https
             } 
             // if I'm retweeting someone else
             else{
@@ -859,8 +723,8 @@ class TweetWiz{
               try{
                 let author = entry.entities.user_mentions.find(t=>{return t.screen_name.toLowerCase() == tweet.username.toLowerCase()})
                 tweet.name = author != null ? author.name : tweet.username
-                wiz.user_queue.push(author.id_str)
-                wiz.pic_tweet_queue[entry.id_str] = author.id_str
+                user_queue.push(author.id_str)
+                pic_tweet_queue[entry.id_str] = author.id_str
                 tweet.retweeted = true
               } catch(e){
                 console.log("ERRORRRRRRRR", e)
@@ -926,11 +790,13 @@ class TweetWiz{
             }
           }
         }
-    } catch(e){
-      console.log("error in totweet", e)
-      console.log("error in totweet", entry)
-      throw(e)
-    }
+      } catch(e){
+        console.log("error in totweet", e)
+        console.log("error in totweet", entry)
+        throw(e)
+      }
+      wiz.user_queue = user_queue
+      wiz.pic_tweet_queue = pic_tweet_queue
       return tweet
     }
       
@@ -951,7 +817,7 @@ class TweetWiz{
 
      
     //to call when we have tweets and wish to update just with the lates
-    async query(auth, meta = null, query_type = "update", count = 3000) {
+    async query(auth, meta = null, query_type = "update", count = 3000, batch_save = true) {
       console.time(`complete query`);
       //start by defining common variables
       this.interrupt_query = false
@@ -970,6 +836,7 @@ class TweetWiz{
       var received_count = 0
       var users = []
       let res = []
+      let all_res = []
       let url = ''
       let stop = false
   
@@ -1067,7 +934,7 @@ class TweetWiz{
             console.timeEnd(`request`);
           }
           catch(err){
-            TweetWiz.handleError(err)
+            wiz.handleError(err)
           }
           if (res.length <= 0 || res == null){
             //throw new Error("res is empty")
@@ -1085,18 +952,41 @@ class TweetWiz{
               console.log(res)
               throw(e)
             }
-            // console.log(res)
-            console.time("out save tweets")
+            all_res = all_res.concat(res)
             // new_tweets = await wiz.saveTweets(res, query_type);
-            wiz.saveTweets(res, query_type);
-            console.timeEnd("out save tweets")
+            if(!batch_save) {
+              console.time("out save tweets")
+              wiz.saveTweets(res, query_type);
+              console.timeEnd("out save tweets")
+            }
             // tweets = Object.assign(tweets,new_tweets)
             // console.log(`received total ${tweets.length} tweets`);
             // console.log("actual query results:", res);
           }
         }while(!vars.stop_condition(res,received_count))
+      if(batch_save) wiz.saveTweets(all_res, query_type);
       console.timeEnd(`complete query`);
       return 
+    }
+
+    async handleArchiveQuery(){
+      console.log("updating archive")
+        utils.getData("temp_archive").then((temp_archive) => {
+          console.assert(temp_archive != null)
+          console.log("got temp_archive")
+          console.time("out save tweets")
+          // worker.postMessage({type: 'handleQuery', temp_archive:temp_archive})
+          wiz.saveTweets(temp_archive, 'archive').then((_tweets)=>{
+            wiz.has_archive = true
+            console.log("SET HAS ARCHIVE", wiz.tweets_meta)
+            wiz.midRequest = false
+            // wiz.getProfilePics()
+            utils.removeData(["temp_archive"])
+            utils.msgCS({type: "tweets-done", query_type: 'archive'})
+            console.log("archive done!")
+          })
+          console.timeEnd("out save tweets")
+      })
     }
   
     /* Updates tweets in 4 different ways
@@ -1121,25 +1011,7 @@ class TweetWiz{
       if(query_type == "update" && !wiz.has_timeline) query_type = "timeline"
       //If we were asked for the archive
       if(query_type == "archive"){
-        console.log("updating archive")
-        utils.getData("temp_archive").then((temp_archive) => {
-          console.assert(temp_archive != null)
-          console.log("got temp_archive")
-          console.time("out save tweets")
-          wiz.saveTweets(temp_archive, query_type).then((_tweets)=>{
-            // tweets = _tweets
-            // set has_archive
-            wiz.has_archive = true
-            console.log("SET HAS ARCHIVE", wiz.tweets_meta)
-            // set has_archive
-            wiz.midRequest = false
-            // wiz.getProfilePics()
-            utils.removeData(["temp_archive"])
-            utils.msgCS({type: "tweets-done", query_type: query_type})
-            console.log("archive done!")
-          })
-          console.timeEnd("out save tweets")
-        })
+        wiz.handleArchiveQuery()
       } else{
         wiz.query(auth, wiz.tweets_meta, query_type).then((_tweets)=>{
           // tweets = _tweets
@@ -1240,9 +1112,9 @@ class NLP{
   }
 
   async onIndexLoaded(index_json){
-    let loaded =  index_json != null ? elasticlunr.Index.load(index_json) : null
-    if(loaded != null){
-      nlp._index = loaded
+    let loaded_index =  index_json != null ? elasticlunr.Index.load(index_json) : null
+    if(loaded_index != null){
+      nlp._index = loaded_index
       console.log("Index loaded", nlp.index)
     } else{
       nlp.index = await nlp.makeIndex()
@@ -1262,7 +1134,8 @@ class NLP{
       this.index = await this.makeIndex()
     } 
     // let new_tweets = this.getNewTweets({},tweets)
-    this.index = await this.addToIndex(tweets)
+    // this.index = await this.addToIndex(tweets)
+    this.addToIndex(tweets)
   }
 
   async makeIndex(){
@@ -1279,18 +1152,19 @@ class NLP{
   }
 
   async addToIndex(_tweets){
-    console.time(`add ${Object.keys(_tweets).length} To Index`)
+    worker.postMessage({type:'addToIndex', tweets: _tweets})
+    // console.time(`add ${Object.keys(_tweets).length} To Index`)
 
-    for (const [id, tweet] of Object.entries(_tweets)){
-      var doc = {}
-      for (var f of nlp.tweet_fields){
-        doc[f] = tweet[f]
-      }
-      doc["id"] = id
-      this.index.addDoc(doc)
-    }
-    console.timeEnd(`add ${Object.keys(_tweets).length} To Index`)
-    return this.index
+    // for (const [id, tweet] of Object.entries(_tweets)){
+    //   var doc = {}
+    //   for (var f of nlp.tweet_fields){
+    //     doc[f] = tweet[f]
+    //   }
+    //   doc["id"] = id
+    //   this.index.addDoc(doc)
+    // }
+    // console.timeEnd(`add ${Object.keys(_tweets).length} To Index`)
+    // return this.index
   }
 
   getNewTweets(old_t,new_t){
@@ -1405,12 +1279,16 @@ async function onMessage(m, sender) {
     let auth_wrapper = async function(func, arg){
       auth_good = await auth.testAuth()
       if(auth_good != null){
+        wiz.user_info = auth_good
         func(arg);
       }
       else{
         //console.log("auth bad, loadin")
         auth_good = await auth.getAuth()
-        if (auth_good) func(arg)
+        if (auth_good){
+          wiz.user_info = auth_good
+          func(arg)
+        }
       }
     }
     switch (m.type) {
@@ -1458,7 +1336,7 @@ async function onMessage(m, sender) {
    
 
 function initWorker(){
-  let worker = new Worker(chrome.extension.getURL('js/bundleWorker.js'));
+  let worker = new Worker(chrome.extension.getURL(workerPath));
   worker.onmessage = onWorkerMessage
   worker.onerror = onWorkerError
   return worker
@@ -1474,6 +1352,19 @@ function onWorkerMessage(ev){
     case 'setIndex':
       console.log('set index', ev.data.index_json)
       break;
+    case 'addToIndex':
+      nlp.onIndexLoaded(ev.data.index_json)
+      break;
+    case 'handleQuery':
+      wiz.has_archive = true
+      console.log("SET HAS ARCHIVE", wiz.tweets_meta)
+      wiz.midRequest = false
+      // wiz.getProfilePics()
+      utils.removeData(["temp_archive"])
+      utils.msgCS({type: "tweets-done", query_type: 'archive'})
+      console.log("archive done!")
+      break;
+    // case ''
   }
 }
 
@@ -1499,10 +1390,19 @@ function main(){
     chrome.tabs.onActivated.addListener(utils.onTabActivated);
     chrome.tabs.onUpdated.addListener(utils.onTabUpdated);
   }
+  
+  let workerPath = 'js/worker/bundleWorker.js'
 
-  let utils = new Utils();  
-  let auth = new Auth();  
-  let wiz = new TweetWiz();  
-  let nlp = new NLP();
-  let worker = initWorker()
+  let auth = {}
+  let wiz = {}
+  let nlp = {}
+  let worker = {}
+  let utils = new Utils()
+  utils.init().then(()=>{
+    auth = new Auth(utils);  
+    wiz = new TweetWiz();  
+    nlp = new NLP();
+    worker = initWorker()
+  })
+  
   main()
