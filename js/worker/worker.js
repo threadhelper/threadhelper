@@ -9,6 +9,7 @@ self.addEventListener('message', onMessage)
 
 async function onMessage(ev){
     let data = ev.data;
+    console.log("ON MESSAGE", ev)
     db = db != null ? db : await idb.openDB('ThreadHelper', 1)
     let index_json = ''
     console.log("WORKER GOT MESSAGE", ev.data)
@@ -38,21 +39,45 @@ async function onMessage(ev){
         case 'getProfilePics':
             console.log('(not) getting profile pics')
             break;
-        case 'addToIndex':
-            let tweets = data.tweets
+        case 'updateIndex':
+            let tweets_to_add = data.tweets_to_add
+            let ids_to_remove = data.ids_to_remove
             index_json = await getIndex(db)
             console.assert(index_json!=null)
-            let loaded_index = elasticlunr.Index.load(index_json)
-            let _index = await addToIndex(loaded_index, tweets)
+            let loaded_index = index_json != null ? elasticlunr.Index.load(index_json) : makeIndex()
+            let _index = await addToIndex(loaded_index, tweets_to_add)
+            _index = await removeFromIndex(_index, ids_to_remove)
             index_json = _index.toJSON()
             await setIndex(db, index_json)
-            self.postMessage({type:'addToIndex', index_json: index_json})
+            self.postMessage({type:'updateIndex', index_json: index_json})
             break;
         default:
             console.log('Invalid access');
-            self.postMessage(`got ${data}`);
+            self.postMessage(`got ${data.type}`);
             // self.close();
     }
+}
+
+function makeIndex(){
+    tweet_fields = [
+        "id",
+        "text", 
+        "name", 
+        "username", 
+        //"time", 
+        "reply_to",
+        "mentions"
+    ]
+  // tweets = wiz.sortTweets(_tweets)
+  let start = (new Date()).getTime()
+  console.log("making index...")
+  var _index = elasticlunr(function () {
+    this.setRef('id');
+    for (var field_name of tweet_fields){
+      this.addField(field_name);
+    }
+  });
+  return _index
 }
 
 async function getIndex(db){
@@ -71,8 +96,8 @@ async function setIndex(db, index_json){
 }
 
 
-async function addToIndex(index,_tweets){
-    console.time(`add ${Object.keys(_tweets).length} To Index`)
+async function addToIndex(index,tweets){
+    console.time(`add ${Object.keys(tweets).length} To Index`)
     let tweet_fields = [
         "id",
         "text", 
@@ -83,7 +108,7 @@ async function addToIndex(index,_tweets){
         "mentions"
       ]
 
-    for (const [id, tweet] of Object.entries(_tweets)){
+    for (const [id, tweet] of Object.entries(tweets)){
         var doc = {}
         for (var f of tweet_fields){
         doc[f] = tweet[f]
@@ -91,6 +116,14 @@ async function addToIndex(index,_tweets){
         doc["id"] = id
         index.addDoc(doc)
     }
-    console.timeEnd(`add ${Object.keys(_tweets).length} To Index`)
+    console.timeEnd(`added ${Object.keys(tweets).length} To Index`)
+    return index
+}
+
+async function removeFromIndex(index, tweet_ids){
+    for(let id of tweet_ids){
+        index.removeDocByRef(id)
+    }
+    console.timeEnd(`added ${tweet_ids.length} To Index`)
     return index
 }

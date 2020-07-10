@@ -128,6 +128,23 @@ class Utils {
     return this.db.get(storeName, key);
   }
 
+  async deleteFromDB(key_list, storeName = 'tweets'){
+    const tx = this.db.transaction(storeName, 'readwrite');
+    const store = tx.objectStore(storeName);
+    let promises = []
+    try{
+      for (let k of key_list) {
+        promises.push(store.delete(k))
+      }
+      promises.push(tx.done)
+      return await Promise.all(promises)        
+    } catch(e){
+      console.log(promises)
+      throw(e)
+    }
+    return this.db.get(storeName, key);
+  }
+
   //returns a promise that gets a value from chrome local storage 
   async getData(key) {
     return new Promise(function(resolve, reject) {
@@ -151,7 +168,7 @@ class Utils {
     let promises = []
     try{
       for(let item of item_list){
-        store.put(item)
+        promises.push(store.put(item))
       }
       promises.push(tx.done)
       return await Promise.all(promises)        
@@ -206,7 +223,6 @@ class Utils {
   async clearStorage(){
     // utils.db.clear('tweets')
     this.clearDB().then(()=>{
-      // nlp.index = nlp.makeIndex()
       nlp.init()
     })
     this.removeData(["tweets_meta","latest_tweets","search_results","has_timeline","has_archive","sync"]).then(()=>{
@@ -438,20 +454,36 @@ class TweetWiz{
     }
 
 
+    async updateTweetsDB(new_tweets){
+      await utils.putDB(Object.values(new_tweets))
+    }
 
     async setNewTweets(new_tweets){
       console.log("setting new tweets ", new_tweets)
       if(new_tweets != null){
         if(new_tweets.length <= 0) return
 
-        nlp.updateIndex(new_tweets)
+        await this.updateTweetsDB(new_tweets)
+      }
+    }
 
-        await utils.putDB(Object.values(new_tweets))
+    async removeTweets(tweet_ids){
+      console.log("removing tweets", tweet_ids)
+      utils.deleteFromDB(tweet_ids)
+      // this.tweet_ids = this.tweet_ids.filter(t=>!tweet_ids.includes(t))
+    }
 
+    async updateTweets(tweets_to_add, ids_to_remove){
+      let n_new_tweets = Object.keys(tweets_to_add).length
+      let n_deleted_tweets = ids_to_remove.length
+      console.log('updateTweets', {tweets_to_add, ids_to_remove})
+      if(n_deleted_tweets > 0) await this.removeTweets(ids_to_remove)
+      if(n_new_tweets > 0) this.setNewTweets(tweets_to_add)
+      if(n_new_tweets > 0 || n_deleted_tweets > 0){
+        nlp.updateIndex(tweets_to_add, ids_to_remove)
         let keys = await utils.db.getAllKeys('tweets')
-
         this.tweet_ids = this.sortKeys(keys)
-        this.tweets_meta = this.updateMeta(new_tweets)
+        if(n_new_tweets > 0) this.tweets_meta = this.updateMeta(tweets_to_add)
         this.latest_tweets = await this.getLatestTweets()
       }
     }
@@ -579,14 +611,38 @@ class TweetWiz{
       return new_tweets
       
     }
+
+    // Finds tweets in our db that are no longer online as evidenced by the request we just got
+    // til_end: find from earliest in res until now, instead of until the newest in res
+    findDeletedTweets(res, til_end = true){
+      let tweet_ids = [...this.tweet_ids];
+      //get only the range in our results
+      let from_id = res[res.length-1].id_str
+      let from = tweet_ids.findIndex((tid,idx,ar)=> {return tid==from_id})
+      let to = 0
+      if (!til_end){
+        let to_id = res[0].id_str
+        to = tweet_ids.findIndex((tid,idx,ar)=> {return tid==to_id})
+      } else{
+        to = 0
+      }
+      tweet_ids = tweet_ids.slice(to,from)
+      let res_ids = res.map(t=>t.id_str)
+      tweet_ids = tweet_ids.filter(tid=>!res_ids.includes(tid))
+      console.log('found deleted tweets', tweet_ids)
+      return tweet_ids
+    }
+
+
     // Convert request results to tweets and save them
     // TODO  : deal with archive RTs which are listed as by the retweeter and not by the original author
     async saveTweets(res, query_type = "update"){
       // In the case of an update query, check whether the most recent result is newer than our current set of tweets as 
       // Keep only new tweets and return empty otherwise
+      let deleted_tweet_ids = this.findDeletedTweets(res)
       res = res.filter(r=>{return !this.tweet_ids.includes(r.id_str)})
-      if (res.length < 1){
-        console.log("no new tweets to save", query_type)
+      if (res.length < 1 && deleted_tweet_ids.length < 1){
+        console.log("no changes in tweets to save", query_type)
         return {}
       } 
       
@@ -598,7 +654,7 @@ class TweetWiz{
       console.timeEnd('toTweets')
       // Update staging area with new tweets and tell CS to load
       console.time(`set new tweets ${Object.keys(new_tweets).length}`)
-      this.setNewTweets(new_tweets)
+      this.updateTweets(new_tweets, deleted_tweet_ids)
       console.timeEnd(`set new tweets ${Object.keys(new_tweets).length}`)
 
       return new_tweets
@@ -858,10 +914,13 @@ class TweetWiz{
       // Defining functions for setup phase
       let setup ={
         update: (vars)=>{
+          let update_count = 200
           vars.since = meta.since_id != null ? `&since_id=${meta.since_id}` : ''
           vars.since_id = 0
-          vars.url = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}&count=${count}${vars.since}&include_rts=${include_rts}`
-          vars.stop_condition = (res,received_count) => {return true ||received_count >= count || !(res != null) || res.length <= 1 || stop}
+          // vars.url = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}&count=${update_count}${vars.since}&include_rts=${include_rts}`
+          vars.url = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}&count=${update_count}&include_rts=${include_rts}`
+          // vars.stop_condition = (res,received_count) => {return received_count >= count || !(res != null) || res.length <= 1 || stop}
+          vars.stop_condition = (res,received_count) => {return true}
           return vars
         },
         timeline: (vars)=>{
@@ -895,13 +954,14 @@ class TweetWiz{
       // Functions for Treat phase, treating the request respense
       let treat ={
         update: async (vars)=>{
+          let update_count = 200
           let batch_since = res[0].id
           if (vars.since_id < batch_since){
             vars.since_id = batch_since
           } else{
             stop = true
           }
-          vars.url = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}&count=${count}&since_id=${vars.since_id}&include_rts=${include_rts}`    
+          vars.url = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}&count=${update_count}&since_id=${vars.since_id}&include_rts=${include_rts}`    
           return vars
         },
         timeline: async (vars)=>{
@@ -986,7 +1046,6 @@ class TweetWiz{
           console.assert(temp_archive != null)
           console.log("got temp_archive")
           console.time("out save tweets")
-          // worker.postMessage({type: 'handleQuery', temp_archive:temp_archive})
           wiz.saveTweets(temp_archive, 'archive').then((_tweets)=>{
             wiz.has_archive = true
             console.log("SET HAS ARCHIVE", wiz.tweets_meta)
@@ -1067,15 +1126,6 @@ class NLP{
 
   async init(){
     worker.postMessage({type:'getIndex'})
-    // let loaded = await this.loadIndex()
-    // if(loaded != null){
-    //   this._index = loaded
-    //   console.log("Index loaded", this.index)
-    // } else{
-    //   this.index = await this.makeIndex()
-    //   console.log("Index initialized", this.index)
-    // }
-    // this.inited = true
   }
   
 
@@ -1139,21 +1189,6 @@ class NLP{
     nlp.inited = true
   }
 
-  // async loadIndex(){
-  //   let index_json = await utils.getData("index")
-  //   let _index = index_json != null ? elasticlunr.Index.load(index_json) : null
-  //   return _index
-  // }
-
-  async updateIndex(tweets){
-    if (this.index == null){
-      this.index = this.makeIndex()
-    } 
-    // let new_tweets = this.getNewTweets({},tweets)
-    // this.index = await this.addToIndex(tweets)
-    this.addToIndex(tweets)
-  }
-
   makeIndex(){
     // tweets = wiz.sortTweets(_tweets)
     let start = (new Date()).getTime()
@@ -1167,20 +1202,20 @@ class NLP{
     return _index
   }
 
-  async addToIndex(_tweets){
-    worker.postMessage({type:'addToIndex', tweets: _tweets})
-    // console.time(`add ${Object.keys(_tweets).length} To Index`)
+  async updateIndex(tweets_to_add, ids_to_remove){
+    // if (this.index == null){
+    //   this.index = this.makeIndex()
+    // } 
+    let msg = {type:'updateIndex', tweets_to_add: tweets_to_add, ids_to_remove: ids_to_remove}
+    console.log("updating index", msg)
+    worker.postMessage(msg)
+  }
 
-    // for (const [id, tweet] of Object.entries(_tweets)){
-    //   var doc = {}
-    //   for (var f of nlp.tweet_fields){
-    //     doc[f] = tweet[f]
-    //   }
-    //   doc["id"] = id
-    //   this.index.addDoc(doc)
-    // }
-    // console.timeEnd(`add ${Object.keys(_tweets).length} To Index`)
-    // return this.index
+  async addToIndex(tweets){
+    nlp.updateIndex(tweets,[])
+  }
+  async removeFromIndex(tweet_ids){
+    nlp.updateIndex([],tweet_ids)
   }
 
   getNewTweets(old_t,new_t){
@@ -1377,7 +1412,7 @@ function onWorkerMessage(ev){
     case 'setIndex':
       console.log('set index', ev.data.index_json)
       break;
-    case 'addToIndex':
+    case 'updateIndex':
       nlp.onIndexLoaded(ev.data.index_json)
       break;
     case 'handleQuery':

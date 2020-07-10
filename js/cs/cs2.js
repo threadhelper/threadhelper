@@ -235,6 +235,17 @@ class wUtils {
     return false
   }
 
+  isDeleteFocused(){
+    var divs = document.querySelectorAll(ui.deleteConfirmSelector)
+    for (var div of divs){
+      if(div.contains(document.activeElement) || document.activeElement.contains(div)){
+        console.log("delete confirm is focused")
+        return true
+      }
+    }
+    return false
+  }
+
   tweetShortcut(e){
     if (e.ctrlKey && e.key === 'Enter') {
       if(wutils.isComposeFocused()){
@@ -261,6 +272,24 @@ class wUtils {
       }
     }
   }
+  deleteConfirmSelector
+  deleteButtonClicked(e){
+    var divs = document.querySelectorAll(ui.deleteConfirmSelector)
+    for (var div of divs){
+      if(e.target && (div.contains(e.target) || e.target.contains(div))){
+        console.log("Delete button pressed")
+        wiz.handlePost()
+      }
+    }
+  }
+  deleteShortcut(e){
+    if (e.key === 'Enter') {
+      if(wutils.isDeleteFocused()){
+        console.log("Delete confirm entered")
+        wiz.handlePost()
+      }
+    }
+  }
 
   // EVENT DELEGATION CRL, EVENT BUBBLING FTW
   setUpListeningComposeClick(){
@@ -271,6 +300,8 @@ class wUtils {
     document.addEventListener('keydown', this.tweetShortcut);
     document.addEventListener('click',this.retweetButtonClicked);
     document.addEventListener('keydown', this.retweetShortcut);
+    document.addEventListener('click',this.deleteButtonClicked);
+    document.addEventListener('keydown', this.deleteShortcut);
   }
 
   // given composer found by ui.editorClass = "DraftEditor-editorContainer",
@@ -294,6 +325,7 @@ class UI {
     this.tweetButtonSelectors = '[data-testid="tweetButtonInline"], [data-testid="tweetButton"]'
     this.sideBarSelector = '[data-testid="sidebarColumn"]'
     this.retweetConfirmSelector = '[data-testid="retweetConfirm"]'
+    this.deleteConfirmSelector = '[data-testid="confirmationSheetConfirm"]'
     
     /* Holds sync status
     Sync:
