@@ -70,10 +70,6 @@ async function setIndex(db, index_json){
     console.timeEnd("worker setting index")
 }
 
-async function handleQuery(data){
-    console.time("handle query")
-    await saveTweets(data.temp_archive, 'archive')
-}
 
 async function addToIndex(index,_tweets){
     console.time(`add ${Object.keys(_tweets).length} To Index`)

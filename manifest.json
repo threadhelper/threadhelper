@@ -14,7 +14,7 @@
   "content_scripts": [
     {
       "matches": ["https://*.twitter.com/*"],
-      "js": ["js/libs/jquery-3.4.1.slim.js", "js/cs/bundleCS.js","js/cs/cs2.js"],
+      "js": ["js/libs/jquery-3.4.1.slim.js", "js/cs/bundleCS.js", "js/cs/sidebarRenderer.js", "js/cs/tweetRenderer.js", "js/cs/cs2.js"],
       "css": ["style.css"]
     }
   ],
@@ -27,7 +27,7 @@
   "manifest_version": 2,
   "background": {
     /*"page": "html/background.html",*/
-    "scripts": ["js/libs/elasticlunr.js", "js/bg/bundleBG.js", "js/bg/auth.js", "js/bg/bg2.js", "js/worker/bundleWorker.js"]
+    "scripts": ["js/libs/elasticlunr.js", "js/bg/bundleBG.js", "js/bg/auth.js","js/bg/nlp.js", "js/bg/bg2.js", "js/worker/bundleWorker.js"]
   },
   "page_action": {
     "default_title": "Thread helper",

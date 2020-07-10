@@ -206,11 +206,17 @@ class Utils {
   async clearStorage(){
     // utils.db.clear('tweets')
     this.clearDB().then(()=>{
-      nlp.index = nlp.makeIndex()
+      // nlp.index = nlp.makeIndex()
+      nlp.init()
     })
-    this.removeData(["tweets","tweets_meta","latest_tweets","search_results","index","has_timeline","has_archive","sync"]).then(()=>{
+    this.removeData(["tweets_meta","latest_tweets","search_results","has_timeline","has_archive","sync"]).then(()=>{
+        // wiz.tweet_ids = []
+        // wiz.users = {}
+        // wiz.has_timeline = false
+        // wiz.has_archive = false
+        // wiz.tweets_meta = wiz.makeTweetsMeta(null)
+        wiz.init()
         this.msgCS({type: "storage-clear"}) 
-        wiz.tweets_meta = wiz.makeTweetsMeta(null)
       }
     )
     return true
@@ -324,12 +330,11 @@ class Utils {
 class TweetWiz{
     constructor() {
       this._inited = false
-			//request flow
+      //request flow
       this._midRequest = false
 			this.interrupt_query = false
 			
 			//DB data
-      this.tweets_dict = {}
       this.tweet_ids = []
       this.users = {}
 			
@@ -356,16 +361,21 @@ class TweetWiz{
       utils.getData("has_archive").then((info)=>{this.has_archive = info != null ? info : false}),
       utils.getData("has_timeline").then((info)=>{this.has_timeline = info != null ? info : false}),
       utils.getData("tweets_meta").then((meta)=>{this.tweets_meta = meta != null ? meta : this.makeTweetsMeta(null)}),
-      // utils.getData("tweets").then((tweets)=>{this.tweets_dict = tweets != null ? tweets : {}}),
       utils.getData("latest_tweets").then((latest_tweets)=>{this._latest_tweets = latest_tweets != null ? latest_tweets : [];})
+      // utils.getData("user_queue").then((user_queue)=>{this._user_queue = user_queue != null ? user_queue : [];})
+      // utils.getData("pic_tweet_queue").then((pic_tweet_queue)=>{this._pic_tweet_queue = pic_tweet_queue != null ? pic_tweet_queue : {}})
+      // utils.getData("profile_pics").then((profile_pics)=>{this._profile_pics = profile_pics != null ? profile_pics : {};})
       ]).then(
         ()=>{
           console.log("after wiz init")
           wiz.inited = true
         }
       )
-		}
-		  
+    }
+    
+    get query_ready(){
+      return wiz.user_info.screen_name != null && auth.csrfToken != null
+    }
     
     get user_info(){return this._user_info}
     // set the value of our user  info, and if it's new, set it in storage
@@ -458,6 +468,7 @@ class TweetWiz{
 
       for (let k of keys){
         let t = await utils.getDB(k)
+
         if(utils.options.getRetweets){
           latest.push(t)
         } else{
@@ -1000,7 +1011,11 @@ class TweetWiz{
       // let tweets = {}
       // let meta = {}
       // If mid request, stop now
-      if (wiz.midRequest || !wiz.inited || !nlp.inited){ return }
+      let midRequest = wiz.midRequest; let query_ready = wiz.query_ready; let wiz_inited = wiz.inited; let nlp_inited = nlp.inited;
+      if (midRequest || !query_ready || !wiz_inited || !nlp_inited){ 
+        console.log("stopped a query from happening", {midRequest, query_ready, wiz_inited, nlp_inited})
+        return 
+      }
       wiz.midRequest = true
       console.log("update requested", query_type)
   
@@ -1050,6 +1065,18 @@ class NLP{
     this._search_results = []
   }
 
+  async init(){
+    worker.postMessage({type:'getIndex'})
+    // let loaded = await this.loadIndex()
+    // if(loaded != null){
+    //   this._index = loaded
+    //   console.log("Index loaded", this.index)
+    // } else{
+    //   this.index = await this.makeIndex()
+    //   console.log("Index initialized", this.index)
+    // }
+    // this.inited = true
+  }
   
 
   get index(){return this._index}
@@ -1098,18 +1125,7 @@ class NLP{
   }
 
 
-  async init(){
-    worker.postMessage({type:'getIndex'})
-    // let loaded = await this.loadIndex()
-    // if(loaded != null){
-    //   this._index = loaded
-    //   console.log("Index loaded", this.index)
-    // } else{
-    //   this.index = await this.makeIndex()
-    //   console.log("Index initialized", this.index)
-    // }
-    // this.inited = true
-  }
+  
 
   async onIndexLoaded(index_json){
     let loaded_index =  index_json != null ? elasticlunr.Index.load(index_json) : null
@@ -1117,7 +1133,7 @@ class NLP{
       nlp._index = loaded_index
       console.log("Index loaded", nlp.index)
     } else{
-      nlp.index = await nlp.makeIndex()
+      nlp.index = nlp.makeIndex()
       console.log("Index initialized", nlp.index)
     }
     nlp.inited = true
@@ -1131,14 +1147,14 @@ class NLP{
 
   async updateIndex(tweets){
     if (this.index == null){
-      this.index = await this.makeIndex()
+      this.index = this.makeIndex()
     } 
     // let new_tweets = this.getNewTweets({},tweets)
     // this.index = await this.addToIndex(tweets)
     this.addToIndex(tweets)
   }
 
-  async makeIndex(){
+  makeIndex(){
     // tweets = wiz.sortTweets(_tweets)
     let start = (new Date()).getTime()
     console.log("making index...")
@@ -1222,7 +1238,10 @@ class NLP{
     let query =  _query.repeat(1) 
     nlp._nextSearch = null
     let return_related = []
-    if(wiz.tweet_ids.length <= 0 || !(this.index != null)) throw("searching before tweets loaded")
+    if(wiz.tweet_ids.length <= 0 || !(this.index != null)){
+       console.log("searching before tweets loaded"); 
+       return []
+    }
 
     
     // If query's empty just return latest 
@@ -1297,6 +1316,7 @@ async function onMessage(m, sender) {
         utils.tabId = tid
         if(!wiz.inited) wiz.init()
         if(!nlp.inited) nlp.init()
+        auth_wrapper(wiz.handleQuery, 'update')
         break;
   
       case "query":
@@ -1304,7 +1324,7 @@ async function onMessage(m, sender) {
         break;
       
       case "new-tweet":
-        auth_wrapper(wiz.handleQuery,'update')
+        auth_wrapper(wiz.handleQuery, 'update')
         break;
       
       case "search":
@@ -1323,7 +1343,12 @@ async function onMessage(m, sender) {
         utils.clearStorage().then(()=>{
           try{
             console.log("reloading")
-            chrome.tabs.reload(utils.tabId);
+            utils.getTwitterTabIds().then(tids=>{
+              //console.log("reloading twitter tabs", tids)
+              for (let tid of tids){
+                chrome.tabs.reload(tid);
+              }
+            })
           } catch(e){
             console.log("couldn't reload twitter tab. None open?")
           }
