@@ -246,6 +246,17 @@ class wUtils {
     return false
   }
 
+  //When tweet buttons are clicked
+  tweetButtonClicked(e){
+    var divs = document.querySelectorAll(ui.tweetButtonSelectors)
+    for (var div of divs){
+      if(e.target && div.contains(e.target)){
+        console.log("Tweet button pressed")
+        wiz.handlePost()
+      }
+    }
+  }  
+
   tweetShortcut(e){
     if (e.ctrlKey && e.key === 'Enter') {
       if(wutils.isComposeFocused()){

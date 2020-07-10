@@ -477,14 +477,24 @@ class TweetWiz{
       let n_new_tweets = Object.keys(tweets_to_add).length
       let n_deleted_tweets = ids_to_remove.length
       console.log('updateTweets', {tweets_to_add, ids_to_remove})
+      console.time("removeTweets")
       if(n_deleted_tweets > 0) await this.removeTweets(ids_to_remove)
+      console.timeEnd("removeTweets")
+      console.time("setNewTweets")
       if(n_new_tweets > 0) this.setNewTweets(tweets_to_add)
+      console.timeEnd("setNewTweets")
       if(n_new_tweets > 0 || n_deleted_tweets > 0){
+        console.time("updateIndex")
         nlp.updateIndex(tweets_to_add, ids_to_remove)
+        console.timeEnd("updateIndex")
         let keys = await utils.db.getAllKeys('tweets')
+        console.time("sortKeys")
         this.tweet_ids = this.sortKeys(keys)
+        console.timeEnd("sortKeys")
         if(n_new_tweets > 0) this.tweets_meta = this.updateMeta(tweets_to_add)
+        console.time("getLatest")
         this.latest_tweets = await this.getLatestTweets()
+        console.timeEnd("getLatest")
       }
     }
   
@@ -639,7 +649,7 @@ class TweetWiz{
     async saveTweets(res, query_type = "update"){
       // In the case of an update query, check whether the most recent result is newer than our current set of tweets as 
       // Keep only new tweets and return empty otherwise
-      let deleted_tweet_ids = this.findDeletedTweets(res)
+      let deleted_tweet_ids = this.findDeletedTweets(res, query_type == "update")
       res = res.filter(r=>{return !this.tweet_ids.includes(r.id_str)})
       if (res.length < 1 && deleted_tweet_ids.length < 1){
         console.log("no changes in tweets to save", query_type)
