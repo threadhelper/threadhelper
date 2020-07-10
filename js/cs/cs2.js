@@ -1,7 +1,11 @@
 //helper functions
 
-//Extending types
+//General js tools
 {
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 Array.prototype.contains = function(obj) {
   var i = this.length;
   while (i--) {
@@ -205,7 +209,7 @@ class wUtils {
   }
 
   //When tweet buttons are clicked
-  onTweetButton(e){
+  tweetButtonClicked(e){
     var divs = document.querySelectorAll(ui.tweetButtonSelectors)
     for (var div of divs){
       if(e.target && div.contains(e.target)){
@@ -214,12 +218,59 @@ class wUtils {
       }
     }
   }
+
+  isComposeFocused(){
+    if(ui.activeComposer)
+     {return ui.activeComposer.contains(document.activeElement)}
+     else{return false}
+  }
+  isRetweetFocused(){
+    var divs = document.querySelectorAll(ui.retweetConfirmSelector)
+    for (var div of divs){
+      if(div.contains(document.activeElement) || document.activeElement.contains(div)){
+        console.log("retweet confirm is focused")
+        return true
+      }
+    }
+    return false
+  }
+
+  tweetShortcut(e){
+    if (e.ctrlKey && e.key === 'Enter') {
+      if(wutils.isComposeFocused()){
+        console.log("Tweet shortcut pressed")
+        wiz.handlePost()
+      }
+    }
+  }
+
+  retweetButtonClicked(e){
+    var divs = document.querySelectorAll(ui.retweetConfirmSelector)
+    for (var div of divs){
+      if(e.target && (div.contains(e.target) || e.target.contains(div))){
+        console.log("Retweet button pressed")
+        wiz.handlePost()
+      }
+    }
+  }
+  retweetShortcut(e){
+    if (e.key === 'Enter') {
+      if(wutils.isRetweetFocused()){
+        console.log("Retweet confirm entered")
+        wiz.handlePost()
+      }
+    }
+  }
+
   // EVENT DELEGATION CRL, EVENT BUBBLING FTW
   setUpListeningComposeClick(){
     //console.log("event listeners added")
     document.addEventListener('focusin',this.onFocusIn);
     document.addEventListener('focusout',this.onFocusOut);
-    document.addEventListener('click',this.onTweetButton);
+    document.addEventListener('click',this.tweetButtonClicked);
+    document.addEventListener('keydown', this.tweetShortcut);
+    document.addEventListener('click',this.retweetButtonClicked);
+    document.addEventListener('keydown', this.retweetShortcut);
   }
 
   // given composer found by ui.editorClass = "DraftEditor-editorContainer",
@@ -242,6 +293,7 @@ class UI {
     //
     this.tweetButtonSelectors = '[data-testid="tweetButtonInline"], [data-testid="tweetButton"]'
     this.sideBarSelector = '[data-testid="sidebarColumn"]'
+    this.retweetConfirmSelector = '[data-testid="retweetConfirm"]'
     
     /* Holds sync status
     Sync:
@@ -264,7 +316,7 @@ class UI {
     
 		// Hold the active context of tweeting/sidebar
 		
-    this.activeComposer = null
+    this._activeComposer = null
     this.activeLogger = null
     this.activeSidebar = null
     // Hold the underlying home sidebar
@@ -273,6 +325,17 @@ class UI {
     this.console_msg = ''
 
     //this.last_mode = wutils.getMode()
+  }
+
+  get activeComposer(){
+    if (this._activeComposer){
+
+    }
+    return this._activeComposer
+  }
+
+  set activeComposer(_activeComposer){
+    this._activeComposer = _activeComposer
   }
 
   // Whether UI is ready to be interacted with
@@ -302,7 +365,7 @@ class UI {
 
   
 	putSidebar(mode, compose_box = null){
-    //to set activeComposer
+    //to set active Composer
 		let sidebar = this.buildBox()
     sidebar = this.placeBox(sidebar,mode)
     return sidebar
@@ -320,7 +383,8 @@ class UI {
     let searchText = ''
     // If we have an active composer, make a search (i.e. if we're writing)
     if (this.activeComposer){
-      searchText = wutils.getTextField(this.activeComposer).textContent
+      // searchText = wutils.getTextField(this.activeComposer).textContent
+      searchText = ui.current_query
       requestSearch(searchText)
       console.log("searching for", searchText)
     } else{ //just update with latest tweets
@@ -727,6 +791,7 @@ class UI {
 async function onChange(mutationRecords) {
   const text = ui.getTextFromMutation(mutationRecords)
   // console.log("CHANGE! text is:", text, "; in element: ", mutationRecords[0].target);
+  ui.current_query = text
   requestSearch(text)
   
 }
@@ -844,7 +909,8 @@ class TweetWiz{
   //called when a new tweet is posted. 
   handlePost(){
     dutils.msgBG({type:"new-tweet"})
-    ui.refreshSidebars()
+    ui.current_query = ''
+    // ui.refreshSidebars()
   }
 
   askUpdate(){
@@ -926,25 +992,27 @@ class Renderer {
       link.select()
       document.execCommand("copy")
       link.style.display = "none"
-      var input = ui.activeComposer.firstElementChild
-      input.focus()
-      // https://stackoverflow.com/questions/24115860/set-caret-position-at-a-specific-position-in-contenteditable-div
-      // There will be multiple spans if multiple lines, so we get the last one to set caret to the end of the last line.
-      let _span = $(input).find('span[data-text=true]').last()[0]
-      // If there's some writing on it, otherwise _span will be undefined
-      if (_span != null){
-        var text = _span.firstChild
-        var range = document.createRange()
-        range.setStart(text, text.length)
-        range.setEnd(text, text.length)
-        var sel = window.getSelection()
-        sel.removeAllRanges()
-        sel.addRange(range)
+      var input = ui.activeComposer != null ? ui.activeComposer.firstElementChild : wutils.getFirstComposeBox()
+      if(input != null)  {
+        input.focus()
+        // https://stackoverflow.com/questions/24115860/set-caret-position-at-a-specific-position-in-contenteditable-div
+        // There will be multiple spans if multiple lines, so we get the last one to set caret to the end of the last line.
+        let _span = $(input).find('span[data-text=true]').last()[0]
+        // If there's some writing on it, otherwise _span will be undefined
+        if (_span != null){
+          var text = _span.firstChild
+          var range = document.createRange()
+          range.setStart(text, text.length)
+          range.setEnd(text, text.length)
+          var sel = window.getSelection()
+          sel.removeAllRanges()
+          sel.addRange(range)
+        }
       }
       copy.text("copied!")
       setTimeout(function() {
         copy.text("copy")
-      }, 2000)
+      }, 20000)
     })
 
     return template[0]
@@ -1161,7 +1229,6 @@ async function onStorageChanged(changes, area){
       switch(item){
         case "options": 
           dutils.options = newVal != null ? newVal : dutils.options;
-          // ui.refreshSidebars()
         case "user_info":
           wiz.user_info = newVal;
           break;

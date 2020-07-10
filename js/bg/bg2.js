@@ -293,7 +293,7 @@ class Utils {
   }
 
   onInstalled() {
-    //console.log("On Installed!")
+    console.log("On Installed!")
     chrome.declarativeContent.onPageChanged.removeRules(undefined, function() {
       chrome.declarativeContent.onPageChanged.addRules([
         {
@@ -308,7 +308,7 @@ class Utils {
     });
     //
     utils.getTwitterTabIds().then(tids=>{
-      //console.log("reloading twitter tabs", tids)
+      console.log("reloading twitter tabs", tids)
       for (let tid of tids){
         chrome.tabs.reload(tid);
       }
@@ -1423,11 +1423,10 @@ function main(){
   let nlp = {}
   let worker = {}
   let utils = new Utils()
+  main()
   utils.init().then(()=>{
     auth = new Auth(utils);  
     wiz = new TweetWiz();  
     nlp = new NLP();
     worker = initWorker()
   })
-  
-  main()
