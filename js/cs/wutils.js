@@ -220,6 +220,15 @@ class wUtils {
         }
       }
     }
+
+    roboShortcut(e){
+      if (e.ctrlKey && e.key === ' ') {
+        if(wutils.isComposeFocused()){
+          console.log("Robo tweet shortcut pressed")
+          wutils.ui.onRoboIconClick()
+        }
+      }
+    }
   
     // EVENT DELEGATION CRL, EVENT BUBBLING FTW
     setUpListeningComposeClick(){
@@ -232,6 +241,7 @@ class wUtils {
       document.addEventListener('keydown', this.retweetShortcut);
       document.addEventListener('click',this.deleteButtonClicked);
       document.addEventListener('keydown', this.deleteShortcut);
+      document.addEventListener('keydown', this.roboShortcut);
     }
   
     // given composer found by ui.editorClass = "DraftEditor-editorContainer",

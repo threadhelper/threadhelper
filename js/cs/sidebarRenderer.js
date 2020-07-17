@@ -1,12 +1,13 @@
 
 class SidebarRenderer {
   // constructor(_onSyncIconClick=null, _onClickLoadArchive=null, _onRoboIconClick=null, _onToggleRTs=null){
-  constructor(ui){
+  constructor(ui, tweetRen){
     // this.onSyncIconClick = _onSyncIconClick != null ? _onSyncIconClick : onSyncIconClick
     // this.onClickLoadArchive = _onClickLoadArchive != null ? _onClickLoadArchive : onClickLoadArchive
     // this.onRoboIconClick = _onRoboIconClick != null ? _onRoboIconClick : onRoboIconClick
     // this.onToggleRTs = _onToggleRTs != null ? _onToggleRTs : onToggleRTs
-    this.ui = ui    
+    this.ui = ui   
+    this.tweetRen = tweetRen 
   }
 
     
@@ -14,7 +15,7 @@ class SidebarRenderer {
   //isGetRTs = dutils.options.getRetweets
   //wiz.sync
   //wiz.has_archive
-  buildBox(sync= false, has_archive = false, isGetRTs = true) {
+  buildBox(user_info, sync= false, has_archive = false, isGetRTs = true) {
     var sidebar = null;
     sidebar = document.createElement('div');   //create a div
     sidebar.setAttribute("aria-label", 'suggestionBox');
@@ -22,7 +23,7 @@ class SidebarRenderer {
     sidebar.appendChild(this.setUpLoadArchive(sync, has_archive))
     sidebar.appendChild(this.buildBoxHeader())
 
-    sidebar.appendChild(this.buildThirdDiv())
+    sidebar.appendChild(this.buildThirdDiv(user_info))
     sidebar.appendChild(this.buildSecondDiv(isGetRTs))
     return sidebar
   }
@@ -94,24 +95,44 @@ class SidebarRenderer {
     console.log("building second div", div)
     return div
   }
-  buildThirdDiv(){
+  buildThirdDiv(user_info){
     let div = document.createElement('div')
     div.setAttribute("class", "suggThirdDiv")
     div.setAttribute("id", "suggThirdDiv")
-    div.appendChild(this.buildRoboTweet())
+    div.appendChild(this.buildRoboIcon())
+    div.appendChild(this.buildRoboTweet(user_info))
     console.log("building third div", div)
     return div
   }
-  buildRoboTweet(){
+
+  buildRoboTweet(user_info, tweet = null){
+    let placeholder_tweet = {
+      username: user_info.screen_name,
+      name: user_info.name + " bot",
+      text: '[ your next tweet ]',
+      id: 'roboTweet',
+      profile_image: user_info.profile_image_url_https,
+      retweeted: false,
+      time: (new Date()).getTime(),
+      reply_to: null,
+      mentions: null,
+      urls: null,
+      has_media: false,
+      media: null,
+      has_quote: false,
+      quote: null,
+      is_quote_up: null
+    }
+
     let div = document.createElement('div')
     div.setAttribute("class", "roboTweetDiv")
     div.setAttribute("id", "roboTweetDiv")
-    let tweet = document.createElement('div')
-    tweet.setAttribute("class", "roboTweet")
-    tweet.setAttribute("id", "roboTweet")
-    tweet.innerHTML = "roboTweet placeholder"
-    div.appendChild(this.buildRoboIcon())
-    div.appendChild(tweet)
+    // let tweet = document.createElement('div')
+    // tweet.setAttribute("class", "roboTweet")
+    // tweet.setAttribute("id", "roboTweet")
+    // tweet.innerHTML = "roboTweet placeholder"
+    div.appendChild(this.tweetRen.renderRoboTweet(placeholder_tweet))
+    // div.appendChild(tweet)
     return div
   }
 

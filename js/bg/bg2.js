@@ -1489,8 +1489,20 @@ function main(){
     chrome.tabs.onActivated.addListener(utils.onTabActivated);
     chrome.tabs.onUpdated.addListener(utils.onTabUpdated);
   }
+
+
+  var DEBUG = true;
+  if(!DEBUG){
+      console.log("CANCELING CONSOLE")
+      if(!window.console) window.console = {};
+      var methods = ["log", "debug", "warn", "trace", "time", "info"];
+      for(var i=0;i<methods.length;i++){
+          console[methods[i]] = function(){};
+      }
+  }
+
   
-  let workerPath = 'js/worker/bundleWorker.js'
+  let workerPath = 'js/worker/bundles/bundleWorker.js'
 
   let auth = {}
   let wiz = {}

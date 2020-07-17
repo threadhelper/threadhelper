@@ -1,17 +1,10 @@
-class Renderer {
+class TweetRenderer {
     constructor(ui) {
       this.shortMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
       this.ui = ui
     }
-  
-      
-    renderTweet(tweet, textTarget) {
-      let tweetLink = `https://twitter.com/${"undefined"}/status/${tweet.id}`
-      try{
-        tweetLink = `https://twitter.com/${tweet.username}/status/${tweet.id}`
-      } catch(e){
-        //console.log("ERROR",tweet)
-      }
+    
+    renderTweetLike(tweet, copyContent, onClick){
       let timeDiff = this.getTimeDiff(tweet.time)
       let reply_text = this.getReplyText(tweet.reply_to, tweet.mentions)
       let text = this.reformatText(tweet.text, tweet.reply_to, tweet.mentions, tweet.urls, tweet.media)
@@ -37,19 +30,32 @@ class Renderer {
           </div>
         </div>
         <div class="th-hover">
-          <textarea style="display: none" id="th-link-${tweet.id}" class="th-link">${tweetLink}</textarea>
+          <textarea style="display: none" id="th-link-${tweet.id}" class="th-link">${copyContent}</textarea>
           <div class="th-hover-copy">copy</div>
         </div>
       </div>`)
       
-      let onClickTweet = function(tweet, e){
+
+      let hover = $('.th-hover', template)
+      hover.click(onClick)
+  
+      return template[0]
+    }     
+
+    renderTweet(tweet) {
+      let tweetLink = `https://twitter.com/${"undefined"}/status/${tweet.id}`
+      try{
+        tweetLink = `https://twitter.com/${tweet.username}/status/${tweet.id}`
+      } catch(e){
+        //console.log("ERROR",tweet)
+      }
+      let onClickTweet = function(tweet, input, e){
         var link = $(`#th-link-${tweet.id}`)[0]
         var copy = $(e.target).find(".th-hover-copy")
         link.style.display = "flex"
         link.select()
         document.execCommand("copy")
         link.style.display = "none"
-        var input = this.ui.activeComposer
         if(input != null)  {
           input.focus()
           // https://stackoverflow.com/questions/24115860/set-caret-position-at-a-specific-position-in-contenteditable-div
@@ -69,13 +75,50 @@ class Renderer {
         copy.text("copied!")
         setTimeout(function() {
             copy.text("copy")
-        }, 20000)
+        }, 2000)
       }
+      let composer = this.ui.activeComposer
+      let onClick = (e)=>{return onClickTweet(tweet, composer, e)}
 
-      let hover = $('.th-hover', template)
-      hover.click((e)=>{return this.onClickTweet(tweet, e)})
-  
-      return template[0]
+      let template = this.renderTweetLike(tweet, tweetLink, onClick)
+      return template
+    }
+
+    renderRoboTweet(tweet) {
+      let onClickTweet = function(tweet, input, e){
+        let robotext = $('.roboTweetDiv').find('.th-text')[0]
+        var link = $(`#th-link-${tweet.id}`)[0]
+        var copy = $(e.target).find(".th-hover-copy")
+        link.style.display = "flex"
+        link.select()
+        document.execCommand("copy")
+        link.style.display = "none"
+        if(input != null)  {
+          input.focus()
+          // https://stackoverflow.com/questions/24115860/set-caret-position-at-a-specific-position-in-contenteditable-div
+          // There will be multiple spans if multiple lines, so we get the last one to set caret to the end of the last line.
+          let _span = $(input).find('span[data-text=true]').last()[0]
+          // If there's some writing on it, otherwise _span will be undefined
+          if (_span != null){
+            var text = _span.firstChild
+            var range = document.createRange()
+            range.setStart(text, text.length)
+            range.setEnd(text, text.length)
+            var sel = window.getSelection()
+            sel.removeAllRanges()
+            sel.addRange(range)
+          }
+        }
+        copy.text("copied text!")
+        setTimeout(function() {
+            copy.text("copy")
+        }, 2000)
+      }
+      let composer = this.ui.activeComposer
+      let onClick = (e)=>{return onClickTweet(tweet, composer, e)}
+
+      let template = this.renderTweetLike(tweet, tweet.text, onClick)
+      return template
     }
   
     getTimeDiff(time) {
@@ -255,7 +298,7 @@ class Renderer {
           message = "No matching tweets yet!"
         }
       } else{
-        message = "Found these:"
+        message = "Found these related tweets:"
       }
       this.ui.showConsoleMessage(message)
       const textTarget = $('span[data-text="true"]');
@@ -263,7 +306,7 @@ class Renderer {
   
         let tweetDiv = document.createElement('div')
         try{
-          tweetDiv = this.renderTweet(t, textTarget);
+          tweetDiv = this.renderTweet(t);
         } catch(e){
           console.log(t)
           console.log(textTarget)

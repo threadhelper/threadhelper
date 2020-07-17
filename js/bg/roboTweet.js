@@ -1,4 +1,6 @@
-async function queryGPT(prompt, max_tokens = 30){
+let midRoboRequest = false
+
+async function queryGPT(prompt, max_tokens = 40){
     let headers = {
           Authorization: "Bearer sk-kPznCiBCG9HRWX1iwuUWgpgR13GLLaox0EUNKdlw",
           "Content-Type": 'application/json'

@@ -50,7 +50,7 @@ class dUtils {
     msgBG(msg = null){
       let message = msg == null ? {type:"query", query_type: "update"} : msg
       chrome.runtime.sendMessage(message);
-      //console.log("messaging BG", message)
+      console.log("messaging BG", message)
     }
   }
   

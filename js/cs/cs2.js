@@ -89,7 +89,7 @@ class UI {
   
 	putSidebar(mode, compose_box = null){
     //to set active Composer
-		let sidebar = sideRen.buildBox()
+		let sidebar = sideRen.buildBox(wiz.user_info, wiz.sync, wiz.has_archive, dutils.options.getRetweets)
     sidebar = this.placeBox(sidebar,mode)
     return sidebar
 	}
@@ -325,10 +325,12 @@ class UI {
     })
   }
   
-  onRoboIconClick(activeComposer){
+  onRoboIconClick(activeComposer=null){
+    activeComposer = activeComposer != null ? activeComposer : ui.activeComposer 
     console.log('icon clicked!')
     if (activeComposer){
-      let query = ui.getRoboQuery()
+      let mode = wutils.getMode()
+      let query = ui.getRoboQuery(mode)
       console.log('robo query: ', query)
       dutils.msgBG({type:"robo-tweet", query: query})
     } else{
@@ -340,9 +342,10 @@ class UI {
   // mode = wutils.getMode()
   getRoboQuery(mode){
     let make_query=(thread_text)=>{
-      let query = 'My new twitter thread: \n'
+      let query = ''
+      // let query = 'An insightful Twitter thread: \n'
       for(let [i,t] of thread_text.entries()){
-          query = query.concat(`${i}/N: ${t}\n`)
+          query = query.concat(`\n${t}`)
       }
       return query
     }
@@ -359,25 +362,37 @@ class UI {
     }
     let query = ''
     switch(mode){
-      case 'compose':
-        query = getThreadDraft()
+      case 'home':
+        query = getCurrentText()
         break;
       default:
-        query = getCurrentText()
+        query = getThreadDraft()
         break
     }
     return query
   }
   
+  processRoboTweet(tweet){
+    
+    // return tweet.replace(/[0-9]\/N: /, '')
+    return tweet
+  }
+
   showRoboTweet(tweet){
     // shouldn't be all of them, just current sidebar's
-    let roboDivs = document.getElementsByClassName('roboTweet')
-    for (let div of roboDivs){
-      if(ui.activeSidebar.contains(div)){
-        console.log('showing robotweet')
-        div.innerHTML = tweet
-      }
-    }
+    tweet = this.processRoboTweet(tweet)
+    let robots = [...document.getElementsByClassName('roboTweetDiv')]
+    let roboTexts = robots.map(r=>$(r).find('.th-text')[0])
+    let roboAreas = robots.map(r=>$(r).find('textarea')[0])
+    roboTexts.forEach(r=>r.innerHTML = tweet)
+    roboAreas.forEach(r=>r.innerHTML = tweet)
+    console.log('showing robotweet')
+
+    // for (let div of roboDivs){
+    //   if(ui.activeSidebar.contains(div)){
+    //     div.innerHTML = tweet
+    //   }
+    // }
   }
   
 
@@ -470,7 +485,7 @@ async function updateWithSearch(related){
     if (related.length > 0){
       // maybe we should throw error instead of just filtering
       related = related.filter(x=>{return x != null})
-      try{ren.renderTweets([...new Set(related)], ui.activeSidebar)} catch(e){
+      try{tweetRen.renderTweets([...new Set(related)], ui.activeSidebar)} catch(e){
         console.log("updating with search ",related)
         throw(e)
       }
@@ -539,18 +554,15 @@ class TweetWiz{
     let end = (new Date()).getTime()
     console.log(`Importing archive took ${(end-start)/1000}s`)
   }
-}
-
-
-function onClickTweet(e){
-  var link = $(`#th-link-${tweet.id}`)[0]
-  var copy = $(e.target).find(".th-hover-copy")
-  link.style.display = "flex"
-  link.select()
-  document.execCommand("copy")
-  link.style.display = "none"
-  var input = ui.activeComposer != null ? ui.activeComposer.firstElementChild : wutils.getFirstComposeBox()
-  if(input != null)  {
+  onClickTweet(tweet, e){
+    var link = $(`#th-link-${tweet.id}`)[0]
+    var copy = $(e.target).find(".th-hover-copy")
+    link.style.display = "flex"
+    link.select()
+    document.execCommand("copy")
+    link.style.display = "none"
+    var input = this.ui.activeComposer
+    if(input != null)  {
       input.focus()
       // https://stackoverflow.com/questions/24115860/set-caret-position-at-a-specific-position-in-contenteditable-div
       // There will be multiple spans if multiple lines, so we get the last one to set caret to the end of the last line.
@@ -565,12 +577,16 @@ function onClickTweet(e){
       sel.removeAllRanges()
       sel.addRange(range)
       }
+    }
+    copy.text("copied!")
+    setTimeout(function() {
+        copy.text("copy")
+    }, 20000)
   }
-  copy.text("copied!")
-  setTimeout(function() {
-      copy.text("copy")
-  }, 20000)
+  
 }
+
+
 
 
 // changes: each has oldValue and newValue
@@ -606,7 +622,7 @@ async function onStorageChanged(changes, area){
 				case "search_results":
           wiz.search_results = newVal;
           console.log("search results: ",newVal)
-          ui.showConsoleMessage("Found these tweets")
+          ui.showConsoleMessage("Found these related tweets")
           updateWithSearch(newVal)
           break;
         case "latest_tweets":
@@ -664,8 +680,8 @@ async function onStorageChanged(changes, area){
   {
     dutils = new dUtils();
     ui = new UI();
-    sideRen = new SidebarRenderer(ui)
-    ren = new Renderer(ui);
+    tweetRen = new TweetRenderer(ui);
+    sideRen = new SidebarRenderer(ui, tweetRen)
     wiz = new TweetWiz(); //loads tweets
     wutils = new wUtils(ui, wiz);
     // myWorker = new Worker('worker.js');
@@ -741,5 +757,13 @@ async function onStorageChanged(changes, area){
   }
   setDestruction();
   
-  
+  var DEBUG = true;
+  if(!DEBUG){
+      if(!window.console) window.console = {};
+      var methods = ["log", "debug", "warn", "trace", "time", "info"];
+      for(var i=0;i<methods.length;i++){
+          console[methods[i]] = function(){};
+      }
+  }
+
   main();

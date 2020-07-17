@@ -1,4 +1,14 @@
 // "use strict";
+
+var DEBUG = true;
+if(!DEBUG){
+    console.log("WORKER CANCELING CONSOLE")
+    var methods = ["log", "debug", "warn", "trace", "time", "timeEnd", "info"];
+    for(var i=0;i<methods.length;i++){
+        console[methods[i]] = function(){};
+    }
+}
+
 let idb = require('idb')
 let elasticlunr = require('elasticlunr')
 let db = {}
@@ -9,7 +19,7 @@ self.addEventListener('message', onMessage)
 
 async function onMessage(ev){
     let data = ev.data;
-    console.log("ON MESSAGE", ev)
+    console.log("WORKER ON MESSAGE", ev)
     db = db != null ? db : await idb.openDB('ThreadHelper', 1)
     let index_json = ''
     console.log("WORKER GOT MESSAGE", ev.data)
@@ -68,8 +78,6 @@ function makeIndex(){
         "reply_to",
         "mentions"
     ]
-  // tweets = wiz.sortTweets(_tweets)
-  let start = (new Date()).getTime()
   console.log("making index...")
   var _index = elasticlunr(function () {
     this.setRef('id');
@@ -124,6 +132,5 @@ async function removeFromIndex(index, tweet_ids){
     for(let id of tweet_ids){
         index.removeDocByRef(id)
     }
-    console.timeEnd(`added ${tweet_ids.length} To Index`)
     return index
 }
