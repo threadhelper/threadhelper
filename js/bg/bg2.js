@@ -16,7 +16,7 @@ class Utils {
 
   async init(){
     await this.openDB()
-    await this.loadOptions()
+    // await this.loadOptions()
   }
   async openDB(){
     console.log("OPENING DB")
@@ -180,6 +180,7 @@ class Utils {
 
   //returns a promise that sets an object with key value pairs into chrome local storage 
   async setData(key_vals) {
+    if(Object.keys(key_vals)[0] == "latest_tweets") console.trace("|||||||| SET DATA LATEST TWEETS")
     return new Promise(function(resolve, reject) {
       chrome.storage.local.set(key_vals, function(items) {
         if (chrome.runtime.lastError) {
@@ -269,13 +270,6 @@ class Utils {
     });
   }
 
-  // Loads options from storage
-  async loadOptions(){
-    this.getData("options").then(opts=>{
-      this.options = opts != null ? opts : this.options
-    })
-  }
-
 
   // Message content script  
   async msgCS(m){
@@ -354,7 +348,8 @@ class TweetWiz{
       this.tweet_ids = []
       this.users = {}
 			
-			//localStorage boys
+      //localStorage boys
+      this._options = {getRetweets: true, getArchive: false}
       this._user_info = {}
 			this._tweets_meta = this.makeTweetsMeta(null)
 			this._has_archive = false
@@ -369,9 +364,10 @@ class TweetWiz{
       this.profile_pics = {} //id: {"name" "screen_name" "id_str"}
     }
     
-    init(){
+    async init(){
       Promise.all(
       [
+      this.loadOptions(),
       utils.db.getAllKeys('tweets').then((ids)=>{this.tweet_ids = this.sortKeys(ids)}),
       utils.getData("user_info").then((info)=>{this.user_info = info != null ? info : {}}),
       utils.getData("has_archive").then((info)=>{this.has_archive = info != null ? info : false}),
@@ -389,6 +385,28 @@ class TweetWiz{
       )
     }
     
+  
+  
+  get options(){return this._options}
+  set options(options){
+    if(this._options.getRetweets != options.getRetweets && this.inited){
+      console.log("option getRetweets changed", options.getRetweets)
+      wiz.getLatestTweets().then((latest)=>{
+        wiz.latest_tweets = latest
+        utils.msgCS({type:"toggled-retweets"})
+      })
+
+    }
+    this._options = Object.assign(this._options,options)
+  }
+    
+    // Loads options from storage
+  async loadOptions(){
+    utils.getData("options").then(opts=>{
+      this.options = opts != null ? opts : this.options
+    })
+  }
+
     get query_ready(){
       return wiz.user_info.screen_name != null && auth.csrfToken != null
     }
@@ -448,8 +466,10 @@ class TweetWiz{
     }
     get latest_tweets(){return this._latest_tweets}
     set latest_tweets(latest_tweets){
+      console.log("setting LATEST TWEETS ", latest_tweets)
       this._latest_tweets = latest_tweets
       utils.setData({latest_tweets:this.latest_tweets}).then(()=>{
+        console.log("latest tweets set")
       })
     }
 
@@ -511,7 +531,7 @@ class TweetWiz{
       for (let k of keys){
         let t = await utils.getDB(k)
 
-        if(utils.options.getRetweets){
+        if(wiz.options.getRetweets){
           latest.push(t)
         } else{
           if(t.username == this.user_info.screen_name) latest.push(t)
@@ -901,7 +921,7 @@ class TweetWiz{
       // meta = meta != null ? meta : this.tweets_meta
       meta = this.tweets_meta
       let vars ={}
-      let include_rts = true //utils.options.getRetweets != null ? utils.options.getRetweets : true//TODO investigate why these are coming up undefined
+      let include_rts = true
       const init = {
         credentials: "include",
         headers: {
@@ -1263,7 +1283,7 @@ class NLP{
     let related = []
 
     for (let res of results){
-      if(utils.options.getRetweets){
+      if(wiz.options.getRetweets){
         related.push(await utils.getDB(res.ref,'tweets'))
       } else{
         if(res.doc.username == wiz.user_info.screen_name) related.push(await utils.getDB(res.ref,'tweets'))
@@ -1327,7 +1347,7 @@ async function onStorageChanged(changes, area){
       switch(item){
         case "options":
           console.log("options changed")
-          utils.options = newVal != null ? newVal : utils.options;
+          wiz.options = newVal != null ? newVal : wiz.options;
           // chrome.tabs.reload(utils.tabId);
           break;
         default:
@@ -1376,6 +1396,15 @@ async function onMessage(m, sender) {
         nlp.nextSearch = m.query
         break;
       
+      case "robo-tweet":
+        console.log('robotweet message received!')
+        let data = await queryGPT(m.query)
+        console.log('got gpt response', data)
+        let roboTweet = data.choices[0].text
+        console.log('roboTweet text: ', roboTweet)
+        utils.setData({'roboTweet':roboTweet})
+        break;
+
       case "interrupt-query":
         wiz.interrupt_query = true;
         break;

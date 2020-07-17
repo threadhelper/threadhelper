@@ -1,329 +1,5 @@
 //helper functions
 
-//General js tools
-{
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-Array.prototype.contains = function(obj) {
-  var i = this.length;
-  while (i--) {
-      if (this[i] === obj) {
-          return true;
-      }
-  }
-  return false;
-};
-
-String.prototype.replaceBetween = function(start, end, what) {
-  return this.substring(0, start) + what + this.substring(end);
-};
-}
-
-function msgBG(msg = null){
-  let message = msg == null ? {type:"query", query_type: "update"} : msg
-  chrome.runtime.sendMessage(message);
-  //console.log("messaging BG", message)
-}
-
-
-// Data/Storage/Comms utils
-class dUtils {
-  constructor() {
-    // dutils.options
-    this.options = {};
-    this.loadOptions();
-    // Holds observers for eventual destruction
-  }
-
-    
-  
-  //returns a promise that gets a value from chrome local storage 
-  async getData(key) {
-    return new Promise(function(resolve, reject) {
-      chrome.storage.local.get(key, function(items) {
-        if (chrome.runtime.lastError) {
-          console.error(chrome.runtime.lastError.message);
-          reject(chrome.runtime.lastError.message);
-        } else {
-          // console.log(items[key])
-          resolve(items[key]);
-        }
-      });
-    });
-  }
-
-  //returns a promise that sets an object with key value pairs into chrome local storage 
-  async setData(key_vals) {
-    return new Promise(function(resolve, reject) {
-      chrome.storage.local.set(key_vals, function(items) {
-        if (chrome.runtime.lastError) {
-          console.error(chrome.runtime.lastError.message);
-          reject(chrome.runtime.lastError.message);
-        } else {
-          resolve();
-        }
-      });
-    });
-  }
-
-
-  async loadOptions(){
-    this.getData("options").then((options)=>{this.options = options != null ? options : this.options})
-    return this.options
-  }
-  
-
-  msgBG(msg = null){
-    let message = msg == null ? {type:"query", query_type: "update"} : msg
-    chrome.runtime.sendMessage(message);
-    //console.log("messaging BG", message)
-  }
-}
-
-// webpage / style utils
-class wUtils {
-  constructor(){
-    this.observers = []
-    this.url_regex = /(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})/;
-    this.current_url = window.location.href
-  }
-
-  setTheme(){
-    const light_theme = "rgb(255, 255, 255)"
-    const dim_theme = "rgb(21, 32, 43)"
-    const black_theme = "rgb(0, 0, 0)"
-    let root = document.documentElement;
-    let bg_color = document.body.style["background-color"]
-
-    
-    //console.log("setting theme", bg_color)
-    switch(bg_color){
-      case light_theme:
-        root.style.setProperty('--main-bg-color', "#f5f8fa");
-        root.style.setProperty('--main-txt-color', "black");
-        root.style.setProperty('--main-border-color', "#e1e8ed");
-        break;
-      case dim_theme:
-        root.style.setProperty('--main-bg-color', "#192734");
-        root.style.setProperty('--main-txt-color', "white");
-        root.style.setProperty('--main-border-color', "#38444d");
-        break;
-      case black_theme:
-        root.style.setProperty('--main-bg-color', "black");
-        root.style.setProperty('--main-txt-color', "white");
-        root.style.setProperty('--main-border-color', "#2f3336");
-        break;
-      default:
-        root.style.setProperty('--main-bg-color', "#f5f8fa");
-        root.style.setProperty('--main-txt-color', "black");
-        root.style.setProperty('--main-border-color', "#e1e8ed");
-        break;
-    }
-  }
-
-  // Modes: home, compose, something else?
-  getMode(url = null){
-    var pageURL = url == null ? window.location.href : url
-    var home = 'https://twitter.com/home'
-    var compose = 'https://twitter.com/compose/tweet'
-    var notifications = 'https://twitter.com/notifications'
-    var explore = 'https://twitter.com/explore'
-    var bookmarks = 'https://twitter.com/i/bookmarks'
-    
-    // console.log("mode is " + pageURL)
-    if (pageURL.indexOf(home) > -1){
-      return 'home'
-    }
-    else if (pageURL.indexOf(compose) > -1){
-      return "compose"
-		}
-		else if (pageURL.indexOf(notifications) > -1){
-      return "notifications"
-		}
-		else if (pageURL.indexOf(explore) > -1){
-      return "explore"
-		}
-		else if (pageURL.indexOf(bookmarks) > -1){
-      return "bookmarks"
-    }
-    else{
-      return "other"
-    }
-  }
-
-  getFirstComposeBox(){
-    return document.getElementsByClassName(ui.editorClass)[0]
-	}
-	
-	isSidebar(mode){
-		switch(mode){
-			case 'home':
-				return document.getElementsByClassName('sug_home').length > 0 
-			case 'compose':
-        return document.getElementsByClassName('sug_compose').length > 0
-      default:
-        return false
-		}
-	}
-  
-  // Sets up a listener for the Recent Trends block. Listens to changes in document's children and checks if it's what we want.
-  setUpTrendsListener(){
-    // console.log("adding trends logger")
-    if(wutils.getMode() != "other"){
-      var observer = new MutationObserver((mutationRecords, me)=>{ui.onTrendsReady(mutationRecords, me)});
-      this.observers.push(observer)
-      observer.observe(document, { subtree: true, childList: true});
-      return observer
-    }
-    return
-  }
-
-  setUpSidebarRemovedListener(){
-    // console.log("setting up sidebar removed listener")
-    var observer = new MutationObserver((mutationRecords, me)=>{ui.onSidebarRemoved(mutationRecords, me)});
-    this.observers.push(observer)
-    let sidebarColumn = document.querySelector(ui.sideBarSelector)
-    observer.observe(sidebarColumn.parentNode, {childList: true});
-    return observer
-  }
-
-  // Detect when the compose box is focused
-  onFocusIn(e){
-    var divs = document.getElementsByClassName(ui.editorClass)
-    for (var div of divs){
-      if(e.target && div.contains(e.target)){
-        if(wutils.getMode() != "other") ui.composeBoxFocused(div)
-      }
-    }
-  }
-  // Detect when the compose box loses focus
-  onFocusOut(e){
-    var divs = document.getElementsByClassName(ui.editorClass)
-    for (var div of divs){
-      if(e.target && div.contains(e.target)){
-        if(wutils.getMode() != "other") ui.composeBoxUnfocused(div)
-      }
-    }
-  }
-
-  //When tweet buttons are clicked
-  tweetButtonClicked(e){
-    var divs = document.querySelectorAll(ui.tweetButtonSelectors)
-    for (var div of divs){
-      if(e.target && div.contains(e.target)){
-        console.log("Tweet button pressed")
-        wiz.handlePost()
-      }
-    }
-  }
-
-  isComposeFocused(){
-    if(ui.activeComposer)
-     {return ui.activeComposer.contains(document.activeElement)}
-     else{return false}
-  }
-  isRetweetFocused(){
-    var divs = document.querySelectorAll(ui.retweetConfirmSelector)
-    for (var div of divs){
-      if(div.contains(document.activeElement) || document.activeElement.contains(div)){
-        console.log("retweet confirm is focused")
-        return true
-      }
-    }
-    return false
-  }
-
-  isDeleteFocused(){
-    var divs = document.querySelectorAll(ui.deleteConfirmSelector)
-    for (var div of divs){
-      if(div.contains(document.activeElement) || document.activeElement.contains(div)){
-        console.log("delete confirm is focused")
-        return true
-      }
-    }
-    return false
-  }
-
-  //When tweet buttons are clicked
-  tweetButtonClicked(e){
-    var divs = document.querySelectorAll(ui.tweetButtonSelectors)
-    for (var div of divs){
-      if(e.target && div.contains(e.target)){
-        console.log("Tweet button pressed")
-        wiz.handlePost()
-      }
-    }
-  }  
-
-  tweetShortcut(e){
-    if (e.ctrlKey && e.key === 'Enter') {
-      if(wutils.isComposeFocused()){
-        console.log("Tweet shortcut pressed")
-        wiz.handlePost()
-      }
-    }
-  }
-
-  retweetButtonClicked(e){
-    var divs = document.querySelectorAll(ui.retweetConfirmSelector)
-    for (var div of divs){
-      if(e.target && (div.contains(e.target) || e.target.contains(div))){
-        console.log("Retweet button pressed")
-        wiz.handlePost()
-      }
-    }
-  }
-  retweetShortcut(e){
-    if (e.key === 'Enter') {
-      if(wutils.isRetweetFocused()){
-        console.log("Retweet confirm entered")
-        wiz.handlePost()
-      }
-    }
-  }
-  deleteConfirmSelector
-  deleteButtonClicked(e){
-    var divs = document.querySelectorAll(ui.deleteConfirmSelector)
-    for (var div of divs){
-      if(e.target && (div.contains(e.target) || e.target.contains(div))){
-        console.log("Delete button pressed")
-        wiz.handlePost()
-      }
-    }
-  }
-  deleteShortcut(e){
-    if (e.key === 'Enter') {
-      if(wutils.isDeleteFocused()){
-        console.log("Delete confirm entered")
-        wiz.handlePost()
-      }
-    }
-  }
-
-  // EVENT DELEGATION CRL, EVENT BUBBLING FTW
-  setUpListeningComposeClick(){
-    //console.log("event listeners added")
-    document.addEventListener('focusin',this.onFocusIn);
-    document.addEventListener('focusout',this.onFocusOut);
-    document.addEventListener('click',this.tweetButtonClicked);
-    document.addEventListener('keydown', this.tweetShortcut);
-    document.addEventListener('click',this.retweetButtonClicked);
-    document.addEventListener('keydown', this.retweetShortcut);
-    document.addEventListener('click',this.deleteButtonClicked);
-    document.addEventListener('keydown', this.deleteShortcut);
-  }
-
-  // given composer found by ui.editorClass = "DraftEditor-editorContainer",
-  // outputs grandparent of const ui.textFieldClass = 'span[data-text="true"]'
-  getTextField(compose_box){
-    //return compose_box.firstElementChild.firstElementChild.firstElementChild.firstElementChild
-    return compose_box.firstElementChild.firstElementChild
-  }
-
-  onWinResize(){}
-}
 class UI {
   constructor() {
     // We use this to find the tweet editor
@@ -371,13 +47,17 @@ class UI {
   }
 
   get activeComposer(){
-    if (this._activeComposer){
-
+    if (!(this._activeComposer != null)){
+      let first = wutils.getFirstComposeBox()
+      if(first){
+        this.activeComposer = first.parentNode
+      }
     }
     return this._activeComposer
   }
 
   set activeComposer(_activeComposer){
+    
     this._activeComposer = _activeComposer
   }
 
@@ -409,7 +89,7 @@ class UI {
   
 	putSidebar(mode, compose_box = null){
     //to set active Composer
-		let sidebar = this.buildBox()
+		let sidebar = sideRen.buildBox()
     sidebar = this.placeBox(sidebar,mode)
     return sidebar
 	}
@@ -435,6 +115,26 @@ class UI {
       let related = wiz.latest_tweets
       updateWithSearch(related)
       this.showConsoleMessage("Latest tweets:")
+    }
+  }
+
+  
+    // Show a message in console, returns old message (presumably for interrupts and stuff like that)
+  // TODO: Consoles could be separate but right now they're all the same. Could lead to confusion in the future
+  showConsoleMessage(message){
+    let consoleDivs = document.getElementsByClassName("suggConsole")
+    let old_msg = ''
+    for(let consoleDiv of consoleDivs) {
+      old_msg = consoleDiv.innerHTML
+      consoleDiv.innerHTML = message;
+    }
+    return old_msg
+  }
+
+  toggleArchIcon(state="flex"){
+    let icons = document.getElementsByClassName('arch_icon')
+    for(let arch_icon of icons) {
+      arch_icon.style.display = state;
     }
   }
 
@@ -569,22 +269,8 @@ class UI {
         break;
     }
 		return sidebar
-	}
-	
-	
-  /** buildBox creates the 'Thread Helper' html elements */
-  buildBox() {
-    var sidebar = null;
-    sidebar = document.createElement('div');   //create a div
-    sidebar.setAttribute("aria-label", 'suggestionBox');
-    
-    sidebar.appendChild(this.setUpLoadArchive())
-    sidebar.appendChild(this.buildBoxHeader())
-
-    sidebar.appendChild(this.buildSecondDiv())
-    return sidebar
   }
-
+  
   updateSyncIcon(synced, msg = null){
     //message
     let message = msg != null ? msg : ''
@@ -603,7 +289,7 @@ class UI {
     }
     return message
   }
-
+	
   onSyncIconClick(){
     console.log("Metadata:",wiz.tweets_meta); 
     console.log("User info:", wiz.user_info); 
@@ -611,178 +297,89 @@ class UI {
     dutils.msgBG({type:"query", query_type: "update"})
     
   }
-
-  buildSyncIcon(){
-    let sync_icon = document.createElement('span')
-    let sync_class = wiz.sync ? 'sync_icon synced' : 'sync_icon unsynced';
-    sync_icon.setAttribute("class", sync_class);
-    let tooltiptext = document.createElement('span')
-    tooltiptext.setAttribute("class", 'tooltiptext');
-    sync_icon.appendChild(tooltiptext)
-    sync_icon.onclick = this.onSyncIconClick
-    return sync_icon
+  
+  onClickLoadArchive(file, e){
+      let idx = 0
+      wiz.mid_request = true
+      wiz.sync = false
+      var files = e.target.files, reader = new FileReader();
+      reader.onload = wiz.importArchive;
+      for (let i = 0; i < files.length; i++){
+        if(files[i].name == "tweet.js"){ file = files[i]; idx = i; break;}
+      }
+      //console.log("files length", files.length)
+  
+      //if(idx <= files.length) 
+      reader.readAsText(files[idx]);  
   }
-
-  toggleArchIcon(state="flex"){
-    let icons = document.getElementsByClassName('arch_icon')
-    for(let arch_icon of icons) {
-      arch_icon.style.display = state;
-    }
-  }
-
-  buildArchIcon(){
-    let msg = '<span>Click here to upload your Twitter Archive here. <a href="https://twitter.com/settings/your_twitter_data">Download an archive of your data</a>, extract it and select data/tweet.js.</span>';
-    let arch_icon = document.createElement('span')
-    arch_icon.setAttribute("class", "arch_icon");
-    let span = document.createElement('button')
-    span.textContent = " (load archive)"
-    arch_icon.appendChild(span)
-    if(wiz.has_archive) this.toggleArchIcon("none");
-
-    let tooltiptext = document.createElement('span')
-    tooltiptext.innerHTML = msg
-    tooltiptext.setAttribute("class", 'tooltiptext');
-    arch_icon.appendChild(tooltiptext)
-    arch_icon.onclick = ()=>{(document.getElementById("hidden_load_archive")).click()}
-    return arch_icon
-  }
-
-  // Builds the header: Currently title and sync light
-  buildBoxHeader(){
-    let headerDiv = document.createElement('div')
-    headerDiv.setAttribute("class", "suggHeader")
-    var h2 = document.createElement('h2')
-    let span = document.createElement('span')
-    span.textContent = "Thread Helper"
-    h2.appendChild(span)
-    h2.setAttribute("class","suggTitle");
-    headerDiv.appendChild(this.buildSyncIcon())
-    headerDiv.appendChild(h2)
-    headerDiv.appendChild(this.buildArchIcon())
-    return headerDiv
-  }
-
-  buildSecondDiv(){
-    let div = document.createElement('div')
-    div.setAttribute("class", "suggSecondDiv")
-    div.setAttribute("id", "suggSecondDiv")
-    div.appendChild(this.buildBoxConsole())
-    div.appendChild(this.buildBoxOptions())
-    return div
-  }
-//
-  //all checkboxes for now
-  buildBoxOptions(){
-    let div = document.createElement('div')
-    div.class = "suggOptions"
-    let onToggleRTs = (cb)=>{
-      let checked = cb.checked
-      console.log("toggled get retweets", cb)
-      dutils.getData("options").then((options)=>{
-        options = options != null ? options : {}
-        options.getRetweets = checked; 
-        dutils.setData({options:options}).then(()=>{
-          console.log("updated get retweets to",checked)
-        })
+  
+  onToggleRTs(cb){
+    let checked = cb.checked
+    console.log("toggled get retweets", cb)
+    dutils.getData("options").then((options)=>{
+      options = options != null ? options : {}
+      options.getRetweets = checked; 
+      dutils.setData({options:options}).then(()=>{
+        console.log("updated get retweets to",checked)
       })
+    })
+  }
+  
+  onRoboIconClick(activeComposer){
+    console.log('icon clicked!')
+    if (activeComposer){
+      let query = ui.getRoboQuery()
+      console.log('robo query: ', query)
+      dutils.msgBG({type:"robo-tweet", query: query})
+    } else{
+      console.log("can't robo tweet, no active composer")
     }
-    let options = {
-      toggleRTs: {
-        description: "RT",
-        onclick: onToggleRTs,
-      },
+  }
+  
+  //supposed to get tweets in thread we're responding to / drafting
+  // mode = wutils.getMode()
+  getRoboQuery(mode){
+    let make_query=(thread_text)=>{
+      let query = 'My new twitter thread: \n'
+      for(let [i,t] of thread_text.entries()){
+          query = query.concat(`${i}/N: ${t}\n`)
+      }
+      return query
     }
-    for(let [key, val] of Object.entries(options)){
-      let span = document.createElement('span')
-      span.id = key
-      span.class = "suggOption"
-      span.style = "display:flex; align-items:center"
-
-      let description = document.createElement('span')
-      description.innerHTML = val.description
-
-      let checkbox = document.createElement('input')
-      checkbox.type = "checkbox"
-      checkbox.checked = dutils.options.getRetweets
-      checkbox.onclick = ()=>{val.onclick(checkbox)}
-
-      span.appendChild(description)
-      span.appendChild(checkbox)
-      div.appendChild(span)
+    let getThreadExisting = ()=>{return ''}
+    let getThreadDraft = ()=>{
+      let editors = [...document.getElementsByClassName(ui.editorClass)]
+      let thread_parent = ui.activeComposer.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode
+      editors = editors.filter(e=>{return thread_parent.contains(e)})
+      let thread_text = editors.map(x=>x.textContent)
+      return make_query(thread_text)
     }
-    return div
-  }
-  // Builds a display for notifications
-  buildBoxConsole(){
-    let consoleDiv = document.createElement('div')
-    consoleDiv.setAttribute("class", "suggConsole")
-    consoleDiv.setAttribute("id", "suggConsole")
-    consoleDiv.innerHTML = "Type something to get related tweets :)"
-    return consoleDiv
-  }
-
-    // Show a message in console, returns old message (presumably for interrupts and stuff like that)
-  // TODO: Consoles could be separate but right now they're all the same. Could lead to confusion in the future
-  showConsoleMessage(message){
-    let consoleDivs = document.getElementsByClassName("suggConsole")
-    let old_msg = ''
-    for(let consoleDiv of consoleDivs) {
-      old_msg = consoleDiv.innerHTML
-      consoleDiv.innerHTML = message;
+    let getCurrentText = ()=>{
+      return make_query([ui.activeComposer.textContent])
     }
-    return old_msg
+    let query = ''
+    switch(mode){
+      case 'compose':
+        query = getThreadDraft()
+        break;
+      default:
+        query = getCurrentText()
+        break
+    }
+    return query
   }
-
-  // Sets up a hidden file load button that is clicked by the button the user clicks.
-  // Currently getting from dir but I worry it puts the whole contents into memory while we just want tweet.js and so maybe we should be import it directly (more user clicks)
-  setUpLoadArchiveFromDir(){
-    var x = document.createElement("input");
-      let file = {}
-      let idx = 0
-        x.setAttribute("type", "file");
-        x.setAttribute("id", "hidden_load_archive");
-        //x.accept=".json,.js,.zip" ;
-        x.webkitdirectory = true;
-        x.style.display = "none"
-        x.addEventListener("change", (e) => {
-          wiz.mid_request = true
-          wiz.sync = false
-          var files = e.target.files, reader = new FileReader();
-          reader.onload = wiz.importArchive;
-          for (let i = 0; i < files.length; i++){
-            if(files[i].name == "tweet.js"){ file = files[i]; idx = i; break;}
-          }
-          //console.log("files length", files.length)
-
-          //if(idx <= files.length) 
-          reader.readAsText(files[idx]);  
-        }, false);
-    return x
+  
+  showRoboTweet(tweet){
+    // shouldn't be all of them, just current sidebar's
+    let roboDivs = document.getElementsByClassName('roboTweet')
+    for (let div of roboDivs){
+      if(ui.activeSidebar.contains(div)){
+        console.log('showing robotweet')
+        div.innerHTML = tweet
+      }
+    }
   }
-  // from file
-  setUpLoadArchive(){
-    var x = document.createElement("input");
-      let file = {}
-      let idx = 0
-        x.setAttribute("type", "file");
-        x.setAttribute("id", "hidden_load_archive");
-        x.accept=".json,.js" ;
-        x.style.display = "none"
-        x.addEventListener("change", (e) => {
-          wiz.mid_request = true
-          wiz.sync = false
-          var files = e.target.files, reader = new FileReader();
-          reader.onload = wiz.importArchive;
-          for (let i = 0; i < files.length; i++){
-            if(files[i].name == "tweet.js"){ file = files[i]; idx = i; break;}
-          }
-          //console.log("files length", files.length)
-
-          //if(idx <= files.length) 
-          reader.readAsText(files[idx]);  
-        }, false);
-    return x
-  }
+  
 
 
   //checks whether composeBox is empty
@@ -829,11 +426,13 @@ class UI {
 
   
 }
+
+
 /** Updates the tweetlist when user types */
 // put semaphore here?
 async function onChange(mutationRecords) {
   const text = ui.getTextFromMutation(mutationRecords)
-  // console.log("CHANGE! text is:", text, "; in element: ", mutationRecords[0].target);
+  console.log("CHANGE! text is:", text, "; in element: ", mutationRecords[0].target);
   ui.current_query = text
   requestSearch(text)
   
@@ -871,34 +470,12 @@ async function updateWithSearch(related){
     if (related.length > 0){
       // maybe we should throw error instead of just filtering
       related = related.filter(x=>{return x != null})
-      try{ren.renderTweets([...new Set(related)])} catch(e){
+      try{ren.renderTweets([...new Set(related)], ui.activeSidebar)} catch(e){
         console.log("updating with search ",related)
         throw(e)
       }
     }
   }
-  // if(!ui.ready()) return
-  // let isTextValid = (text) => {return typeof text != "undefined" && text != null /*&& text.trim() != ''*/}
-  // if(/*wiz.getTweets() != null &&*/ isTextValid(text)){
-  //   if(Object.keys(wiz.getTweets()).length>0){
-  //     var box = ui.activeSidebar
-  //     //const box = document.`querySelector('[aria-label="suggestionBox"]')
-  //     if(typeof ui.activeSidebar !== 'undefined' && ui.activeSidebar != null && ui.activeSidebar.style.display != "flex"){
-  //       ui.activeSidebar.style.display = "flex"
-  //     }
-  //     const tweet = text.replace(wutils.url_regex, "")
-  //     nlp.getRelated(tweet, wiz.getTweets()).then((related)=>{
-  //       ren.renderTweets([...new Set(related)])
-  //     });
-      
-  //   }
-  // }
-  // else{
-  //   //console.log("no tweets")
-  //   if (typeof ui.activeSidebar !== 'undefined'){
-  //     ren.renderTweets([], text != null ? text : '');
-  //   }
-  // }
 }
 
 
@@ -929,25 +506,6 @@ class TweetWiz{
     dutils.getData("tweets").then((tweets)=>{this.tweets_dict = tweets != null ? tweets : {}})
     dutils.getData("latest_tweets").then((latest_tweets)=>{this.latest_tweets = latest_tweets != null ? latest_tweets : []})
   }
-
-  // get sync(){
-  //   return this.tweets_meta.has_timeline
-  // }
-
-  // set sync(synced){
-  //   this._sync = synced
-  // }
-
-  // get tweets_meta(){
-  //   return this._tweets_meta
-  // }
-  // set tweets_meta(meta){
-  //   console.log("set metadata ", meta)
-  //   this._tweets_meta = meta
-  //   //set ui icons
-  //   if (meta.has_archive){ui.toggleArchIcon("none")} else{ui.toggleArchIcon("flex")}
-  //   if (meta.has_timeline){this.sync = true; this.updateSyncStatus(true)} else{this.sync = false; this.updateSyncStatus(false)}
-  // }
 
   //called when a new tweet is posted. 
   handlePost(){
@@ -983,280 +541,37 @@ class TweetWiz{
   }
 }
 
-class Renderer {
-  constructor() {
-    this.shortMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-    
+
+function onClickTweet(e){
+  var link = $(`#th-link-${tweet.id}`)[0]
+  var copy = $(e.target).find(".th-hover-copy")
+  link.style.display = "flex"
+  link.select()
+  document.execCommand("copy")
+  link.style.display = "none"
+  var input = ui.activeComposer != null ? ui.activeComposer.firstElementChild : wutils.getFirstComposeBox()
+  if(input != null)  {
+      input.focus()
+      // https://stackoverflow.com/questions/24115860/set-caret-position-at-a-specific-position-in-contenteditable-div
+      // There will be multiple spans if multiple lines, so we get the last one to set caret to the end of the last line.
+      let _span = $(input).find('span[data-text=true]').last()[0]
+      // If there's some writing on it, otherwise _span will be undefined
+      if (_span != null){
+      var text = _span.firstChild
+      var range = document.createRange()
+      range.setStart(text, text.length)
+      range.setEnd(text, text.length)
+      var sel = window.getSelection()
+      sel.removeAllRanges()
+      sel.addRange(range)
+      }
   }
-
-    
-  renderTweet(tweet, textTarget) {
-    let tweetLink = `https://twitter.com/${"undefined"}/status/${tweet.id}`
-    try{
-      tweetLink = `https://twitter.com/${tweet.username}/status/${tweet.id}`
-    } catch(e){
-      //console.log("ERROR",tweet)
-    }
-    let timeDiff = this.getTimeDiff(tweet.time)
-    let reply_text = this.getReplyText(tweet.reply_to, tweet.mentions)
-    let text = this.reformatText(tweet.text, tweet.reply_to, tweet.mentions, tweet.urls, tweet.media)
-    let maybeMedia = tweet.has_media ? this.renderMedia(tweet.media, "th-media") : ""
-    let maybeQuote = tweet.has_quote ? this.renderQuote(tweet.quote, tweet.has_media) : ""
-    let template = $(`
-    <div class="th-tweet-container">
-      <div class="th-tweet">
-        <div class="th-gutter">
-          <img class="th-profile" src="${tweet.profile_image}">
-        </div>
-        <div class="th-body">
-          <div class="th-header">
-            <div class="th-header-name">${tweet.name}</div>
-            <div class="th-header-username">@${tweet.username}</div>
-            <div class="th-header-dot">·</div>
-            <div class="th-header-time">${timeDiff}</div>
-          </div>
-          <div class="th-reply">${reply_text}</div>
-          <div class="th-text">${text}</div>
-          ${maybeMedia}
-          ${maybeQuote}
-        </div>
-      </div>
-      <div class="th-hover">
-        <textarea style="display: none" id="th-link-${tweet.id}" class="th-link">${tweetLink}</textarea>
-        <div class="th-hover-copy">copy</div>
-      </div>
-    </div>`)
-
-    let hover = $('.th-hover', template)
-    hover.click(function(e) {
-      var link = $(`#th-link-${tweet.id}`)[0]
-      var copy = $(e.target).find(".th-hover-copy")
-      link.style.display = "flex"
-      link.select()
-      document.execCommand("copy")
-      link.style.display = "none"
-      var input = ui.activeComposer != null ? ui.activeComposer.firstElementChild : wutils.getFirstComposeBox()
-      if(input != null)  {
-        input.focus()
-        // https://stackoverflow.com/questions/24115860/set-caret-position-at-a-specific-position-in-contenteditable-div
-        // There will be multiple spans if multiple lines, so we get the last one to set caret to the end of the last line.
-        let _span = $(input).find('span[data-text=true]').last()[0]
-        // If there's some writing on it, otherwise _span will be undefined
-        if (_span != null){
-          var text = _span.firstChild
-          var range = document.createRange()
-          range.setStart(text, text.length)
-          range.setEnd(text, text.length)
-          var sel = window.getSelection()
-          sel.removeAllRanges()
-          sel.addRange(range)
-        }
-      }
-      copy.text("copied!")
-      setTimeout(function() {
-        copy.text("copy")
-      }, 20000)
-    })
-
-    return template[0]
-  }
-
-  getTimeDiff(time) {
-    let now = new Date()
-    let timeDate = new Date(time)
-    let diff = now-timeDate // In milliseconds.
-    let seconds = parseInt(diff/1000)
-    if (seconds < 60) {
-      return `${seconds}s`
-    }
-    let mins = parseInt(seconds/60)
-    if (mins < 60) {
-      return `${mins}m`
-    }
-    let hours = parseInt(mins/60)
-    if (hours < 24) {
-      return `${hours}h`
-    }
-    let month = this.shortMonths[timeDate.getMonth()]
-    let day = timeDate.getDate()
-    let thisYear = new Date(now.getFullYear(), 0)
-    return timeDate > thisYear ? `${month} ${day}` : `${month} ${day}, ${timeDate.getFullYear()}`
-  }
-
-  getReplyText(reply_to, mentions) {
-    if (reply_to === null) {
-      return ""
-    } else 
-    if (mentions.length === 1 || mentions.length === 0) {
-      return `Replying to @${reply_to}`
-    }
-
-    // Count number of mentions that occur at the beginning of the tweet. Begin at -1 because mentions
-    // will include reply_to.
-    let numOthers = -1
-    let nextIndex = 0
-    for (var mention of mentions) {
-      if (mention.indices[0] !== nextIndex) {
-        break
-      }
-      numOthers++
-      nextIndex = mention.indices[1]+1
-    }
-    let otherWord = numOthers===1 ? "other" : "others"
-    return `Replying to @${reply_to} and ${numOthers} ${otherWord}`
-  }
-
-  reformatText(text, reply_to=null, mentions=null, urls=null, media=null) {
-    let ret = text
-    let charsRemoved = 0
-    // Cut out reply_to + any mentions at the beginning.
-    if (reply_to !== null) {
-      let nextIndex = 0
-      for (var mention of mentions) {
-        if (mention.indices[0] !== nextIndex) {
-          break
-        }
-        // Plus one to get rid of the space between usernames.
-        ret = ret.replaceBetween(mention.indices[0]-charsRemoved, mention.indices[1]-charsRemoved+1, "")
-        charsRemoved += mention.indices[1]-mention.indices[0]+1
-        nextIndex = mention.indices[1]+1
-      }
-    }
-    if (urls !== null) {
-      for (var url of urls) {
-        if (url.expanded.includes("https://twitter.com")) {
-          ret = ret.replace(url.current_text, "")
-        } else {
-          ret = ret.replace(url.current_text, url.display)
-        }
-      }
-    }
-    if (media !== null) {
-      for (var m of media) {
-        ret = ret.replace(m.current_text, "")
-      }
-    }
-
-    return ret
-  }
-
-  renderMedia(media, className) {
-    let topImgs = ""
-    let botImgs = ""
-    if (media.length > 0) {
-      topImgs += `<div class="th-media-image"><img src="${media[0].url}"></div>`
-    }
-    if (media.length > 1) {
-      topImgs += `<div class="th-media-image"><img src="${media[1].url}"></div>`
-    }
-    if (media.length > 2) {
-      botImgs += `<div class="th-media-image"><img src="${media[2].url}"></div>`
-    }
-    if (media.length > 3) {
-      botImgs += `<div class="th-media-image"><img src="${media[3].url}"></div>`
-    }
-
-    let top = `<div class="th-media-top">${topImgs}</div>`
-    let bottom = botImgs === "" ? "" : `<div class="th-media-bottom">${botImgs}</div>`
-    let template = `
-    <div class="${className}">
-      ${top}
-      ${bottom}
-    </div>
-    `
-    return template
-  }
-
-  renderQuote(quote, parent_has_media) {
-    if (quote != null){
-      let timeDiff = this.getTimeDiff(quote.time)
-      let replyText = this.getReplyText(quote.reply_to, quote.mentions)
-      let text = this.reformatText(quote.text, quote.reply_to, quote.mentions, null, quote.media)
-      let minimedia = ""
-      let mainmedia = ""
-      if (quote.has_media) {
-        if (parent_has_media) {
-          minimedia = this.renderMedia(quote.media, "th-quote-content-minimedia")
-        } else {
-          mainmedia = this.renderMedia(quote.media, "th-quote-content-main-media")
-        }
-      }
-      let template = `
-      <div class="th-quote">
-        <div class="th-quote-header">
-          <img class="th-quote-header-profile" src="${quote.profile_image}">
-          <div class="th-quote-header-name">${quote.name}</div>
-          <div class="th-quote-header-username">@${quote.username}</div>
-          <div class="th-header-dot">·</div>
-          <div class="th-quote-header-time">${timeDiff}</div>
-        </div>
-        <div class="th-quote-reply">${replyText}</div>
-        <div class="th-quote-content">
-          ${minimedia}
-          <div class="th-quote-content-main">
-            <div class="th-text">${text}</div>
-            ${mainmedia}
-          </div>
-        </div>
-      </div>
-      `
-      return template
-    }
-    else{
-      let template = `
-      <div class="th-quote th-unavailable">
-        <div class="th-quote-content">
-          <div class="th-quote-content-main">
-            <div class="th-quote-content-main-text">This Tweet is unavailable.</div>
-          </div>
-        </div>
-      </div>
-      `
-      return template
-    }
-  }
-
-  //** Build the html for a set of tweets */
-  renderTweets(tweets, text = '') {
-    var resultsDiv = ui.activeSidebar
-    for (let child of resultsDiv.children){
-      if (child.className == "th-tweet-container") {resultsDiv.removeChild(child);}
-      else{
-      }
-    }
-    let children = resultsDiv.children
-    while (children.length > 3) {
-      children = resultsDiv.children
-      resultsDiv.removeChild(children[children.length -1]);
-    }
-    let message = ''
-    // Header and hidden load button
-    if (tweets.length < 1){
-      if(text == ''){
-        message = "Type something to get related tweets :)"
-      } else{
-        message = "No matching tweets yet!"
-      }
-    } else{
-      message = "Found these:"
-    }
-    ui.showConsoleMessage(message)
-    const textTarget = $('span[data-text="true"]');
-    for (let t of tweets) {
-
-      let tweetDiv = document.createElement('div')
-      try{
-        tweetDiv = this.renderTweet(t, textTarget);
-      } catch(e){
-        console.log(t)
-        console.log(textTarget)
-        throw("RENDER TWEET ERROR",e)
-      }
-      resultsDiv.appendChild(tweetDiv);
-    }
-  }
-
+  copy.text("copied!")
+  setTimeout(function() {
+      copy.text("copy")
+  }, 20000)
 }
+
 
 // changes: each has oldValue and newValue
 // area: could be sync local or managed
@@ -1296,8 +611,12 @@ async function onStorageChanged(changes, area){
           break;
         case "latest_tweets":
           console.log("new latest tweets", newVal)
-          wiz.latest_tweets = newVal
+          wiz.latest_tweets = newVal != null ? newVal : []
           ui.refreshSidebars()
+          break;
+        case "roboTweet":
+          console.log("roboTweet changed in storage, newVal")
+          ui.showRoboTweet(newVal)  
           break;
         case "tweets_meta":
           // wiz.tweets_meta = newVal != null ? newVal : wiz.makeTweetsMeta(null)
@@ -1344,10 +663,11 @@ async function onStorageChanged(changes, area){
   function main()
   {
     dutils = new dUtils();
-    wutils = new wUtils();
     ui = new UI();
-    ren = new Renderer();
+    sideRen = new SidebarRenderer(ui)
+    ren = new Renderer(ui);
     wiz = new TweetWiz(); //loads tweets
+    wutils = new wUtils(ui, wiz);
     // myWorker = new Worker('worker.js');
   
     chrome.runtime.onMessage.addListener(onMessage);
