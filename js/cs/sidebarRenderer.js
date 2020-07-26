@@ -146,7 +146,7 @@ class SidebarRenderer {
     tooltiptext.innerHTML = msg
     let textarea = document.createRange().createContextualFragment('<textarea class="roboConfig" cols="20" rows="5"></textarea>')
     tooltiptext.appendChild(textarea)
-    // robo_icon.onclick = this.ui.onRoboIconClick
+    robo_icon.onclick = this.ui.onRoboIconClick
     robo_icon.appendChild(tooltiptext)
     //console.log('built robo icon')
     return robo_icon
