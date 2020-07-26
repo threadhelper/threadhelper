@@ -19,7 +19,6 @@ self.addEventListener('message', onMessage)
 
 async function onMessage(ev){
     let data = ev.data;
-    console.log("WORKER ON MESSAGE", ev)
     db = db != null ? db : await idb.openDB('ThreadHelper', 1)
     let index_json = ''
     console.log("WORKER GOT MESSAGE", ev.data)
@@ -61,6 +60,11 @@ async function onMessage(ev){
             await setIndex(db, index_json)
             self.postMessage({type:'updateIndex', index_json: index_json})
             break;
+        case 'setTweets':
+            console.log("worker putting tweets")
+            await putDB(data.tweets)
+            self.postMessage({type:`setTweets`});
+            break;
         default:
             console.log('Invalid access');
             self.postMessage(`got ${data.type}`);
@@ -90,7 +94,6 @@ function makeIndex(){
 
 async function getIndex(db){
     console.time("worker getting index")
-    console.log("loaded db in worker", db)
     let index_json = await db.get('misc', 'index');   
     console.timeEnd("worker getting index")
     return index_json
@@ -98,14 +101,12 @@ async function getIndex(db){
 
 async function setIndex(db, index_json){
     console.time("worker setting index")
-    console.log("loaded db in worker", db)
     db.put('misc', index_json, 'index');
     console.timeEnd("worker setting index")
 }
 
 
 async function addToIndex(index,tweets){
-    console.time(`add ${Object.keys(tweets).length} To Index`)
     let tweet_fields = [
         "id",
         "text", 
@@ -124,7 +125,6 @@ async function addToIndex(index,tweets){
         doc["id"] = id
         index.addDoc(doc)
     }
-    console.timeEnd(`added ${Object.keys(tweets).length} To Index`)
     return index
 }
 
@@ -134,3 +134,19 @@ async function removeFromIndex(index, tweet_ids){
     }
     return index
 }
+
+async function putDB(item_list, storeName = 'tweets'){
+    const tx = db.transaction(storeName, 'readwrite');
+    const store = tx.objectStore(storeName);
+    let promises = []
+    try{
+      for(let item of item_list){
+        promises.push(store.put(item))
+      }
+      promises.push(tx.done)
+      return await Promise.all(promises)        
+    } catch(e){
+      console.log(promises)
+      throw(e)
+    }
+  }

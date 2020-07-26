@@ -63,7 +63,7 @@ class Utils {
   set options(options){
     if(this._options.getRetweets != options.getRetweets){
       console.log("option getRetweets changed", options.getRetweets)
-      wiz.getLatestTweets().then((latest)=>{
+      wiz.getLatestTweets(wiz.tweet_ids).then((latest)=>{
         wiz.latest_tweets = latest
         utils.msgCS({type:"toggled-retweets"})
       })
@@ -76,14 +76,16 @@ class Utils {
   onTabActivated(activeInfo){
     chrome.tabs.get(activeInfo.tabId, function(tab){
       //console.log("tab", tab)
-      try{
-        let url = tab.url;
-        if (url.match(utils.twitter_url)) {
-          utils.tabId = tab.id
-          utils.msgCS({type:"tab-activate", url:url, cs_id: tab.id})
+      if(tab.url != null){
+        try{
+          let url = tab.url;
+          if (url.match(utils.twitter_url)) {
+            utils.tabId = tab.id
+            utils.msgCS({type:"tab-activate", url:url, cs_id: tab.id})
+          }
+        }catch(e){
+          console.log(e)
         }
-      }catch(e){
-        console.log(e)
       }
     });
   }
@@ -387,25 +389,25 @@ class TweetWiz{
     
   
   
-  get options(){return this._options}
-  set options(options){
-    if(this._options.getRetweets != options.getRetweets && this.inited){
-      console.log("option getRetweets changed", options.getRetweets)
-      wiz.getLatestTweets().then((latest)=>{
-        wiz.latest_tweets = latest
-        utils.msgCS({type:"toggled-retweets"})
-      })
+    get options(){return this._options}
+    set options(options){
+      if(this._options.getRetweets != options.getRetweets && this.inited){
+        console.log("option getRetweets changed", options.getRetweets)
+        wiz.getLatestTweets(wiz.tweet_ids).then((latest)=>{
+          wiz.latest_tweets = latest
+          utils.msgCS({type:"toggled-retweets"})
+        })
 
+      }
+      this._options = Object.assign(this._options,options)
     }
-    this._options = Object.assign(this._options,options)
-  }
-    
-    // Loads options from storage
-  async loadOptions(){
-    utils.getData("options").then(opts=>{
-      this.options = opts != null ? opts : this.options
-    })
-  }
+      
+      // Loads options from storage
+    async loadOptions(){
+      utils.getData("options").then(opts=>{
+        this.options = opts != null ? opts : this.options
+      })
+    }
 
     get query_ready(){
       return wiz.user_info.screen_name != null && auth.csrfToken != null
@@ -475,7 +477,8 @@ class TweetWiz{
 
 
     async updateTweetsDB(new_tweets){
-      await utils.putDB(Object.values(new_tweets))
+      // await utils.putDB(Object.values(new_tweets))
+      worker.postMessage({type:'setTweets', tweets:Object.values(new_tweets)})
     }
 
     async setNewTweets(new_tweets){
@@ -484,6 +487,7 @@ class TweetWiz{
         if(new_tweets.length <= 0) return
 
         await this.updateTweetsDB(new_tweets)
+        
       }
     }
 
@@ -493,39 +497,50 @@ class TweetWiz{
       // this.tweet_ids = this.tweet_ids.filter(t=>!tweet_ids.includes(t))
     }
 
+    //add new tweets to db, remove deleted, update meta and latest tweets
     async updateTweets(tweets_to_add, ids_to_remove){
       let n_new_tweets = Object.keys(tweets_to_add).length
       let n_deleted_tweets = ids_to_remove.length
-      console.log('updateTweets', {tweets_to_add, ids_to_remove})
-      console.time("removeTweets")
+      // console.log('updateTweets', {tweets_to_add, ids_to_remove})
+      // console.time("removeTweets")
       if(n_deleted_tweets > 0) await this.removeTweets(ids_to_remove)
-      console.timeEnd("removeTweets")
-      console.time("setNewTweets")
+      // console.timeEnd("removeTweets")
+      // console.time("setNewTweets")
       if(n_new_tweets > 0) this.setNewTweets(tweets_to_add)
-      console.timeEnd("setNewTweets")
+      // console.timeEnd("setNewTweets")
       if(n_new_tweets > 0 || n_deleted_tweets > 0){
-        console.time("updateIndex")
+        // console.time("updateIndex")
         nlp.updateIndex(tweets_to_add, ids_to_remove)
-        console.timeEnd("updateIndex")
-        let keys = await utils.db.getAllKeys('tweets')
-        console.time("sortKeys")
-        this.tweet_ids = this.sortKeys(keys)
-        console.timeEnd("sortKeys")
-        if(n_new_tweets > 0) this.tweets_meta = this.updateMeta(tweets_to_add)
-        console.time("getLatest")
-        this.latest_tweets = await this.getLatestTweets()
-        console.timeEnd("getLatest")
+        // console.timeEnd("updateIndex")
+        //this should be done after adding tweets
+        // let keys = await utils.db.getAllKeys('tweets')
+        // // console.time("sortKeys")
+        // this.tweet_ids = this.sortKeys(keys)
+        // // console.timeEnd("sortKeys")
+        if(n_new_tweets > 0) this.tweets_meta = this.updateMeta(tweets_to_add, this.tweets_meta.count + n_new_tweets)
+        // // console.time("getLatest")
+        // this.latest_tweets = await this.getLatestTweets(this.tweet_ids)
+        // // console.timeEnd("getLatest")
       }
     }
-  
+    
+    async afterUpdateTweets(){
+      let keys = await utils.db.getAllKeys('tweets')
+      // console.time("sortKeys")
+      this.tweet_ids = this.sortKeys(keys)
+      // console.timeEnd("sortKeys")
+      // console.time("getLatest")
+      this.latest_tweets = await this.getLatestTweets(this.tweet_ids)
+      // console.timeEnd("getLatest")
+    }
+
     async loadUserInfo(){
       utils.getData("user_info").then((info)=>{this.user_info = info})
       return this.user_info
     }
 
-    async getLatestTweets(n_tweets = 20){
+    async getLatestTweets(keys, n_tweets = 20){
       // let keys = utils.db.getAllKeys('tweets')
-      let keys = this.tweet_ids
       let latest = []
 
       for (let k of keys){
@@ -542,13 +557,13 @@ class TweetWiz{
       return latest
     }
 
-    updateMeta(new_tweets){
+    updateMeta(new_tweets, count){
       let old_meta = this.tweets_meta
       let len = Object.keys(new_tweets).length - 1
       let first_key = Object.keys(new_tweets)[0]
       let last_key = Object.keys(new_tweets)[len]
       let meta = {
-        count: this.tweet_ids.length, 
+        count: count, 
         max_id: Math.min(new_tweets[last_key].id, old_meta.max_id),
         max_time: Math.min(new_tweets[last_key].time, old_meta.max_time),
         since_id: Math.max(new_tweets[first_key].id, old_meta.since_id),
@@ -639,7 +654,6 @@ class TweetWiz{
       let new_tweet_list = arch ? res.map(archToTweet) : res.map(toTweet);
       let new_tweets = Object.fromEntries(new_tweet_list)
       return new_tweets
-      
     }
 
     // Finds tweets in our db that are no longer online as evidenced by the request we just got
@@ -869,7 +883,7 @@ class TweetWiz{
           if (tweet.has_quote && tweet.is_quote_up) {
             tweet.quote = {
               // Basic info.
-              text: entry.quoted_status.text,
+              text: entry.quoted_status.full_text || entry.quoted_status.text,
               name: entry.quoted_status.user.name,
               username: entry.quoted_status.user.screen_name,
               time: new Date(entry.quoted_status.created_at).getTime(),
@@ -948,7 +962,7 @@ class TweetWiz{
           vars.since = meta.since_id != null ? `&since_id=${meta.since_id}` : ''
           vars.since_id = 0
           // vars.url = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}&count=${update_count}${vars.since}&include_rts=${include_rts}`
-          vars.url = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}&count=${update_count}&include_rts=${include_rts}`
+          vars.url = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}&count=${update_count}&include_rts=${include_rts}&tweet_mode=extended`
           // vars.stop_condition = (res,received_count) => {return received_count >= count || !(res != null) || res.length <= 1 || stop}
           vars.stop_condition = (res,received_count) => {return true}
           return vars
@@ -957,7 +971,7 @@ class TweetWiz{
           // vars.max = meta.max_id != null ? `&since_id=${meta.max_id}` : ''
           vars.max = meta.max_id != null ? `&max_id=${meta.max_id}` : ''
           vars.max_id = meta.max_id == null ? -1 : meta.max_id;
-          vars.url = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}${vars.max}&count=${count}&include_rts=${include_rts}`
+          vars.url = `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}${vars.max}&count=${count}&include_rts=${include_rts}&tweet_mode=extended`
           vars.stop_condition = (res,received_count) => {return received_count >= count || !(res != null) || res.length < 1 || stop}
           return vars
         },
@@ -1133,6 +1147,27 @@ class TweetWiz{
       }
       return
     }
+
+    // let tid = '1284519292982005760'
+    async fetchTweet(tid){
+      let url = (tid)=>{return `https://api.twitter.com/1.1/statuses/show.json?id=${tid}&tweet_mode=extended`}
+      let tweet =  await fetch(url(tid),auth.init()).then(x=>x.json())//.then(x=>x.in_reply_to_status_id_str)
+      return tweet
+    }
+    async getThreadAbove(tid){
+      let tweet_list = []
+      let cur_tweet = {}
+      let id = tid
+      let prev_id = 0
+      while(id != prev_id && id != null){
+          prev_id = id
+          cur_tweet = await this.fetchTweet(id)
+          id = cur_tweet.in_reply_to_status_id_str
+          tweet_list = [cur_tweet,...tweet_list]
+      }
+      console.log(tweet_list)
+      return tweet_list
+    }
         
 }
 
@@ -1183,22 +1218,27 @@ class NLP{
   get midSearch(){return this._midSearch}
   set midSearch(midSearch){
     this._midSearch = midSearch
-    if(!midSearch && this.inited){
-      if(this.nextSearch != null){
-        console.log("finished search, picking back up ", this.nextSearch)
-        this.search(this.nextSearch)
-      }
-    }
+    // if(!midSearch && this.inited){
+    //   if(this.nextSearch != null){
+    //     console.log("finished search, picking back up ", this.nextSearch)
+    //     this.search(this.nextSearch)
+    //   }
+    // }
   }
 
   // if we're not searching, do that. if we're mid search, save the next search and it will be done asap
   get nextSearch(){return this._nextSearch}
   set nextSearch(nextSearch){
-    if(this.inited && !this.midSearch && this.nextSearch != null){
+    // if(this.inited && !this.midSearch && this.nextSearch != null){
+    if(this.inited && !this.midSearch && nextSearch != null){
       console.log("searching for ", nextSearch)
       this._nextSearch = null
       this.search(nextSearch)
     }else{
+      let inited = this.inited
+      let midSearch = this.midSearch
+      let this_next_search = this.nextSearch
+      console.log("not ready ", {inited, midSearch, this_next_search})
       console.log("waiting. busy for ", nextSearch)
       this._nextSearch = nextSearch
     }
@@ -1237,8 +1277,8 @@ class NLP{
     //   this.index = this.makeIndex()
     // } 
     let msg = {type:'updateIndex', tweets_to_add: tweets_to_add, ids_to_remove: ids_to_remove}
-    console.log("updating index", msg)
     worker.postMessage(msg)
+    console.log("updating index", msg)
   }
 
   async addToIndex(tweets){
@@ -1324,8 +1364,8 @@ class NLP{
       return_related = related
       console.log("related",related)
     }
-    nlp.midSearch = false
     this.search_results = return_related
+    nlp.midSearch = false
     return return_related
   }
 
@@ -1395,14 +1435,13 @@ async function onMessage(m, sender) {
       case "search":
         nlp.nextSearch = m.query
         break;
-      
+
       case "robo-tweet":
-        console.log('robotweet message received!')
-        let data = await queryGPT(m.query)
-        console.log('got gpt response', data)
-        let roboTweet = data.choices[0].text
-        console.log('roboTweet text: ', roboTweet)
-        utils.setData({'roboTweet':roboTweet})
+        robo.handleRoboTweet(m)
+        break;
+      
+      case "get-thread":
+        wiz.getThreadAbove(m.tid)
         break;
 
       case "interrupt-query":
@@ -1442,7 +1481,7 @@ function initWorker(){
 }
 
 function onWorkerMessage(ev){
-  console.log("Messaged worker: ", ev.data)
+  console.log("Message from worker: ", ev.data)
   switch(ev.data.type){
     case 'getIndex':
       console.log('got index', ev.data.index_json)
@@ -1463,7 +1502,8 @@ function onWorkerMessage(ev){
       utils.msgCS({type: "tweets-done", query_type: 'archive'})
       console.log("archive done!")
       break;
-    // case ''
+    case 'setTweets':
+      wiz.afterUpdateTweets()
   }
 }
 
@@ -1506,7 +1546,7 @@ function main(){
 
   let auth = {}
   let wiz = {}
-  let nlp = {}
+  // let nlp = {}
   let worker = {}
   let utils = new Utils()
   main()
@@ -1514,5 +1554,6 @@ function main(){
     auth = new Auth(utils);  
     wiz = new TweetWiz();  
     nlp = new NLP();
+    robo = new Robo(wiz,utils)
     worker = initWorker()
   })

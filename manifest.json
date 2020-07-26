@@ -5,7 +5,6 @@
   "permissions": [
     "declarativeContent",
     "storage",
-    "tabs",
     "unlimitedStorage",
     "webRequest",
     "https://api.twitter.com/",

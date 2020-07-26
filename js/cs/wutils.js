@@ -7,6 +7,7 @@ class wUtils {
       this.observers = []
       this.url_regex = /(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})/;
       this.current_url = window.location.href
+      this.last_tweet_id = ''
     }
   
     setTheme(){
@@ -50,7 +51,7 @@ class wUtils {
       var notifications = 'https://twitter.com/notifications'
       var explore = 'https://twitter.com/explore'
       var bookmarks = 'https://twitter.com/i/bookmarks'
-      
+      var status = '/status/'
       // console.log("mode is " + pageURL)
       if (pageURL.indexOf(home) > -1){
         return 'home'
@@ -66,6 +67,9 @@ class wUtils {
           }
           else if (pageURL.indexOf(bookmarks) > -1){
         return "bookmarks"
+          }
+          else if (pageURL.indexOf(status) > -1){
+        return "status"
       }
       else{
         return "other"
@@ -110,8 +114,10 @@ class wUtils {
   
     // Detect when the compose box is focused
     onFocusIn(e){
-      var divs = document.getElementsByClassName(ui.editorClass)
-      for (var div of divs){
+      var compose_divs = document.getElementsByClassName(ui.editorClass)
+      var robo_divs = document.getElementsByClassName(ui.roboConfigClass)
+      
+      for (var div of compose_divs){
         if(e.target && div.contains(e.target)){
           if(wutils.getMode() != "other") ui.composeBoxFocused(div)
         }
@@ -126,6 +132,8 @@ class wUtils {
         }
       }
     }
+
+    
   
     //When tweet buttons are clicked
     tweetButtonClicked(e){
@@ -202,7 +210,75 @@ class wUtils {
         }
       }
     }
-    deleteConfirmSelector
+
+    getTweetId(tweet){
+      console.log(tweet)
+      let date = $(tweet).find('time')[0]
+      let linkEl = date.parentNode
+      let link = linkEl.href
+      let link_spl = link.split('/')
+      let tid = link_spl[link_spl.length -1]
+      return tid
+    }
+
+    getIdFromUrl(url){
+      let link_split = url.split('/')
+      let tid = link_split[link_split.length - 1]
+      return tid
+    }
+
+    replyClicked(e){
+      let mode = wutils.getMode()
+      var divs = $('div[aria-label~="Reply"]')
+      let tid = ''
+      console.log("reply, mode is", mode)
+      for (var div of divs){
+        if(e.target && (div.contains(e.target) || e.target.contains(div))){
+          let dateEl = ''
+          console.log('target: ', e.target)
+          try{
+            //the case where there is a date link on the tweet
+            dateEl = e.target.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode
+            tid = wutils.getTweetId(dateEl)
+          } catch(error){
+            //if there's no date lik
+            console.log('getting id from url', error)
+            // tid = this.getIdFromUrl(window.location.href)
+            tid = wutils.last_tweet_id
+          }
+          ui.current_reply_to = tid
+          console.log("Replying to", tid)
+        }
+      }
+    }
+
+    // replyClicked(e){
+    //   let mode = wutils.getMode()
+    //   var divs = $('div[aria-label~="Reply"]')
+    //   let tid = ''
+    //   console.log("reply, mode is", mode)
+    //   for (var div of divs){
+    //     if(e.target && (div.contains(e.target) || e.target.contains(div))){
+    //       switch(mode){
+    //         case 'status':
+    //           let link_split = window.location.href.split('/')
+    //           tid = link_split[link_split.length - 1]
+    //           ui.current_reply_to = tid
+    //           console.log("Replying to", tid)
+    //           break;
+    //         default:
+    //           // console.log("Reply button pressed",e.target)
+    //           tid = wutils.getTweetId(e.target.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode)
+    //           console.log("Replying to", tid)
+    //           ui.current_reply_to = tid
+    //           break;
+    //       }
+    //     }
+    //   }
+      
+    // }
+
+    // deleteConfirmSelector
     deleteButtonClicked(e){
       var divs = document.querySelectorAll(ui.deleteConfirmSelector)
       for (var div of divs){
@@ -229,7 +305,7 @@ class wUtils {
         }
       }
     }
-  
+    
     // EVENT DELEGATION CRL, EVENT BUBBLING FTW
     setUpListeningComposeClick(){
       //console.log("event listeners added")
@@ -242,6 +318,7 @@ class wUtils {
       document.addEventListener('click',this.deleteButtonClicked);
       document.addEventListener('keydown', this.deleteShortcut);
       document.addEventListener('keydown', this.roboShortcut);
+      document.addEventListener('click', this.replyClicked)
     }
   
     // given composer found by ui.editorClass = "DraftEditor-editorContainer",

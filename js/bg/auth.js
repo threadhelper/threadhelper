@@ -16,6 +16,18 @@ updateAuth: turns headers into auth
       
     }
     
+    init(){
+      let auth = this
+      const init = {
+        credentials: "include",
+        headers: {
+          authorization: auth.authorization,
+          "x-csrf-token": auth.csrfToken
+        }
+      };
+      return init
+    }
+
     isAuth(){
       let auth = this;
       return ! (typeof auth === 'undefined' || auth.authorization == null || auth.csrfToken == null || auth.authorization == 'null' ||auth.csrfToken == 'null')

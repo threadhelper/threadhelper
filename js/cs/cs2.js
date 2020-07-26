@@ -9,6 +9,7 @@ class UI {
     // We use this to find the spot to place the sugg box in the home screen
     this.trendText = '[aria-label="Timeline: Trending now"]';
     //
+    this.roboConfigClass = 'roboConfig'
     this.tweetButtonSelectors = '[data-testid="tweetButtonInline"], [data-testid="tweetButton"]'
     this.sideBarSelector = '[data-testid="sidebarColumn"]'
     this.retweetConfirmSelector = '[data-testid="retweetConfirm"]'
@@ -34,7 +35,8 @@ class UI {
 		this.initSyncMsg = "Welcome to Thread Helper, scroll around for a bit."
     
 		// Hold the active context of tweeting/sidebar
-		
+    this.current_reply_to = ''
+    
     this._activeComposer = null
     this.activeLogger = null
     this.activeSidebar = null
@@ -75,11 +77,12 @@ class UI {
   //handle compose box on tab change
 	onTabChangeUrl(url){
     this.activeComposer = null
-
     let prev_url = wutils.current_url
     let old_mode = wutils.getMode(prev_url)
 		wutils.current_url = url
     let new_mode = wutils.getMode(wutils.current_url)
+    if (new_mode != 'compose') this.current_reply_to = ''
+    if (new_mode == 'status') wutils.last_tweet_id = wutils.getIdFromUrl(url); console.log('updated last_tweet_id: ',wutils.last_tweet_id) //used for identifying which tweet we're replying to, for getting the thread we're on
     this.manageSidebarPresence(old_mode,new_mode)
     this.refreshSidebars()
 		wutils.setTheme()  
@@ -91,6 +94,7 @@ class UI {
     //to set active Composer
 		let sidebar = sideRen.buildBox(wiz.user_info, wiz.sync, wiz.has_archive, dutils.options.getRetweets)
     sidebar = this.placeBox(sidebar,mode)
+    this.initSidebar(sidebar)
     return sidebar
 	}
 	
@@ -270,6 +274,23 @@ class UI {
     }
 		return sidebar
   }
+
+  // Here we should initialize all fields that depend on values from storage like:
+    // header: sync and loadArchive
+    // robo: sync and config
+    // tweets: tweets, console, and RT
+  async initSidebar(sidebar){
+    let initRoboConfig = async ()=>{
+      let default_config = "This is an excellently written thread composed of high quality tweets: \n"
+      let configs = document.getElementsByClassName(this.roboConfigClass)
+      let val = await dutils.getData('robo_config')
+      for (let config of configs){
+        config.oninput = ui.onRoboConfigChange
+        config.value = val != null ? val : default_config
+      }
+    }
+    initRoboConfig()
+  }
   
   updateSyncIcon(synced, msg = null){
     //message
@@ -325,48 +346,66 @@ class UI {
     })
   }
   
-  onRoboIconClick(activeComposer=null){
+  async onRoboIconClick(activeComposer=null){
     activeComposer = activeComposer != null ? activeComposer : ui.activeComposer 
-    console.log('icon clicked!')
+    // console.log('icon clicked!')
     if (activeComposer){
       let mode = wutils.getMode()
-      let query = ui.getRoboQuery(mode)
+      let query = await ui.getRoboQuery(mode)
       console.log('robo query: ', query)
-      dutils.msgBG({type:"robo-tweet", query: query})
+      dutils.msgBG({type:"robo-tweet", query: query, reply_to: ui.current_reply_to})
     } else{
       console.log("can't robo tweet, no active composer")
     }
   }
+
+
+  onRoboConfigChange(e){
+    const text = e.target.value
+    console.log("ROBO CONFIG CHANGE TO::", text);
+    dutils.setData({robo_config:text})
+  }
+
+  getRoboPrefix(config){
+    return config
+  }
   
   //supposed to get tweets in thread we're responding to / drafting
   // mode = wutils.getMode()
-  getRoboQuery(mode){
-    let make_query=(thread_text)=>{
-      let query = ''
+  async getRoboQuery(mode){
+    let make_query= async (thread_text)=>{
+      let roboConfig = await dutils.getData('robo_config')
+      roboConfig = roboConfig != null ? roboConfig : ''
+      console.log('robo_config: ', roboConfig)
+      let prefix = this.getRoboPrefix(roboConfig)
+      let query = prefix
       // let query = 'An insightful Twitter thread: \n'
       for(let [i,t] of thread_text.entries()){
           query = query.concat(`\n${t}`)
       }
       return query
     }
-    let getThreadExisting = ()=>{return ''}
-    let getThreadDraft = ()=>{
+    // let getThreadExisting = ()=>{
+
+    //   return ''
+    // }
+    let getThreadDraft = async ()=>{
       let editors = [...document.getElementsByClassName(ui.editorClass)]
       let thread_parent = ui.activeComposer.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode
       editors = editors.filter(e=>{return thread_parent.contains(e)})
       let thread_text = editors.map(x=>x.textContent)
-      return make_query(thread_text)
+      return await make_query(thread_text)
     }
-    let getCurrentText = ()=>{
-      return make_query([ui.activeComposer.textContent])
+    let getCurrentText = async ()=>{
+      return await make_query([ui.activeComposer.textContent])
     }
     let query = ''
     switch(mode){
       case 'home':
-        query = getCurrentText()
+        query = await getCurrentText()
         break;
       default:
-        query = getThreadDraft()
+        query = await getThreadDraft()
         break
     }
     return query
@@ -386,7 +425,7 @@ class UI {
     let roboAreas = robots.map(r=>$(r).find('textarea')[0])
     roboTexts.forEach(r=>r.innerHTML = tweet)
     roboAreas.forEach(r=>r.innerHTML = tweet)
-    console.log('showing robotweet')
+    // console.log('showing robotweet')
 
     // for (let div of roboDivs){
     //   if(ui.activeSidebar.contains(div)){
@@ -520,6 +559,7 @@ class TweetWiz{
     dutils.getData("tweets_meta").then((meta)=>{this.tweets_meta = meta != null ? meta : this.tweets_meta})
     dutils.getData("tweets").then((tweets)=>{this.tweets_dict = tweets != null ? tweets : {}})
     dutils.getData("latest_tweets").then((latest_tweets)=>{this.latest_tweets = latest_tweets != null ? latest_tweets : []})
+    dutils.getData("latest_tweets").then((latest_tweets)=>{this.latest_tweets = latest_tweets != null ? latest_tweets : []})
   }
 
   //called when a new tweet is posted. 
@@ -631,7 +671,7 @@ async function onStorageChanged(changes, area){
           ui.refreshSidebars()
           break;
         case "roboTweet":
-          console.log("roboTweet changed in storage, newVal")
+          // console.log("roboTweet changed in storage, newVal")
           ui.showRoboTweet(newVal)  
           break;
         case "tweets_meta":
@@ -757,7 +797,8 @@ async function onStorageChanged(changes, area){
   }
   setDestruction();
   
-  var DEBUG = true;
+  let GPT3 = false
+  let DEBUG = true;
   if(!DEBUG){
       if(!window.console) window.console = {};
       var methods = ["log", "debug", "warn", "trace", "time", "info"];

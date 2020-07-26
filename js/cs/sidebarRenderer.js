@@ -92,7 +92,7 @@ class SidebarRenderer {
     div.setAttribute("id", "suggSecondDiv")
     div.appendChild(this.buildBoxConsole())
     div.appendChild(this.buildBoxOptions(isGetRTs))
-    console.log("building second div", div)
+    //console.log("building second div", div)
     return div
   }
   buildThirdDiv(user_info){
@@ -101,7 +101,7 @@ class SidebarRenderer {
     div.setAttribute("id", "suggThirdDiv")
     div.appendChild(this.buildRoboIcon())
     div.appendChild(this.buildRoboTweet(user_info))
-    console.log("building third div", div)
+    //console.log("building third div", div)
     return div
   }
 
@@ -144,9 +144,11 @@ class SidebarRenderer {
     let tooltiptext = document.createElement('span')
     tooltiptext.setAttribute("class", 'tooltiptext');
     tooltiptext.innerHTML = msg
-    robo_icon.onclick = this.ui.onRoboIconClick
+    let textarea = document.createRange().createContextualFragment('<textarea class="roboConfig" cols="20" rows="5"></textarea>')
+    tooltiptext.appendChild(textarea)
+    // robo_icon.onclick = this.ui.onRoboIconClick
     robo_icon.appendChild(tooltiptext)
-    console.log('built robo icon')
+    //console.log('built robo icon')
     return robo_icon
   }
 
