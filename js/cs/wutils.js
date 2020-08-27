@@ -80,16 +80,16 @@ class wUtils {
       return document.getElementsByClassName(ui.editorClass)[0]
       }
       
-      isSidebar(mode){
-          switch(mode){
-              case 'home':
-                  return document.getElementsByClassName('sug_home').length > 0 
-              case 'compose':
+    isSidebar(mode){
+      switch(mode){
+        case 'home':
+          return document.getElementsByClassName('sug_home').length > 0 
+        case 'compose':
           return document.getElementsByClassName('sug_compose').length > 0
         default:
           return false
-          }
-      }
+        }
+    }
     
     // Sets up a listener for the Recent Trends block. Listens to changes in document's children and checks if it's what we want.
     setUpTrendsListener(){
@@ -114,9 +114,7 @@ class wUtils {
   
     // Detect when the compose box is focused
     onFocusIn(e){
-      var compose_divs = document.getElementsByClassName(ui.editorClass)
-      var robo_divs = document.getElementsByClassName(ui.roboConfigClass)
-      
+      var compose_divs = document.getElementsByClassName(ui.editorClass)      
       for (var div of compose_divs){
         if(e.target && div.contains(e.target)){
           if(wutils.getMode() != "other") ui.composeBoxFocused(div)
@@ -132,9 +130,6 @@ class wUtils {
         }
       }
     }
-
-    
-  
     //When tweet buttons are clicked
     tweetButtonClicked(e){
       var divs = document.querySelectorAll(ui.tweetButtonSelectors)

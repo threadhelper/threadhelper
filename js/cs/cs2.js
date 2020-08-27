@@ -100,7 +100,7 @@ class UI {
 	
 
   
-  // for refreshing properties withing sidebar: sync, archive, metadata
+  // for refreshing properties within sidebar: sync, archive, metadata
 	refreshSidebars(){
     let sidebars = document.getElementsByClassName('sugg_box')
     this.updateSyncIcon(wiz.sync)
@@ -776,6 +776,7 @@ async function onStorageChanged(changes, area){
     document.removeEventListener('focusout',wutils.onFocusOut);
     window.removeEventListener('resize', wutils.onWinResize);
     chrome.runtime.onMessage.removeListener(onMessage);
+    chrome.storage.onChanged.removeListener(onStorageChanged);
     for (let obs of wutils.observers){
       if (obs != null) obs.disconnect()
     }

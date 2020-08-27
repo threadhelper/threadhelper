@@ -167,6 +167,12 @@ class TweetRenderer {
     }
   
     reformatText(text, reply_to=null, mentions=null, urls=null, media=null) {
+      function replaceBetween(originalString, start, end, replacement)
+      {
+          return originalString.substr(0,start)+replacement+originalString.substr(end);
+      }
+
+
       let ret = text
       let charsRemoved = 0
       // Cut out reply_to + any mentions at the beginning.
@@ -177,7 +183,8 @@ class TweetRenderer {
             break
           }
           // Plus one to get rid of the space between usernames.
-          ret = ret.replaceBetween(mention.indices[0]-charsRemoved, mention.indices[1]-charsRemoved+1, "")
+          // ret = ret.replaceBetween(mention.indices[0]-charsRemoved, mention.indices[1]-charsRemoved+1, "")
+          ret = replaceBetween(ret, mention.indices[0]-charsRemoved, mention.indices[1]-charsRemoved+1, "")
           charsRemoved += mention.indices[1]-mention.indices[0]+1
           nextIndex = mention.indices[1]+1
         }
