@@ -1,7 +1,7 @@
 {
-  "name": "Thread Helper",
-  "version": "0.1.2",
-  "description": "A helper for twitter threads. Find your related past tweets and quote them as you write.",
+  "name": "ReactiveTH",
+  "description": "TH but reactive",
+  "version": "0.0.0.1",
   "permissions": [
     "declarativeContent",
     "storage",
@@ -10,27 +10,18 @@
     "https://api.twitter.com/",
     "https://*.twitter.com/*"
   ],
+  "browser_action": {
+    "default_title": "ReactiveTH",
+    "default_popup": "popup.html"
+  },
+  "manifest_version": 2,
   "content_scripts": [
     {
       "matches": ["https://*.twitter.com/*"],
-      "js": ["js/libs/jquery-3.4.1.slim.js", "js/cs/bundles/bundleCS.js", "js/cs/sidebarRenderer.js", "js/cs/tweetRenderer.js", "js/cs/wutils.js", "js/cs/dutils.js","js/cs/misc_utils.js", "js/cs/cs2.js"],
-      "css": ["style.css"]
+      "js": ["content-script.js"]
     }
   ],
-  "icons": {
-    "16": "images/thread_16.png",
-    "32": "images/thread_32.png",
-    "48": "images/thread_48.png",
-    "128": "images/thread_128.png"
-  },
-  "manifest_version": 2,
   "background": {
-    /*"page": "html/background.html",*/
-    "scripts": ["js/libs/elasticlunr.js", "js/bg/bundles/bundleBG.js", "js/bg/auth.js","js/bg/nlp.js", "js/bg/roboTweet.js", "js/bg/bg2.js", "js/worker/bundles/bundleWorker.js"]
-  },
-  "page_action": {
-    "default_title": "Thread helper",
-    "default_popup": "html/popup.html"
-  },
-  "options_page": "html/options.html"
+    "scripts": ["background.js"]
+  }
 }
