@@ -6,27 +6,41 @@ import { msgBG } from '../utils/dutils';
 
 
 
-export function Settings(props){
+export function SettingsButton(props){
   const [open, setOpen] = useState(false);
+
+  const closeMenu = ()=>{setOpen(false)}
 
   return (
     <div className="nav-item" >
       <div class="options icon-button" > 
-        < GearIcon onFocus={() => {setOpen(true); console.log('settings focused');}} onBlur={() => setOpen(false)} /> 
+        < GearIcon onFocus={() => {setOpen(true); console.log('settings focused');}} onBlur={
+          (e) => {
+            // console.log("focusout (self or child)");
+            if (e.currentTarget === e.target) {
+              console.log("blur (self)");
+            }
+            if (!e.currentTarget.parentNode.parentNode.contains(e.relatedTarget)) {
+              console.log("focusleave");
+              console.log(e.currentTarget);
+              console.log(e.relatedTarget);
+              setOpen(false)
+            }
+          }} /> 
       </div>
+      {open && <DropdownMenu closeMenu={closeMenu}/>}
       
-      {open && props.children}
     </div>
   )
 }
 
 
-export function DropdownMenu() {
+export function DropdownMenu(_props) {
   const dropdownRef = useRef(null);
 
   function DropdownItem(props) {
     return (
-      <a href="#" className="menu-item" onClick={props.effect}>
+      <a href="#" className="menu-item" onClick={(e)=>{props.effect(); _props.closeMenu();}}>
         <span className="icon-button">{props.leftIcon}</span>
         {props.children}
         <span className="icon-right">{props.rightIcon}</span>
@@ -35,11 +49,18 @@ export function DropdownMenu() {
   }
 
   function onClearStorage(){
+    console.log("clear storage")
     msgBG({type:'clear'})
   }
 
   function onAssessStorage(){
+    console.log("assess storage")
     chrome.storage.local.getBytesInUse(b=>{console.log(`Storage using ${b} bytes`)})
+  }
+
+  function onGetBookmarks(){
+    console.log("get bookmarks")
+    msgBG({type:'get-bookmarks'})
   }
 
   return (
@@ -53,6 +74,11 @@ export function DropdownMenu() {
         // leftIcon={<GearIcon />}
         effect={onAssessStorage}>
         Assess Storage
+      </DropdownItem>
+      <DropdownItem
+        // leftIcon={<GearIcon />}
+        effect={onGetBookmarks}>
+        Get Bookmarks
       </DropdownItem>
     </div>
   );

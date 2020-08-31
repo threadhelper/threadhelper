@@ -2,7 +2,7 @@ import { h, render, Component } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
 import { makeOnStorageChanged } from '../utils/dutils.jsx';
 import { SyncIcon } from './Sync.jsx';
-import {Settings, DropdownMenu} from './Settings.jsx';
+import {SettingsButton} from './Settings.jsx';
 import GearIcon from '../../images/gear.svg';
 
 
@@ -23,9 +23,8 @@ export function Header(){
         <button>{`(load archive)`}</button> 
         {tooltip}
       </div>
-      <Settings>
-        <DropdownMenu />
-      </Settings>
+      <SettingsButton>
+      </SettingsButton>
     </div>
   );
 }

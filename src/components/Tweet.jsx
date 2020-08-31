@@ -337,7 +337,7 @@ function renderQuote(quote, parent_has_media) {
     let template = (
     <div class="th-quote">
       <div class="th-quote-header">
-        <img class="th-quote-header-profile" src="${quote.profile_image}" />
+        <img class="th-quote-header-profile" src={quote.profile_image} />
         <div class="th-quote-header-name">{quote.name}</div>
         <div class="th-quote-header-username">@{quote.username}</div>
         <div class="th-header-dot">·</div>
