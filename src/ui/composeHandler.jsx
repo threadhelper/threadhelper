@@ -112,17 +112,9 @@ import { Kefir, fromEvents, stream } from 'kefir';
 import { compose, curry, prop } from '../utils/fp.jsx';
 
 export function makeComposeObs(box){
-  // console.log('making compose obs', box)
-  
   const textChange$ = obsCharData(box, `${editorSelector} span`)
-  // const query$ = textChange$.map((compose(
-    //   cleanSearchString,
-    //   getTextFromElement,
-    //   )))
-    
-  // console.log({textChange$})
-  // textChange$.log('text change')
-  const query$ = textChange$.map(_=>box.innerText).map(cleanSearchString).toProperty(()=>'')
-  // box.textContent
+  // const query$ = textChange$.map(_=>box.innerText).map(cleanSearchString).toProperty(()=>'')
+  const query$ = textChange$.map(_=>box.innerText).map(cleanSearchString).toProperty(()=>box.innerText)
+  
   return query$
 }

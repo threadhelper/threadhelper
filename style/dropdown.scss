@@ -5,6 +5,7 @@
     --border: 1px solid #474a4d;
     --speed: 200ms; 
     position: absolute;
+    z-index:1;
     top: 100px;
     width: 115px;
     transform: translateX(-75%);

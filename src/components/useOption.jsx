@@ -1,25 +1,30 @@
 import { h, render, Component } from 'preact';
 import { useState, useEffect, useContext } from 'preact/hooks';
-import {getData, setData} from '../utils/dutils.jsx'
+import {getData, setData, initOption, updateOption, getOptions} from '../utils/dutils.jsx'
+import {pipe, andThen, prop} from 'ramda'
 
-const initOption = (name, init_val, set) => {
-  getData("options").then((options)=>{options != null ? set( options[name] ) : setData({options:{name: init_val}}) })
-}
 
-export function useOption(name, init_val = null){
-  const [getOption, setOption] = useState(init_val);
+export function useOption(name){
+  const [getOption, setOption] = useState(true);
   
-  initOption(name, init_val, setOption)
+  getOptions().then(pipe(prop(name), setOption))
   
-  const setOptionBG = (new_val)=>{
-    getData("options").then((options)=>{
-      options = options != null ? options : {}
-      options[name] = new_val; 
-      setData({options:options}).then(()=>{
-        setOption(new_val)
-        console.log("updated get retweets to",new_val)
-      })
-    })
-  }
+  const setOptionBG = pipe(
+    updateOption(name),
+    andThen(pipe(
+      prop(name),
+      setOption))
+      )
+
+  // const setOptionBG = (new_val)=>{
+  //   getData("options").then((options)=>{
+  //     options = options != null ? options : {}
+  //     options[name] = new_val; 
+  //     setData({options:options}).then(()=>{
+  //       setOption(new_val)
+  //       console.log("updated get retweets to",new_val)
+  //     })
+  //   })
+  // }
   return [getOption, setOptionBG]
 }

@@ -1,6 +1,8 @@
 //using this temporarily but eventually probably should refactor away from classes
 import "@babel/polyfill";
 import {Auth} from './bg/auth.js'
+import {altBG} from './bg.jsx'
+import {makeAuthObs} from './bg/new_auth.js'
 import {Robo} from './bg/robo.js'
 import * as idb from 'idb'
 import * as elasticlunr from 'elasticlunr'
@@ -676,20 +678,15 @@ class TweetWiz{
       let deleted_tweet_ids = this.findDeletedTweets(res, query_type == "update")
       res = res.filter(r=>{return !this.tweet_ids.includes(r.id_str)})
       if (res.length < 1 && deleted_tweet_ids.length < 1){
-        console.log("no changes in tweets to save", query_type)
         return {}
       } 
       
       // Takes relatively little time
       // Mapping results to tweets
-      console.time('toTweets')
       let arch = query_type == "archive"
       let new_tweets = wiz.toTweets(res, arch)
-      console.timeEnd('toTweets')
       // Update staging area with new tweets and tell CS to load
-      console.time(`set new tweets ${Object.keys(new_tweets).length}`)
       this.updateTweets(new_tweets, deleted_tweet_ids)
-      console.timeEnd(`set new tweets ${Object.keys(new_tweets).length}`)
 
       return new_tweets
     }
@@ -919,20 +916,13 @@ class TweetWiz{
      
     //to call when we have tweets and wish to update just with the lates
     async query(auth, meta = null, query_type = "update", count = 3000, batch_save = true) {
-      console.time(`complete query`);
       //start by defining common variables
       this.interrupt_query = false
       // meta = meta != null ? meta : this.tweets_meta
       meta = this.tweets_meta
       let vars ={}
       let include_rts = true
-      const init = {
-        credentials: "include",
-        headers: {
-          authorization: auth.authorization,
-          "x-csrf-token": auth.csrfToken
-        }
-      };
+      const init = auth.init();
       var username = this.user_info.screen_name
       var received_count = 0
       var users = []
@@ -1033,42 +1023,33 @@ class TweetWiz{
       {
         try
         {
-          console.log(`GET: ${vars.url}`)
-            console.time(`request`);
-            res = await fetch(vars.url,init).then(x => x.json())
-            console.timeEnd(`request`);
+          res = await fetch(vars.url,init).then(x => x.json())
+        }
+        catch(err){
+          wiz.handleError(err)
+        }
+        if (res.length <= 0 || res == null){
+          //throw new Error("res is empty")
+          //console.log("res is empty")
+          break;
+        } else{ 
+          //modifies new_tweets
+          try{
+            received_count +=  res.length
+            vars = await treat[query_type](vars)
+          } catch(e){
+            throw(e)
           }
-          catch(err){
-            wiz.handleError(err)
+          all_res = all_res.concat(res)
+          // new_tweets = await wiz.saveTweets(res, query_type);
+          if(!batch_save) {
+            wiz.saveTweets(res, query_type);
           }
-          if (res.length <= 0 || res == null){
-            //throw new Error("res is empty")
-            //console.log("res is empty")
-            break;
-          } else{ 
-            //modifies new_tweets
-            try{
-              console.time(`treat request`);
-              received_count +=  res.length
-              vars = await treat[query_type](vars)
-              console.log(res)
-              console.timeEnd(`treat request`);
-            } catch(e){
-              console.log(res)
-              throw(e)
-            }
-            all_res = all_res.concat(res)
-            // new_tweets = await wiz.saveTweets(res, query_type);
-            if(!batch_save) {
-              console.time("out save tweets")
-              wiz.saveTweets(res, query_type);
-              console.timeEnd("out save tweets")
-            }
-            // tweets = Object.assign(tweets,new_tweets)
-            // console.log(`received total ${tweets.length} tweets`);
-            // console.log("actual query results:", res);
-          }
-        }while(!vars.stop_condition(res,received_count))
+          // tweets = Object.assign(tweets,new_tweets)
+          // console.log(`received total ${tweets.length} tweets`);
+          // console.log("actual query results:", res);
+        }
+      }while(!vars.stop_condition(res,received_count))
       if(batch_save) wiz.saveTweets(all_res, query_type);
       console.timeEnd(`complete query`);
       return 
@@ -1391,9 +1372,18 @@ async function onStorageChanged(changes, area){
     }
   }
 
+async function getBookmarks(){
+  console.log("get bookmarks")
+  const init = auth.init();
+  const url = "https://api.twitter.com/2/timeline/bookmark.json?include_profile_interstitial_type=1&include_blocking=1&include_blocked_by=1&include_followed_by=1&include_want_retweets=1&include_mute_edge=1&include_can_dm=1&include_can_media_tag=1&skip_status=1&cards_platform=Web-12&include_cards=1&include_composer_source=true&include_ext_alt_text=true&include_reply_count=1&tweet_mode=extended&include_entities=true&include_user_entities=true&include_ext_media_color=true&include_ext_media_availability=true&send_error_codes=true&simple_quoted_tweets=true&count=10000&ext=mediaStats%2CcameraMoment"
+  const bookmarks = await fetch(url,init).then(x => x.json())
+  console.log({bookmarks})
+  return bookmarks
+}
+
 //** Handles messages sent from popup or content scripts */
 async function onMessage(m, sender) {
-    console.log("message received:", m);
+    // console.log("message received:", m);
     let auth_good = null
     let auth_wrapper = async function(func, arg){
       auth_good = await auth.testAuth()
@@ -1439,9 +1429,12 @@ async function onMessage(m, sender) {
         wiz.getThreadAbove(m.tid)
         break;
 
-      case "interrupt-query":
-        wiz.interrupt_query = true;
-        break;
+      case "get-bookmarks":
+        getBookmarks()
+
+      // case "interrupt-query":
+      //   wiz.interrupt_query = true;
+      //   break;
   
       case "temp-archive-stored":
         wiz.handleQuery(m);

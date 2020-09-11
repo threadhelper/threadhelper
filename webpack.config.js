@@ -6,8 +6,8 @@ module.exports = {
   entry: {
     popup: './src/popup.jsx',
     'content-script': './src/cs.jsx',
-    background: './src/bg2.js',
-    worker: './src/bg/worker.jsx'
+    background: './src/bg.jsx',
+    worker: './src/worker/worker.jsx'
   },
   output: {
     filename: '[name].js',

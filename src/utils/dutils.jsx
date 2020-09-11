@@ -1,4 +1,6 @@
 import Kefir from 'kefir';
+import { curry, isNil, pipe, prop, andThen, defaultTo, assoc } from 'ramda'
+
 // let options = {}
 
 //returns a promise that gets a value from chrome local storage 
@@ -24,20 +26,50 @@ export async function setData(key_vals) {
         console.error(chrome.runtime.lastError.message);
         reject(chrome.runtime.lastError.message);
       } else {
-        resolve();
+        resolve(key_vals);
       }
     });
   });
 }
 
-export async function loadOptions(){
-  this.getData("options").then((options)=>{this.options = options != null ? options : this.options})
-  return this.options
+// Delete data from storage
+// takes an array of keys
+export async function removeData(keys){
+  return new Promise(function(resolve, reject) {
+    chrome.storage.local.remove(keys,function(){
+      //console.log("removed", keys)
+      if (chrome.runtime.lastError) {
+        console.error(chrome.runtime.lastError.message);
+        reject(chrome.runtime.lastError.message);
+      } else {
+        resolve();
+      }
+    }); 
+  });
 }
+
+export const inspect = curry ((prepend, x)=>{console.log(prepend, x); return x;})
+export const setStg = curry( (key,val) => setData({[key]:val}) )
+
+export const defaultOptions = () => {return {
+  name: 'options',
+  getRTs: true,
+}}
+
+export const getOptions = async () => getData('options').then(defaultTo(defaultOptions()))
+
+export const updateOption = curry(async (name, val)=>
+  {
+  return getOptions().then(pipe(
+      assoc(name,val),
+      inspect('updated options'),
+      setStg('options')
+    ))
+  })
 
 
 export function msgBG(msg = null){
-  let message = msg == null ? {type:"query", query_type: "update"} : msg
+  let message = isNil(msg) ? {type:"query", query_type: "update"} : msg
   chrome.runtime.sendMessage(message);
   console.log("messaging BG", message)
 }
@@ -60,18 +92,51 @@ export function makeOnStorageChanged(act){
 }
 
 
-export function makeGotMsgObs(){
+
+
+const makeEventObs = curry ((event, makeEmit, initVal) => {
   return Kefir.stream(emitter => {
-  var count = 0;
-  emitter.emit(count);
+    emitter.emit(initVal);
 
-  const emitMsg = m => emitter.emit(m)
-  chrome.runtime.onMessage.addListener(emitMsg)
+    const emit = makeEmit(emitter)
+    event.addListener(emit)
 
-  return () => {
-    chrome.runtime.onMessage.removeListener(emitMsg)
-    emitter.end()
-  }
+    return () => {
+      event.removeListener(emit)
+      emitter.end()
+    }
 
   });
+})
+
+
+export const makeStoragegObs = () => {
+  const makeEmitStgCH = (emitter) =>  makeOnStorageChanged((itemName, oldVal, newVal) => emitter.emit({itemName, oldVal, newVal}))
+  return makeEventObs(chrome.storage.onChanged, makeEmitStgCH, {itemName:null, oldVal:null, newVal:null}) 
 }
+
+export const makeGotMsgObs = () =>{ 
+  const makeEmitMsg = (emitter) =>  (message,sender) => emitter.emit({m:message,s:sender})
+  return makeEventObs(chrome.runtime.onMessage, makeEmitMsg, {m:{type:null},s:null}) 
+}
+
+
+
+
+// export function makeGotMsgObs(){
+
+//   return Kefir.stream(emitter => {
+//     emitter.emit({m:{type:null},s:null});
+
+//     const emitMsg = (message,sender) => emitter.emit({m:message,s:sender})
+//     chrome.runtime.onMessage.addListener(emitMsg)
+
+//     return () => {
+//       chrome.runtime.onMessage.removeListener(emitMsg)
+//       emitter.end()
+//     }
+
+//   });
+// }
+
+

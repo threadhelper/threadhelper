@@ -28,16 +28,28 @@ import "@babel/polyfill";
 import { h, render, Component } from 'preact';
 // import { useState, useCallback } from 'preact/hooks';
 import { updateTheme, getMode, isSidebar, getIdFromUrl, getCurrentUrl } from './utils/wutils.jsx'
-import { getData, setData, msgBG, makeGotMsgObs } from './utils/dutils.jsx';
-import { compose, curry, prop } from './utils/fp.jsx';
+import { getData, setData, msgBG, makeGotMsgObs, makeStoragegObs, inspect } from './utils/dutils.jsx';
 import { makeRoboStream, makeActionStream, makeComposeFocusObs, makeReplyObs, replyToWhom } from './ui/inputsHandler.jsx'
 import { makeSidebarHome, makeSidebarCompose, makeHomeSidebarObserver, makeFloatSidebarObserver, injectSidebarHome, injectDummy } from './ui/sidebarHandler.jsx'
 import { makeComposeObs } from './ui/composeHandler.jsx'
 
 import { makeLastStatusObs, makeModeObs, makeBgColorObs } from './ui/tabsHandler.jsx'
 import css from '../style/cs.scss'
-import Kefir, { sequentially } from 'kefir';
+import Kefir from 'kefir';
+import { isNil, defaultTo, curry, filter, includes, difference, prop, props, path, propEq, pathEq, pipe, andThen, map, reduce, and, not, propSatisfies } from 'ramda'
+
 import ThreadHelper from './components/ThreadHelper.jsx'
+
+
+Kefir.Property.prototype.currentValue = function() {
+  var result;
+  var save = function(x) {
+    result = x;
+  };
+  this.onValue(save);
+  this.offValue(save);
+  return result;
+};
 
 
 let thBarHome = makeSidebarHome()
@@ -58,35 +70,10 @@ function main(){
   
 }
 
-//onMessage and onStorageChanged should process stuff from BG and Twitter and send custom DOM events
-
-
-//** Handles messages sent from background */
-// async function onMessage(m) {
-//   // console.log("message received:", m);
-//   switch (m.type) {
-//     case "tab-change-url":
-//       onURLChange(m.url)
-//       break;  
-//   }
-//   return true
-// }
-
-// on chrome storage changes
-// function onStorageChanged(changes, area){
-  
-//   function csOnStorageChanged(item, oldVal, newVal){
-//     switch(item){
-      
-//     }
-//   }
-
-//   return makeOnStorageChanged(csOnStorageChanged)
-// }
-
 // hande twitter posting actions like tweets, rts and deletes
 function handlePosting(){
-  msgBG({type:'query', query_type:'update'})
+  // msgBG({type:'query', query_type:'update'})
+  msgBG({type:'update-tweets'})
 }
 
 const subscriptions = []
@@ -95,8 +82,14 @@ function rememberSub(sub){
   subscriptions.push(sub)
 }
 async function onLoad(thBarHome, thBarComp){
-  const gotMsg$ = makeGotMsgObs()
-  const mode$ = makeModeObs(gotMsg$)
+  const gotMsg$ = makeGotMsgObs().map(x=>x.m)
+  const storageChange$ = makeStoragegObs()
+  const sync$ = storageChange$.filter(x=>x.itemName=='sync').map(prop('newVal'))
+  //TODO init val from stg
+  const syncDisplay$ = storageChange$.filter(x=>x.itemName=='syncDisplay').map(prop('newVal')).toProperty(()=>'')
+  syncDisplay$.log('syncDisplay')
+
+  const mode$ = gotMsg$.filter(m => m.type == "tab-change-url").map(m=>getMode(m.url))
   
   const actions$ = makeActionStream()
   console.log('action stream created',actions$)
@@ -130,7 +123,7 @@ async function onLoad(thBarHome, thBarComp){
   })
   rememberSub(_sub_theme)
 
-  const robo$ = makeRoboStream()
+  const robo$ = makeRoboStream();
   // stream for focus on compose box
   // stream writing while focused 
   const composeFocus$ = makeComposeFocusObs();
@@ -159,25 +152,26 @@ async function onLoad(thBarHome, thBarComp){
   const replyTo$ = reply$.map(replyToWhom(lastStatus$))
     replyTo$.log("replying to ")
 
-  const input$ = {
+  const thStreams = {
     actions : actions$,
     robo : robo$,
     composeQuery : composeQuery$,
     replyTo : replyTo$,
-    // lastTw : lastTwStream,
+    syncDisplay : syncDisplay$,
   }
   //
-  const activateSidebar = curry( (floatSidebarStream, inject, bar, inputStreams) => { inject(bar); render(<ThreadHelper streams={inputStreams} float={floatSidebarStream}></ThreadHelper>, bar); })
-  // const activateFloatSidebar = curry( (inject, bar, inputStreams) => { inject(bar); render(<ThreadHelper streams={inputStreams}></ThreadHelper>, bar); })
+  const activateSidebar = curry( (floatSidebarStream, inject, bar, thStreams) => { inject(bar); render(<ThreadHelper streams={thStreams} float={floatSidebarStream}></ThreadHelper>, bar); })
+  // const activateFloatSidebar = curry( (inject, bar, thStreams) => { inject(bar); render(<ThreadHelper streams={thStreams}></ThreadHelper>, bar); })
   const activateFloatSidebar = activateSidebar(Kefir.never())
   const activateHomeSidebar = activateSidebar
   const deactivateSidebar = (bar) => { render(null, bar) }
   
+  // for floating sidebar in compose mode
   const floatSidebar$ = makeFloatSidebarObserver(thBarComp)
   const _sub_float = floatSidebar$.observe({
     value(value) {
       console.log('float sidebar value:', value);
-      value == 'render' ? activateFloatSidebar(injectDummy, thBarComp, input$) : deactivateSidebar(thBarComp)
+      value == 'render' ? activateFloatSidebar(injectDummy, thBarComp, thStreams) : deactivateSidebar(thBarComp)
     },
     error(error) {
       console.log('error:', error);
@@ -186,12 +180,12 @@ async function onLoad(thBarHome, thBarComp){
       console.log('end');
     },
   });
-
+  // for main site sidebar over recent trends
   const homeSidebar$ = makeHomeSidebarObserver(thBarHome)
   const _sub_home = homeSidebar$.observe({
     value(value) {
       // console.log('home sidebar value:', value);
-      value == 'render' ? activateHomeSidebar(floatSidebar$, injectSidebarHome, thBarHome, input$) : deactivateSidebar(thBarHome)
+      value == 'render' ? activateHomeSidebar(floatSidebar$, injectSidebarHome, thBarHome, thStreams) : deactivateSidebar(thBarHome)
     },
     error(error) {
       console.log('error:', error);
@@ -201,6 +195,7 @@ async function onLoad(thBarHome, thBarComp){
     },
   });
 
+  // for destructing
   rememberSub(_sub_float)
   rememberSub(_sub_home)
 
@@ -210,24 +205,11 @@ async function onLoad(thBarHome, thBarComp){
   // setUpPublishListeners()
 
   if(!await getData('sync')){
-    msgBG({type:"query", query_type: "update"})
+    // msgBG({type:"query", query_type: "update"})
+    msgBG({type:"update-tweets"})
+    
   }
 }
-
-
-
-
-
-//for initializing localStorage variables that might not have values and pertain to CS (vs BG)
-async function initLocalStorage(){
-  // only has anything if a tweet(with a url on the date)'s reply button has been clicked
-  if((await getData('current_reply_to')) != null) setData({current_reply_to: null})
-  // only has anything if user's been on a status page
-  if((await getData('last_tweet_id')) != null) setData({last_tweet_id: null})
-}
-
-
-
 
   
 function destructor(destructionEvent) {

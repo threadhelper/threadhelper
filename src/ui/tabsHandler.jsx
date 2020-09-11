@@ -10,7 +10,7 @@ export function onTabActivate(url){
   setData({current_url: window.location.href})
 }
 
-export const makeModeObs = (gotMsg$)=>gotMsg$.filter(m => m.type == "tab-change-url").map(m=>getMode(m.url))//.skipDuplicates()
+export const makeModeObs = (gotMsg$)=>gotMsg$.map(x=>x.m).filter(m => m.type == "tab-change-url").map(m=>getMode(m.url))//.skipDuplicates()
 
 // Returns a property (has a current value), not a stream
 export function makeLastStatusObs(mode$){

@@ -5,6 +5,19 @@ export const last_tweet_id = 0
 export const editorClass = "DraftEditor-editorContainer"
 const editorSelector = ".DraftEditor-editorContainer";
 
+// gets all twitter tabs
+export function getTwitterTabIds(){
+  return new Promise(function(resolve, reject) {
+    chrome.tabs.query({url: "*://twitter.com/*", currentWindow: true}, function(tabs){
+      if (chrome.runtime.lastError) {
+        console.error(chrome.runtime.lastError.message);
+        reject(chrome.runtime.lastError.message);
+      } else {
+        resolve(tabs.map(tab=>{return tab.id}));
+      }
+    });  
+  });
+}
 
 export const getComposers = ()=>document.querySelectorAll(editorSelector)
 export const getActiveComposer = ()=>{
@@ -33,6 +46,7 @@ export function getMode(url = null){
   var explore = 'https://twitter.com/explore'
   var bookmarks = 'https://twitter.com/i/bookmarks'
   var status = '/status/'
+  // .?
   // console.log("mode is " + pageURL)
   if (pageURL.indexOf(home) > -1){
     return 'home'

@@ -1,11 +1,12 @@
 import { h, render, Component } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
+import { useStream } from './useStream.jsx';
 import { msgBG, makeOnStorageChanged, getData } from '../utils/dutils.jsx';
+import { isNil } from 'ramda'
 
 
 
-
-export function SyncIcon(){
+export function SyncIcon(props){
   // Add `name` to the initial state
   // let state_template = {
   //   synced:'unsynced',
@@ -17,6 +18,9 @@ export function SyncIcon(){
   const [synced, setSynced] = useState('unsynced');
   const [meta, setMeta] = useState({count: 0, last_updated: "never"});
   const [user_info, setUserInfo] = useState({username: "No user"});
+  const syncDisplay = useStream(props.streams.syncDisplay,'')
+
+  // syncDisplay
   
 
   const syncStorageChange = async function(item, oldVal, newVal){
@@ -25,17 +29,17 @@ export function SyncIcon(){
         // setState({options: newVal != null ? newVal : state.options})
         break;
       case "user_info":
-        setUserInfo(newVal != null ? newVal : user_info)
+        setUserInfo( isNil(newVal) ? user_info : newVal )
         break;
       // case "has_archive":
       //   wiz.has_archive = newVal;
       //   break;
       case "sync":
-        setSynced(newVal ? 'synced' : 'unsynced')
+        setSynced( isNil(newVal) ? false  : true )
         break;
       case "tweets_meta":
         console.log(`meta changed ${newVal}`)
-        setMeta(newVal != null ? newVal : meta)
+        setMeta( isNil(newVal) ? meta : newVal )
         // setMeta(newVal)
         break;
       default:
@@ -72,7 +76,7 @@ export function SyncIcon(){
 
   return (
     <div class={`sync ${synced}`} onClick={onSyncClick}>
-      <span class="tooltiptext"> {`${JSON.stringify(meta, null, 2)} - ${JSON.stringify(user_info, null, 2)}`} </span>  
+      <span class="tooltiptext"> {syncDisplay} </span>  
     </div>
   );
 }

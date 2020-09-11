@@ -3,6 +3,7 @@ import { useState, useEffect, useContext } from 'preact/hooks';
 import { makeOnStorageChanged } from '../utils/dutils.jsx';
 import { useOption } from './useOption.jsx';
 import Kefir, { sequentially } from 'kefir';
+import {pipe, prop, curry} from 'ramda'
 
 
 
@@ -11,7 +12,7 @@ export function Console(){
   const [query, setQuery] = useState('[search query]');
   // const [text, setText] = useState('[console text]');
   const [text, setText] = useState('[console text]');
-  const [isGetRTs, setIsGetRTs] = useOption('getRetweets', false)
+  const [isGetRTs, setIsGetRTs] = useOption('getRTs')
   
   
   const consoleStorageChange = async function(item, oldVal, newVal){
@@ -60,15 +61,24 @@ export function Console(){
 
   return (
     <div class="console">
-      <span>{`$: `} {`query: ${query}`}</span>      <span class="getRTs"> <span> <input name="getRTs" type="checkbox" checked={isGetRTs} onChange={(e)=>handleInputChange(e,setIsGetRTs)}></input> <span>RTs</span> </span> </span>
+      <span>{`$: `} {`query: ${query}`}</span>      <span class="getRTs"> <span> <input name="getRTs" type="checkbox" checked={isGetRTs} onChange={(e)=>handleInputChange(setIsGetRTs, e)}></input> <span>RTs</span> </span> </span>
     </div> 
   );
 }
 
-function handleInputChange(event, set) {
-  const target = event.target;
-  const value = target.type === 'checkbox' ? target.checked : target.value;
-  const name = target.name;
+// function handleInputChange(set, event) {
+//   const target = event.target;
+//   const value = target.type === 'checkbox' ? target.checked : target.value;
+//   const name = target.name;
+  
+//   set(value)
+// }
 
-  set(value)
-}
+const handleInputChange = curry((_set, event) => {
+  console.log('handling input change', {event, _set})
+  pipe(
+    prop('target'),
+    target=>(target.type === 'checkbox' ? target.checked : target.value),
+    _set
+  )(event)
+})

@@ -1,6 +1,6 @@
 import { h, render, Component } from 'preact';
 import { useState, useRef, useEffect, useContext, useCallback } from 'preact/hooks';
-import { getData, setData, msgBG, makeOnStorageChanged } from '../utils/dutils.jsx';
+import { getData, msgBG, makeOnStorageChanged } from '../utils/dutils.jsx';
 import { Console } from './Console.jsx';
 import { Tweet } from './Tweet.jsx';
 import { IOStreams } from './ThreadHelper.jsx';
@@ -17,6 +17,7 @@ export function Search(props){
   // const [synced, setSynced] = useState('synced');
   // setTweets([{text: "memes are great"}, {text: "afkjbasfjbaosufboaubfoaudbfaefaf"}])
 
+  const _setTweets = (t)=>{setTweets(t);}
   const searchStorageChange = async function(item, oldVal, newVal){
     // console.log(` search storage ${item} change active?`, [props.active, myRef])
     if(!props.active) return
@@ -24,27 +25,27 @@ export function Search(props){
       case "search_results":
         if(newVal != null && newVal.length > 0){
           console.log(`new search results `, newVal)
-          setTweets(newVal != null ? newVal : [])  
+          _setTweets(newVal != null ? newVal : [])  
         } else{
           console.log('showing latest instead of search')
           const latest = await getData("latest_tweets")
-          setTweets( latest != null ? latest : [])
+          _setTweets( latest != null ? latest : [])
         }
         break;
       case "latest_tweets":
         console.log(`new latest tweets `, newVal)
-        // setTweets(newVal != null ? newVal : [])
+        // _setTweets(newVal != null ? newVal : [])
         const isMidSearch = ()=>query!=null && query.length>0
         if(isMidSearch()){
           const search_results = await getData("search_results")
           if(search_results != null){
             console.log('showing search results instead of latest')
-            setTweets( search_results != null ? search_results : [])
+            _setTweets( search_results != null ? search_results : [])
             break
           }
         }
         console.log('showing latest')
-        setTweets( newVal != null ? newVal : [])
+        _setTweets( newVal != null ? newVal : [])
         break;
       default:
         break;
@@ -66,7 +67,8 @@ export function Search(props){
   }, []);
 
   useEffect(async () => {
-    setTweets(await getData('latest_tweets'))
+    const initTweets = await getData('latest_tweets') 
+    setTweets(initTweets != null ? initTweets : [])
   }, []);
 
   function reqSearch(query){
@@ -76,8 +78,7 @@ export function Search(props){
 
   useEffect(()=>{
     if(props.active && query != null) reqSearch(query)
-      return ()=>{  
-    };
+    return ()=>{  };
   },[query]);
 
   return (

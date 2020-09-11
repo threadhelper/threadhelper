@@ -2,6 +2,7 @@ import { h, render, Component } from 'preact';
 import { useState, useEffect, useRef } from 'preact/hooks';
 import GearIcon from '../../images/gear.svg';
 import { msgBG } from '../utils/dutils';
+import { defaultTo, pipe} from 'ramda'
 
 
 
@@ -9,31 +10,24 @@ import { msgBG } from '../utils/dutils';
 export function SettingsButton(props){
   const [open, setOpen] = useState(false);
 
-  const closeMenu = ()=>{setOpen(false)}
-
+  // const closeMenu = (e) => ((!e.currentTarget.parentNode.parentNode.contains(e.relatedTarget)) ? setOpen(false) : null)
+  const closeMenu = pipe(
+    defaultTo(null),
+    (e) => {return (!e.currentTarget.parentNode.parentNode.contains(e.relatedTarget)) ? setOpen(false) : null}
+  )
+  
   return (
     <div className="nav-item" >
       <div class="options icon-button" > 
-        < GearIcon onFocus={() => {setOpen(true); console.log('settings focused');}} onBlur={
-          (e) => {
-            // console.log("focusout (self or child)");
-            if (e.currentTarget === e.target) {
-              console.log("blur (self)");
-            }
-            if (!e.currentTarget.parentNode.parentNode.contains(e.relatedTarget)) {
-              console.log("focusleave");
-              console.log(e.currentTarget);
-              console.log(e.relatedTarget);
-              setOpen(false)
-            }
-          }} /> 
+        < GearIcon onClick={() => setOpen(!open)} onBlur={closeMenu} /> 
       </div>
-      {open && <DropdownMenu closeMenu={closeMenu}/>}
+      {open && <DropdownMenu closeMenu={()=>setOpen(false)}/>}
       
     </div>
   )
 }
 
+const debug = true
 
 export function DropdownMenu(_props) {
   const dropdownRef = useRef(null);
@@ -46,6 +40,10 @@ export function DropdownMenu(_props) {
         <span className="icon-right">{props.rightIcon}</span>
       </a>
     );
+  }
+  
+  function DebugItem(props) {
+    return (debug ? DropdownItem(props) : null)
   }
 
   function onClearStorage(){
@@ -63,23 +61,59 @@ export function DropdownMenu(_props) {
     msgBG({type:'get-bookmarks'})
   }
 
+
   return (
     <div className="dropdown" ref={dropdownRef}>
+      <DropdownItem
+        // leftIcon={<GearIcon />}
+        effect={()=>{}}>
+        Load Archive
+      </DropdownItem>
       <DropdownItem
         // leftIcon={<GearIcon />}
         effect={onClearStorage}>
         Clear Storage
       </DropdownItem>
-      <DropdownItem
-        // leftIcon={<GearIcon />}
+      <DebugItem
+        leftIcon={'🛠'}
         effect={onAssessStorage}>
         Assess Storage
-      </DropdownItem>
-      <DropdownItem
-        // leftIcon={<GearIcon />}
+      </DebugItem>
+      <DebugItem
+        leftIcon={'🛠'}
+        effect={()=>{msgBG({type:'log-auth'})}}>
+        Log Auth
+      </DebugItem>
+      <DebugItem
+        leftIcon={'🛠'}
+        effect={()=>{msgBG({type:'get-user-info'})}}>
+        Get User Info
+      </DebugItem>
+      <DebugItem
+        leftIcon={'🛠'}
+        effect={()=>{msgBG({type:'update-tweets'})}}>
+        Update Tweets
+      </DebugItem>
+      <DebugItem
+        leftIcon={'🛠'}
+        effect={()=>{msgBG({type:'update-timeline'})}}>
+        Update Timeline
+      </DebugItem>
+      <DebugItem
+        leftIcon={'🛠'}
+        effect={()=>{msgBG({type:'get-latest'})}}>
+        Get Latest
+      </DebugItem>
+      <DebugItem
+        leftIcon={'🛠'}
         effect={onGetBookmarks}>
         Get Bookmarks
-      </DropdownItem>
+      </DebugItem>
+      <DebugItem
+        leftIcon={'🛠'}
+        effect={()=>{msgBG({type:'make-index'})}}>
+        Make Index
+      </DebugItem>
     </div>
   );
 }

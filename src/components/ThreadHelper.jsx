@@ -34,7 +34,7 @@ export default function ThreadHelper(props){
 
   // Add `name` to the initial state
   const [active, setActive] = useState(true);
-  const isFloatBar = useStream(props.float)
+  // const isFloatBar = useStream(props.float)
   // const [mode, setMode] = useState(getMode(window.location.href));
   // const currentVal = useStream(props.streams.actions, '[placeholder stream val 2]') //for testing
   const myRef = useRef(null);
@@ -46,13 +46,13 @@ export default function ThreadHelper(props){
   // Think of a component which needs to subscribe to some data when it mounts and needs to unsubscribe when it unmounts. 
   // This can be accomplished with useEffect too. To run any cleanup code we just need to return a function in our callback.*/
   // // To subscribe to storage changes
-  useEffect(() => {
-    setActive(isFloatBar == 'render' ? false : true)
-    // console.log(`setting active to ${isFloatBar == 'render' ? 'false' : 'true'}`)
-    return () => {   
-      // console.log("master TH unmounting")
-    };
-  }, [isFloatBar]);
+  // useEffect(() => {
+  //   setActive(isFloatBar == 'render' ? false : true)
+  //   // console.log(`setting active to ${isFloatBar == 'render' ? 'false' : 'true'}`)
+  //   return () => {   
+  //     // console.log("master TH unmounting")
+  //   };
+  // }, [isFloatBar]);
 
   
 
@@ -71,7 +71,7 @@ function Sidebar(props){
 
   return(
     <div class="sidebar">
-      <Header />
+      <Header streams={props.streams}/>
       <Robo active={props.active} streams={props.streams}/>
       <Search active={props.active} composeQuery={props.streams.composeQuery}/>
     </div>
