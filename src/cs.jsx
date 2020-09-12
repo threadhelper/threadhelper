@@ -28,7 +28,7 @@ import "@babel/polyfill";
 import { h, render, Component } from 'preact';
 // import { useState, useCallback } from 'preact/hooks';
 import { updateTheme, getMode, isSidebar, getIdFromUrl, getCurrentUrl } from './utils/wutils.jsx'
-import { getData, setData, msgBG, makeGotMsgObs, makeStoragegObs, inspect } from './utils/dutils.jsx';
+import { getData, setData, msgBG, makeGotMsgObs, makeStoragegObs, inspect, requestRoboTweet } from './utils/dutils.jsx';
 import { makeRoboStream, makeActionStream, makeComposeFocusObs, makeReplyObs, replyToWhom } from './ui/inputsHandler.jsx'
 import { makeSidebarHome, makeSidebarCompose, makeHomeSidebarObserver, makeFloatSidebarObserver, injectSidebarHome, injectDummy } from './ui/sidebarHandler.jsx'
 import { makeComposeObs } from './ui/composeHandler.jsx'
@@ -36,7 +36,7 @@ import { makeComposeObs } from './ui/composeHandler.jsx'
 import { makeLastStatusObs, makeModeObs, makeBgColorObs } from './ui/tabsHandler.jsx'
 import css from '../style/cs.scss'
 import Kefir from 'kefir';
-import { isNil, defaultTo, curry, filter, includes, difference, prop, props, path, propEq, pathEq, pipe, andThen, map, reduce, and, not, propSatisfies } from 'ramda'
+import { isNil, isEmpty, defaultTo, curry, filter, includes, difference, prop, props, path, propEq, pathEq, pipe, andThen, map, reduce, and, not, propSatisfies } from 'ramda'
 
 import ThreadHelper from './components/ThreadHelper.jsx'
 
@@ -123,35 +123,28 @@ async function onLoad(thBarHome, thBarComp){
   })
   rememberSub(_sub_theme)
 
-  const robo$ = makeRoboStream();
   // stream for focus on compose box
   // stream writing while focused 
   const composeFocus$ = makeComposeFocusObs();
   // composeFocus$.log('compose focus')
-  let composeQuery$ = composeFocus$.filter(x => x != 'unfocused').flatMapLatest(e=>makeComposeObs(e.target))
+  const composeQuery$ = composeFocus$.filter(x => x != 'unfocused').flatMapLatest(e=>makeComposeObs(e.target)).toProperty(()=>'')
+  
+  // to detect when writing has stopped for a bit
+  const stoppedWriting$ = composeQuery$.skipDuplicates().filter(x=>!isEmpty(x)).debounce(3000)
+  stoppedWriting$.log("stoppedWriting")
 
-  // const composeQueryObsFunc = {
-  //   value(value) {
-  //     // console.log('value:', value);
-  //   },
-  //   error(error) {
-  //     console.log('error:', error);
-  //   },
-  //   end() {
-  //     console.log('end');
-  //   },
-  // }
-  // composeQuery$.observe(composeQueryObsFunc);
-
-
+  
   const lastStatus$ = makeLastStatusObs(mode$)
     lastStatus$.log("last status: ")
-
+    
   const reply$ = makeReplyObs(mode$)
-
-  const replyTo$ = reply$.map(replyToWhom(lastStatus$))
+  
+  const replyTo$ = reply$.map(replyToWhom(lastStatus$)).toProperty(()=>null)
     replyTo$.log("replying to ")
-
+    
+  const robo$ = Kefir.merge([makeRoboStream(), stoppedWriting$])
+  robo$.onValue(_=>requestRoboTweet(composeQuery$.currentValue(), replyTo$.currentValue()))
+  
   const thStreams = {
     actions : actions$,
     robo : robo$,

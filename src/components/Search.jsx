@@ -5,6 +5,7 @@ import { Console } from './Console.jsx';
 import { Tweet } from './Tweet.jsx';
 import { IOStreams } from './ThreadHelper.jsx';
 import { useStream } from './useStream.jsx';
+import { eqProps } from 'ramda';
 
 
 export function Search(props){
@@ -83,10 +84,9 @@ export function Search(props){
 
   return (
     <div class="searchWidget" ref={myRef}>
-      <Console />
+      <Console composeQuery={props.composeQuery}/>
       
       <div class="searchTweets"> 
-        Search Results for {query}:
         {tweets.map(tweet => (
           // Without a key, Preact has to guess which tweets have
           // changed when re-rendering.

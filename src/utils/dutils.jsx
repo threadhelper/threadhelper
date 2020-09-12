@@ -1,8 +1,6 @@
 import Kefir from 'kefir';
 import { curry, isNil, pipe, prop, andThen, defaultTo, assoc } from 'ramda'
 
-// let options = {}
-
 //returns a promise that gets a value from chrome local storage 
 export async function getData(key) {
   return new Promise(function(resolve, reject) {
@@ -73,6 +71,22 @@ export function msgBG(msg = null){
   chrome.runtime.sendMessage(message);
   console.log("messaging BG", message)
 }
+
+export async function requestRoboTweet(query, reply_to){
+  console.log('req robo tweet!', {query, reply_to})
+  //TODO port reply_to thing
+  // inefficient, if they're in storage, I could just get them in bg
+  let msg = {
+    type:"robo-tweet", 
+    query: query != null ? query : '', 
+    reply_to: reply_to != null ? reply_to : ''
+  }
+  msgBG(msg)
+  // console.log(`clicked robo sync`, msg)
+}
+
+
+
 
 
 // makes an onStorageChange function given an act function that's usually a switch over item keys that have changed

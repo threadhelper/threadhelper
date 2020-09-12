@@ -3,19 +3,19 @@ import "@babel/polyfill";
 import * as browser from "webextension-polyfill";
 import {inspect, setStg, getData, setData, removeData, updateOption, defaultOptions, makeStoragegObs, makeGotMsgObs} from './utils/dutils.jsx'
 import {getTwitterTabIds} from './utils/wutils.jsx'
-import { isNil, defaultTo, curry, filter, includes, difference, prop, props, path, propEq, pathEq, pipe, andThen, map, reduce, and, not, propSatisfies } from 'ramda'
+import { isNil, defaultTo, curry, filter, includes, difference, prop, props, path, propEq, pathEq, pipe, andThen, map, reduce, and, not, last, propSatisfies } from 'ramda'
 import Kefir from 'kefir';
 import {makeAuthObs} from './bg/auth.jsx'
 import {makeOptionsObs} from './bg/options.jsx'
 import * as db from './bg/db.jsx'
 import {initWorker} from './bg/workerBoss.jsx'
-import {Robo} from './bg/robo.js'
+import {makeRoboRequest} from './bg/robo.jsx'
 import {makeIndex, loadIndex, updateIndex, search} from './bg/nlp.jsx'
 import {getUserInfo, updateQuery, timelineQuery, archToTweet, toTweet, getLatestTweets} from './bg/twitterScout.jsx'
 import * as idb from 'idb'
 import * as elasticlunr from 'elasticlunr'
 
-
+// 
 var DEBUG = true;
 if(!DEBUG){
     console.log("CANCELING CONSOLE")
@@ -146,8 +146,9 @@ export async function main(){
     dbReady$.map( x=>{return isNil(x) ? false : true}),
     index$.map( x=>{return isNil(x) ? false : true}),
     userInfo$.map( x=>{return isNil(x.id) ? false : true}),
+    
   ], (...args)=>reduce(and, true, args)).toProperty(()=>false)
-  ready$.onValue(setStg('sync'))
+  
   ready$.log('READY')
   const notReady$ = ready$.map(not)
 
@@ -157,7 +158,7 @@ export async function main(){
     const username = getUsername()
     const n_tweets = await howManyTweetsDb()
     const dateTime = await whenLastUpdate()
-    return `Hello ${username}, I have ${n_tweets} tweets available. \n Last updated on ${dateTime}`
+    return `Hi ${username}, I have ${n_tweets} tweets available. \n Last updated on ${dateTime}`
   }
   const syncDisplay$ = Kefir.merge([
     ready$,
@@ -238,7 +239,7 @@ export async function main(){
 
   const update_size = 200
   // reqUpdateTweets$ :: msg -> msg
-  const reqUpdateTweets$ = msg$.filter(m => ['update-tweets', "new-tweet"].includes(m.type)).bufferWhileBy(notReady$)
+  const reqUpdateTweets$ = msg$.filter(m => ['update-tweets', "new-tweet"].includes(m.type)).bufferWhileBy(notReady$).flatten()
   // IMPURE
   const fetchedUpdate$ = reqUpdateTweets$.flatMapLatest(_=>Kefir.fromPromise(updateQuery(getAuthInit, getUsername(), update_size)))
 
@@ -253,7 +254,7 @@ export async function main(){
   //   ))
     // 
   // reqTimeline$ :: msg -> msg
-  const reqTimeline$ = msg$.filter(m => ["update-timeline"].includes(m.type)).bufferWhileBy(notReady$)
+  const reqTimeline$ = msg$.filter(m => ["update-timeline"].includes(m.type)).bufferWhileBy(notReady$).flatten()
   // IMPURE
   const fetchedTimeline$ = reqTimeline$.flatMapLatest(_=>Kefir.fromPromise(timelineQuery(getAuthInit, userInfo$.currentValue())))
   
@@ -281,6 +282,12 @@ export async function main(){
     reqSaveTweets
   ))
 
+  const isNotLoading$ = Kefir.combine([
+    reqArchiveLoad$.map(_=>true), archiveLoadedTweets$.map(_=>false),
+  ], (...args)=>reduce(and, true, args)).toProperty(true)
+
+  const syncLight$ = Kefir.combine([isNotLoading$, ready$], (...args)=>reduce(and, true, args)).toProperty(()=>false)
+  syncLight$.onValue(setStg('sync'))
   // const archiveLoad$ = msg$.filter(m => m.type === "temp-archive-stored")
     // .map(m.query_type)
   const n_tweets_results = 20
@@ -290,6 +297,7 @@ export async function main(){
   // getTweetsFromDbById :: [id] -> [tweets]
   const getTweetsFromDbById = async (ids) => await pipe(
     map(db_get('tweets')), 
+    filter(x=>not(isNil(x))),
     (arr)=>Promise.all(arr),
   )(ids)
 
@@ -300,29 +308,32 @@ export async function main(){
   const reqSearch$ = Kefir.merge([ 
     searchQuery$,
     getRT$.map(()=>searchQuery$.currentValue()),
-    ]).bufferWhileBy(notReady$)
-  // reqSearch$.log('reqSearch')                  
-  // const commitSearch$ = reqSearch$.take(1).(skipUntilBy())
-// 
-  let searchFree = true
-  const isSearchFree = () => searchFree
-  // const setSearchFree = (val) => {searchFree = val; console.log('set search free', val)}
+    ]).bufferWhileBy(notReady$).flatten()
+
+  const makeMidSearchEvent = (_free) => {
+    return new CustomEvent("midSearch", {detail: {free:_free}})
+  }
+  const emitMidSearch = (free) => {
+    window.dispatchEvent(makeMidSearchEvent(free));
+  }
+  const isMidSearch$ = Kefir.fromEvents(window, 'midSearch').map(path(['detail', 'free'])).toProperty(()=>false)
+  isMidSearch$.log('midSearch')
 
   // const searchResult$ = reqSearch$.skipUntilBy(query=>Kefir.fromPromise(searchTweets(query)))
   // TODO buffer and process last query
-  const searchResult$ = reqSearch$.filter(isSearchFree).flatMapFirst(query => {
-    // console.log(`searching for ${query} bc searchFree is ${searchFree}`); 
-    // setSearchFree(false); 
-    return Kefir.fromPromise(searchTweets(query))} )
+  const searchResult$ = reqSearch$.bufferWhileBy(isMidSearch$).map(last).flatMapFirst(query => {
+    console.log(`searching for ${query}`); 
+    emitMidSearch(true); 
+    return Kefir.fromPromise(searchTweets(query))
+  })
     
   searchResult$.onValue(
     pipe(
-      inspect('search res ids'),
       getTweetsFromDbById,
       inspect('search res tweets'),
       andThen(pipe(
         setStg('search_results'),
-        // x=>{setSearchFree(true); return x;},
+        andThen(x=>{emitMidSearch(false); return x;})
         )),
     )
   )
@@ -339,7 +350,7 @@ export async function main(){
     getRT$,
     msg$.filter(propEq('type', "get-latest")),
     fetchedTweets$.delay(100), // TODO: this makes us set the latest tweets a little after every tweets update, but we should be doing it based on db updates instead.
-  ]).bufferWhileBy(notReady$)
+  ]).bufferWhileBy(notReady$).flatten()
 
   latestTweets$.onValue(pipe(
     getLatest,
@@ -349,8 +360,15 @@ export async function main(){
     )
   )
 
-  const loadArchive$ = msg$.filter(propEq('type', 'load-archive'))
-  const reqRoboQuery$ = null
+  const reqRoboQuery$ = msg$.filter(x=>!isNil(x)).filter(propEq('type', 'robo-tweet')).bufferWhileBy(notReady$).flatten()
+  reqRoboQuery$.log('robo query')
+  reqRoboQuery$.onValue(m=>{
+    setData({'roboSync':false});
+    makeRoboRequest(getAuthInit,m).then(roboTweet=>
+      setData({'roboTweet':roboTweet, 'roboSync':true})
+      )
+  })
+
   const reqBookmarks$ = null
   const reqThread$ = null
 
@@ -420,5 +438,5 @@ function onTabUpdated(tabId, change, tab){
     }
   }
 }    
-
+// 
 main()

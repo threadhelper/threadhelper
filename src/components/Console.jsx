@@ -2,14 +2,15 @@ import { h, render, Component } from 'preact';
 import { useState, useEffect, useContext } from 'preact/hooks';
 import { makeOnStorageChanged } from '../utils/dutils.jsx';
 import { useOption } from './useOption.jsx';
+import { useStream } from './useStream.jsx';
 import Kefir, { sequentially } from 'kefir';
 import {pipe, prop, curry} from 'ramda'
 
 
 
-export function Console(){
+export function Console(props){
   // Add `name` to the initial state
-  const [query, setQuery] = useState('[search query]');
+  const query = useStream(props.composeQuery,'')
   // const [text, setText] = useState('[console text]');
   const [text, setText] = useState('[console text]');
   const [isGetRTs, setIsGetRTs] = useOption('getRTs')
@@ -61,7 +62,7 @@ export function Console(){
 
   return (
     <div class="console">
-      <span>{`$: `} {`query: ${query}`}</span>      <span class="getRTs"> <span> <input name="getRTs" type="checkbox" checked={isGetRTs} onChange={(e)=>handleInputChange(setIsGetRTs, e)}></input> <span>RTs</span> </span> </span>
+      <span>{`$: `} {`Search Results for ${query}:`}</span>      <span class="getRTs"> <span> <input name="getRTs" type="checkbox" checked={isGetRTs} onChange={(e)=>handleInputChange(setIsGetRTs, e)}></input> <span>RTs</span> </span> </span>
     </div> 
   );
 }

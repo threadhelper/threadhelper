@@ -85,23 +85,8 @@ export const getTopNResults = curry(async (getRTs, screen_name, n_tweets, index,
   return pipe(
     filter(x => getRTs ? true : getDocUsername(index, x.ref) === screen_name),
     take(n_tweets),
-    inspect('hi gettopn'),
-    x=>{console.log("getTopN", {index}); return x},
     map(prop('ref')),
   )(results)
-
-
-  // const isFull = (acc, x) => acc.length >= n_tweets
-  // reduceWhile(isFull, append), [], results)
-
-  // const related = getRTs ? await getRes(results) : await getResRT(results)
-  
-
-  // for (let res of results){
-  //   if(res.doc.username === screen_name) related.push(await getDB(res.ref,'tweets'))    
-  //   if(related.length >= n_tweets) break;
-  // }    
-  // return related
 })
 // 
 export const search = curry (async (getRTs, screen_name, n_tweets, index, query) => {

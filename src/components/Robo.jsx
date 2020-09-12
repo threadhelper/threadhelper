@@ -1,6 +1,6 @@
 import { h, render, Component } from 'preact';
 import { useState, useRef, useEffect, useContext, useCallback } from 'preact/hooks';
-import { getData, setData, msgBG, makeOnStorageChanged } from '../utils/dutils.jsx';
+import { getData, setData, msgBG, makeOnStorageChanged, requestRoboTweet } from '../utils/dutils.jsx';
 import { IOStreams } from './ThreadHelper.jsx';
 import { useStream } from './useStream.jsx';
 
@@ -74,20 +74,6 @@ export function Robo(props){
     return () => chrome.storage.onChanged.removeListener(onStCh);
   }, []);
 
-
-  async function requestRoboTweet(query, reply_to){
-    console.log('req robo tweet!', {query, reply_to})
-    //TODO port reply_to thing
-    // inefficient, if they're in storage, I could just get them in bg
-    let msg = {
-      type:"robo-tweet", 
-      query: query != null ? query : '', 
-      reply_to: reply_to != null ? reply_to : ''
-    }
-    msgBG(msg)
-    // console.log(`clicked robo sync`, msg)
-  }
-
   async function onRoboClick(){
     if(props.active) {
       requestRoboTweet(query, reply_to)
@@ -95,15 +81,14 @@ export function Robo(props){
     }
   }
 
-  // const onclick = ()=>onRoboClick(query, reply_to)
-  useEffect(()=>{
-    const woop = _=>{onRoboClick(); }
-    robo.onValue(woop)
-    return ()=>{
-      console.log('destructing')
-      robo.offValue(woop)
-    }
-  }, [])
+  // useEffect(()=>{
+  //   const woop = _=>{onRoboClick(); }
+  //   robo.onValue(woop)
+  //   return ()=>{
+  //     console.log('destructing')
+  //     robo.offValue(woop)
+  //   }
+  // }, [])
 
 
   return (
@@ -111,7 +96,7 @@ export function Robo(props){
       <div class={`sync ${synced}`} onClick={onRoboClick}>
         <span class="tooltiptext"> {`robo, click to get a completion`} </span>  
       </div>
-      <div class="roboTweet"> {`suggested tweet: `}<b>{`${query}`}</b>{`${tweet}`}</div>
+      <div class="roboTweet"> {`🤖: `}<b>{`${query}`}</b>{`${tweet}`}</div>
     </div>
   );
 }

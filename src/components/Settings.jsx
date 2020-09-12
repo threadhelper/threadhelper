@@ -70,7 +70,7 @@ export function DropdownMenu(_props) {
         Load Archive
       </DropdownItem>
       <DropdownItem
-        // leftIcon={<GearIcon />}
+        leftIcon={'⛔'}
         effect={onClearStorage}>
         Clear Storage
       </DropdownItem>

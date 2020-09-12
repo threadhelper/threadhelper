@@ -1,5 +1,5 @@
 import {getData, setData, makeOnStorageChanged} from '../utils/dutils.jsx'
-import { curry, difference, prop, reverse, minBy, maxBy, dropLastWhile, dropWhile, gt, lt, reduce, map, pipe } from 'ramda'
+import { isNil, isEmpty, curry, difference, prop, reverse, minBy, maxBy, dropLastWhile, dropWhile, gt, lt, reduce, map, pipe } from 'ramda'
 
 
 export const getUserInfo = async (getAuthInit) => await fetch(`https://api.twitter.com/1.1/account/verify_credentials.json`,getAuthInit()).then(x => x.json())
@@ -13,13 +13,14 @@ const getMaxId = (res) => res.length > 1 ? res[res.length - 1].id : null
 // fetch as many tweets as possible from the timeline
 export const timelineQuery = async (getAuthInit, user_info) => await query(getAuthInit, user_info.screen_name, user_info.statuses_count, -1, [])
 
+
+const stop_condition = (res, count, max_id)=>(res.length >= count || !(max_id != null)) //stop if got enough tweets or if max_id is null (twitter not giving any more)
+
 // res is the accumulator, should be called as [], max_id initialized as -1
 const query = curry( async (getAuthInit, username, count, max_id, res) => {
-  const stop_condition = (res, count, max_id)=>(res.length >= count || !(max_id != null)) //stop if got enough tweets or if max_id is null (twitter not giving any more)
   if (stop_condition(res, count, max_id)) return res
 
-  const url = makeTweetQueryUrl(max_id, username, count)
-  const req_res = await fetch(url, getAuthInit()).then(x => x.json())
+  const req_res = await fetch(makeTweetQueryUrl(max_id, username, count), getAuthInit()).then(x => x.json())
     
   return await query(getAuthInit, username, count, getMaxId(req_res), res.concat(req_res))
 })
@@ -33,61 +34,52 @@ const makeTweetQueryUrl = curry( (max_id, username, count) => {
 const makeUpdateQueryUrl = makeTweetQueryUrl(-1)
 
 
-function updateMeta(new_tweets, count){
-  let old_meta = this.tweets_meta
-  let len = Object.keys(new_tweets).length - 1
-  let first_key = Object.keys(new_tweets)[0]
-  let last_key = Object.keys(new_tweets)[len]
-  let meta = {
-    count: count, 
-    max_id: Math.min(new_tweets[last_key].id, old_meta.max_id),
-    max_time: Math.min(new_tweets[last_key].time, old_meta.max_time),
-    since_id: Math.max(new_tweets[first_key].id, old_meta.since_id),
-    since_time: Math.max(new_tweets[first_key].time, old_meta.since_time),
-    last_updated: (new Date()).getTime(),
-  }
-  return meta
-}
+// function updateMeta(new_tweets, count){
+//   let old_meta = this.tweets_meta
+//   let len = Object.keys(new_tweets).length - 1
+//   let first_key = Object.keys(new_tweets)[0]
+//   let last_key = Object.keys(new_tweets)[len]
+//   let meta = {
+//     count: count, 
+//     max_id: Math.min(new_tweets[last_key].id, old_meta.max_id),
+//     max_time: Math.min(new_tweets[last_key].time, old_meta.max_time),
+//     since_id: Math.max(new_tweets[first_key].id, old_meta.since_id),
+//     since_time: Math.max(new_tweets[first_key].time, old_meta.since_time),
+//     last_updated: (new Date()).getTime(),
+//   }
+//   return meta
+// }
 
-function makeTweetsMeta(tweets){
-  let meta = {}
-  if (tweets != null){
-    if (Object.keys(tweets).length>0){
-      let len = Object.keys(tweets).length - 1
-      let first_key = Object.keys(tweets)[0]
-      let last_key = Object.keys(tweets)[len]
-      meta = {
-        count: len, 
-        max_id: tweets[last_key].id, 
-        max_time: tweets[last_key].time,
-        since_id: tweets[first_key].id, 
-        since_time: tweets[first_key].time,
-        last_updated: (new Date()).getTime(),
-      }
-    }
-  } else{
-    meta = {
-      count: 0, 
-      max_id: null, 
-      max_time: null,
-      since_id: null, 
-      since_time: null,
-      last_updated: null,
-    }
-  }
-  return meta
-}
+// function makeTweetsMeta(tweets){
+//   let meta = {}
+//   if (tweets != null){
+//     if (Object.keys(tweets).length>0){
+//       let len = Object.keys(tweets).length - 1
+//       let first_key = Object.keys(tweets)[0]
+//       let last_key = Object.keys(tweets)[len]
+//       meta = {
+//         count: len, 
+//         max_id: tweets[last_key].id, 
+//         max_time: tweets[last_key].time,
+//         since_id: tweets[first_key].id, 
+//         since_time: tweets[first_key].time,
+//         last_updated: (new Date()).getTime(),
+//       }
+//     }
+//   } else{
+//     meta = {
+//       count: 0, 
+//       max_id: null, 
+//       max_time: null,
+//       since_id: null, 
+//       since_time: null,
+//       last_updated: null,
+//     }
+//   }
+//   return meta
+// }
 
-export const idComp = (b,a)=>{
-  let res = null; 
-  try {
-    res = a.localeCompare(b,undefined,{numeric: true});  
-  } catch (error) {
-    console.log(error)
-    console.log({a,b})
-  }
-  return res 
-}
+export const idComp = (b,a)=>a.localeCompare(b,undefined,{numeric: true})
 
 
 function sortKeys(keys){
@@ -334,27 +326,36 @@ async function getProfilePics(){
     })
   })
 }
+// 
 
-// let tid = '1284519292982005760'
-export const fetchTweet = async (tid) => {
-  let url = (tid)=>{return `https://api.twitter.com/1.1/statuses/show.json?id=${tid}&tweet_mode=extended`}
-  let tweet =  await fetch(url(tid),auth.init()).then(x=>x.json())//.then(x=>x.in_reply_to_status_id_str)
+// (IMPURE) fetchTweet :: tid -> tweet
+const fetchTweet = async (getAuthInit,tid)=>{
+  const url = (tid)=>{return `https://api.twitter.com/1.1/statuses/show.json?id=${tid}&tweet_mode=extended`}
+  const tweet =  await fetch(url(tid),getAuthInit()).then(x=>x.json())//.then(x=>x.in_reply_to_status_id_str)
   return tweet
 }
 
+// (IMPURE) getThreadAbove :: tid -> [tweet]
+// thread init []
+export const getThreadAbove = curry(async (getAuthInit,tid)=>{
+  console.log('getting thread above', tid)
+  if (isNil(tid) || isEmpty(tid)) return []
+  const cur = await fetchTweet(getAuthInit,tid)
+  return [...(await getThreadAbove(cur.in_reply_to_status_id_str)), cur]
+})
 
-export const getThreadAbove = async (tid) => {
-  let tweet_list = []
-  let cur_tweet = {}
-  let id = tid
-  let prev_id = 0
-  while(id != prev_id && id != null){
-      prev_id = id
-      cur_tweet = await fetchTweet(id)
-      id = cur_tweet.in_reply_to_status_id_str
-      tweet_list = [cur_tweet,...tweet_list]
-  }
-  console.log(tweet_list)
-  return tweet_list
-}
-
+// const getThreadAbove = async (tid)=>{
+//   let tweet_list = []
+//   let cur_tweet = {}
+//   let id = tid
+//   let prev_id = 0
+//   while(id != prev_id && id != null){
+//       prev_id = id
+//       cur_tweet = await fetchTweet(id)
+//       id = cur_tweet.in_reply_to_status_id_str
+//       tweet_list = [cur_tweet,...tweet_list]
+//   }
+//   console.log(tweet_list)
+//   return tweet_list
+// }
+    
