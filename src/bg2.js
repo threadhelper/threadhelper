@@ -1372,15 +1372,15 @@ async function onStorageChanged(changes, area){
     }
   }
 
-async function getBookmarks(){
-  console.log("get bookmarks")
-  const init = auth.init();
-  const url = "https://api.twitter.com/2/timeline/bookmark.json?include_profile_interstitial_type=1&include_blocking=1&include_blocked_by=1&include_followed_by=1&include_want_retweets=1&include_mute_edge=1&include_can_dm=1&include_can_media_tag=1&skip_status=1&cards_platform=Web-12&include_cards=1&include_composer_source=true&include_ext_alt_text=true&include_reply_count=1&tweet_mode=extended&include_entities=true&include_user_entities=true&include_ext_media_color=true&include_ext_media_availability=true&send_error_codes=true&simple_quoted_tweets=true&count=10000&ext=mediaStats%2CcameraMoment"
-  const bookmarks = await fetch(url,init).then(x => x.json())
-  console.log({bookmarks})
-  return bookmarks
-}
-
+  async function getBookmarks(){
+    console.log("get bookmarks")
+    const init = auth.init();
+    const url = "https://api.twitter.com/2/timeline/bookmark.json?include_profile_interstitial_type=1&include_blocking=1&include_blocked_by=1&include_followed_by=1&include_want_retweets=1&include_mute_edge=1&include_can_dm=1&include_can_media_tag=1&skip_status=1&cards_platform=Web-12&include_cards=1&include_composer_source=true&include_ext_alt_text=true&include_reply_count=1&tweet_mode=extended&include_entities=true&include_user_entities=true&include_ext_media_color=true&include_ext_media_availability=true&send_error_codes=true&simple_quoted_tweets=true&count=10000&ext=mediaStats%2CcameraMoment"
+    const bookmarks = await fetch(url,init).then(x => x.json())
+    console.log({bookmarks})
+    return bookmarks
+  }
+  
 //** Handles messages sent from popup or content scripts */
 async function onMessage(m, sender) {
     // console.log("message received:", m);

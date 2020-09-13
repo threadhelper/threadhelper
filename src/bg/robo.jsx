@@ -15,11 +15,12 @@ const clean_tweet = (text)=>{
 // getThreadText :: tid -> [tweets ]
 const getThreadText = curry((getAuthInit, m) => pipe(
   defaultTo(null),
-  getThreadAbove(getAuthInit),
+  getThreadAbove(getAuthInit, 0),
   andThen(pipe(
     map(x=>(x.full_text || x.text)),
-    reduce(join(tweet_separator),''),
-    append(m.query)
+    // reduce(join(tweet_separator),''),
+    append(m.query),
+    join(tweet_separator),
     )),
 )(m.reply_to))
 

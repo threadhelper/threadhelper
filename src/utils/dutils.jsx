@@ -1,5 +1,5 @@
 import Kefir from 'kefir';
-import { curry, isNil, pipe, prop, andThen, defaultTo, assoc } from 'ramda'
+import { curry, isNil, pipe, prop, propEq, andThen, defaultTo, assoc } from 'ramda'
 
 //returns a promise that gets a value from chrome local storage 
 export async function getData(key) {
@@ -129,10 +129,18 @@ export const makeStoragegObs = () => {
   return makeEventObs(chrome.storage.onChanged, makeEmitStgCH, {itemName:null, oldVal:null, newVal:null}) 
 }
 
+
+export const makeStorageStream = (type) => makeStoragegObs().filter(propEq('type',type))
+
+
+
 export const makeGotMsgObs = () =>{ 
   const makeEmitMsg = (emitter) =>  (message,sender) => emitter.emit({m:message,s:sender})
   return makeEventObs(chrome.runtime.onMessage, makeEmitMsg, {m:{type:null},s:null}) 
 }
+
+export const makeMsgStream = (type) => makeGotMsgObs().map(prop('m')).filter(propEq('type',type))
+
 
 
 

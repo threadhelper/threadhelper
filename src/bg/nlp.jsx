@@ -8,9 +8,9 @@ const tweet_fields = [
   "text", 
   "name", 
   "username", 
-  //"time", 
   "reply_to",
-  "mentions"
+  "mentions",
+  // "is_bookmark",
 ]
 
 

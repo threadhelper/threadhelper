@@ -130,7 +130,8 @@ async function onLoad(thBarHome, thBarComp){
   const composeQuery$ = composeFocus$.filter(x => x != 'unfocused').flatMapLatest(e=>makeComposeObs(e.target)).toProperty(()=>'')
   
   // to detect when writing has stopped for a bit
-  const stoppedWriting$ = composeQuery$.skipDuplicates().filter(x=>!isEmpty(x)).debounce(3000)
+  const minIdleTime = 3000;
+  const stoppedWriting$ = composeQuery$.skipDuplicates().filter(x=>!isEmpty(x)).debounce(minIdleTime)
   stoppedWriting$.log("stoppedWriting")
 
   
@@ -142,7 +143,7 @@ async function onLoad(thBarHome, thBarComp){
   const replyTo$ = reply$.map(replyToWhom(lastStatus$)).toProperty(()=>null)
     replyTo$.log("replying to ")
     
-  const robo$ = Kefir.merge([makeRoboStream(), stoppedWriting$])
+  const robo$ = Kefir.merge([makeRoboStream(), stoppedWriting$]).throttle(minIdleTime, {trailing: false})
   robo$.onValue(_=>requestRoboTweet(composeQuery$.currentValue(), replyTo$.currentValue()))
   
   const thStreams = {

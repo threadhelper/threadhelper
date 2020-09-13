@@ -336,12 +336,16 @@ const fetchTweet = async (getAuthInit,tid)=>{
 }
 
 // (IMPURE) getThreadAbove :: tid -> [tweet]
-// thread init []
-export const getThreadAbove = curry(async (getAuthInit,tid)=>{
-  console.log('getting thread above', tid)
-  if (isNil(tid) || isEmpty(tid)) return []
+// init : thread [], counter 0
+const maxThreadSize = 20;
+export const getThreadAbove = curry(async (getAuthInit, counter, tid)=>{
+  // console.log('getting thread above', tid)
+  if (isNil(tid) || isEmpty(tid) || counter > maxThreadSize) return []
   const cur = await fetchTweet(getAuthInit,tid)
-  return [...(await getThreadAbove(cur.in_reply_to_status_id_str)), cur]
+  // console.log('current tweet', cur)
+  const thread_above = await getThreadAbove(getAuthInit, counter+1, cur.in_reply_to_status_id_str)
+  // console.log('thread above', thread_above)
+  return [...thread_above, cur]
 })
 
 // const getThreadAbove = async (tid)=>{
@@ -359,3 +363,10 @@ export const getThreadAbove = curry(async (getAuthInit,tid)=>{
 //   return tweet_list
 // }
     
+
+export async function getBookmarks(getAuthInit){
+  const init = getAuthInit();
+  const url = "https://api.twitter.com/2/timeline/bookmark.json?include_profile_interstitial_type=1&include_blocking=1&include_blocked_by=1&include_followed_by=1&include_want_retweets=1&include_mute_edge=1&include_can_dm=1&include_can_media_tag=1&skip_status=1&cards_platform=Web-12&include_cards=1&include_composer_source=true&include_ext_alt_text=true&include_reply_count=1&tweet_mode=extended&include_entities=true&include_user_entities=true&include_ext_media_color=true&include_ext_media_availability=true&send_error_codes=true&simple_quoted_tweets=true&count=10000&ext=mediaStats%2CcameraMoment"
+  const bookmarks = await fetch(url,init).then(x => x.json())
+  return bookmarks.globalObjects.tweets
+}

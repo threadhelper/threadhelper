@@ -1,7 +1,7 @@
 //using this temporarily but eventually probably should refactor away from classes
 import "@babel/polyfill";
 import * as browser from "webextension-polyfill";
-import {inspect, setStg, getData, setData, removeData, updateOption, defaultOptions, makeStoragegObs, makeGotMsgObs} from './utils/dutils.jsx'
+import {inspect, setStg, getData, setData, removeData, updateOption, defaultOptions, makeStoragegObs, makeGotMsgObs, makeStorageStream, makeMsgStream} from './utils/dutils.jsx'
 import {getTwitterTabIds} from './utils/wutils.jsx'
 import { isNil, defaultTo, curry, filter, includes, difference, prop, props, path, propEq, pathEq, pipe, andThen, map, reduce, and, not, last, propSatisfies } from 'ramda'
 import Kefir from 'kefir';
@@ -11,7 +11,7 @@ import * as db from './bg/db.jsx'
 import {initWorker} from './bg/workerBoss.jsx'
 import {makeRoboRequest} from './bg/robo.jsx'
 import {makeIndex, loadIndex, updateIndex, search} from './bg/nlp.jsx'
-import {getUserInfo, updateQuery, timelineQuery, archToTweet, toTweet, getLatestTweets} from './bg/twitterScout.jsx'
+import {getUserInfo, updateQuery, timelineQuery, archToTweet, toTweet, getLatestTweets, getBookmarks} from './bg/twitterScout.jsx'
 import * as idb from 'idb'
 import * as elasticlunr from 'elasticlunr'
 
@@ -284,7 +284,7 @@ export async function main(){
 
   const isNotLoading$ = Kefir.combine([
     reqArchiveLoad$.map(_=>true), archiveLoadedTweets$.map(_=>false),
-  ], (...args)=>reduce(and, true, args)).toProperty(true)
+  ], (...args)=>reduce(and, true, args)).toProperty(()=>true)
 
   const syncLight$ = Kefir.combine([isNotLoading$, ready$], (...args)=>reduce(and, true, args)).toProperty(()=>false)
   syncLight$.onValue(setStg('sync'))
@@ -337,7 +337,7 @@ export async function main(){
         )),
     )
   )
-  
+  // 
   const getLatest = async _=>getLatestTweets(
     n_tweets_results, 
     getRT$.currentValue(), 
@@ -369,7 +369,9 @@ export async function main(){
       )
   })
 
-  const reqBookmarks$ = null
+  const reqBookmarks$ = msg$.filter(propEq('type','get-bookmarks'))
+  const fetchedBookmarks$ = reqBookmarks$.flatMapLatest(_=>Kefir.fromPromise(getBookmarks(getAuthInit)))
+  fetchedBookmarks$.log('bookmarks')
   const reqThread$ = null
 
   const stg_clear = ()=>chrome.storage.local.clear(()=>{

@@ -26,6 +26,7 @@
     "css-loader": "^4.0.0",
     "delay": "^4.4.0",
     "elasticlunr": "^0.9.5",
+    "folktale": "^2.3.2",
     "idb": "^5.0.4",
     "jest": "^26.1.0",
     "kefir": "^3.8.7",

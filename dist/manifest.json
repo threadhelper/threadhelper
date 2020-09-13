@@ -1,0 +1,27 @@
+{
+  "name": "ReactiveTH",
+  "description": "TH but reactive",
+  "version": "0.0.0.1",
+  "permissions": [
+    "declarativeContent",
+    "storage",
+    "unlimitedStorage",
+    "webRequest",
+    "https://api.twitter.com/",
+    "https://*.twitter.com/*"
+  ],
+  "browser_action": {
+    "default_title": "ReactiveTH",
+    "default_popup": "popup.html"
+  },
+  "manifest_version": 2,
+  "content_scripts": [
+    {
+      "matches": ["https://*.twitter.com/*"],
+      "js": ["content-script.js"]
+    }
+  ],
+  "background": {
+    "scripts": ["background.js"]
+  }
+}
