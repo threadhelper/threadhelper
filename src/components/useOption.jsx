@@ -1,18 +1,18 @@
 import { h, render, Component } from 'preact';
 import { useState, useEffect, useContext } from 'preact/hooks';
-import {getData, setData, initOption, updateOption, getOptions} from '../utils/dutils.jsx'
-import {pipe, andThen, prop} from 'ramda'
+import {getData, setData, initOption, updateOptionStg, getOptions} from '../utils/dutils.jsx'
+import {pipe, andThen, prop, path} from 'ramda'
 
 
 export function useOption(name){
   const [getOption, setOption] = useState(true);
   
-  getOptions().then(pipe(prop(name), setOption))
+  getOptions().then(pipe(path([name, 'value']), setOption))
   
   const setOptionBG = pipe(
-    updateOption(name),
+    updateOptionStg(name),
     andThen(pipe(
-      prop(name),
+      path([name, 'value']),
       setOption))
       )
 

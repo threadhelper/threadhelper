@@ -50329,12 +50329,23 @@ function Console(props) {
   var _useState = Object(preact_hooks__WEBPACK_IMPORTED_MODULE_1__["useState"])('[console text]'),
       _useState2 = _slicedToArray(_useState, 2),
       text = _useState2[0],
-      setText = _useState2[1];
+      setText = _useState2[1]; // TODO make these generate themselves
+
 
   var _useOption = Object(_useOption_jsx__WEBPACK_IMPORTED_MODULE_3__["useOption"])('getRTs'),
       _useOption2 = _slicedToArray(_useOption, 2),
-      isGetRTs = _useOption2[0],
-      setIsGetRTs = _useOption2[1];
+      getRTs = _useOption2[0],
+      setGetRTs = _useOption2[1];
+
+  var _useOption3 = Object(_useOption_jsx__WEBPACK_IMPORTED_MODULE_3__["useOption"])('useBookmarks'),
+      _useOption4 = _slicedToArray(_useOption3, 2),
+      useBookmarks = _useOption4[0],
+      setUseBookmarks = _useOption4[1];
+
+  var _useOption5 = Object(_useOption_jsx__WEBPACK_IMPORTED_MODULE_3__["useOption"])('useReplies'),
+      _useOption6 = _slicedToArray(_useOption5, 2),
+      useReplies = _useOption6[0],
+      setUseReplies = _useOption6[1];
 
   var consoleStorageChange = /*#__PURE__*/function () {
     var _ref = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee(item, oldVal, newVal) {
@@ -50395,16 +50406,34 @@ function Console(props) {
   }, []);
   return Object(preact__WEBPACK_IMPORTED_MODULE_0__["h"])("div", {
     "class": "console"
-  }, Object(preact__WEBPACK_IMPORTED_MODULE_0__["h"])("span", null, "$: ", " ", "Search Results for ".concat(query, ":")), "      ", Object(preact__WEBPACK_IMPORTED_MODULE_0__["h"])("span", {
+  }, Object(preact__WEBPACK_IMPORTED_MODULE_0__["h"])("span", null, "$: ", " ", "Search Results for ".concat(query, ":")), Object(preact__WEBPACK_IMPORTED_MODULE_0__["h"])("span", {
     "class": "getRTs"
   }, " ", Object(preact__WEBPACK_IMPORTED_MODULE_0__["h"])("span", null, " ", Object(preact__WEBPACK_IMPORTED_MODULE_0__["h"])("input", {
     name: "getRTs",
     type: "checkbox",
-    checked: isGetRTs,
+    checked: getRTs,
     onChange: function onChange(e) {
-      return handleInputChange(setIsGetRTs, e);
+      return handleInputChange(setGetRTs, e);
     }
-  }), " ", Object(preact__WEBPACK_IMPORTED_MODULE_0__["h"])("span", null, "RTs"), " "), " "));
+  }), " ", Object(preact__WEBPACK_IMPORTED_MODULE_0__["h"])("span", null, "RTs"), " "), " "), Object(preact__WEBPACK_IMPORTED_MODULE_0__["h"])("span", {
+    "class": "useBookmarks"
+  }, " ", Object(preact__WEBPACK_IMPORTED_MODULE_0__["h"])("span", null, " ", Object(preact__WEBPACK_IMPORTED_MODULE_0__["h"])("input", {
+    name: "useBookmarks",
+    type: "checkbox",
+    checked: useBookmarks,
+    onChange: function onChange(e) {
+      return handleInputChange(setUseBookmarks, e);
+    }
+  }), " ", Object(preact__WEBPACK_IMPORTED_MODULE_0__["h"])("span", null, "bookmarks"), " "), " "), Object(preact__WEBPACK_IMPORTED_MODULE_0__["h"])("span", {
+    "class": "useReplies"
+  }, " ", Object(preact__WEBPACK_IMPORTED_MODULE_0__["h"])("span", null, " ", Object(preact__WEBPACK_IMPORTED_MODULE_0__["h"])("input", {
+    name: "useReplies",
+    type: "checkbox",
+    checked: useReplies,
+    onChange: function onChange(e) {
+      return handleInputChange(setUseReplies, e);
+    }
+  }), " ", Object(preact__WEBPACK_IMPORTED_MODULE_0__["h"])("span", null, "replies"), " "), " "));
 } // function handleInputChange(set, event) {
 //   const target = event.target;
 //   const value = target.type === 'checkbox' ? target.checked : target.value;
@@ -51979,8 +52008,8 @@ function useOption(name) {
       getOption = _useState2[0],
       setOption = _useState2[1];
 
-  Object(_utils_dutils_jsx__WEBPACK_IMPORTED_MODULE_2__["getOptions"])().then(Object(ramda__WEBPACK_IMPORTED_MODULE_3__["pipe"])(Object(ramda__WEBPACK_IMPORTED_MODULE_3__["prop"])(name), setOption));
-  var setOptionBG = Object(ramda__WEBPACK_IMPORTED_MODULE_3__["pipe"])(Object(_utils_dutils_jsx__WEBPACK_IMPORTED_MODULE_2__["updateOption"])(name), Object(ramda__WEBPACK_IMPORTED_MODULE_3__["andThen"])(Object(ramda__WEBPACK_IMPORTED_MODULE_3__["pipe"])(Object(ramda__WEBPACK_IMPORTED_MODULE_3__["prop"])(name), setOption))); // const setOptionBG = (new_val)=>{
+  Object(_utils_dutils_jsx__WEBPACK_IMPORTED_MODULE_2__["getOptions"])().then(Object(ramda__WEBPACK_IMPORTED_MODULE_3__["pipe"])(Object(ramda__WEBPACK_IMPORTED_MODULE_3__["path"])([name, 'value']), setOption));
+  var setOptionBG = Object(ramda__WEBPACK_IMPORTED_MODULE_3__["pipe"])(Object(_utils_dutils_jsx__WEBPACK_IMPORTED_MODULE_2__["updateOptionStg"])(name), Object(ramda__WEBPACK_IMPORTED_MODULE_3__["andThen"])(Object(ramda__WEBPACK_IMPORTED_MODULE_3__["pipe"])(Object(ramda__WEBPACK_IMPORTED_MODULE_3__["path"])([name, 'value']), setOption))); // const setOptionBG = (new_val)=>{
   //   getData("options").then((options)=>{
   //     options = options != null ? options : {}
   //     options[name] = new_val; 
@@ -52066,8 +52095,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _style_cs_scss__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../style/cs.scss */ "./style/cs.scss");
 /* harmony import */ var _style_cs_scss__WEBPACK_IMPORTED_MODULE_8___default = /*#__PURE__*/__webpack_require__.n(_style_cs_scss__WEBPACK_IMPORTED_MODULE_8__);
 /* harmony import */ var kefir__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! kefir */ "./node_modules/kefir/dist/kefir.esm.js");
-/* harmony import */ var ramda__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ramda */ "./node_modules/ramda/es/index.js");
-/* harmony import */ var _components_ThreadHelper_jsx__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./components/ThreadHelper.jsx */ "./src/components/ThreadHelper.jsx");
+/* harmony import */ var _utils_putils_jsx__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./utils/putils.jsx */ "./src/utils/putils.jsx");
+/* harmony import */ var ramda__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ramda */ "./node_modules/ramda/es/index.js");
+/* harmony import */ var _components_ThreadHelper_jsx__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./components/ThreadHelper.jsx */ "./src/components/ThreadHelper.jsx");
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
 
 function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
@@ -52109,6 +52139,8 @@ x define destruction and dispatch its event on start up
 
 
 
+
+Object(_utils_putils_jsx__WEBPACK_IMPORTED_MODULE_10__["flattenModule"])(window, ramda__WEBPACK_IMPORTED_MODULE_11__);
 
 
 kefir__WEBPACK_IMPORTED_MODULE_9__["default"].Property.prototype.currentValue = function () {
@@ -52175,11 +52207,11 @@ function _onLoad2() {
             storageChange$ = Object(_utils_dutils_jsx__WEBPACK_IMPORTED_MODULE_3__["makeStoragegObs"])();
             sync$ = storageChange$.filter(function (x) {
               return x.itemName == 'sync';
-            }).map(Object(ramda__WEBPACK_IMPORTED_MODULE_10__["prop"])('newVal')); //TODO init val from stg
+            }).map(prop('newVal')); //TODO init val from stg
 
             syncDisplay$ = storageChange$.filter(function (x) {
               return x.itemName == 'syncDisplay';
-            }).map(Object(ramda__WEBPACK_IMPORTED_MODULE_10__["prop"])('newVal')).toProperty(function () {
+            }).map(prop('newVal')).toProperty(function () {
               return '';
             });
             syncDisplay$.log('syncDisplay');
@@ -52238,7 +52270,7 @@ function _onLoad2() {
 
             minIdleTime = 3000;
             stoppedWriting$ = composeQuery$.skipDuplicates().filter(function (x) {
-              return !Object(ramda__WEBPACK_IMPORTED_MODULE_10__["isEmpty"])(x);
+              return !isEmpty(x);
             }).debounce(minIdleTime);
             stoppedWriting$.log("stoppedWriting");
             lastStatus$ = Object(_ui_tabsHandler_jsx__WEBPACK_IMPORTED_MODULE_7__["makeLastStatusObs"])(mode$);
@@ -52262,9 +52294,9 @@ function _onLoad2() {
               syncDisplay: syncDisplay$
             }; //
 
-            activateSidebar = Object(ramda__WEBPACK_IMPORTED_MODULE_10__["curry"])(function (floatSidebarStream, inject, bar, thStreams) {
+            activateSidebar = curry(function (floatSidebarStream, inject, bar, thStreams) {
               inject(bar);
-              Object(preact__WEBPACK_IMPORTED_MODULE_1__["render"])(Object(preact__WEBPACK_IMPORTED_MODULE_1__["h"])(_components_ThreadHelper_jsx__WEBPACK_IMPORTED_MODULE_11__["default"], {
+              Object(preact__WEBPACK_IMPORTED_MODULE_1__["render"])(Object(preact__WEBPACK_IMPORTED_MODULE_1__["h"])(_components_ThreadHelper_jsx__WEBPACK_IMPORTED_MODULE_12__["default"], {
                 streams: thStreams,
                 "float": floatSidebarStream
               }), bar);
@@ -52396,7 +52428,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _utils_dutils_jsx__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/dutils.jsx */ "./src/utils/dutils.jsx");
 /* harmony import */ var _utils_kefirMutationObs_jsx__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/kefirMutationObs.jsx */ "./src/utils/kefirMutationObs.jsx");
 /* harmony import */ var kefir__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! kefir */ "./node_modules/kefir/dist/kefir.esm.js");
-/* harmony import */ var _utils_fp_jsx__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../utils/fp.jsx */ "./src/utils/fp.jsx");
+/* harmony import */ var _utils_putils_jsx__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../utils/putils.jsx */ "./src/utils/putils.jsx");
+/* harmony import */ var ramda__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ramda */ "./node_modules/ramda/es/index.js");
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
 
 function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
@@ -52575,6 +52608,8 @@ function clearSearchResults() {
 
 
 
+
+Object(_utils_putils_jsx__WEBPACK_IMPORTED_MODULE_4__["flattenModule"])(window, ramda__WEBPACK_IMPORTED_MODULE_5__);
 function makeComposeObs(box) {
   var textChange$ = Object(_utils_kefirMutationObs_jsx__WEBPACK_IMPORTED_MODULE_2__["obsCharData"])(box, "".concat(editorSelector, " span")); // const query$ = textChange$.map(_=>box.innerText).map(cleanSearchString).toProperty(()=>'')
 
@@ -52597,7 +52632,7 @@ function makeComposeObs(box) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "rtConfirmSelector", function() { return rtConfirmSelector; });
+/* WEBPACK VAR INJECTION */(function(global) {/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "rtConfirmSelector", function() { return rtConfirmSelector; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "unRtConfirmSelector", function() { return unRtConfirmSelector; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "isRtFocused", function() { return isRtFocused; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "isUnRtFocused", function() { return isUnRtFocused; });
@@ -52616,7 +52651,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _utils_dutils_jsx__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/dutils.jsx */ "./src/utils/dutils.jsx");
 /* harmony import */ var _components_Robo_jsx__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../components/Robo.jsx */ "./src/components/Robo.jsx");
 /* harmony import */ var kefir__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! kefir */ "./node_modules/kefir/dist/kefir.esm.js");
-/* harmony import */ var _utils_fp_jsx__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../utils/fp.jsx */ "./src/utils/fp.jsx");
+/* harmony import */ var _utils_putils_jsx__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../utils/putils.jsx */ "./src/utils/putils.jsx");
+/* harmony import */ var ramda__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ramda */ "./node_modules/ramda/es/index.js");
 function _toConsumableArray(arr) { return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _unsupportedIterableToArray(arr) || _nonIterableSpread(); }
 
 function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
@@ -52634,6 +52670,8 @@ function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len 
 
 
 
+
+Object(_utils_putils_jsx__WEBPACK_IMPORTED_MODULE_4__["flattenModule"])(global, ramda__WEBPACK_IMPORTED_MODULE_5__);
 var editorClass = "DraftEditor-editorContainer";
 var editorSelector = ".DraftEditor-editorContainer";
 var tweetButtonSelectors = '[data-testid="tweetButtonInline"], [data-testid="tweetButton"]';
@@ -52683,7 +52721,7 @@ function buttonClicked(target, selector) {
   });
 } // Cond streamClickCond :: (Selector -> Event) -> Bool
 
-var clickCondStream = Object(_utils_fp_jsx__WEBPACK_IMPORTED_MODULE_4__["curry"])(function (parent, selector, e) {
+var clickCondStream = curry(function (parent, selector, e) {
   return buttonClicked(e.target, selector, parent);
 });
 var docClickCondStream = clickCondStream(document); // Cond fromClick :: Cond -> Stream (Event)
@@ -52698,7 +52736,7 @@ var fromShortcut = function fromShortcut(cond) {
 }; // Stream streamInput :: (Cond -> Cond) -> Stream (Event)
 
 
-var inputStream = Object(_utils_fp_jsx__WEBPACK_IMPORTED_MODULE_4__["curry"])(function (shortCond, clickCond) {
+var inputStream = curry(function (shortCond, clickCond) {
   var s = fromShortcut(shortCond);
   var c = fromClick(clickCond);
   return kefir__WEBPACK_IMPORTED_MODULE_3__["default"].merge([s, c]);
@@ -52818,7 +52856,7 @@ function replyEl2TweetEl(replyEl) {
   return replyEl.closest(tweetCardSelector);
 }
 
-var replyToWhom = Object(_utils_fp_jsx__WEBPACK_IMPORTED_MODULE_4__["curry"])(function (lastStatus$, e) {
+var replyToWhom = curry(function (lastStatus$, e) {
   if (!(e != null)) return null; //if null, we're not replying to anything
 
   var dateSelector = 'a time';
@@ -52844,6 +52882,7 @@ kefir__WEBPACK_IMPORTED_MODULE_3__["default"].Property.prototype.currentValue = 
   this.offValue(save);
   return result;
 };
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../../node_modules/webpack/buildin/global.js */ "./node_modules/webpack/buildin/global.js")))
 
 /***/ }),
 
@@ -52856,7 +52895,7 @@ kefir__WEBPACK_IMPORTED_MODULE_3__["default"].Property.prototype.currentValue = 
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "makeSidebarHome", function() { return makeSidebarHome; });
+/* WEBPACK VAR INJECTION */(function(global) {/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "makeSidebarHome", function() { return makeSidebarHome; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "injectSidebarHome", function() { return injectSidebarHome; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "injectDummy", function() { return injectDummy; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "makeSidebarCompose", function() { return makeSidebarCompose; });
@@ -52866,11 +52905,12 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _components_ThreadHelper_jsx__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../components/ThreadHelper.jsx */ "./src/components/ThreadHelper.jsx");
 /* harmony import */ var _utils_wutils_jsx__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/wutils.jsx */ "./src/utils/wutils.jsx");
 /* harmony import */ var _utils_dutils_jsx__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/dutils.jsx */ "./src/utils/dutils.jsx");
-/* harmony import */ var _utils_fp_jsx__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../utils/fp.jsx */ "./src/utils/fp.jsx");
-/* harmony import */ var jquery__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! jquery */ "./node_modules/jquery/dist/jquery.js");
-/* harmony import */ var jquery__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(jquery__WEBPACK_IMPORTED_MODULE_5__);
-/* harmony import */ var _utils_kefirMutationObs_jsx__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../utils/kefirMutationObs.jsx */ "./src/utils/kefirMutationObs.jsx");
-/* harmony import */ var kefir__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! kefir */ "./node_modules/kefir/dist/kefir.esm.js");
+/* harmony import */ var _utils_putils_jsx__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../utils/putils.jsx */ "./src/utils/putils.jsx");
+/* harmony import */ var ramda__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ramda */ "./node_modules/ramda/es/index.js");
+/* harmony import */ var jquery__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! jquery */ "./node_modules/jquery/dist/jquery.js");
+/* harmony import */ var jquery__WEBPACK_IMPORTED_MODULE_6___default = /*#__PURE__*/__webpack_require__.n(jquery__WEBPACK_IMPORTED_MODULE_6__);
+/* harmony import */ var _utils_kefirMutationObs_jsx__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../utils/kefirMutationObs.jsx */ "./src/utils/kefirMutationObs.jsx");
+/* harmony import */ var kefir__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! kefir */ "./node_modules/kefir/dist/kefir.esm.js");
 function _toConsumableArray(arr) { return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _unsupportedIterableToArray(arr) || _nonIterableSpread(); }
 
 function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
@@ -52888,6 +52928,8 @@ function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len 
 
 
 
+
+Object(_utils_putils_jsx__WEBPACK_IMPORTED_MODULE_4__["flattenModule"])(global, ramda__WEBPACK_IMPORTED_MODULE_5__);
 
 var trendText = '[aria-label="Timeline: Trending now"]';
 var sideBarSelector = '[data-testid="sidebarColumn"]';
@@ -53021,7 +53063,7 @@ function makeDummyCompose(thBar) {
   var dummyUI = {};
 
   if (!_toConsumableArray(dummies).length) {
-    dummyUI = jquery__WEBPACK_IMPORTED_MODULE_5___default()("\n      <div class=\"dummyContainer\">\n        <div class=\"dummyLeft\"></div>\n        <div id=\"suggestionContainer\" class=\"dummyRight\"></div>\n      </div>\n    ")[0]; //console.log("trying to append dummy")
+    dummyUI = jquery__WEBPACK_IMPORTED_MODULE_6___default()("\n      <div class=\"dummyContainer\">\n        <div class=\"dummyLeft\"></div>\n        <div id=\"suggestionContainer\" class=\"dummyRight\"></div>\n      </div>\n    ")[0]; //console.log("trying to append dummy")
   } else {
     dummyUI = dummies[0];
   }
@@ -53063,48 +53105,49 @@ function makeSidebarCompose() {
 
 function makeHomeSidebarObserver(thBar) {
   // const trendAdd$ = stream(null)
-  var trendAdd$ = Object(_utils_kefirMutationObs_jsx__WEBPACK_IMPORTED_MODULE_6__["obsAdded"])(document, trendText, true); // const trendRemove$ = stream(null)
+  var trendAdd$ = Object(_utils_kefirMutationObs_jsx__WEBPACK_IMPORTED_MODULE_7__["obsAdded"])(document, trendText, true); // const trendRemove$ = stream(null)
 
-  var trendRemove$ = Object(_utils_kefirMutationObs_jsx__WEBPACK_IMPORTED_MODULE_6__["obsRemoved"])(document, trendText, true);
-  var sidebarOutDoc$ = Object(kefir__WEBPACK_IMPORTED_MODULE_7__["fromEvents"])(thBar, 'DOMNodeRemovedFromDocument');
+  var trendRemove$ = Object(_utils_kefirMutationObs_jsx__WEBPACK_IMPORTED_MODULE_7__["obsRemoved"])(document, trendText, true);
+  var sidebarOutDoc$ = Object(kefir__WEBPACK_IMPORTED_MODULE_8__["fromEvents"])(thBar, 'DOMNodeRemovedFromDocument');
   var render$ = trendAdd$.filter(function (_) {
     return !Object(_utils_wutils_jsx__WEBPACK_IMPORTED_MODULE_2__["isSidebar"])('home');
   }).map(function (_) {
     return 'render';
   }); //probably not great practice to put a filter that has nothing to do with the data flowing but fuck it
 
-  var unrender$ = kefir__WEBPACK_IMPORTED_MODULE_7__["Kefir"].merge([
+  var unrender$ = kefir__WEBPACK_IMPORTED_MODULE_8__["Kefir"].merge([
   /*trendRemove$, */
   sidebarOutDoc$]).filter(function (_) {
     return Object(_utils_wutils_jsx__WEBPACK_IMPORTED_MODULE_2__["isSidebar"])('home');
   }).map(function (_) {
     return 'unrender';
   });
-  var homeSidebarObserver$ = kefir__WEBPACK_IMPORTED_MODULE_7__["Kefir"].merge([render$, unrender$]);
+  var homeSidebarObserver$ = kefir__WEBPACK_IMPORTED_MODULE_8__["Kefir"].merge([render$, unrender$]);
   return homeSidebarObserver$;
 }
 function makeFloatSidebarObserver(thBar) {
   // const floatAdd$ = stream(null)
-  var floatAdd$ = Object(_utils_kefirMutationObs_jsx__WEBPACK_IMPORTED_MODULE_6__["obsAdded"])(document, floatingComposeSelector, true); //.filter(f=>f.target.getElementsByClassName(editorClass).length > 0)
+  var floatAdd$ = Object(_utils_kefirMutationObs_jsx__WEBPACK_IMPORTED_MODULE_7__["obsAdded"])(document, floatingComposeSelector, true); //.filter(f=>f.target.getElementsByClassName(editorClass).length > 0)
 
   floatAdd$.log('float add'); // const floatRemove$ = stream(null)
 
-  var floatRemove$ = Object(_utils_kefirMutationObs_jsx__WEBPACK_IMPORTED_MODULE_6__["obsRemoved"])(document, floatingComposeSelector, true);
-  var sidebarOutDoc$ = Object(kefir__WEBPACK_IMPORTED_MODULE_7__["fromEvents"])(thBar, 'DOMNodeRemovedFromDocument');
+  var floatRemove$ = Object(_utils_kefirMutationObs_jsx__WEBPACK_IMPORTED_MODULE_7__["obsRemoved"])(document, floatingComposeSelector, true);
+  var sidebarOutDoc$ = Object(kefir__WEBPACK_IMPORTED_MODULE_8__["fromEvents"])(thBar, 'DOMNodeRemovedFromDocument');
   var render$ = floatAdd$.filter(function (_) {
     return !Object(_utils_wutils_jsx__WEBPACK_IMPORTED_MODULE_2__["isSidebar"])('compose');
   }).map(function (_) {
     return 'render';
   }); //probably not great practice to put a filter that has nothing to do with the data flowing but fuck it
 
-  var unrender$ = kefir__WEBPACK_IMPORTED_MODULE_7__["Kefir"].merge([floatRemove$, sidebarOutDoc$]).filter(function (_) {
+  var unrender$ = kefir__WEBPACK_IMPORTED_MODULE_8__["Kefir"].merge([floatRemove$, sidebarOutDoc$]).filter(function (_) {
     return Object(_utils_wutils_jsx__WEBPACK_IMPORTED_MODULE_2__["isSidebar"])('home');
   }).map(function (_) {
     return 'unrender';
   });
-  var floatSidebarObserver$ = kefir__WEBPACK_IMPORTED_MODULE_7__["Kefir"].merge([render$, unrender$]);
+  var floatSidebarObserver$ = kefir__WEBPACK_IMPORTED_MODULE_8__["Kefir"].merge([render$, unrender$]);
   return floatSidebarObserver$;
 }
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../../node_modules/webpack/buildin/global.js */ "./node_modules/webpack/buildin/global.js")))
 
 /***/ }),
 
@@ -53172,19 +53215,19 @@ function makeBgColorObs() {
 /*!******************************!*\
   !*** ./src/utils/dutils.jsx ***!
   \******************************/
-/*! exports provided: getData, setData, removeData, inspect, setStg, defaultOptions, getOptions, updateOption, msgBG, requestRoboTweet, makeOnStorageChanged, makeStoragegObs, makeStorageStream, makeGotMsgObs, makeMsgStream */
+/*! exports provided: getData, setData, removeData, inspect, setStg, defaultOptions, getOptions, updateOptionStg, msgBG, requestRoboTweet, makeOnStorageChanged, makeStoragegObs, makeStorageStream, makeGotMsgObs, makeMsgStream */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getData", function() { return getData; });
+/* WEBPACK VAR INJECTION */(function(global) {/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getData", function() { return getData; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "setData", function() { return setData; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "removeData", function() { return removeData; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "inspect", function() { return inspect; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "setStg", function() { return setStg; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "defaultOptions", function() { return defaultOptions; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getOptions", function() { return getOptions; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "updateOption", function() { return updateOption; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "updateOptionStg", function() { return updateOptionStg; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "msgBG", function() { return msgBG; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "requestRoboTweet", function() { return requestRoboTweet; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "makeOnStorageChanged", function() { return makeOnStorageChanged; });
@@ -53193,7 +53236,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "makeGotMsgObs", function() { return makeGotMsgObs; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "makeMsgStream", function() { return makeMsgStream; });
 /* harmony import */ var kefir__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! kefir */ "./node_modules/kefir/dist/kefir.esm.js");
-/* harmony import */ var ramda__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ramda */ "./node_modules/ramda/es/index.js");
+/* harmony import */ var _putils_jsx__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./putils.jsx */ "./src/utils/putils.jsx");
+/* harmony import */ var ramda__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ramda */ "./node_modules/ramda/es/index.js");
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
@@ -53201,7 +53245,9 @@ function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try
 function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
 
 
- //returns a promise that gets a value from chrome local storage 
+
+
+Object(_putils_jsx__WEBPACK_IMPORTED_MODULE_1__["flattenModule"])(global, ramda__WEBPACK_IMPORTED_MODULE_2__); //returns a promise that gets a value from chrome local storage 
 
 function getData(_x) {
   return _getData.apply(this, arguments);
@@ -53299,17 +53345,32 @@ function _removeData() {
   return _removeData.apply(this, arguments);
 }
 
-var inspect = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["curry"])(function (prepend, x) {
+var inspect = curry(function (prepend, x) {
   console.log(prepend, x);
   return x;
 });
-var setStg = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["curry"])(function (key, val) {
+var setStg = curry(function (key, val) {
   return setData(_defineProperty({}, key, val));
-});
+}); // DEFAULT OPTIONS V IMPORTANT
+
 var defaultOptions = function defaultOptions() {
   return {
     name: 'options',
-    getRTs: true
+    getRTs: {
+      name: 'getRTs',
+      type: 'searchFilter',
+      value: true
+    },
+    useBookmarks: {
+      name: 'useBookmarks',
+      type: 'searchFilter',
+      value: true
+    },
+    useReplies: {
+      name: 'useReplies',
+      type: 'searchFilter',
+      value: true
+    }
   };
 };
 var getOptions = /*#__PURE__*/function () {
@@ -53318,7 +53379,7 @@ var getOptions = /*#__PURE__*/function () {
       while (1) {
         switch (_context.prev = _context.next) {
           case 0:
-            return _context.abrupt("return", getData('options').then(Object(ramda__WEBPACK_IMPORTED_MODULE_1__["defaultTo"])(defaultOptions())));
+            return _context.abrupt("return", getData('options').then(defaultTo(defaultOptions())));
 
           case 1:
           case "end":
@@ -53332,13 +53393,13 @@ var getOptions = /*#__PURE__*/function () {
     return _ref.apply(this, arguments);
   };
 }();
-var updateOption = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["curry"])( /*#__PURE__*/function () {
+var updateOptionStg = curry( /*#__PURE__*/function () {
   var _ref2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee2(name, val) {
     return regeneratorRuntime.wrap(function _callee2$(_context2) {
       while (1) {
         switch (_context2.prev = _context2.next) {
           case 0:
-            return _context2.abrupt("return", getOptions().then(Object(ramda__WEBPACK_IMPORTED_MODULE_1__["pipe"])(Object(ramda__WEBPACK_IMPORTED_MODULE_1__["assoc"])(name, val), inspect('updated options'), setStg('options'))));
+            return _context2.abrupt("return", getOptions().then(pipe(set(lensPath([name, 'value']), val), tap(setStg('options')))));
 
           case 1:
           case "end":
@@ -53354,7 +53415,7 @@ var updateOption = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["curry"])( /*#__PUR
 }());
 function msgBG() {
   var msg = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
-  var message = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["isNil"])(msg) ? {
+  var message = isNil(msg) ? {
     type: "query",
     query_type: "update"
   } : msg;
@@ -53411,7 +53472,7 @@ function makeOnStorageChanged(act) {
     }
   };
 }
-var makeEventObs = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["curry"])(function (event, makeEmit, initVal) {
+var makeEventObs = curry(function (event, makeEmit, initVal) {
   return kefir__WEBPACK_IMPORTED_MODULE_0__["default"].stream(function (emitter) {
     emitter.emit(initVal);
     var emit = makeEmit(emitter);
@@ -53440,7 +53501,7 @@ var makeStoragegObs = function makeStoragegObs() {
   });
 };
 var makeStorageStream = function makeStorageStream(type) {
-  return makeStoragegObs().filter(Object(ramda__WEBPACK_IMPORTED_MODULE_1__["propEq"])('type', type));
+  return makeStoragegObs().filter(propEq('type', type));
 };
 var makeGotMsgObs = function makeGotMsgObs() {
   var makeEmitMsg = function makeEmitMsg(emitter) {
@@ -53460,7 +53521,7 @@ var makeGotMsgObs = function makeGotMsgObs() {
   });
 };
 var makeMsgStream = function makeMsgStream(type) {
-  return makeGotMsgObs().map(Object(ramda__WEBPACK_IMPORTED_MODULE_1__["prop"])('m')).filter(Object(ramda__WEBPACK_IMPORTED_MODULE_1__["propEq"])('type', type));
+  return makeGotMsgObs().map(prop('m')).filter(propEq('type', type));
 }; // export function makeGotMsgObs(){
 //   return Kefir.stream(emitter => {
 //     emitter.emit({m:{type:null},s:null});
@@ -53472,69 +53533,7 @@ var makeMsgStream = function makeMsgStream(type) {
 //     }
 //   });
 // }
-
-/***/ }),
-
-/***/ "./src/utils/fp.jsx":
-/*!**************************!*\
-  !*** ./src/utils/fp.jsx ***!
-  \**************************/
-/*! exports provided: compose, curry, prop */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "compose", function() { return compose; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "curry", function() { return curry; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "prop", function() { return prop; });
-function _toConsumableArray(arr) { return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _unsupportedIterableToArray(arr) || _nonIterableSpread(); }
-
-function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
-
-function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
-
-function _iterableToArray(iter) { if (typeof Symbol !== "undefined" && Symbol.iterator in Object(iter)) return Array.from(iter); }
-
-function _arrayWithoutHoles(arr) { if (Array.isArray(arr)) return _arrayLikeToArray(arr); }
-
-function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
-
-// utils for functional programing (install a module like Ramda later)
-// compose :: ((a -> b), (b -> c),  ..., (y -> z)) -> a -> z
-var compose = function compose() {
-  for (var _len = arguments.length, fns = new Array(_len), _key = 0; _key < _len; _key++) {
-    fns[_key] = arguments[_key];
-  }
-
-  return function () {
-    for (var _len2 = arguments.length, args = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-      args[_key2] = arguments[_key2];
-    }
-
-    return fns.reduceRight(function (res, fn) {
-      return [fn.call.apply(fn, [null].concat(_toConsumableArray(res)))];
-    }, args)[0];
-  };
-}; // curry :: ((a, b, ...) -> c) -> a -> b -> ... -> c
-
-function curry(fn) {
-  var arity = fn.length;
-  return function $curry() {
-    for (var _len3 = arguments.length, args = new Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
-      args[_key3] = arguments[_key3];
-    }
-
-    if (args.length < arity) {
-      return $curry.bind.apply($curry, [null].concat(args));
-    }
-
-    return fn.call.apply(fn, [null].concat(args));
-  };
-} //property getter
-
-var prop = curry(function (property, object) {
-  return object[property];
-});
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../../node_modules/webpack/buildin/global.js */ "./node_modules/webpack/buildin/global.js")))
 
 /***/ }),
 
@@ -53683,6 +53682,41 @@ var obsCharData = function obsCharData(root, selector) {
   // .map(console.log)
   // only looking at one node
   // .map(el => el[0])
+};
+
+/***/ }),
+
+/***/ "./src/utils/putils.jsx":
+/*!******************************!*\
+  !*** ./src/utils/putils.jsx ***!
+  \******************************/
+/*! exports provided: flattenModule */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "flattenModule", function() { return flattenModule; });
+function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest(); }
+
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+
+function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
+
+function _iterableToArrayLimit(arr, i) { if (typeof Symbol === "undefined" || !(Symbol.iterator in Object(arr))) return; var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
+
+function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
+
+//project utilities
+var flattenModule = function flattenModule(window, R) {
+  return Object.entries(R).forEach(function (_ref) {
+    var _ref2 = _slicedToArray(_ref, 2),
+        name = _ref2[0],
+        exported = _ref2[1];
+
+    return window[name] = exported;
+  });
 };
 
 /***/ }),

@@ -1,5 +1,7 @@
 import * as elasticlunr from 'elasticlunr'
-import { take, values, curry, project, forEach, map, reduce, reduceWhile, append, filter, isNil, difference, prop, pipe, andThen } from 'ramda'
+import { flattenModule } from '../utils/putils.jsx'
+import * as R from 'ramda';
+flattenModule(global,R)
 import {inspect} from '../utils/dutils.jsx'
 
 
@@ -10,7 +12,7 @@ const tweet_fields = [
   "username", 
   "reply_to",
   "mentions",
-  // "is_bookmark",
+  "is_bookmark",
 ]
 
 
@@ -78,19 +80,35 @@ export const getRelated = curry( async (n_tweets, index, query) => {
   // console.log("bg search results:", results)
 })
 
-const getDocUsername = (index, ref) => index.documentStore.getDoc(ref).username
 
 // getRes :: [idx_tweet] -> [db_tweet]
-export const getTopNResults = curry(async (getRTs, screen_name, n_tweets, index, results) => {
+export const getTopNResults = curry(async (filters, screen_name, n_tweets, index, results) => {
+  const getDocUsername = (ref) => index.documentStore.getDoc(ref).username
+  const isRT = (x)=>getDocUsername(x.ref) != screen_name
+
+  const filterRTs = filter(either(_=>filters.getRTs, y=>index.documentStore.getDoc(y.ref).username === screen_name))
+  const isNotReply = x => isNil(x.reply_to) || x.reply_to === x.username
+  const filterReplies = filter(either(_=>filters.useReplies, y=>isNotReply(index.documentStore.getDoc(y.ref))))
+  const isBookmark = prop('is_bookmark')
+  const filterBookmarks = filter(pipe(isBookmark, not))
   return pipe(
-    filter(x => getRTs ? true : getDocUsername(index, x.ref) === screen_name),
+    // filter(either(_=>filters.useBookmarks, pipe(not,isBookmark))),
+    // filter(either(_=>filters.useReplies, pipe(not,isReply))),
+    filterRTs,
+    filterReplies,
+    filterBookmarks,
     take(n_tweets),
+    tap(x=>{
+      // console.log('hi',{x,pass:filter(y=>filters.getRTs || index.documentStore.getDoc(y.ref).username === screen_name, x), index, getRT:filters.getRTs, username:screen_name, names:map(y=>index.documentStore.getDoc(y.ref).username, x)})
+      console.log('hi',{xdoc:map(y=>index.documentStore.getDoc(y.ref),x) ,pass:map(isNotReply, map(y=>index.documentStore.getDoc(y.ref),x)),  index, useRep:filters.useReplies, username:screen_name, names:map(y=>index.documentStore.getDoc(y.ref).username, x)})
+      // console.log('hi',{x,index})
+    }),
     map(prop('ref')),
   )(results)
 })
 // 
-export const search = curry (async (getRTs, screen_name, n_tweets, index, query) => {
+export const search = curry (async (filters, screen_name, n_tweets, index, query) => {
   return await pipe(
     getRelated(n_tweets, index),
-    andThen(getTopNResults(getRTs, screen_name, n_tweets, index)),
+    andThen(getTopNResults(filters, screen_name, n_tweets, index)),
     )(query)})

@@ -1,5 +1,7 @@
 import Kefir from 'kefir';
-import { curry, isNil, pipe, prop, propEq, andThen, defaultTo, assoc } from 'ramda'
+import { flattenModule } from './putils.jsx'
+import * as R from 'ramda';
+flattenModule(global,R)
 
 //returns a promise that gets a value from chrome local storage 
 export async function getData(key) {
@@ -49,19 +51,21 @@ export async function removeData(keys){
 export const inspect = curry ((prepend, x)=>{console.log(prepend, x); return x;})
 export const setStg = curry( (key,val) => setData({[key]:val}) )
 
+// DEFAULT OPTIONS V IMPORTANT
 export const defaultOptions = () => {return {
   name: 'options',
-  getRTs: true,
+  getRTs: {name:'getRTs', type:'searchFilter', value:true},
+  useBookmarks: {name:'useBookmarks', type:'searchFilter', value:true},
+  useReplies: {name:'useReplies', type:'searchFilter', value:true},
 }}
 
 export const getOptions = async () => getData('options').then(defaultTo(defaultOptions()))
 
-export const updateOption = curry(async (name, val)=>
+export const updateOptionStg = curry(async (name, val)=>
   {
   return getOptions().then(pipe(
-      assoc(name,val),
-      inspect('updated options'),
-      setStg('options')
+      set(lensPath([name,'value']),val),
+      tap(setStg('options')),
     ))
   })
 

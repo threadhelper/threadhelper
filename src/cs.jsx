@@ -32,12 +32,12 @@ import { getData, setData, msgBG, makeGotMsgObs, makeStoragegObs, inspect, reque
 import { makeRoboStream, makeActionStream, makeComposeFocusObs, makeReplyObs, replyToWhom } from './ui/inputsHandler.jsx'
 import { makeSidebarHome, makeSidebarCompose, makeHomeSidebarObserver, makeFloatSidebarObserver, injectSidebarHome, injectDummy } from './ui/sidebarHandler.jsx'
 import { makeComposeObs } from './ui/composeHandler.jsx'
-
 import { makeLastStatusObs, makeModeObs, makeBgColorObs } from './ui/tabsHandler.jsx'
 import css from '../style/cs.scss'
 import Kefir from 'kefir';
-import { isNil, isEmpty, defaultTo, curry, filter, includes, difference, prop, props, path, propEq, pathEq, pipe, andThen, map, reduce, and, not, propSatisfies } from 'ramda'
-
+import { flattenModule } from './utils/putils.jsx'
+import * as R from 'ramda';
+flattenModule(window,R)
 import ThreadHelper from './components/ThreadHelper.jsx'
 
 

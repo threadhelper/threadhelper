@@ -1,7 +1,8 @@
 import {setData} from '../utils/dutils.jsx'
 import {getThreadAbove} from './twitterScout.jsx'
-import { isNil, join, defaultTo, curry, append, filter, includes, difference, prop, props, path, propEq, pathEq, pipe, andThen, map, reduce, and, not, head, last, propSatisfies } from 'ramda'
-
+import { flattenModule } from '../utils/putils.jsx'
+import * as R from 'ramda';
+flattenModule(global,R)
 
 const clean_tweet = (text)=>{
   let t_url = /https:\/\/t\.co.*/

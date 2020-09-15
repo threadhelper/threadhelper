@@ -2,7 +2,9 @@ import { h, render, Component } from 'preact';
 import ThreadHelper from '../components/ThreadHelper.jsx'
 import { getMode, isSidebar } from '../utils/wutils.jsx'
 import { getData, setData } from '../utils/dutils.jsx'
-import { compose, curry, prop } from '../utils/fp.jsx';
+import { flattenModule } from '../utils/putils.jsx'
+import * as R from 'ramda';
+flattenModule(global,R)
 import $ from 'jquery'
 
 

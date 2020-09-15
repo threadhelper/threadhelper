@@ -34663,7 +34663,7 @@ var clear = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["curry"])( /*#__PURE__*/fu
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "loadIndex", function() { return loadIndex; });
+/* WEBPACK VAR INJECTION */(function(global) {/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "loadIndex", function() { return loadIndex; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "makeIndex", function() { return makeIndex; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "addToIndex", function() { return addToIndex; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "removeFromIndex", function() { return removeFromIndex; });
@@ -34673,8 +34673,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "search", function() { return search; });
 /* harmony import */ var elasticlunr__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! elasticlunr */ "./node_modules/elasticlunr/elasticlunr.js");
 /* harmony import */ var elasticlunr__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(elasticlunr__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var ramda__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ramda */ "./node_modules/ramda/es/index.js");
-/* harmony import */ var _utils_dutils_jsx__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/dutils.jsx */ "./src/utils/dutils.jsx");
+/* harmony import */ var _utils_putils_jsx__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/putils.jsx */ "./src/utils/putils.jsx");
+/* harmony import */ var ramda__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ramda */ "./node_modules/ramda/es/index.js");
+/* harmony import */ var _utils_dutils_jsx__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/dutils.jsx */ "./src/utils/dutils.jsx");
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
 
 function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
@@ -34682,13 +34683,14 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
 
 
 
-var tweet_fields = ["id", "text", "name", "username", "reply_to", "mentions" // "is_bookmark",
-]; // const loadedIndexJson = await db_get('misc', 'index')
+Object(_utils_putils_jsx__WEBPACK_IMPORTED_MODULE_1__["flattenModule"])(global, ramda__WEBPACK_IMPORTED_MODULE_2__);
+
+var tweet_fields = ["id", "text", "name", "username", "reply_to", "mentions", "is_bookmark"]; // const loadedIndexJson = await db_get('misc', 'index')
 // export const loadIndex = (loadedIndexJson) => {console.log(loadedIndexJson); return isNil(loadedIndexJson) ?  makeIndex() : elasticlunr.Index.load(JSON.parse(loadedIndexJson))}
 
 var loadIndex = function loadIndex(loadedIndexJson) {
   console.log(loadedIndexJson);
-  return Object(ramda__WEBPACK_IMPORTED_MODULE_1__["isNil"])(loadedIndexJson) ? makeIndex() : elasticlunr__WEBPACK_IMPORTED_MODULE_0__["Index"].load(loadedIndexJson);
+  return isNil(loadedIndexJson) ? makeIndex() : elasticlunr__WEBPACK_IMPORTED_MODULE_0__["Index"].load(loadedIndexJson);
 };
 
 var initIndex = function initIndex() {
@@ -34709,14 +34711,14 @@ var makeIndex = function makeIndex() {
 // export const removeFromIndex = async (tweet_ids) => updateIndex([],tweet_ids)
 // IMPURE
 
-var addToIndex = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["curry"])( /*#__PURE__*/function () {
+var addToIndex = curry( /*#__PURE__*/function () {
   var _ref = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee(index, tweets) {
     var toDoc;
     return regeneratorRuntime.wrap(function _callee$(_context) {
       while (1) {
         switch (_context.prev = _context.next) {
           case 0:
-            toDoc = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["pipe"])(ramda__WEBPACK_IMPORTED_MODULE_1__["values"], Object(ramda__WEBPACK_IMPORTED_MODULE_1__["project"])(tweet_fields));
+            toDoc = pipe(values, project(tweet_fields));
             console.log('adding to index', {
               index: index,
               docs: toDoc(tweets)
@@ -34739,7 +34741,7 @@ var addToIndex = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["curry"])( /*#__PURE_
     return _ref.apply(this, arguments);
   };
 }());
-var removeFromIndex = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["curry"])( /*#__PURE__*/function () {
+var removeFromIndex = curry( /*#__PURE__*/function () {
   var _ref2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee2(index, tweet_ids) {
     return regeneratorRuntime.wrap(function _callee2$(_context2) {
       while (1) {
@@ -34767,7 +34769,7 @@ var removeFromIndex = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["curry"])( /*#__
     return _ref2.apply(this, arguments);
   };
 }());
-var updateIndex = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["curry"])( /*#__PURE__*/function () {
+var updateIndex = curry( /*#__PURE__*/function () {
   var _ref3 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee3(index, tweets_to_add, ids_to_remove) {
     return regeneratorRuntime.wrap(function _callee3$(_context3) {
       while (1) {
@@ -34798,7 +34800,7 @@ var updateIndex = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["curry"])( /*#__PURE
   };
 }()); //** Find related tweets */
 
-var getRelated = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["curry"])( /*#__PURE__*/function () {
+var getRelated = curry( /*#__PURE__*/function () {
   var _ref4 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee4(n_tweets, index, query) {
     return regeneratorRuntime.wrap(function _callee4$(_context4) {
       while (1) {
@@ -34837,24 +34839,61 @@ var getRelated = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["curry"])( /*#__PURE_
   return function (_x8, _x9, _x10) {
     return _ref4.apply(this, arguments);
   };
-}());
+}()); // getRes :: [idx_tweet] -> [db_tweet]
 
-var getDocUsername = function getDocUsername(index, ref) {
-  return index.documentStore.getDoc(ref).username;
-}; // getRes :: [idx_tweet] -> [db_tweet]
-
-
-var getTopNResults = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["curry"])( /*#__PURE__*/function () {
-  var _ref5 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee5(getRTs, screen_name, n_tweets, index, results) {
+var getTopNResults = curry( /*#__PURE__*/function () {
+  var _ref5 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee5(filters, screen_name, n_tweets, index, results) {
+    var getDocUsername, isRT, filterRTs, isNotReply, filterReplies, isBookmark, filterBookmarks;
     return regeneratorRuntime.wrap(function _callee5$(_context5) {
       while (1) {
         switch (_context5.prev = _context5.next) {
           case 0:
-            return _context5.abrupt("return", Object(ramda__WEBPACK_IMPORTED_MODULE_1__["pipe"])(Object(ramda__WEBPACK_IMPORTED_MODULE_1__["filter"])(function (x) {
-              return getRTs ? true : getDocUsername(index, x.ref) === screen_name;
-            }), Object(ramda__WEBPACK_IMPORTED_MODULE_1__["take"])(n_tweets), Object(ramda__WEBPACK_IMPORTED_MODULE_1__["map"])(Object(ramda__WEBPACK_IMPORTED_MODULE_1__["prop"])('ref')))(results));
+            getDocUsername = function getDocUsername(ref) {
+              return index.documentStore.getDoc(ref).username;
+            };
 
-          case 1:
+            isRT = function isRT(x) {
+              return getDocUsername(x.ref) != screen_name;
+            };
+
+            filterRTs = filter(either(function (_) {
+              return filters.getRTs;
+            }, function (y) {
+              return index.documentStore.getDoc(y.ref).username === screen_name;
+            }));
+
+            isNotReply = function isNotReply(x) {
+              return isNil(x.reply_to) || x.reply_to === x.username;
+            };
+
+            filterReplies = filter(either(function (_) {
+              return filters.useReplies;
+            }, function (y) {
+              return isNotReply(index.documentStore.getDoc(y.ref));
+            }));
+            isBookmark = prop('is_bookmark');
+            filterBookmarks = filter(pipe(isBookmark, not));
+            return _context5.abrupt("return", pipe( // filter(either(_=>filters.useBookmarks, pipe(not,isBookmark))),
+            // filter(either(_=>filters.useReplies, pipe(not,isReply))),
+            filterRTs, filterReplies, filterBookmarks, take(n_tweets), tap(function (x) {
+              // console.log('hi',{x,pass:filter(y=>filters.getRTs || index.documentStore.getDoc(y.ref).username === screen_name, x), index, getRT:filters.getRTs, username:screen_name, names:map(y=>index.documentStore.getDoc(y.ref).username, x)})
+              console.log('hi', {
+                xdoc: map(function (y) {
+                  return index.documentStore.getDoc(y.ref);
+                }, x),
+                pass: map(isNotReply, map(function (y) {
+                  return index.documentStore.getDoc(y.ref);
+                }, x)),
+                index: index,
+                useRep: filters.useReplies,
+                username: screen_name,
+                names: map(function (y) {
+                  return index.documentStore.getDoc(y.ref).username;
+                }, x)
+              }); // console.log('hi',{x,index})
+            }), map(prop('ref')))(results));
+
+          case 8:
           case "end":
             return _context5.stop();
         }
@@ -34867,14 +34906,14 @@ var getTopNResults = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["curry"])( /*#__P
   };
 }()); // 
 
-var search = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["curry"])( /*#__PURE__*/function () {
-  var _ref6 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee6(getRTs, screen_name, n_tweets, index, query) {
+var search = curry( /*#__PURE__*/function () {
+  var _ref6 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee6(filters, screen_name, n_tweets, index, query) {
     return regeneratorRuntime.wrap(function _callee6$(_context6) {
       while (1) {
         switch (_context6.prev = _context6.next) {
           case 0:
             _context6.next = 2;
-            return Object(ramda__WEBPACK_IMPORTED_MODULE_1__["pipe"])(getRelated(n_tweets, index), Object(ramda__WEBPACK_IMPORTED_MODULE_1__["andThen"])(getTopNResults(getRTs, screen_name, n_tweets, index)))(query);
+            return pipe(getRelated(n_tweets, index), andThen(getTopNResults(filters, screen_name, n_tweets, index)))(query);
 
           case 2:
             return _context6.abrupt("return", _context6.sent);
@@ -34891,6 +34930,7 @@ var search = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["curry"])( /*#__PURE__*/f
     return _ref6.apply(this, arguments);
   };
 }());
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../../node_modules/webpack/buildin/global.js */ "./node_modules/webpack/buildin/global.js")))
 
 /***/ }),
 
@@ -34898,23 +34938,31 @@ var search = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["curry"])( /*#__PURE__*/f
 /*!*********************************!*\
   !*** ./src/bg/twitterScout.jsx ***!
   \*********************************/
-/*! exports provided: getUserInfo, updateQuery, timelineQuery, idComp, archToTweet, toTweet, findDeletedIds, getLatestTweets, getThreadAbove, getBookmarks */
+/*! exports provided: getUserInfo, updateQuery, timelineQuery, idComp, bookmarkToTweet, apiToTweet, archToTweet, findDeletedIds, getLatestTweets, getThreadAbove, getBookmarks */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getUserInfo", function() { return getUserInfo; });
+/* WEBPACK VAR INJECTION */(function(global) {/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getUserInfo", function() { return getUserInfo; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "updateQuery", function() { return updateQuery; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "timelineQuery", function() { return timelineQuery; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "idComp", function() { return idComp; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "bookmarkToTweet", function() { return bookmarkToTweet; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "apiToTweet", function() { return apiToTweet; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "archToTweet", function() { return archToTweet; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "toTweet", function() { return toTweet; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "findDeletedIds", function() { return findDeletedIds; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getLatestTweets", function() { return getLatestTweets; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getThreadAbove", function() { return getThreadAbove; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getBookmarks", function() { return getBookmarks; });
 /* harmony import */ var _utils_dutils_jsx__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/dutils.jsx */ "./src/utils/dutils.jsx");
-/* harmony import */ var ramda__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ramda */ "./node_modules/ramda/es/index.js");
+/* harmony import */ var _utils_putils_jsx__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/putils.jsx */ "./src/utils/putils.jsx");
+/* harmony import */ var ramda__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ramda */ "./node_modules/ramda/es/index.js");
+function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
+
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys(Object(source), true).forEach(function (key) { _defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
 function _createForOfIteratorHelper(o, allowArrayLike) { var it; if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = o[Symbol.iterator](); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
 
 function _toConsumableArray(arr) { return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _unsupportedIterableToArray(arr) || _nonIterableSpread(); }
@@ -34935,6 +34983,8 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
 
 
 
+
+Object(_utils_putils_jsx__WEBPACK_IMPORTED_MODULE_1__["flattenModule"])(global, ramda__WEBPACK_IMPORTED_MODULE_2__);
 var getUserInfo = /*#__PURE__*/function () {
   var _ref = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee(getAuthInit) {
     return regeneratorRuntime.wrap(function _callee$(_context) {
@@ -35024,7 +35074,7 @@ var stop_condition = function stop_condition(res, count, max_id) {
 // res is the accumulator, should be called as [], max_id initialized as -1
 
 
-var query = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["curry"])( /*#__PURE__*/function () {
+var query = curry( /*#__PURE__*/function () {
   var _ref4 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee4(getAuthInit, username, count, max_id, res) {
     var req_res;
     return regeneratorRuntime.wrap(function _callee4$(_context4) {
@@ -35064,7 +35114,7 @@ var query = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["curry"])( /*#__PURE__*/fu
     return _ref4.apply(this, arguments);
   };
 }());
-var makeTweetQueryUrl = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["curry"])(function (max_id, username, count) {
+var makeTweetQueryUrl = curry(function (max_id, username, count) {
   var max_param = max_id > 0 ? "&max_id=".concat(max_id) : '';
   return "https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=".concat(username, "&count=").concat(count).concat(max_param, "&include_rts=1&tweet_mode=extended");
 });
@@ -35132,278 +35182,416 @@ function sortTweets(tweetDict) {
   return stobj;
 }
 
-function toTweets(res, user_info) {
-  var arch = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
+var re = /RT @([a-zA-Z0-9_]+).*/;
+var rt_tag = /RT @([a-zA-Z0-9_]+:)/;
+var default_pic_url = 'https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png';
+var bookmarkToTweet = function bookmarkToTweet(entry) {
+  var tweet = apiToTweet(entry);
+  tweet = toTweetCommon(tweet, entry);
+  tweet.is_bookmark = true; // TODO: get QT from bookmarks, what follows is absolute placeholder
 
-  var toTweet = function toTweet(t) {
-    var tweet = toTweet(t, false, user_info);
-    return [tweet.id, tweet];
-  };
-
-  var archToTweet = function archToTweet(t) {
-    var tweet = toTweet(t, true, user_info);
-    return [tweet.id, tweet];
-  };
-
-  var new_tweet_list = arch ? res.map(archToTweet) : res.map(toTweet);
-  var new_tweets = Object.fromEntries(new_tweet_list);
-  return new_tweets;
-} // TOOD: make user and pic queue emit events 
-
-
-var _toTweet = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["curry"])(function (arch, user_info, entry) {
-  var return_tweet = {};
-  var tweet = {};
-  var user_queue = [];
-  var pic_tweet_queue = [];
-  entry = arch ? entry.tweet : entry;
-  var re = /RT @([a-zA-Z0-9_]+).*/;
-  var rt_tag = /RT @([a-zA-Z0-9_]+:)/;
-  var default_pic_url = 'https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png';
-
-  try {
-    if (entry != null) {
-      tweet.id = entry.id_str; //Handing retweets in archive
-
-      if (arch) {
-        var rt = re.exec(entry.full_text); //tweet contents
-
-        tweet.username = rt != null ? rt[1] : user_info.screen_name;
-        tweet.text = rt != null ? entry.full_text.replace(rt_tag, '') : entry.full_text; // If I'm tweeting/retweeting myself
-
-        if (tweet.username == user_info.screen_name) {
-          tweet.name = user_info.name;
-          tweet.profile_image = user_info.profile_image_url_https;
-        } // if I'm retweeting someone else
-        else {
-            tweet.profile_image = default_pic_url;
-
-            try {
-              var author = entry.entities.user_mentions.find(function (t) {
-                return t.screen_name.toLowerCase() == tweet.username.toLowerCase();
-              });
-              tweet.name = author != null ? author.name : tweet.username;
-              user_queue.push(author.id_str);
-              pic_tweet_queue[entry.id_str] = author.id_str;
-              tweet.retweeted = true;
-            } catch (e) {
-              console.log("ERRORRRRRRRR", e);
-              console.log("RT match", rt);
-              console.log("tweet username", tweet.username);
-              console.log(entry.entities.user_mentions);
-            } //console.log(tweet); console.log(entry); wiz
-
-          }
-      } else {
-        tweet.retweeted = entry.retweeted;
-        tweet.id = entry.id_str;
-
-        if (tweet.retweeted) {
-          if (entry.retweeted_status != null) tweet.orig_id = entry.retweeted_status.id_str;
-          entry = entry.retweeted_status != null ? entry.retweeted_status : entry;
-        } //tweet contents
-
-
-        tweet.username = entry.user.screen_name;
-        tweet.name = entry.user.name;
-        tweet.text = entry.full_text || entry.text;
-        tweet.profile_image = entry.user.profile_image_url_https;
-      } // Basic info, same for everyone
-      // tweet.id = entry.id,
-
-
-      tweet.time = new Date(entry.created_at).getTime(); // tweet.human_time = new Date(entry.created_at).toLocaleString()
+  if (tweet.has_quote) {
+    tweet.quote = {
+      // Basic info.
+      text: "bookmark tweet is quoting tweet ".concat(entry.quoted_status_id_str),
+      name: '',
+      username: '',
+      time: new Date().getTime(),
+      profile_image: default_pic_url,
       // Replies/mentions.
+      reply_to: '',
+      mentions: [],
+      // URLs.
+      urls: [],
+      has_media: false,
+      media: null
+    };
+  }
 
-      tweet.reply_to = entry.in_reply_to_screen_name != null ? entry.in_reply_to_screen_name : null; // null if not present.
+  return tweet;
+}; // FUNCTIONAL ATTEMPT
+// TOOD: make user and pic queue emit events 
 
-      tweet.mentions = entry.entities.user_mentions.map(function (x) {
+var apiToTweet = function apiToTweet(entry) {
+  var tweet = {};
+  tweet.retweeted = entry.retweeted;
+  tweet.id = entry.id_str;
+
+  if (tweet.retweeted) {
+    if (entry.retweeted_status != null) tweet.orig_id = entry.retweeted_status.id_str;
+    entry = entry.retweeted_status != null ? entry.retweeted_status : entry;
+  } //tweet contents
+
+
+  tweet.username = entry.user.screen_name;
+  tweet.name = entry.user.name;
+  tweet.text = entry.full_text || entry.text;
+  tweet.profile_image = entry.user.profile_image_url_https;
+  tweet = toTweetCommon(tweet, entry); // Add full quote info.
+
+  if (tweet.has_quote && tweet.is_quote_up) {
+    tweet.quote = {
+      // Basic info.
+      text: entry.quoted_status.full_text || entry.quoted_status.text,
+      name: entry.quoted_status.user.name,
+      username: entry.quoted_status.user.screen_name,
+      time: new Date(entry.quoted_status.created_at).getTime(),
+      profile_image: entry.quoted_status.user.profile_image_url_https,
+      // Replies/mentions.
+      reply_to: entry.quoted_status.in_reply_to_screen_name,
+      mentions: entry.quoted_status.entities.user_mentions.map(function (x) {
         return {
           username: x.screen_name,
           indices: x.indices
         };
-      }); // URLs.
-
-      tweet.urls = entry.entities.urls.map(function (x) {
+      }),
+      // URLs.
+      urls: entry.quoted_status.entities.urls.map(function (x) {
         return {
           current_text: x.url,
           display: x.display_url,
           expanded: x.expanded_url
         };
-      }); // Media.
+      }),
+      has_media: typeof entry.quoted_status.entities.media !== "undefined",
+      media: null
+    };
 
-      tweet.has_media = typeof entry.entities.media !== "undefined";
-      tweet.media = null; // Quote info.
-
-      tweet.has_quote = entry.is_quote_status;
-      tweet.is_quote_up = typeof entry.quoted_status !== "undefined";
-      tweet.quote = null; // Add media info.
-
-      if (tweet.has_media) {
-        tweet.media = entry.entities.media.map(function (x) {
-          return {
-            current_text: x.url,
-            url: x.media_url_https
-          };
-        });
-      } // Add full quote info.
-
-
-      if (tweet.has_quote && tweet.is_quote_up) {
-        tweet.quote = {
-          // Basic info.
-          text: entry.quoted_status.full_text || entry.quoted_status.text,
-          name: entry.quoted_status.user.name,
-          username: entry.quoted_status.user.screen_name,
-          time: new Date(entry.quoted_status.created_at).getTime(),
-          profile_image: entry.quoted_status.user.profile_image_url_https,
-          // Replies/mentions.
-          reply_to: entry.quoted_status.in_reply_to_screen_name,
-          mentions: entry.quoted_status.entities.user_mentions.map(function (x) {
-            return {
-              username: x.screen_name,
-              indices: x.indices
-            };
-          }),
-          // URLs.
-          urls: entry.quoted_status.entities.urls.map(function (x) {
-            return {
-              current_text: x.url,
-              display: x.display_url,
-              expanded: x.expanded_url
-            };
-          }),
-          has_media: typeof entry.quoted_status.entities.media !== "undefined",
-          media: null
+    if (tweet.quote.has_media) {
+      tweet.quote.media = entry.quoted_status.entities.media.map(function (x) {
+        return {
+          current_text: x.url,
+          url: x.media_url_https
         };
-
-        if (tweet.quote.has_media) {
-          tweet.quote.media = entry.quoted_status.entities.media.map(function (x) {
-            return {
-              current_text: x.url,
-              url: x.media_url_https
-            };
-          });
-        }
-      }
+      });
     }
-  } catch (e) {
-    console.log("error in totweet", e);
-    console.log("error in totweet", entry);
-    throw e;
-  } // wiz.user_queue = user_queue
-  // wiz.pic_tweet_queue = pic_tweet_queue
+  }
 
+  return tweet;
+}; // archToTweet :: archive_entry -> th_tweet
+
+var archToTweet = curry(function (user_info, entry) {
+  var rt = re.exec(entry.full_text);
+  var t = prop('tweet', entry);
+  var isOwnTweet = isNil(rt) || rt[1] === user_info.screen_name;
+
+  var findAuthor = function findAuthor() {
+    return t.entities.user_mentions.find(function (t) {
+      return t.screen_name.toLowerCase() === user_info.screen_name.toLowerCase();
+    });
+  };
+
+  var init_tweet = {
+    username: !isNil(rt) ? rt[1] : user_info.screen_name,
+    text: !isNil(rt) ? t.full_text.replace(rt_tag, '') : t.full_text,
+    name: isOwnTweet ? user_info.name : findAuthor(),
+    // If I'm tweeting/retweeting myself
+    profile_image: isOwnTweet ? user_info.profile_image_url_https : default_pic_url,
+    retweeted: isOwnTweet ? false : true
+  };
+  var tweet = toTweetCommon(init_tweet, entry); // Add full quote info.
+
+  if (tweet.has_quote && tweet.is_quote_up) {
+    tweet.quote = {
+      // Basic info.
+      text: entry.quoted_status.full_text || entry.quoted_status.text,
+      name: entry.quoted_status.user.name,
+      username: entry.quoted_status.user.screen_name,
+      time: new Date(entry.quoted_status.created_at).getTime(),
+      profile_image: entry.quoted_status.user.profile_image_url_https,
+      // Replies/mentions.
+      reply_to: entry.quoted_status.in_reply_to_screen_name,
+      mentions: entry.quoted_status.entities.user_mentions.map(function (x) {
+        return {
+          username: x.screen_name,
+          indices: x.indices
+        };
+      }),
+      // URLs.
+      urls: entry.quoted_status.entities.urls.map(function (x) {
+        return {
+          current_text: x.url,
+          display: x.display_url,
+          expanded: x.expanded_url
+        };
+      }),
+      has_media: typeof entry.quoted_status.entities.media !== "undefined",
+      media: null
+    };
+
+    if (tweet.quote.has_media) {
+      tweet.quote.media = entry.quoted_status.entities.media.map(function (x) {
+        return {
+          current_text: x.url,
+          url: x.media_url_https
+        };
+      });
+    }
+  }
 
   return tweet;
 });
 
-var archToTweet = _toTweet(true);
-var toTweet = _toTweet(false);
+var toTweetCommon = function toTweetCommon(tweet, entry) {
+  // Basic info, same for everyone
+  tweet.id = entry.id_str; // tweet.id = entry.id,
+
+  tweet.time = new Date(entry.created_at).getTime(); // tweet.human_time = new Date(entry.created_at).toLocaleString()
+  // Replies/mentions.
+
+  tweet.reply_to = !isNil(entry.in_reply_to_screen_name) ? entry.in_reply_to_screen_name : null; // null if not present.
+
+  tweet.mentions = !isNil(entry.entities.user_mentions) ? entry.entities.user_mentions.map(function (x) {
+    return {
+      username: x.screen_name,
+      indices: x.indices
+    };
+  }) : []; // URLs.
+
+  tweet.urls = !isNil(entry.entities.urls) ? entry.entities.urls.map(function (x) {
+    return {
+      current_text: x.url,
+      display: x.display_url,
+      expanded: x.expanded_url
+    };
+  }) : []; // Media.
+
+  tweet.has_media = !isNil(entry.entities.media);
+  tweet.media = null; // Quote info.
+
+  tweet.has_quote = isNil(entry.is_quote_status) ? false : entry.is_quote_status;
+  tweet.is_quote_up = !isNil(entry.quoted_status);
+  tweet.quote = null;
+  tweet.is_bookmark = false; // Add media info.
+
+  if (tweet.has_media) {
+    tweet.media = entry.entities.media.map(function (x) {
+      return {
+        current_text: x.url,
+        url: x.media_url_https
+      };
+    });
+  }
+
+  return tweet;
+}; // // TOOD: make user and pic queue emit events 
+// const _toTweet = curry ((arch, user_info, entry) => {
+//   let return_tweet = {}
+//   let tweet = {};
+//   let user_queue = []
+//   let pic_tweet_queue = []
+//   entry = arch ? entry.tweet : entry;
+//   let re = /RT @([a-zA-Z0-9_]+).*/
+//   let rt_tag = /RT @([a-zA-Z0-9_]+:)/
+//   let default_pic_url = 'https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png'
+//   try{
+//     if (entry != null){
+//       tweet.id = entry.id_str
+//       //Handing retweets in archive
+//       if(arch){
+//         let rt = re.exec(entry.full_text);  
+//         //tweet contents
+//         tweet.username = rt != null ? rt[1] : user_info.screen_name
+//         tweet.text = rt != null ? entry.full_text.replace(rt_tag,'') : entry.full_text
+//         // If I'm tweeting/retweeting myself
+//         if(tweet.username == user_info.screen_name){
+//           tweet.name = user_info.name
+//           tweet.profile_image = user_info.profile_image_url_https
+//         } 
+//         // if I'm retweeting someone else
+//         else{
+//           tweet.profile_image = default_pic_url
+//           try{
+//             let author = entry.entities.user_mentions.find(t=>{return t.screen_name.toLowerCase() == tweet.username.toLowerCase()})
+//             tweet.name = author != null ? author.name : tweet.username
+//             user_queue.push(author.id_str)
+//             pic_tweet_queue[entry.id_str] = author.id_str
+//             tweet.retweeted = true
+//           } catch(e){
+//             console.log("ERRORRRRRRRR", e)
+//             console.log("RT match",rt)
+//             console.log("tweet username",tweet.username)
+//             console.log(entry.entities.user_mentions)
+//           }
+//           //console.log(tweet); console.log(entry); wiz
+//         }
+//       }else{
+//         tweet.retweeted = entry.retweeted
+//         tweet.id = entry.id_str
+//         if(tweet.retweeted){
+//           if(entry.retweeted_status != null) tweet.orig_id = entry.retweeted_status.id_str
+//            entry = entry.retweeted_status != null ? entry.retweeted_status : entry;
+//           }
+//         //tweet contents
+//         tweet.username = entry.user.screen_name
+//         tweet.name = entry.user.name
+//         tweet.text = entry.full_text || entry.text
+//         tweet.profile_image = entry.user.profile_image_url_https
+//       }
+//         // Basic info, same for everyone
+//         // tweet.id = entry.id,
+//         tweet.time = new Date(entry.created_at).getTime()
+//         // tweet.human_time = new Date(entry.created_at).toLocaleString()
+//         // Replies/mentions.
+//         tweet.reply_to = entry.in_reply_to_screen_name != null ? entry.in_reply_to_screen_name : null // null if not present.
+//         tweet.mentions = entry.entities.user_mentions.map(x => ({username: x.screen_name, indices: x.indices}))
+//         // URLs.
+//         tweet.urls = entry.entities.urls.map(x => ({current_text: x.url, display: x.display_url, expanded: x.expanded_url}))
+//         // Media.
+//         tweet.has_media = typeof entry.entities.media !== "undefined"
+//         tweet.media = null
+//         // Quote info.
+//         tweet.has_quote = entry.is_quote_status
+//         tweet.is_quote_up = typeof entry.quoted_status !== "undefined"
+//         tweet.quote = null
+//       // Add media info.
+//       if (tweet.has_media) {
+//         tweet.media = entry.entities.media.map(x => ({current_text: x.url, url: x.media_url_https}))
+//       }
+//       // Add full quote info.
+//       if (tweet.has_quote && tweet.is_quote_up) {
+//         tweet.quote = {
+//           // Basic info.
+//           text: entry.quoted_status.full_text || entry.quoted_status.text,
+//           name: entry.quoted_status.user.name,
+//           username: entry.quoted_status.user.screen_name,
+//           time: new Date(entry.quoted_status.created_at).getTime(),
+//           profile_image: entry.quoted_status.user.profile_image_url_https,
+//           // Replies/mentions.
+//           reply_to: entry.quoted_status.in_reply_to_screen_name,
+//           mentions: entry.quoted_status.entities.user_mentions.map(x => ({username: x.screen_name, indices: x.indices})),
+//           // URLs.
+//           urls: entry.quoted_status.entities.urls.map(x => ({current_text: x.url, display: x.display_url, expanded: x.expanded_url})),
+//           has_media: typeof entry.quoted_status.entities.media !== "undefined",
+//           media: null,
+//         }
+//         if (tweet.quote.has_media) {
+//           tweet.quote.media = entry.quoted_status.entities.media.map(x => ({current_text: x.url, url: x.media_url_https}))
+//         }
+//       }
+//     }
+//   } catch(e){
+//     console.log("error in totweet", e)
+//     console.log("error in totweet", entry)
+//     throw(e)
+//   }
+//   // wiz.user_queue = user_queue
+//   // wiz.pic_tweet_queue = pic_tweet_queue
+//   return tweet
+// })
+
+
 var findDeletedIds = function findDeletedIds(currentIds, incomingIds) {
   // const minNew = reduce(minBy(idComp), '0', newTweets)
   // const maxNew = reduce(maxBy(idComp), Number.MAX_SAFE_INTEGER.toString(), newTweets)
   var sortedNew = sortKeys(incomingIds);
   var minNew = sortedNew[0];
   var maxNew = sortedNew[sortedNew.length - 1];
-  var overlappingOldTweets = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["pipe"])(sortKeys, Object(ramda__WEBPACK_IMPORTED_MODULE_1__["dropLastWhile"])(Object(ramda__WEBPACK_IMPORTED_MODULE_1__["gt"])(maxNew)), Object(ramda__WEBPACK_IMPORTED_MODULE_1__["dropWhile"])(Object(ramda__WEBPACK_IMPORTED_MODULE_1__["lt"])(minNew)))(currentIds);
-  return Object(ramda__WEBPACK_IMPORTED_MODULE_1__["difference"])(overlappingOldTweets, incomingIds);
+  var overlappingOldTweets = pipe(sortKeys, dropLastWhile(gt(maxNew)), dropWhile(lt(minNew)))(currentIds);
+  return difference(overlappingOldTweets, incomingIds);
+};
+
+var getDocUsername = function getDocUsername(ref) {
+  return index.documentStore.getDoc(ref).username;
+};
+
+var isRT = propEq();
+var isBookmark = prop('is_bookmark');
+
+var isReply = function isReply(x) {
+  return !isNil(x.reply_to) && x.reply_to === x.username;
 }; // TODO make functional
+
 
 function getLatestTweets(_x12, _x13, _x14, _x15, _x16) {
   return _getLatestTweets.apply(this, arguments);
-} // // Finds tweets in our db that are no longer online as evidenced by the request we just got
-// // til_end: find from earliest in res until now, instead of until the newest in res
-// function findDeletedTweets(res, tweet_ids, til_end = true){
-//   //get only the range in our results
-//   let from_id = res[res.length-1].id_str
-//   let from = tweet_ids.findIndex((tid,idx,ar)=> {return tid==from_id})
-//   let to = 0
-//   if (!til_end){
-//     let to_id = res[0].id_str
-//     to = tweet_ids.findIndex((tid,idx,ar)=> {return tid==to_id})
-//   } else{
-//     to = 0
-//   }
-//   tweet_ids = tweet_ids.slice(to,from)
-//   let res_ids = res.map(t=>t.id_str)
-//   tweet_ids = tweet_ids.filter(tid=>!res_ids.includes(tid))
-//   console.log('found deleted tweets', tweet_ids)
-//   return tweet_ids
-// }
+}
 
 function _getLatestTweets() {
-  _getLatestTweets = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee7(n_tweets, getRT, db_get, screen_name, keys) {
-    var latest, _iterator, _step, k, t;
+  _getLatestTweets = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee7(n_tweets, filters, db_get, screen_name, keys) {
+    var latest, isFull, isRT, isBookmark, isReply, isValidTweet, _iterator, _step, k, t;
 
     return regeneratorRuntime.wrap(function _callee7$(_context7) {
       while (1) {
         switch (_context7.prev = _context7.next) {
           case 0:
             // let keys = utils.db.getAllKeys('tweets')
-            latest = []; // for (let k of reverse(sortKeys(keys))){
+            latest = [];
+
+            isFull = function isFull(latest) {
+              return latest.length >= n_tweets;
+            };
+
+            isRT = function isRT(t) {
+              return t.username != screen_name;
+            };
+
+            isBookmark = prop('is_bookmark');
+
+            isReply = function isReply(t) {
+              return !isNil(t.reply_to) && t.reply_to != t.username;
+            };
+
+            isValidTweet = function isValidTweet(t) {
+              return (filters.getRTs || !isRT(t)) && (filters.useBookmarks || !isBookmark(t)) && (filters.useReplies || !isReply(t));
+            };
 
             _iterator = _createForOfIteratorHelper(sortKeys(keys));
-            _context7.prev = 2;
+            _context7.prev = 7;
 
             _iterator.s();
 
-          case 4:
+          case 9:
             if ((_step = _iterator.n()).done) {
-              _context7.next = 14;
+              _context7.next = 19;
               break;
             }
 
             k = _step.value;
-            _context7.next = 8;
+            _context7.next = 13;
             return db_get('tweets', k);
 
-          case 8:
+          case 13:
             t = _context7.sent;
+            isValidTweet(t) ? latest.push(t) : null;
 
-            if (getRT) {
-              latest.push(t);
-            } else {
-              if (t.username == screen_name) latest.push(t);
-            }
-
-            if (!(latest.length >= n_tweets)) {
-              _context7.next = 12;
+            if (!isFull(latest)) {
+              _context7.next = 17;
               break;
             }
 
-            return _context7.abrupt("break", 14);
+            return _context7.abrupt("break", 19);
 
-          case 12:
-            _context7.next = 4;
+          case 17:
+            _context7.next = 9;
             break;
 
-          case 14:
-            _context7.next = 19;
+          case 19:
+            _context7.next = 24;
             break;
 
-          case 16:
-            _context7.prev = 16;
-            _context7.t0 = _context7["catch"](2);
+          case 21:
+            _context7.prev = 21;
+            _context7.t0 = _context7["catch"](7);
 
             _iterator.e(_context7.t0);
 
-          case 19:
-            _context7.prev = 19;
+          case 24:
+            _context7.prev = 24;
 
             _iterator.f();
 
-            return _context7.finish(19);
+            return _context7.finish(24);
 
-          case 22:
+          case 27:
             return _context7.abrupt("return", latest);
 
-          case 23:
+          case 28:
           case "end":
             return _context7.stop();
         }
       }
-    }, _callee7, null, [[2, 16, 19, 22]]);
+    }, _callee7, null, [[7, 21, 24, 27]]);
   }));
   return _getLatestTweets.apply(this, arguments);
 }
@@ -35570,14 +35758,14 @@ var fetchTweet = /*#__PURE__*/function () {
 
 
 var maxThreadSize = 20;
-var getThreadAbove = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["curry"])( /*#__PURE__*/function () {
+var getThreadAbove = curry( /*#__PURE__*/function () {
   var _ref6 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee6(getAuthInit, counter, tid) {
     var cur, thread_above;
     return regeneratorRuntime.wrap(function _callee6$(_context6) {
       while (1) {
         switch (_context6.prev = _context6.next) {
           case 0:
-            if (!(Object(ramda__WEBPACK_IMPORTED_MODULE_1__["isNil"])(tid) || Object(ramda__WEBPACK_IMPORTED_MODULE_1__["isEmpty"])(tid) || counter > maxThreadSize)) {
+            if (!(isNil(tid) || isEmpty(tid) || counter > maxThreadSize)) {
               _context6.next = 2;
               break;
             }
@@ -35608,28 +35796,14 @@ var getThreadAbove = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["curry"])( /*#__P
   return function (_x19, _x20, _x21) {
     return _ref6.apply(this, arguments);
   };
-}()); // const getThreadAbove = async (tid)=>{
-//   let tweet_list = []
-//   let cur_tweet = {}
-//   let id = tid
-//   let prev_id = 0
-//   while(id != prev_id && id != null){
-//       prev_id = id
-//       cur_tweet = await fetchTweet(id)
-//       id = cur_tweet.in_reply_to_status_id_str
-//       tweet_list = [cur_tweet,...tweet_list]
-//   }
-//   console.log(tweet_list)
-//   return tweet_list
-// }
-
+}());
 function getBookmarks(_x22) {
   return _getBookmarks.apply(this, arguments);
 }
 
 function _getBookmarks() {
   _getBookmarks = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee9(getAuthInit) {
-    var init, url, bookmarks;
+    var init, url, bookmarks, tweets, users;
     return regeneratorRuntime.wrap(function _callee9$(_context9) {
       while (1) {
         switch (_context9.prev = _context9.next) {
@@ -35643,9 +35817,19 @@ function _getBookmarks() {
 
           case 4:
             bookmarks = _context9.sent;
-            return _context9.abrupt("return", bookmarks.globalObjects.tweets);
+            console.log('bookmarks', {
+              bookmarks: bookmarks
+            });
+            tweets = Object.values(bookmarks.globalObjects.tweets);
+            users = bookmarks.globalObjects.users;
+            tweets = tweets.map(function (tweet) {
+              return _objectSpread(_objectSpread({}, tweet), {}, {
+                user: users[tweet.user_id_str]
+              });
+            });
+            return _context9.abrupt("return", values(tweets));
 
-          case 6:
+          case 10:
           case "end":
             return _context9.stop();
         }
@@ -35654,6 +35838,7 @@ function _getBookmarks() {
   }));
   return _getBookmarks.apply(this, arguments);
 }
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../../node_modules/webpack/buildin/global.js */ "./node_modules/webpack/buildin/global.js")))
 
 /***/ }),
 
@@ -35661,19 +35846,19 @@ function _getBookmarks() {
 /*!******************************!*\
   !*** ./src/utils/dutils.jsx ***!
   \******************************/
-/*! exports provided: getData, setData, removeData, inspect, setStg, defaultOptions, getOptions, updateOption, msgBG, requestRoboTweet, makeOnStorageChanged, makeStoragegObs, makeStorageStream, makeGotMsgObs, makeMsgStream */
+/*! exports provided: getData, setData, removeData, inspect, setStg, defaultOptions, getOptions, updateOptionStg, msgBG, requestRoboTweet, makeOnStorageChanged, makeStoragegObs, makeStorageStream, makeGotMsgObs, makeMsgStream */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getData", function() { return getData; });
+/* WEBPACK VAR INJECTION */(function(global) {/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getData", function() { return getData; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "setData", function() { return setData; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "removeData", function() { return removeData; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "inspect", function() { return inspect; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "setStg", function() { return setStg; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "defaultOptions", function() { return defaultOptions; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getOptions", function() { return getOptions; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "updateOption", function() { return updateOption; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "updateOptionStg", function() { return updateOptionStg; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "msgBG", function() { return msgBG; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "requestRoboTweet", function() { return requestRoboTweet; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "makeOnStorageChanged", function() { return makeOnStorageChanged; });
@@ -35682,7 +35867,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "makeGotMsgObs", function() { return makeGotMsgObs; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "makeMsgStream", function() { return makeMsgStream; });
 /* harmony import */ var kefir__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! kefir */ "./node_modules/kefir/dist/kefir.esm.js");
-/* harmony import */ var ramda__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ramda */ "./node_modules/ramda/es/index.js");
+/* harmony import */ var _putils_jsx__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./putils.jsx */ "./src/utils/putils.jsx");
+/* harmony import */ var ramda__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ramda */ "./node_modules/ramda/es/index.js");
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
@@ -35690,7 +35876,9 @@ function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try
 function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
 
 
- //returns a promise that gets a value from chrome local storage 
+
+
+Object(_putils_jsx__WEBPACK_IMPORTED_MODULE_1__["flattenModule"])(global, ramda__WEBPACK_IMPORTED_MODULE_2__); //returns a promise that gets a value from chrome local storage 
 
 function getData(_x) {
   return _getData.apply(this, arguments);
@@ -35788,17 +35976,32 @@ function _removeData() {
   return _removeData.apply(this, arguments);
 }
 
-var inspect = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["curry"])(function (prepend, x) {
+var inspect = curry(function (prepend, x) {
   console.log(prepend, x);
   return x;
 });
-var setStg = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["curry"])(function (key, val) {
+var setStg = curry(function (key, val) {
   return setData(_defineProperty({}, key, val));
-});
+}); // DEFAULT OPTIONS V IMPORTANT
+
 var defaultOptions = function defaultOptions() {
   return {
     name: 'options',
-    getRTs: true
+    getRTs: {
+      name: 'getRTs',
+      type: 'searchFilter',
+      value: true
+    },
+    useBookmarks: {
+      name: 'useBookmarks',
+      type: 'searchFilter',
+      value: true
+    },
+    useReplies: {
+      name: 'useReplies',
+      type: 'searchFilter',
+      value: true
+    }
   };
 };
 var getOptions = /*#__PURE__*/function () {
@@ -35807,7 +36010,7 @@ var getOptions = /*#__PURE__*/function () {
       while (1) {
         switch (_context.prev = _context.next) {
           case 0:
-            return _context.abrupt("return", getData('options').then(Object(ramda__WEBPACK_IMPORTED_MODULE_1__["defaultTo"])(defaultOptions())));
+            return _context.abrupt("return", getData('options').then(defaultTo(defaultOptions())));
 
           case 1:
           case "end":
@@ -35821,13 +36024,13 @@ var getOptions = /*#__PURE__*/function () {
     return _ref.apply(this, arguments);
   };
 }();
-var updateOption = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["curry"])( /*#__PURE__*/function () {
+var updateOptionStg = curry( /*#__PURE__*/function () {
   var _ref2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee2(name, val) {
     return regeneratorRuntime.wrap(function _callee2$(_context2) {
       while (1) {
         switch (_context2.prev = _context2.next) {
           case 0:
-            return _context2.abrupt("return", getOptions().then(Object(ramda__WEBPACK_IMPORTED_MODULE_1__["pipe"])(Object(ramda__WEBPACK_IMPORTED_MODULE_1__["assoc"])(name, val), inspect('updated options'), setStg('options'))));
+            return _context2.abrupt("return", getOptions().then(pipe(set(lensPath([name, 'value']), val), tap(setStg('options')))));
 
           case 1:
           case "end":
@@ -35843,7 +36046,7 @@ var updateOption = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["curry"])( /*#__PUR
 }());
 function msgBG() {
   var msg = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
-  var message = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["isNil"])(msg) ? {
+  var message = isNil(msg) ? {
     type: "query",
     query_type: "update"
   } : msg;
@@ -35900,7 +36103,7 @@ function makeOnStorageChanged(act) {
     }
   };
 }
-var makeEventObs = Object(ramda__WEBPACK_IMPORTED_MODULE_1__["curry"])(function (event, makeEmit, initVal) {
+var makeEventObs = curry(function (event, makeEmit, initVal) {
   return kefir__WEBPACK_IMPORTED_MODULE_0__["default"].stream(function (emitter) {
     emitter.emit(initVal);
     var emit = makeEmit(emitter);
@@ -35929,7 +36132,7 @@ var makeStoragegObs = function makeStoragegObs() {
   });
 };
 var makeStorageStream = function makeStorageStream(type) {
-  return makeStoragegObs().filter(Object(ramda__WEBPACK_IMPORTED_MODULE_1__["propEq"])('type', type));
+  return makeStoragegObs().filter(propEq('type', type));
 };
 var makeGotMsgObs = function makeGotMsgObs() {
   var makeEmitMsg = function makeEmitMsg(emitter) {
@@ -35949,7 +36152,7 @@ var makeGotMsgObs = function makeGotMsgObs() {
   });
 };
 var makeMsgStream = function makeMsgStream(type) {
-  return makeGotMsgObs().map(Object(ramda__WEBPACK_IMPORTED_MODULE_1__["prop"])('m')).filter(Object(ramda__WEBPACK_IMPORTED_MODULE_1__["propEq"])('type', type));
+  return makeGotMsgObs().map(prop('m')).filter(propEq('type', type));
 }; // export function makeGotMsgObs(){
 //   return Kefir.stream(emitter => {
 //     emitter.emit({m:{type:null},s:null});
@@ -35961,6 +36164,42 @@ var makeMsgStream = function makeMsgStream(type) {
 //     }
 //   });
 // }
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../../node_modules/webpack/buildin/global.js */ "./node_modules/webpack/buildin/global.js")))
+
+/***/ }),
+
+/***/ "./src/utils/putils.jsx":
+/*!******************************!*\
+  !*** ./src/utils/putils.jsx ***!
+  \******************************/
+/*! exports provided: flattenModule */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "flattenModule", function() { return flattenModule; });
+function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest(); }
+
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+
+function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
+
+function _iterableToArrayLimit(arr, i) { if (typeof Symbol === "undefined" || !(Symbol.iterator in Object(arr))) return; var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
+
+function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
+
+//project utilities
+var flattenModule = function flattenModule(window, R) {
+  return Object.entries(R).forEach(function (_ref) {
+    var _ref2 = _slicedToArray(_ref, 2),
+        name = _ref2[0],
+        exported = _ref2[1];
+
+    return window[name] = exported;
+  });
+};
 
 /***/ }),
 
@@ -35973,15 +36212,16 @@ var makeMsgStream = function makeMsgStream(type) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony import */ var _babel_polyfill__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babel/polyfill */ "./node_modules/@babel/polyfill/lib/index.js");
+/* WEBPACK VAR INJECTION */(function(global) {/* harmony import */ var _babel_polyfill__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babel/polyfill */ "./node_modules/@babel/polyfill/lib/index.js");
 /* harmony import */ var _babel_polyfill__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_babel_polyfill__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var _bg_db_jsx__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../bg/db.jsx */ "./src/bg/db.jsx");
 /* harmony import */ var elasticlunr__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! elasticlunr */ "./node_modules/elasticlunr/elasticlunr.js");
 /* harmony import */ var elasticlunr__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(elasticlunr__WEBPACK_IMPORTED_MODULE_2__);
 /* harmony import */ var _bg_nlp_jsx__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../bg/nlp.jsx */ "./src/bg/nlp.jsx");
 /* harmony import */ var _bg_twitterScout_jsx__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../bg/twitterScout.jsx */ "./src/bg/twitterScout.jsx");
-/* harmony import */ var ramda__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ramda */ "./node_modules/ramda/es/index.js");
-/* harmony import */ var kefir__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! kefir */ "./node_modules/kefir/dist/kefir.esm.js");
+/* harmony import */ var _utils_putils_jsx__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../utils/putils.jsx */ "./src/utils/putils.jsx");
+/* harmony import */ var ramda__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ramda */ "./node_modules/ramda/es/index.js");
+/* harmony import */ var kefir__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! kefir */ "./node_modules/kefir/dist/kefir.esm.js");
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
 
 function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
@@ -36005,6 +36245,8 @@ function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len 
 
 
 
+Object(_utils_putils_jsx__WEBPACK_IMPORTED_MODULE_5__["flattenModule"])(global, ramda__WEBPACK_IMPORTED_MODULE_6__);
+
 {
   var DEBUG = true;
 
@@ -36017,12 +36259,12 @@ function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len 
     }
   }
 }
-var inspect = Object(ramda__WEBPACK_IMPORTED_MODULE_5__["curry"])(function (prepend, x) {
+var inspect = curry(function (prepend, x) {
   console.log(prepend, x);
   return x;
 });
 
-kefir__WEBPACK_IMPORTED_MODULE_6__["default"].Property.prototype.currentValue = function () {
+kefir__WEBPACK_IMPORTED_MODULE_7__["default"].Property.prototype.currentValue = function () {
   var result;
 
   var save = function save(x) {
@@ -36038,7 +36280,7 @@ var msgBG = function msgBG(msg) {
   return self.postMessage(msg);
 };
 
-var db$ = kefir__WEBPACK_IMPORTED_MODULE_6__["default"].fromPromise(_bg_db_jsx__WEBPACK_IMPORTED_MODULE_1__["open"]()).ignoreEnd().toProperty();
+var db$ = kefir__WEBPACK_IMPORTED_MODULE_7__["default"].fromPromise(_bg_db_jsx__WEBPACK_IMPORTED_MODULE_1__["open"]()).ignoreEnd().toProperty();
 db$.onValue(function () {
   return msgBG({
     type: 'ready'
@@ -36049,32 +36291,32 @@ var getDb = function getDb() {
   return db$.currentValue();
 };
 
-var noDb$ = db$.map(ramda__WEBPACK_IMPORTED_MODULE_5__["isNil"]);
-var receivedMsg$ = kefir__WEBPACK_IMPORTED_MODULE_6__["default"].fromEvents(self, 'message');
-var msg$ = receivedMsg$.map(Object(ramda__WEBPACK_IMPORTED_MODULE_5__["prop"])('data')); //.bufferWhile(dbReady$).flatten()
+var noDb$ = db$.map(isNil);
+var receivedMsg$ = kefir__WEBPACK_IMPORTED_MODULE_7__["default"].fromEvents(self, 'message');
+var msg$ = receivedMsg$.map(prop('data')); //.bufferWhile(dbReady$).flatten()
 
 receivedMsg$.log('worker got message:');
-var getIndex$ = msg$.filter(Object(ramda__WEBPACK_IMPORTED_MODULE_5__["propEq"])('type', 'getIndex')).bufferWhileBy(noDb$).flatten();
-var getIndex = Object(ramda__WEBPACK_IMPORTED_MODULE_5__["pipe"])(function (_) {
+var getIndex$ = msg$.filter(propEq('type', 'getIndex')).bufferWhileBy(noDb$).flatten();
+var getIndex = pipe(function (_) {
   return _bg_db_jsx__WEBPACK_IMPORTED_MODULE_1__["get"](getDb(), 'misc', 'index');
-}, Object(ramda__WEBPACK_IMPORTED_MODULE_5__["andThen"])(Object(ramda__WEBPACK_IMPORTED_MODULE_5__["pipe"])(Object(ramda__WEBPACK_IMPORTED_MODULE_5__["defaultTo"])(Object(_bg_nlp_jsx__WEBPACK_IMPORTED_MODULE_3__["makeIndex"])().toJSON()), Object(ramda__WEBPACK_IMPORTED_MODULE_5__["assoc"])('index_json', ramda__WEBPACK_IMPORTED_MODULE_5__["__"], {
+}, andThen(pipe(defaultTo(Object(_bg_nlp_jsx__WEBPACK_IMPORTED_MODULE_3__["makeIndex"])().toJSON()), assoc('index_json', __, {
   type: "getIndex"
 }), inspect('will send in msg:'), msgBG)));
 getIndex$.onValue(getIndex);
-var setIndex$ = msg$.filter(Object(ramda__WEBPACK_IMPORTED_MODULE_5__["propEq"])('type', 'setIndex')).map(Object(ramda__WEBPACK_IMPORTED_MODULE_5__["prop"])('index_json')).bufferWhileBy(noDb$).flatten();
-var setIndex = Object(ramda__WEBPACK_IMPORTED_MODULE_5__["pipe"])(function (x) {
+var setIndex$ = msg$.filter(propEq('type', 'setIndex')).map(prop('index_json')).bufferWhileBy(noDb$).flatten();
+var setIndex = pipe(function (x) {
   return getDb().put('misc', x, 'index');
-}, Object(ramda__WEBPACK_IMPORTED_MODULE_5__["andThen"])(function (_) {
+}, andThen(function (_) {
   return msgBG({
     type: "setIndex"
   });
 }));
 setIndex$.onValue(setIndex);
-var updateTweets$ = msg$.filter(Object(ramda__WEBPACK_IMPORTED_MODULE_5__["propEq"])('type', 'updateTweets')).bufferWhileBy(noDb$).flatten();
+var updateTweets$ = msg$.filter(propEq('type', 'updateTweets')).bufferWhileBy(noDb$).flatten();
 updateTweets$.log('updateTweets');
-var onUpdateTweets = Object(ramda__WEBPACK_IMPORTED_MODULE_5__["pipe"])(inspect('yo'), Object(ramda__WEBPACK_IMPORTED_MODULE_5__["props"])(['index_json', 'res']), function (args) {
+var onUpdateTweets = pipe(inspect('yo'), props(['index_json', 'res']), function (args) {
   return updateTweets.apply(void 0, _toConsumableArray(args));
-}, Object(ramda__WEBPACK_IMPORTED_MODULE_5__["andThen"])(Object(ramda__WEBPACK_IMPORTED_MODULE_5__["pipe"])(Object(ramda__WEBPACK_IMPORTED_MODULE_5__["assoc"])('index_json', ramda__WEBPACK_IMPORTED_MODULE_5__["__"], {
+}, andThen(pipe(assoc('index_json', __, {
   type: "updateTweets"
 }), msgBG)));
 updateTweets$.onValue(onUpdateTweets); // updateTweets$.onValue(console.log)
@@ -36126,10 +36368,10 @@ var updateTweets = /*#__PURE__*/function () {
             tweet_ids = _context2.sent;
             // const deleted_ids = difference(tweet_ids, res.map(prop('id_str')))
             // const deleted_ids = difference(tweet_ids, res.map(prop('id')))
-            deleted_ids = Object(_bg_twitterScout_jsx__WEBPACK_IMPORTED_MODULE_4__["findDeletedIds"])(tweet_ids, res.map(Object(ramda__WEBPACK_IMPORTED_MODULE_5__["prop"])('id')));
-            new_ids = Object(ramda__WEBPACK_IMPORTED_MODULE_5__["difference"])(res.map(Object(ramda__WEBPACK_IMPORTED_MODULE_5__["prop"])('id_str')), tweet_ids);
-            new_tweets = Object(ramda__WEBPACK_IMPORTED_MODULE_5__["filter"])(function (x) {
-              return Object(ramda__WEBPACK_IMPORTED_MODULE_5__["includes"])(x.id_str, new_ids);
+            deleted_ids = Object(_bg_twitterScout_jsx__WEBPACK_IMPORTED_MODULE_4__["findDeletedIds"])(tweet_ids, res.map(prop('id')));
+            new_ids = difference(res.map(prop('id_str')), tweet_ids);
+            new_tweets = filter(function (x) {
+              return includes(x.id_str, new_ids);
             }, res); // console.log('updating tweets', {new_tweets, deleted_ids})
 
             updateDB(new_tweets, deleted_ids);
@@ -36155,15 +36397,8 @@ var updateTweets = /*#__PURE__*/function () {
   return function updateTweets(_x3, _x4) {
     return _ref2.apply(this, arguments);
   };
-}(); // async function main()  {
-//   console.log('starting worker', self)
-//   const db_prom = db.open(  ).then(msgBG({type:'ready'}))
-//   _db = await db_prom
-//   // self.addEventListener('message', onMessage)
-//   // const db_get = db.get(_db)
-//   // const db_put = db.put(_db)
-// }
-// main()
+}();
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../../node_modules/webpack/buildin/global.js */ "./node_modules/webpack/buildin/global.js")))
 
 /***/ })
 

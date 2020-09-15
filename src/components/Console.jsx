@@ -13,7 +13,10 @@ export function Console(props){
   const query = useStream(props.composeQuery,'')
   // const [text, setText] = useState('[console text]');
   const [text, setText] = useState('[console text]');
-  const [isGetRTs, setIsGetRTs] = useOption('getRTs')
+  // TODO make these generate themselves
+  const [getRTs, setGetRTs] = useOption('getRTs')
+  const [useBookmarks, setUseBookmarks] = useOption('useBookmarks')
+  const [useReplies, setUseReplies] = useOption('useReplies')
   
   
   const consoleStorageChange = async function(item, oldVal, newVal){
@@ -62,7 +65,10 @@ export function Console(props){
 
   return (
     <div class="console">
-      <span>{`$: `} {`Search Results for ${query}:`}</span>      <span class="getRTs"> <span> <input name="getRTs" type="checkbox" checked={isGetRTs} onChange={(e)=>handleInputChange(setIsGetRTs, e)}></input> <span>RTs</span> </span> </span>
+      <span>{`$: `} {`Search Results for ${query}:`}</span>      
+      <span class="getRTs"> <span> <input name="getRTs" type="checkbox" checked={getRTs} onChange={(e)=>handleInputChange(setGetRTs, e)}></input> <span>RTs</span> </span> </span>
+      <span class="useBookmarks"> <span> <input name="useBookmarks" type="checkbox" checked={useBookmarks} onChange={(e)=>handleInputChange(setUseBookmarks, e)}></input> <span>bookmarks</span> </span> </span>
+      <span class="useReplies"> <span> <input name="useReplies" type="checkbox" checked={useReplies} onChange={(e)=>handleInputChange(setUseReplies, e)}></input> <span>replies</span> </span> </span>
     </div> 
   );
 }

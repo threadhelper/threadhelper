@@ -2,7 +2,10 @@ import { getMode, getTweetId, isFocused, elIntersect } from '../utils/wutils.jsx
 import { msgBG } from '../utils/dutils.jsx';
 import { onRoboClick } from '../components/Robo.jsx';
 import Kefir, { sequentially } from 'kefir';
-import { curry, compose, prop } from '../utils/fp.jsx'
+import { flattenModule } from '../utils/putils.jsx'
+import * as R from 'ramda';
+flattenModule(global,R)
+
 
 const editorClass = "DraftEditor-editorContainer"
 const editorSelector = ".DraftEditor-editorContainer"

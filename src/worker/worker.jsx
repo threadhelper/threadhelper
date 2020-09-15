@@ -4,7 +4,9 @@ import * as db from '../bg/db.jsx'
 import * as elasticlunr from 'elasticlunr'
 import {makeIndex, updateIndex, search, loadIndex} from '../bg/nlp.jsx'
 import {findDeletedIds} from '../bg/twitterScout.jsx'
-import { __, isNil, defaultTo, curry, filter, minBy, maxBy, includes, difference, prop, props, propEq, pipe, andThen, map, assoc } from 'ramda'
+import { flattenModule } from '../utils/putils.jsx'
+import * as R from 'ramda';
+flattenModule(global,R)
 import Kefir from 'kefir';
 
 
@@ -108,16 +110,3 @@ const updateTweets = async (index_json, res) => {
   getDb().put('misc', index_json, 'index'); //re-store index
   return index_json
 }
-
-// async function main()  {
-  
-
-//   console.log('starting worker', self)
-//   const db_prom = db.open(  ).then(msgBG({type:'ready'}))
-//   _db = await db_prom
-//   // self.addEventListener('message', onMessage)
-//   // const db_get = db.get(_db)
-//   // const db_put = db.put(_db)
-// }
-
-// main()

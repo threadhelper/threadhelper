@@ -109,7 +109,9 @@ function clearSearchResults(){
 
 import { obsAdded, obsRemoved, obsCharData } from '../utils/kefirMutationObs.jsx';
 import { Kefir, fromEvents, stream } from 'kefir';
-import { compose, curry, prop } from '../utils/fp.jsx';
+import { flattenModule } from '../utils/putils.jsx'
+import * as R from 'ramda';
+flattenModule(window,R)
 
 export function makeComposeObs(box){
   const textChange$ = obsCharData(box, `${editorSelector} span`)
