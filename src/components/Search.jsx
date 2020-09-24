@@ -20,7 +20,7 @@ export function Search(props){
 
   const _setTweets = (t)=>{setTweets(t);}
   const searchStorageChange = async function(item, oldVal, newVal){
-    // console.log(` search storage ${item} change active?`, [props.active, myRef])
+    console.log(` search storage ${item} change active?`, [props.active, myRef])
     if(!props.active) return
     switch(item){
       case "search_results":

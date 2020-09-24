@@ -3,6 +3,9 @@ import { useState, useRef, useEffect, useContext, useCallback } from 'preact/hoo
 import { getData, setData, msgBG, makeOnStorageChanged, requestRoboTweet } from '../utils/dutils.jsx';
 import { IOStreams } from './ThreadHelper.jsx';
 import { useStream } from './useStream.jsx';
+import { flattenModule } from '../utils/putils.jsx'
+import * as R from 'ramda';
+flattenModule(global,R)
 
 
 
@@ -43,7 +46,7 @@ const getQuery = async ()=>{return await getData('search_query')}
 
 export function Robo(props){
   // Add `name` to the initial state
-  const [tweet, setTweet] = useState('...');
+  const [tweet, setTweet] = useState('');
   const [synced, setSynced] = useState('synced');
   // const IO = useContext(IOStreams); //for testing
   const IO = props.streams
@@ -90,13 +93,16 @@ export function Robo(props){
   //   }
   // }, [])
 
-
+  // {(!isNil(tweet) && !isEmpty(tweet)) ? `: ${query} ${tweet}` : ''}
+  const isThere = x => !isNil(x) && !isEmpty(x) 
+  // const displayRoboTweet = (tweet, query) => (<span><b> {`: ${query}`}</b> {`${tweet}`}</span>)
   return (
-    <div class="robo">
-      <div class={`sync ${synced}`} onClick={onRoboClick}>
+   
+    <div class="robo"> 
+      <div class={`robo-sync ${synced}`} onClick={onRoboClick}>{`🤖`}
         <span class="tooltiptext"> {`robo, click to get a completion`} </span>  
       </div>
-      <div class="roboTweet"> {`🤖: `}<b>{`${query}`}</b>{`${tweet}`}</div>
+       <span><b>{(isThere(tweet)) ? `: ${query}` : ''}</b>{(isThere(tweet)) ? `${tweet}` : ''}</span>
     </div>
   );
 }

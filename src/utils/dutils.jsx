@@ -1,7 +1,18 @@
 import Kefir from 'kefir';
-import { flattenModule } from './putils.jsx'
+import { flattenModule, inspect } from './putils.jsx'
 import * as R from 'ramda';
 flattenModule(global,R)
+
+// DEFAULT OPTIONS V IMPORTANT
+export const defaultOptions = () => {return {
+  name: 'options',
+  getRTs: {name:'getRTs', type:'searchFilter', value:true},
+  useBookmarks: {name:'useBookmarks', type:'searchFilter', value:true},
+  useReplies: {name:'useReplies', type:'searchFilter', value:true},
+  roboActive: {name:'roboActive', type:'featureFilter', value:false},
+  hasArchive: {name:'hasArchive', type:'flag', value:false},
+}}
+
 
 //returns a promise that gets a value from chrome local storage 
 export async function getData(key) {
@@ -48,18 +59,11 @@ export async function removeData(keys){
   });
 }
 
-export const inspect = curry ((prepend, x)=>{console.log(prepend, x); return x;})
 export const setStg = curry( (key,val) => setData({[key]:val}) )
 
-// DEFAULT OPTIONS V IMPORTANT
-export const defaultOptions = () => {return {
-  name: 'options',
-  getRTs: {name:'getRTs', type:'searchFilter', value:true},
-  useBookmarks: {name:'useBookmarks', type:'searchFilter', value:true},
-  useReplies: {name:'useReplies', type:'searchFilter', value:true},
-}}
+const addNewDefaultOptions = (oldOptions) => mergeLeft(oldOptions,defaultOptions())
 
-export const getOptions = async () => getData('options').then(defaultTo(defaultOptions()))
+export const getOptions = async () => getData('options').then(pipe(defaultTo(defaultOptions()), addNewDefaultOptions))
 
 export const updateOptionStg = curry(async (name, val)=>
   {
@@ -145,8 +149,35 @@ export const makeGotMsgObs = () =>{
 
 export const makeMsgStream = (type) => makeGotMsgObs().map(prop('m')).filter(propEq('type',type))
 
+// optionsChange$ :: change -> change
+export const makeOptionsChangeObs = async (storageChange$) => {
+  const cachedOptions = {oldVal:null, newVal:await getOptions()}
+  return storageChange$.filter(x=>x.itemName=='options').toProperty(()=>cachedOptions)
+}
+
+// const isOptionSame = x=>(isNil(x.oldVal) && isNil(x.newVal)) || (x.oldVal[itemName] == x.newVal[itemName])
+const isOptionSame = curry ((name, x)=> (isNil(x.oldVal) && isNil(x.newVal)) || (!isNil(x.oldVal) && !isNil(x.newVal) && (path(['oldVal', name, 'value'],x) === path(['newVal', name, 'value'],x))) )
 
 
+// makeOptionsObs :: String -> a
+export const makeOptionObs = curry ((optionsChange$, itemName) => 
+  optionsChange$.filter(x=>!isOptionSame(itemName,x))
+  .map(path([['newVal'], itemName]))
+  .map(pipe(
+    defaultTo(prop(itemName,defaultOptions()))))
+  .map(inspect(`make option obs for ${itemName}`))/*.toProperty()*/)
+
+const listSearchFilters = pipe(prop('newVal'), values, filter(propEq('type', 'searchFilter')), map(prop('name')), R.map(makeOptionObs),inspect('listsearchfilters'))
+const combineOptions = (...args) => pipe(inspect('combineopt'), reduce((a,b)=>assoc(b.name, b.value, a),{}))(args)
+
+
+export const makeSearchFiltersObs = ()=>Kefir.combine([getRT$, useBookmarks$, useReplies$], combineOptions).toProperty()
+
+// const searchFilters$ = Kefir.combine(
+  // const filters = listSearchFilters(optionsChange$.currentValue())
+//   filters,
+//   combineOptions
+//   ).toProperty()
 
 
 // export function makeGotMsgObs(){

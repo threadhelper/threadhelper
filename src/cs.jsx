@@ -27,15 +27,15 @@ x define destruction and dispatch its event on start up
 import "@babel/polyfill";
 import { h, render, Component } from 'preact';
 // import { useState, useCallback } from 'preact/hooks';
+import { flattenModule, inspect } from './utils/putils.jsx'
 import { updateTheme, getMode, isSidebar, getIdFromUrl, getCurrentUrl } from './utils/wutils.jsx'
-import { getData, setData, msgBG, makeGotMsgObs, makeStoragegObs, inspect, requestRoboTweet } from './utils/dutils.jsx';
-import { makeRoboStream, makeActionStream, makeComposeFocusObs, makeReplyObs, replyToWhom } from './ui/inputsHandler.jsx'
+import { getData, setData, msgBG, makeGotMsgObs, makeStoragegObs, getOptions, requestRoboTweet } from './utils/dutils.jsx';
+import { makeRoboStream, makeActionStream, makeComposeFocusObs, makeReplyObs, getHostTweetId, makeLastClickedObs, makeAddBookmarkStream, makeRemoveBookmarkStream, makeDeleteEventStream } from './ui/inputsHandler.jsx'
 import { makeSidebarHome, makeSidebarCompose, makeHomeSidebarObserver, makeFloatSidebarObserver, injectSidebarHome, injectDummy } from './ui/sidebarHandler.jsx'
 import { makeComposeObs } from './ui/composeHandler.jsx'
 import { makeLastStatusObs, makeModeObs, makeBgColorObs } from './ui/tabsHandler.jsx'
 import css from '../style/cs.scss'
 import Kefir from 'kefir';
-import { flattenModule } from './utils/putils.jsx'
 import * as R from 'ramda';
 flattenModule(window,R)
 import ThreadHelper from './components/ThreadHelper.jsx'
@@ -82,6 +82,7 @@ function rememberSub(sub){
   subscriptions.push(sub)
 }
 async function onLoad(thBarHome, thBarComp){
+  // const optionsChange$ = 
   const gotMsg$ = makeGotMsgObs().map(x=>x.m)
   const storageChange$ = makeStoragegObs()
   const sync$ = storageChange$.filter(x=>x.itemName=='sync').map(prop('newVal'))
@@ -90,22 +91,25 @@ async function onLoad(thBarHome, thBarComp){
   syncDisplay$.log('syncDisplay')
 
   const mode$ = gotMsg$.filter(m => m.type == "tab-change-url").map(m=>getMode(m.url))
-  
+  const lastStatus$ = makeLastStatusObs(mode$)
+  // lastStatus$.log("last status: ")
+  const getTargetId = getHostTweetId(lastStatus$)
+  const lastClickedId$ = makeLastClickedObs().map(getTargetId).filter(x=>!isNil(x)).toProperty()
+  lastClickedId$.log('last clicked id')
+
   const actions$ = makeActionStream()
   console.log('action stream created',actions$)
-  const _sub_actions = actions$.observe({
-    value(value) {
-      console.log(`action taken: ${value}`)
-      handlePosting()
-    },
-    error(error) {
-      console.log('error:', error);
-    },
-    end() {
-      console.log('end');
-    },
-  });
+  const _sub_actions = actions$.delay(2000).observe({value(_){handlePosting()},});
   rememberSub(_sub_actions)
+
+  const makeIdMsg = type => {return {type:type, id:lastClickedId$.currentValue()}}
+  const addBookmark$ =  makeAddBookmarkStream().map(inspect('add bookmark')).map(_=>makeIdMsg('add-bookmark'))
+  const removeBookmark$ = makeRemoveBookmarkStream().map(inspect('remove bookmark')).map(_=>makeIdMsg('remove-bookmark'))
+  const delete$ = makeDeleteEventStream().map(inspect('delete')).map(_=>makeIdMsg('delete-tweet'))
+  const targetedTweetActions$ = Kefir.merge([addBookmark$, removeBookmark$, delete$])
+  targetedTweetActions$.log("targetedTweetAction")
+  targetedTweetActions$.onValue(msgBG)
+  //getTargetId
 
   const bgColor$ = makeBgColorObs()
   const getBgColor = x=>x.style.backgroundColor
@@ -134,14 +138,10 @@ async function onLoad(thBarHome, thBarComp){
   const stoppedWriting$ = composeQuery$.skipDuplicates().filter(x=>!isEmpty(x)).debounce(minIdleTime)
   stoppedWriting$.log("stoppedWriting")
 
-  
-  const lastStatus$ = makeLastStatusObs(mode$)
-    lastStatus$.log("last status: ")
     
-  const reply$ = makeReplyObs(mode$)
-  
-  const replyTo$ = reply$.map(replyToWhom(lastStatus$)).toProperty(()=>null)
-    replyTo$.log("replying to ")
+  const reply$ = makeReplyObs(mode$)  
+  const replyTo$ = reply$.map(getTargetId).toProperty(()=>null)
+  // replyTo$.log("replying to ")
     
   const robo$ = Kefir.merge([makeRoboStream(), stoppedWriting$]).throttle(minIdleTime, {trailing: false})
   robo$.onValue(_=>requestRoboTweet(composeQuery$.currentValue(), replyTo$.currentValue()))

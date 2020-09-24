@@ -35,7 +35,7 @@ export function SyncIcon(props){
       //   wiz.has_archive = newVal;
       //   break;
       case "sync":
-        setSynced( isNil(newVal) ? false  : true )
+        setSynced( (isNil(newVal) || !newVal ) ? 'unsynced' : 'synced' )
         break;
       case "tweets_meta":
         console.log(`meta changed ${newVal}`)

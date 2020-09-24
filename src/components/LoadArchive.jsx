@@ -4,7 +4,7 @@ import { makeOnStorageChanged, getData, setData, msgBG } from '../utils/dutils.j
 import { SyncIcon } from './Sync.jsx';
 import {SettingsButton} from './Settings.jsx';
 import GearIcon from '../../images/gear.svg';
-import { defaultTo, curry, propEq, find } from 'ramda'
+import { defaultTo, curry, propEq, find, take } from 'ramda'
 
 
 function LoadArchiveIcon(){  
@@ -45,10 +45,10 @@ export const ArchiveUploader = props => {
   // Parses json and stores in temp to be processed by BG
   function importArchive(){
     const result = this.result.replace(/^[a-z0-9A-Z\.]* = /, "");
-    const importedTweetArchive = JSON.parse(result);
+    const importedTweetArchive =  take(20000, JSON.parse(result));
     // 
     console.log('setting archive', importedTweetArchive)
-    setData({temp_archive: importedTweetArchive}).then(()=>{
+    setData({temp_archive:importedTweetArchive}).then(()=>{
       msgBG({type:"temp-archive-stored"});
       hiddenFileInput.current.value = null;
     })

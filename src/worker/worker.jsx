@@ -49,7 +49,6 @@ const getIndex = pipe(
   andThen(pipe(
     defaultTo(makeIndex().toJSON()),
     assoc('index_json', __, {type:`getIndex`}),
-    inspect('will send in msg:'),
     msgBG,
     ))
   )
@@ -69,7 +68,6 @@ setIndex$.onValue(setIndex)
 const updateTweets$ = msg$.filter(propEq('type','updateTweets')).bufferWhileBy(noDb$).flatten()
 updateTweets$.log('updateTweets')
 const onUpdateTweets = pipe(
-  inspect('yo'),
   props(['index_json', 'res']), 
   args=>updateTweets(...args), 
   andThen(pipe(
@@ -78,6 +76,25 @@ const onUpdateTweets = pipe(
 updateTweets$.onValue(onUpdateTweets)
 // updateTweets$.onValue(console.log)
 
+const addTweets$ = msg$.filter(propEq('type','addTweets')).bufferWhileBy(noDb$).flatten()
+addTweets$.log('addTweets')
+const onAddTweets = pipe(
+  props(['index_json', 'res']), 
+  args=>addTweets(...args), 
+  andThen(pipe(
+    assoc('index_json', __, {type:`addTweets`}),
+    msgBG )))
+addTweets$.onValue(onAddTweets)
+
+const removeTweets$ = msg$.filter(propEq('type','removeTweets')).bufferWhileBy(noDb$).flatten()
+removeTweets$.log('removeTweets')
+const onRemoveTweets = pipe(
+  props(['index_json', 'res']), 
+  args=>removeTweets(...args), 
+  andThen(pipe(
+    assoc('index_json', __, {type:`removeTweets`}),
+    msgBG )))
+removeTweets$.onValue(onRemoveTweets)
 
 
 // IMPURE, updates idb
@@ -92,20 +109,42 @@ const updateDB = async (new_tweets, deleted_ids)=>{
 
 
 const updateTweets = async (index_json, res) => {
-  console.log("inside updateTweets",{index_json, res})
+  // console.log("inside updateTweets",{index_json, res})
   const tweet_ids = await getDb().getAllKeys('tweets')
-  // const deleted_ids = difference(tweet_ids, res.map(prop('id_str')))
-  // const deleted_ids = difference(tweet_ids, res.map(prop('id')))
   const deleted_ids = findDeletedIds(tweet_ids, res.map(prop('id')))
   
   const new_ids = difference(res.map(prop('id_str')), tweet_ids)
   const new_tweets = filter(x=>includes(x.id_str, new_ids), res)
   
-  // console.log('updating tweets', {new_tweets, deleted_ids})
   updateDB(new_tweets, deleted_ids)
 
   let _index = loadIndex(index_json)
   _index = await updateIndex(_index, new_tweets, deleted_ids)
+  index_json = _index.toJSON()
+  getDb().put('misc', index_json, 'index'); //re-store index
+  return index_json
+}
+
+const addTweets = async (index_json, res) => {
+  const tweet_ids = await getDb().getAllKeys('tweets')
+  
+  const new_ids = difference(res.map(prop('id_str')), tweet_ids)
+  const new_tweets = filter(x=>includes(x.id_str, new_ids), res)
+  console.log('adding tweets',res)
+  updateDB(new_tweets, [])
+
+  let _index = loadIndex(index_json)
+  _index = await updateIndex(_index, new_tweets, []) //this should have an empty list wtf
+  index_json = _index.toJSON()
+  getDb().put('misc', index_json, 'index'); //re-store index
+  return index_json
+}
+
+const removeTweets = async (index_json, ids) => {
+  updateDB([], ids)
+
+  let _index = loadIndex(index_json)
+  _index = await updateIndex(_index, [], ids)
   index_json = _index.toJSON()
   getDb().put('misc', index_json, 'index'); //re-store index
   return index_json

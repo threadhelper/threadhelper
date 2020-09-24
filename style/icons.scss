@@ -10,14 +10,38 @@
       width: 200px;
       left: 100%;
     }
-  }
-  .synced {
-    background-color: rgb(0,200,0); 
+
+    &.synced {
+      background-color: rgb(0,200,0); 
+    }
+  
+    &.unsynced{
+      background-color: rgb(200,100,0); 
+    }
   }
 
-  .unsynced{
-    background-color: rgb(200,100,0); 
+
+  .robo-sync{  
+    position: relative;
+
+    &.unsynced::before {
+      content: "...";
+    }
+    &.synced::before {
+      content: "";
+    }
+
+    .tooltiptext{
+      width: 200px;
+      left: 100%;
+    }
+    /* Show the tooltip text when you mouse over the tooltip container */
+    
+    &:hover .tooltiptext {
+      visibility: visible;
+    }
   }
+
   /*For archive loading button*/
   .tooltiptext{
     visibility: hidden;
@@ -48,4 +72,34 @@
   /* Show the tooltip text when you mouse over the tooltip container */
   .sync:hover .tooltiptext {
     visibility: visible;
+  }
+
+  .filter-icon{
+    height:calc(17px);
+    width:calc(17px);
+  }
+  
+  .filter-icon:hover{
+    
+  }
+  
+  .filter-checkbox{
+    display:none;
+  }
+
+  input[type="checkbox"]:checked + label{
+    display:inline-block;
+    fill:var(--main-txt-color);
+  }
+  input[type="checkbox"] + label{
+    display:inline-block;
+    fill:var(--neutral-color);
+  }
+
+  .settings-icon{
+    fill:var(--neutral-color);
+  }
+  
+  .settings-icon:hover{
+    fill:var(--main-txt-color);
   }

@@ -19,7 +19,7 @@ export function SettingsButton(props){
   return (
     <div className="nav-item" >
       <div class="options icon-button" > 
-        < GearIcon onClick={() => setOpen(!open)} onBlur={closeMenu} /> 
+        < GearIcon class='settings-icon' onClick={() => setOpen(!open)} onBlur={closeMenu} /> 
       </div>
       {open && <DropdownMenu closeMenu={()=>setOpen(false)}/>}
       

@@ -6,6 +6,7 @@ import { Robo } from './Robo.jsx';
 import { Header } from './Header.jsx';
 import { Search } from './Search.jsx';
 import { useStream } from './useStream.jsx';
+import { useOption } from './useOption.jsx';
 
 
 function useStorageState(){
@@ -24,38 +25,11 @@ const Theme = createContext('light');
 // }
 
 export const IOStreams = createContext('[placeholder IO stream val]')
-// export const RoboStream = createContext('[placeholder robo stream val]')
-// export const ComposeQueryStream = createContext('[placeholder compose query stream val]')
-// export const ReplyToStream = createContext('[placeholder reply to stream val]')
-
-
 
 export default function ThreadHelper(props){
-
-  // Add `name` to the initial state
   const [active, setActive] = useState(true);
-  // const isFloatBar = useStream(props.float)
-  // const [mode, setMode] = useState(getMode(window.location.href));
-  // const currentVal = useStream(props.streams.actions, '[placeholder stream val 2]') //for testing
   const myRef = useRef(null);
-
-
   
-  // /*Side-Effects are at the heart of many modern Apps. Whether you want to fetch some data from an API or trigger an effect on the document, 
-  // you'll find that the useEffect fits nearly all your needs.
-  // Think of a component which needs to subscribe to some data when it mounts and needs to unsubscribe when it unmounts. 
-  // This can be accomplished with useEffect too. To run any cleanup code we just need to return a function in our callback.*/
-  // // To subscribe to storage changes
-  // useEffect(() => {
-  //   setActive(isFloatBar == 'render' ? false : true)
-  //   // console.log(`setting active to ${isFloatBar == 'render' ? 'false' : 'true'}`)
-  //   return () => {   
-  //     // console.log("master TH unmounting")
-  //   };
-  // }, [isFloatBar]);
-
-  
-
 
   return (
     // <IOStreams.Provider value={props.streams}>
@@ -68,11 +42,11 @@ export default function ThreadHelper(props){
 }
 
 function Sidebar(props){
-
+  const [roboActive, setRoboActive] = useOption('roboActive')
   return(
     <div class="sidebar">
       <Header streams={props.streams}/>
-      <Robo active={props.active} streams={props.streams}/>
+      {!roboActive ? <Robo active={props.active} streams={props.streams}/> : null}
       <Search active={props.active} composeQuery={props.streams.composeQuery}/>
     </div>
   );

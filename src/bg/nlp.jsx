@@ -86,7 +86,7 @@ export const getTopNResults = curry(async (filters, screen_name, n_tweets, index
   const getDocUsername = (ref) => index.documentStore.getDoc(ref).username
   const isRT = (x)=>getDocUsername(x.ref) != screen_name
 
-  const filterRTs = filter(either(_=>filters.getRTs, y=>index.documentStore.getDoc(y.ref).username === screen_name))
+  const filterRTs = filter(either(_=>filters.getRTs, y=>index.documentStore.getDoc(y.ref).username === screen_name || index.documentStore.getDoc(y.ref).is_bookmark))
   const isNotReply = x => isNil(x.reply_to) || x.reply_to === x.username
   const filterReplies = filter(either(_=>filters.useReplies, y=>isNotReply(index.documentStore.getDoc(y.ref))))
   const isBookmark = prop('is_bookmark')
@@ -100,7 +100,7 @@ export const getTopNResults = curry(async (filters, screen_name, n_tweets, index
     take(n_tweets),
     tap(x=>{
       // console.log('hi',{x,pass:filter(y=>filters.getRTs || index.documentStore.getDoc(y.ref).username === screen_name, x), index, getRT:filters.getRTs, username:screen_name, names:map(y=>index.documentStore.getDoc(y.ref).username, x)})
-      console.log('hi',{xdoc:map(y=>index.documentStore.getDoc(y.ref),x) ,pass:map(isNotReply, map(y=>index.documentStore.getDoc(y.ref),x)),  index, useRep:filters.useReplies, username:screen_name, names:map(y=>index.documentStore.getDoc(y.ref).username, x)})
+      // console.log('hi',{xdoc:map(y=>index.documentStore.getDoc(y.ref),x) ,pass:map(isNotReply, map(y=>index.documentStore.getDoc(y.ref),x)),  index, useRep:filters.useReplies, username:screen_name, names:map(y=>index.documentStore.getDoc(y.ref).username, x)})
       // console.log('hi',{x,index})
     }),
     map(prop('ref')),

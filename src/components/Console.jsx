@@ -5,6 +5,9 @@ import { useOption } from './useOption.jsx';
 import { useStream } from './useStream.jsx';
 import Kefir, { sequentially } from 'kefir';
 import {pipe, prop, curry} from 'ramda'
+import BookmarkIcon from '../../images/bookmark.svg';
+import ReplyIcon from '../../images/reply.svg';
+import RetweetIcon from '../../images/retweet.svg';
 
 
 
@@ -65,10 +68,19 @@ export function Console(props){
 
   return (
     <div class="console">
-      <span>{`$: `} {`Search Results for ${query}:`}</span>      
-      <span class="getRTs"> <span> <input name="getRTs" type="checkbox" checked={getRTs} onChange={(e)=>handleInputChange(setGetRTs, e)}></input> <span>RTs</span> </span> </span>
-      <span class="useBookmarks"> <span> <input name="useBookmarks" type="checkbox" checked={useBookmarks} onChange={(e)=>handleInputChange(setUseBookmarks, e)}></input> <span>bookmarks</span> </span> </span>
-      <span class="useReplies"> <span> <input name="useReplies" type="checkbox" checked={useReplies} onChange={(e)=>handleInputChange(setUseReplies, e)}></input> <span>replies</span> </span> </span>
+      <span>{`Filters:`}</span>      
+      <span class="getRTs"> 
+        <input id="getRTs" name="getRTs" class='filter-checkbox' type="checkbox" checked={getRTs} onChange={(e)=>handleInputChange(setGetRTs, e)}></input> 
+        <label for="getRTs" >< RetweetIcon class='filter-icon' onClick={_ => _} /> </label>
+      </span>
+      <span class="useBookmarks"> 
+        <input id="useBookmarks" name="useBookmarks" class='filter-checkbox' type="checkbox" checked={useBookmarks} onChange={(e)=>handleInputChange(setUseBookmarks, e)}></input> 
+        <label for="useBookmarks" > < BookmarkIcon class='filter-icon' onClick={_ => _} /> </label>
+      </span>
+      <span class="useReplies"> 
+        <input id="useReplies" name="useReplies" class='filter-checkbox' type="checkbox" checked={useReplies} onChange={(e)=>handleInputChange(setUseReplies, e)}></input> 
+        <label for="useReplies" > < ReplyIcon class='filter-icon' onClick={_ => _} /> </label>
+      </span>
     </div> 
   );
 }

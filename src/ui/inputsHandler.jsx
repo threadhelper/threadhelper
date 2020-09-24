@@ -2,11 +2,11 @@ import { getMode, getTweetId, isFocused, elIntersect } from '../utils/wutils.jsx
 import { msgBG } from '../utils/dutils.jsx';
 import { onRoboClick } from '../components/Robo.jsx';
 import Kefir, { sequentially } from 'kefir';
-import { flattenModule } from '../utils/putils.jsx'
+import { flattenModule, inspect } from '../utils/putils.jsx'
 import * as R from 'ramda';
 flattenModule(global,R)
 
-
+const dateSelector = 'a time'
 const editorClass = "DraftEditor-editorContainer"
 const editorSelector = ".DraftEditor-editorContainer"
 const tweetButtonSelectors = '[data-testid="tweetButtonInline"], [data-testid="tweetButton"]'
@@ -14,6 +14,8 @@ const sideBarSelector = '[data-testid="sidebarColumn"]'
 export const rtConfirmSelector = '[data-testid="retweetConfirm"]'
 export const unRtConfirmSelector = '[data-testid="unretweetConfirm"]'
 const deleteConfirmSelector = '[data-testid="confirmationSheetConfirm"]'
+const bookmarkButtonSelector ='#layers > div.css-1dbjc4n.r-1d2f490.r-105ug2t.r-u8s1d.r-zchlnj.r-ipm5af > div > div > div > div:nth-child(2) > div.css-1dbjc4n.r-yfoy6g.r-1f0042m.r-xnswec.r-1ekmkwe.r-1udh08x.r-u8s1d > div > div > div > div:nth-child(2)'
+const bookmarkRemoveSelector ='#layers > div.css-1dbjc4n.r-1d2f490.r-105ug2t.r-u8s1d.r-zchlnj.r-ipm5af > div > div > div > div:nth-child(2) > div.css-1dbjc4n.r-yfoy6g.r-1f0042m.r-xnswec.r-1ekmkwe.r-1udh08x.r-u8s1d > div > div > div > div:nth-child(2) > div.css-1dbjc4n.r-16y2uox.r-1wbh5a2 > div > span'
 const replySelector = 'div[aria-label~="Reply"]'
 // const tweetCardSelector = 'article div[data-testid="tweet"]'
 const tweetCardSelector = 'article'
@@ -88,6 +90,13 @@ export function makeDeleteStream(){
   const deleteStream =  inputStream(deleteShortCond, docClickCondStream(deleteConfirmSelector)).map(x=>'delete')
   return deleteStream
 }
+// stream tweet delete events
+export function makeDeleteEventStream(){
+  // Cond :: Event -> Bool
+  const deleteShortCond = e => (e.key === 'Enter' && isDeleteFocused()) 
+  const deleteStream =  inputStream(deleteShortCond, docClickCondStream(deleteConfirmSelector))
+  return deleteStream
+}
 
 // stream robo shortcut events
 export function makeRoboStream(){
@@ -97,27 +106,28 @@ export function makeRoboStream(){
   return roboStream
 }
 
-
-// tweet posting actions
-export function makeActionStream(){  
-  return Kefir.merge([makePostStream(), makeRtStream(), makeUnRtStream(), makeDeleteStream()])
+// stream tweet bookmark adds events
+// () -> event
+export const makeAddBookmarkStream = () => {
+  const bookmarkShortCond = e => (e.key === 'b' && isTweetCardFocused()) 
+  return inputStream(bookmarkShortCond, docClickCondStream(bookmarkButtonSelector)).filter(e=>e.target.textContent.includes('Add'))//.map(x=>'bookmark')
+}
+// () -> event
+export function makeRemoveBookmarkStream(){
+  return fromClick(docClickCondStream(bookmarkRemoveSelector)).filter(e=>e.target.textContent.includes('Remove'))//.map(x=>'remove_bookmark')
 }
 
 
-// export function setUpComposeListener(){
-//   console.log('set up compose listener')
-//   document.addEventListener('focusin',onFocusIn);
-//   document.addEventListener('focusout',onFocusOut);
-// }
-
-// // EVENT DELEGATION CRL, EVENT BUBBLING FTW
-// // listeners for replies, retweets, deletes
-// export function setUpPublishListeners(){
-//   console.log("set up publish listener")
-//   document.addEventListener('click',onButtonClicked);
-//   document.addEventListener('keydown', onShortcut);
-// }
-
+// tweet posting actions
+export function makeActionStream(){  
+  return Kefir.merge([
+    makePostStream(), 
+    makeRtStream(), 
+    makeUnRtStream(), 
+    // makeDeleteStream(),
+    // makeBookmarkStream()
+  ])
+}
 
 export function makeComposeFocusObs(){
   const focusIn = Kefir.fromEvents(document.body, 'focusin').filter(_ => getMode() != "other").filter(_=>isFocused(editorSelector))//.map(_=>'focused')
@@ -128,31 +138,49 @@ export function makeComposeFocusObs(){
 }
 
 
-
 // Returns a property (has a current value), not a stream
 export function makeReplyObs(mode$){
   const replyClickCond = docClickCondStream(replySelector)
   const replyShortCond = e => (e.key === 'r' && isTweetCardFocused()) 
-  const notReplying$ =  mode$.filter(m=>m!='compose').map(_=>null)
   const reply$ = inputStream(replyShortCond, replyClickCond)
-  const replyObs$ = Kefir.merge([reply$, notReplying$]).skipDuplicates()
+  const notReplying$ =  mode$.filter(m=>m!='compose').map(_=>null)
+  // const replyObs$ = Kefir.merge([reply$, notReplying$]).skipDuplicates()
+  const replyObs$ = Kefir.merge([reply$]).skipDuplicates()
   return replyObs$
 }
 
-function replyEl2TweetEl(replyEl){
+// actionEl2TweetEl :: element -> element
+function actionEl2TweetEl(replyEl){
   return replyEl.closest(tweetCardSelector)
 }
 
-export const replyToWhom = curry((lastStatus$, e) => {
-  if(!(e != null)) return null //if null, we're not replying to anything
-  const dateSelector = 'a time'
-  const hasDate = el => el.querySelectorAll(dateSelector).length > 0 
-  const tweetCard = replyEl2TweetEl(e.target)
-  console.log('reply to whom tweet card', tweetCard)
-  
-  const id = hasDate(tweetCard) ? getTweetId(tweetCard) : lastStatus$.currentValue()
-  return id
+// hasDate :: element -> Bool
+const hasDate = el => el.querySelectorAll(dateSelector).length > 0 
+
+
+export const makeLastClickedObs = ()=>
+  fromClick(docClickCondStream('article *'))
+
+// getHostTweetId :: lastStatus$ -> event -> id
+// Gets the id of the tweet on which an action  (the event) is being performed
+export const getHostTweetId = curry((lastStatus$, e) => {
+  // if(!(e != null)) return null //if null, we're not replying to anything
+  return pipe(
+    prop('target'),
+    actionEl2TweetEl,
+    ifElse(
+      isNil,
+      _=>null,
+      ifElse(
+        hasDate,
+        getTweetId,
+        _=> lastStatus$.currentValue()
+      )
+    )
+  )(e)
 })
+
+
 
 Kefir.Property.prototype.currentValue = function() {
   var result;

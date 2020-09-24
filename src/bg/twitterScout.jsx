@@ -7,6 +7,10 @@ export const getUserInfo = async (getAuthInit) => await fetch(`https://api.twitt
 
 export const updateQuery = async (getAuthInit, username, count) => await fetch(makeUpdateQueryUrl(username, count), getAuthInit()).then(x => x.json())
 
+export const tweetLookupQuery = curry(async (getAuthInit, ids) => {
+  console.trace('inside tweetLookupQuery', ids)
+  return await fetch(`https://api.twitter.com/1.1/statuses/lookup.json?id=${R.join(",",ids)}`, getAuthInit()).then(x => x.json())
+})
 
 const getMaxId = (res) => res.length > 1 ? res[res.length - 1].id : null
 
@@ -168,68 +172,72 @@ export const apiToTweet = (entry) => {
 }
 
 // archToTweet :: archive_entry -> th_tweet
-export const archToTweet = curry((user_info, entry)=>{
-  let rt = re.exec(entry.full_text);  
-  const t = prop('tweet', entry)
+export const archToTweet = curry((getUserInfo, entry)=>{
+  const user_info = getUserInfo()
+  const default_pic_url = 'https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png'
+  let re = /RT @([a-zA-Z0-9_]+).*/
+  let rt_tag = /RT @([a-zA-Z0-9_]+:)/
+  let t = prop('tweet', entry)
+  let rt = re.exec(t.full_text);  
   const isOwnTweet = isNil(rt) || rt[1] === user_info.screen_name
-  const findAuthor =  ()=>t.entities.user_mentions.find(t=>{return t.screen_name.toLowerCase() === user_info.screen_name.toLowerCase()})
+  const findAuthor =  t=>t.entities.user_mentions.find(t=>{return t.screen_name.toLowerCase() === rt[1].toLowerCase()})
 
   const init_tweet = {
     username : !isNil(rt) ? rt[1] : user_info.screen_name,
     text: !isNil(rt) ? t.full_text.replace(rt_tag,'') : t.full_text,
-    name: isOwnTweet ? user_info.name : findAuthor(),  // If I'm tweeting/retweeting myself
+    name: isOwnTweet ? user_info.name : findAuthor(t).name,  // If I'm tweeting/retweeting myself
     profile_image: isOwnTweet ? user_info.profile_image_url_https : default_pic_url,
     retweeted: isOwnTweet ? false : true
   }
 
-  let tweet = toTweetCommon(init_tweet,entry)
+  let tweet = toTweetCommon(init_tweet,t)
   // Add full quote info.
   if (tweet.has_quote && tweet.is_quote_up) { 
     tweet.quote = {
       // Basic info.
-      text: entry.quoted_status.full_text || entry.quoted_status.text,
-      name: entry.quoted_status.user.name,
-      username: entry.quoted_status.user.screen_name,
-      time: new Date(entry.quoted_status.created_at).getTime(),
-      profile_image: entry.quoted_status.user.profile_image_url_https,
+      text: t.quoted_status.full_text || t.quoted_status.text,
+      name: t.quoted_status.user.name,
+      username: t.quoted_status.user.screen_name,
+      time: new Date(t.quoted_status.created_at).getTime(),
+      profile_image: t.quoted_status.user.profile_image_url_https,
       // Replies/mentions.
-      reply_to: entry.quoted_status.in_reply_to_screen_name,
-      mentions: entry.quoted_status.entities.user_mentions.map(x => ({username: x.screen_name, indices: x.indices})),
+      reply_to: t.quoted_status.in_reply_to_screen_name,
+      mentions: t.quoted_status.entities.user_mentions.map(x => ({username: x.screen_name, indices: x.indices})),
       // URLs.
-      urls: entry.quoted_status.entities.urls.map(x => ({current_text: x.url, display: x.display_url, expanded: x.expanded_url})),
-      has_media: typeof entry.quoted_status.entities.media !== "undefined",
+      urls: t.quoted_status.entities.urls.map(x => ({current_text: x.url, display: x.display_url, expanded: x.expanded_url})),
+      has_media: typeof t.quoted_status.entities.media !== "undefined",
       media: null,
     }
     if (tweet.quote.has_media) {
-      tweet.quote.media = entry.quoted_status.entities.media.map(x => ({current_text: x.url, url: x.media_url_https}))
+      tweet.quote.media = t.quoted_status.entities.media.map(x => ({current_text: x.url, url: x.media_url_https}))
     }
   }
   return tweet
 })
 
 
-const toTweetCommon = (tweet, entry) => {
+const toTweetCommon = (tweet, t) => {
   // Basic info, same for everyone
-  tweet.id = entry.id_str
-  // tweet.id = entry.id,
-  tweet.time = new Date(entry.created_at).getTime()
-  // tweet.human_time = new Date(entry.created_at).toLocaleString()
+  tweet.id = t.id_str
+  // tweet.id = t.id,
+  tweet.time = new Date(t.created_at).getTime()
+  // tweet.human_time = new Date(t.created_at).toLocaleString()
   // Replies/mentions.
-  tweet.reply_to = !isNil(entry.in_reply_to_screen_name) ? entry.in_reply_to_screen_name : null // null if not present.
-  tweet.mentions = !isNil(entry.entities.user_mentions) ? entry.entities.user_mentions.map(x => ({username: x.screen_name, indices: x.indices})) : []
+  tweet.reply_to = !isNil(t.in_reply_to_screen_name) ? t.in_reply_to_screen_name : null // null if not present.
+  tweet.mentions = !isNil(path(['entities','user_mentions'], t)) ? t.entities.user_mentions.map(x => ({username: x.screen_name, indices: x.indices})) : []
   // URLs.
-  tweet.urls = !isNil(entry.entities.urls) ? entry.entities.urls.map(x => ({current_text: x.url, display: x.display_url, expanded: x.expanded_url})) : []
+  tweet.urls = !isNil(path(['entities','urls'], t)) ? t.entities.urls.map(x => ({current_text: x.url, display: x.display_url, expanded: x.expanded_url})) : []
   // Media.
-  tweet.has_media = !isNil(entry.entities.media)
+  tweet.has_media = !isNil(path(['entities','media'], t))
   tweet.media = null
-  // Quote info.
-  tweet.has_quote = isNil(entry.is_quote_status) ? false :entry.is_quote_status
-  tweet.is_quote_up = !isNil(entry.quoted_status)
+  // Quote info. 
+  tweet.has_quote = isNil(t.is_quote_status) ? false :t.is_quote_status
+  tweet.is_quote_up = !isNil(t.quoted_status)
   tweet.quote = null
   tweet.is_bookmark = false
   // Add media info.
   if (tweet.has_media) {
-    tweet.media = entry.entities.media.map(x => ({current_text: x.url, url: x.media_url_https}))
+    tweet.media = t.entities.media.map(x => ({current_text: x.url, url: x.media_url_https}))
   }
   
   return tweet
@@ -356,6 +364,7 @@ export const findDeletedIds = (currentIds, incomingIds) =>{
   const minNew = sortedNew[0]
   const maxNew = sortedNew[sortedNew.length - 1]
   const overlappingOldTweets = pipe(sortKeys,dropLastWhile(gt(maxNew)), dropWhile(lt(minNew)))(currentIds)
+  console.log(`counting deleted tweets from ${minNew} to ${maxNew}`)
   return difference(overlappingOldTweets, incomingIds)
 }
 
@@ -369,7 +378,7 @@ export async function getLatestTweets(n_tweets, filters, db_get, screen_name, ke
   // let keys = utils.db.getAllKeys('tweets')
   let latest = []
   const isFull = (latest) => latest.length >= n_tweets
-  const isRT = t=>t.username != screen_name
+  const isRT = t=>((t.username != screen_name) && !t.is_bookmark)
   const isBookmark = prop('is_bookmark')
   const isReply = t=>!isNil(t.reply_to) && t.reply_to != t.username  
   const isValidTweet = t => 
