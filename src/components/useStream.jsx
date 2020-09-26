@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 
 export const useStream = (stream, initialState) => {
+    // const init = stream.currentValue != null ? stream.currentValue() : initialState
+    // const init2 = init != null ? init : initialState
+    // console.log(`init stream`, init)
+    // const [current, setCurrent] = useState(init);
     const [current, setCurrent] = useState(initialState);
 
     useEffect(() => {

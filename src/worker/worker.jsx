@@ -110,7 +110,13 @@ const updateDB = async (new_tweets, deleted_ids)=>{
 
 const updateTweets = async (index_json, res) => {
   // console.log("inside updateTweets",{index_json, res})
-  const tweet_ids = await getDb().getAllKeys('tweets')
+  const isBookmark = path([0,'is_bookmark'],res)
+
+  console.log('filtering db from worker', {res, isBookmark})
+  const filteredRes = await db.filterDb(getDb(), 'tweets', propEq('is_bookmark', isBookmark))
+  console.log('filtered db from worker', filteredRes)
+  // const tweet_ids = await getDb().getAllKeys('tweets')
+  const tweet_ids = map(prop('id'),filteredRes)
   const deleted_ids = findDeletedIds(tweet_ids, res.map(prop('id')))
   
   const new_ids = difference(res.map(prop('id_str')), tweet_ids)

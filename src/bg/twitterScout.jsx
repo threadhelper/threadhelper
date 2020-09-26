@@ -3,6 +3,7 @@ import { flattenModule } from '../utils/putils.jsx'
 import * as R from 'ramda';
 flattenModule(global,R)
 
+
 export const getUserInfo = async (getAuthInit) => await fetch(`https://api.twitter.com/1.1/account/verify_credentials.json`,getAuthInit()).then(x => x.json())
 
 export const updateQuery = async (getAuthInit, username, count) => await fetch(makeUpdateQueryUrl(username, count), getAuthInit()).then(x => x.json())
@@ -134,7 +135,7 @@ export const bookmarkToTweet = (entry)=>{
 // TOOD: make user and pic queue emit events 
 export const apiToTweet = (entry) => {
   let tweet = {};
-  tweet.retweeted = entry.retweeted
+  tweet.retweeted = isNil(entry.retweeted) ? false : entry.retweeted
   tweet.id = entry.id_str
   if(tweet.retweeted){
     if(entry.retweeted_status != null) tweet.orig_id = entry.retweeted_status.id_str
@@ -358,6 +359,7 @@ const toTweetCommon = (tweet, t) => {
 
 
 export const findDeletedIds = (currentIds, incomingIds) =>{
+  if(isEmpty(currentIds)) return []
   // const minNew = reduce(minBy(idComp), '0', newTweets)
   // const maxNew = reduce(maxBy(idComp), Number.MAX_SAFE_INTEGER.toString(), newTweets)
   const sortedNew = sortKeys(incomingIds)

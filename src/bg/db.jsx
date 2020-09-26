@@ -1,4 +1,5 @@
-import * as idb from 'idb'
+// import * as idb from 'idb'
+import { openDB } from 'idb/with-async-ittr.js';
 import { curry } from 'ramda'
 
 /*
@@ -13,7 +14,7 @@ bookmarks
 
 export const open = async () => {
   console.log("OPENING DB")
-  const db = await idb.openDB('ThreadHelper', 1, {
+  const db = await openDB('ThreadHelper', 1, {
     upgrade(db) {
       console.log("version ",db.oldVersion)
       let oldV = db.oldVersion != null ? db.oldVersion : 0
@@ -97,3 +98,25 @@ export const clear = curry( async (db) => {
   }
 })
 
+export const iterate = curry(async(db, storeName)=>{
+  console.log('iterating db')
+  // const index = db.transaction('books').store.index('author');
+  const tx = db.transaction(storeName);
+
+  // for await (const cursor of index.iterate('Douglas Adams')) {
+  for await (const cursor of tx.store) {
+    console.log(cursor.value);
+    
+  }
+})
+
+export const filterDb = curry(async (db, storeName, condFn) =>{
+  const tx = db.transaction(storeName);
+  let accum = []
+
+  // for await (const cursor of index.iterate('Douglas Adams')) {
+  for await (const cursor of tx.store) {
+    if(condFn(cursor.value)) accum.push(cursor.value)
+  }
+  return accum
+})

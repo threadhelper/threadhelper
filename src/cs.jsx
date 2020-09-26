@@ -29,7 +29,7 @@ import { h, render, Component } from 'preact';
 // import { useState, useCallback } from 'preact/hooks';
 import { flattenModule, inspect } from './utils/putils.jsx'
 import { updateTheme, getMode, isSidebar, getIdFromUrl, getCurrentUrl } from './utils/wutils.jsx'
-import { getData, setData, msgBG, makeGotMsgObs, makeStoragegObs, getOptions, requestRoboTweet } from './utils/dutils.jsx';
+import { getData, setData, msgBG, makeGotMsgObs, makeStorageObs, getOptions, requestRoboTweet } from './utils/dutils.jsx';
 import { makeRoboStream, makeActionStream, makeComposeFocusObs, makeReplyObs, getHostTweetId, makeLastClickedObs, makeAddBookmarkStream, makeRemoveBookmarkStream, makeDeleteEventStream } from './ui/inputsHandler.jsx'
 import { makeSidebarHome, makeSidebarCompose, makeHomeSidebarObserver, makeFloatSidebarObserver, injectSidebarHome, injectDummy } from './ui/sidebarHandler.jsx'
 import { makeComposeObs } from './ui/composeHandler.jsx'
@@ -84,11 +84,11 @@ function rememberSub(sub){
 async function onLoad(thBarHome, thBarComp){
   // const optionsChange$ = 
   const gotMsg$ = makeGotMsgObs().map(x=>x.m)
-  const storageChange$ = makeStoragegObs()
+  const storageChange$ = makeStorageObs()
   const sync$ = storageChange$.filter(x=>x.itemName=='sync').map(prop('newVal'))
   //TODO init val from stg
   const syncDisplay$ = storageChange$.filter(x=>x.itemName=='syncDisplay').map(prop('newVal')).toProperty(()=>'')
-  syncDisplay$.log('syncDisplay')
+  // syncDisplay$.log('syncDisplay log')
 
   const mode$ = gotMsg$.filter(m => m.type == "tab-change-url").map(m=>getMode(m.url))
   const lastStatus$ = makeLastStatusObs(mode$)
@@ -136,7 +136,7 @@ async function onLoad(thBarHome, thBarComp){
   // to detect when writing has stopped for a bit
   const minIdleTime = 3000;
   const stoppedWriting$ = composeQuery$.skipDuplicates().filter(x=>!isEmpty(x)).debounce(minIdleTime)
-  stoppedWriting$.log("stoppedWriting")
+  // stoppedWriting$.log("stoppedWriting")
 
     
   const reply$ = makeReplyObs(mode$)  

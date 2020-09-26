@@ -5,9 +5,15 @@ import {pipe, andThen, prop, path} from 'ramda'
 
 
 export function useOption(name){
-  const [getOption, setOption] = useState(true);
+  const [option, setOption] = useState(true);
   
-  getOptions().then(pipe(path([name, 'value']), setOption))
+    
+  useEffect(() => {
+    //init
+    getOptions().then(pipe(path([name, 'value']), setOption))
+    return () => {};
+  }, []);
+  
   
   const setOptionBG = pipe(
     updateOptionStg(name),
@@ -16,15 +22,5 @@ export function useOption(name){
       setOption))
       )
 
-  // const setOptionBG = (new_val)=>{
-  //   getData("options").then((options)=>{
-  //     options = options != null ? options : {}
-  //     options[name] = new_val; 
-  //     setData({options:options}).then(()=>{
-  //       setOption(new_val)
-  //       console.log("updated get retweets to",new_val)
-  //     })
-  //   })
-  // }
-  return [getOption, setOptionBG]
+  return [option, setOptionBG]
 }

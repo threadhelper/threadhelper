@@ -3,6 +3,17 @@ import { flattenModule, inspect } from './putils.jsx'
 import * as R from 'ramda';
 flattenModule(global,R)
 
+Kefir.Property.prototype.currentValue = function() {
+  var result;
+  var save = function(x) {
+    result = x;
+  };
+  this.onValue(save);
+  this.offValue(save);
+  return result;
+};
+
+
 // DEFAULT OPTIONS V IMPORTANT
 export const defaultOptions = () => {return {
   name: 'options',
@@ -61,6 +72,8 @@ export async function removeData(keys){
 
 export const setStg = curry( (key,val) => setData({[key]:val}) )
 
+export const updateStg = curry( (key,val) => setData({[key]:val}) )
+
 const addNewDefaultOptions = (oldOptions) => mergeLeft(oldOptions,defaultOptions())
 
 export const getOptions = async () => getData('options').then(pipe(defaultTo(defaultOptions()), addNewDefaultOptions))
@@ -77,7 +90,7 @@ export const updateOptionStg = curry(async (name, val)=>
 export function msgBG(msg = null){
   let message = isNil(msg) ? {type:"query", query_type: "update"} : msg
   chrome.runtime.sendMessage(message);
-  console.log("messaging BG", message)
+  // console.log("messaging BG", message)
 }
 
 export async function requestRoboTweet(query, reply_to){
@@ -132,31 +145,37 @@ const makeEventObs = curry ((event, makeEmit, initVal) => {
 })
 
 
-export const makeStoragegObs = () => {
+export const makeStorageObs = () => {
   const makeEmitStgCH = (emitter) =>  makeOnStorageChanged((itemName, oldVal, newVal) => emitter.emit({itemName, oldVal, newVal}))
   return makeEventObs(chrome.storage.onChanged, makeEmitStgCH, {itemName:null, oldVal:null, newVal:null}) 
 }
 
+// shallow
+const isStgItemSame = x => (isNil(x.oldVal) && isNil(x.newVal)) || x.oldVal === x.newVal 
 
-export const makeStorageStream = (type) => makeStoragegObs().filter(propEq('type',type))
+
+// export const makeStgItemObs = itemName => {console.log('making stg item obs for ', itemName); return makeStorageObs().filter(propEq('itemName',itemName)).filter(pipe(isStgItemSame, not)).map(prop('newVal')).skipDuplicates()}
+export const makeStgItemObs = itemName => {console.log('making stg item obs for ', itemName); return makeStorageObs().filter(propEq('itemName',itemName)).map(prop('newVal')).toProperty()}
+
+// export const makeStorageStream = (type) => makeStoragegObs().filter(propEq('type',type))
 
 
 
 export const makeGotMsgObs = () =>{ 
-  const makeEmitMsg = (emitter) =>  (message,sender) => emitter.emit({m:message,s:sender})
+  const makeEmitMsg = emitter =>  (message,sender) => emitter.emit({m:message,s:sender})
   return makeEventObs(chrome.runtime.onMessage, makeEmitMsg, {m:{type:null},s:null}) 
 }
 
-export const makeMsgStream = (type) => makeGotMsgObs().map(prop('m')).filter(propEq('type',type))
+export const makeMsgStream = type => makeGotMsgObs().map(prop('m')).filter(propEq('type',type))
 
-// optionsChange$ :: change -> change
-export const makeOptionsChangeObs = async (storageChange$) => {
-  const cachedOptions = {oldVal:null, newVal:await getOptions()}
-  return storageChange$.filter(x=>x.itemName=='options').toProperty(()=>cachedOptions)
-}
+// // optionsChange$ :: change -> change
+// export const makeOptionsChangeObs = async (storageChange$) => {
+//   const cachedOptions = {oldVal:null, newVal:await getOptions()}
+//   return storageChange$.filter(x=>x.itemName=='options').toProperty(()=>cachedOptions)
+// }
 
-// const isOptionSame = x=>(isNil(x.oldVal) && isNil(x.newVal)) || (x.oldVal[itemName] == x.newVal[itemName])
-const isOptionSame = curry ((name, x)=> (isNil(x.oldVal) && isNil(x.newVal)) || (!isNil(x.oldVal) && !isNil(x.newVal) && (path(['oldVal', name, 'value'],x) === path(['newVal', name, 'value'],x))) )
+const isOptionSame = curry ((name, x)=> isStgItemSame(x) || (!isNil(x.oldVal) && !isNil(x.newVal) && (path(['oldVal', name, 'value'],x) === path(['newVal', name, 'value'],x))) )
+// const isOptionSame = curry ((name, x)=> (isNil(x.oldVal) && isNil(x.newVal)) || (!isNil(x.oldVal) && !isNil(x.newVal) && (path(['oldVal', name, 'value'],x) === path(['newVal', name, 'value'],x))) )
 
 
 // makeOptionsObs :: String -> a
@@ -164,8 +183,10 @@ export const makeOptionObs = curry ((optionsChange$, itemName) =>
   optionsChange$.filter(x=>!isOptionSame(itemName,x))
   .map(path([['newVal'], itemName]))
   .map(pipe(
-    defaultTo(prop(itemName,defaultOptions()))))
-  .map(inspect(`make option obs for ${itemName}`))/*.toProperty()*/)
+    defaultTo(prop(itemName,defaultOptions()))
+    ))
+  // .map(inspect(`make option obs for ${itemName}`))/*.toProperty()*/
+  )
 
 const listSearchFilters = pipe(prop('newVal'), values, filter(propEq('type', 'searchFilter')), map(prop('name')), R.map(makeOptionObs),inspect('listsearchfilters'))
 const combineOptions = (...args) => pipe(inspect('combineopt'), reduce((a,b)=>assoc(b.name, b.value, a),{}))(args)

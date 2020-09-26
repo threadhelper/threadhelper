@@ -1,12 +1,12 @@
 //using this temporarily but eventually probably should refactor away from classes
 import "@babel/polyfill";
 import * as browser from "webextension-polyfill";
-import {setStg, getData, setData, removeData, getOptions, defaultOptions, makeStoragegObs, makeGotMsgObs, makeStorageStream, makeMsgStream} from './utils/dutils.jsx'
 import {getTwitterTabIds} from './utils/wutils.jsx'
 import { flattenModule, inspect } from './utils/putils.jsx'
 import * as R from 'ramda';
 flattenModule(window,R)
 import Kefir from 'kefir';
+import {setStg, getData, setData, removeData, getOptions, defaultOptions, makeStorageObs, makeGotMsgObs, makeMsgStream} from './utils/dutils.jsx'
 import {makeAuthObs} from './bg/auth.jsx'
 import * as db from './bg/db.jsx'
 import {initWorker} from './bg/workerBoss.jsx'
@@ -136,11 +136,11 @@ export async function main(){
   ready$.log('READY')
   const notReady$ = ready$.map(not)
 
-  const howManyTweetsDb = async ()=> (await _db.getAllKeys('tweets')).length
+  const howManyTweetsDb = async (_db)=> (await _db.getAllKeys('tweets')).length
   const whenLastUpdate = ()=>whenUpdated$.currentValue()
   const makeSyncDisplayMsg = async ()=>{
     const username = getUsername()
-    const n_tweets = await howManyTweetsDb()
+    const n_tweets = await howManyTweetsDb(_db)
     const dateTime = await whenLastUpdate()
     return `Hi ${username}, I have ${n_tweets} tweets available. \n Last updated on ${dateTime}`
   }
@@ -148,18 +148,19 @@ export async function main(){
     ready$,
     anyTweetUpdate$,
   ])
+  syncDisplay$.log('syncDisplay log')
   syncDisplay$.onValue(pipe(
     _=>makeSyncDisplayMsg(),
     andThen(pipe(
-      inspect('syncDisplay'),
+      inspect('syncDisplay setting stg'),
       setStg('syncDisplay')
       ))
   ))
-
+// 
   // storageChange$ :: () -> change
   // change :: {itemName, oldVal, newVal}
   // Listens to changes in chrome.storage
-  const storageChange$ = makeStoragegObs()
+  const storageChange$ = makeStorageObs()
   
   // IMPURE  
   const cachedOptions = {oldVal:null, newVal:await getOptions()}
@@ -200,9 +201,12 @@ export async function main(){
   // msg :: {type,...}
   // Listens to chrome runtime onMessage
   const msg$ = makeGotMsgObs().map(x=>x.m)
-  msg$.log("bg message")
+  // msg$.log("bg message")
 
-
+  // const splitStream = (condFn, stream)=>[stream.filter(condFn), stream.filter(pipe(condFn, not))]
+  const csStart$ = msg$.filter(propEq('type','cs-created'))
+  csStart$.log('csStart')
+  // [startUpdate$, startTimeline$] = csStart$.filter(howManyTweetsDb)
 
   const update_size = 200
   // reqUpdateTweets$ :: msg -> msg
@@ -211,7 +215,11 @@ export async function main(){
   const fetchedUpdate$ = reqUpdateTweets$.flatMapLatest(_=>Kefir.fromPromise(updateQuery(getAuthInit, getUsername(), update_size)))
 
   // reqTimeline$ :: msg -> msg
-  const reqTimeline$ = msg$.filter(m => ["update-timeline"].includes(m.type)).bufferWhileBy(notReady$).flatten()
+  const reqTimeline$ = Kefir.merge([
+    msg$.filter(m => ["update-timeline"].includes(m.type)),
+    csStart$,
+  ]).bufferWhileBy(notReady$).flatten()
+  reqTimeline$.log('reqTimeline')
   // IMPURE
   const fetchedTimeline$ = reqTimeline$.flatMapLatest(_=>Kefir.fromPromise(timelineQuery(getAuthInit, userInfo$.currentValue())))
   
@@ -360,7 +368,11 @@ export async function main(){
       )
   })
 
-  const reqBookmarks$ = msg$.filter(propEq('type','get-bookmarks')).bufferWhileBy(notReady$).flatten()
+  const reqBookmarks$ = Kefir.merge([
+    msg$.filter(propEq('type','get-bookmarks')),
+    csStart$
+  ]).bufferWhileBy(notReady$).flatten()
+
   const fetchedBookmarks$ = reqBookmarks$.flatMapLatest(_=>Kefir.fromPromise(getBookmarks(getAuthInit)))
   fetchedBookmarks$.log('bookmarks')
   const reqThread$ = null
@@ -370,6 +382,8 @@ export async function main(){
     map(bookmarkToTweet),
     reqSaveTweets,
   ))
+  
+
   
 
   const stg_clear = ()=>chrome.storage.local.clear(()=>{

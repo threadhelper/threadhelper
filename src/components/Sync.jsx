@@ -1,6 +1,7 @@
 import { h, render, Component } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
 import { useStream } from './useStream.jsx';
+import { useStorage } from './useStorage.jsx';
 import { msgBG, makeOnStorageChanged, getData } from '../utils/dutils.jsx';
 import { isNil } from 'ramda'
 
@@ -15,33 +16,33 @@ export function SyncIcon(props){
   //   options:{getRTs: true},
   //   tweets_meta:{count: 0, last_updated: "never"}
   // }
-  const [synced, setSynced] = useState('unsynced');
-  const [meta, setMeta] = useState({count: 0, last_updated: "never"});
+  // const [synced, setSynced] = useState('unsynced');
+  // const [meta, setMeta] = useState({count: 0, last_updated: "never"});
   const [user_info, setUserInfo] = useState({username: "No user"});
-  const syncDisplay = useStream(props.streams.syncDisplay,'')
-
+  // const syncDisplay = useStream(props.streams.syncDisplay,'')
+  const sync = useStorage('sync', false)
+  const [_syncDisplay, setSyncDisplay] = useStorage('syncDisplay', 'default sync display msg')
+  // const syncDisplay = useStream(props.streams.syncDisplay,'')
+  
   // syncDisplay
   
 
   const syncStorageChange = async function(item, oldVal, newVal){
     switch(item){
-      case "options": 
-        // setState({options: newVal != null ? newVal : state.options})
-        break;
       case "user_info":
         setUserInfo( isNil(newVal) ? user_info : newVal )
         break;
       // case "has_archive":
       //   wiz.has_archive = newVal;
       //   break;
-      case "sync":
-        setSynced( (isNil(newVal) || !newVal ) ? 'unsynced' : 'synced' )
-        break;
-      case "tweets_meta":
-        console.log(`meta changed ${newVal}`)
-        setMeta( isNil(newVal) ? meta : newVal )
-        // setMeta(newVal)
-        break;
+      // case "sync":
+        // setSynced( (isNil(newVal) || !newVal ) ? 'unsynced' : 'synced' )
+        // break;
+      // case "tweets_meta":
+      //   console.log(`meta changed ${newVal}`)
+      //   setMeta( isNil(newVal) ? meta : newVal )
+      //   // setMeta(newVal)
+      //   break;
       default:
         break;
     }
@@ -63,10 +64,15 @@ export function SyncIcon(props){
 
   //init 
   useEffect(async () => {
-    setMeta(await getData('tweets_meta'))
-    setSynced((await getData('sync')) ? 'synced' : 'unsynced')
+    // setMeta(await getData('tweets_meta'))
+    // setSynced((await getData('sync')) ? 'synced' : 'unsynced')
     setUserInfo(await getData('user_info'))
   }, []);
+
+  useEffect(()=>{
+    console.log({_syncDisplay})
+    return ()=>{  };
+  },[_syncDisplay]);
 
 
   function onSyncClick(){
@@ -75,8 +81,8 @@ export function SyncIcon(props){
   }
 
   return (
-    <div class={`sync ${synced}`} onClick={onSyncClick}>
-      <span class="tooltiptext"> {syncDisplay} </span>  
+    <div class={`sync ${sync ? 'synced' : 'unsynced'}`} onClick={onSyncClick}>
+      <span class="tooltiptext"> sync msg: {_syncDisplay} </span>  
     </div>
   );
 }
