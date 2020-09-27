@@ -77,6 +77,7 @@ export const updateStg = curry( (key,val) => setData({[key]:val}) )
 const addNewDefaultOptions = (oldOptions) => mergeLeft(oldOptions,defaultOptions())
 
 export const getOptions = async () => getData('options').then(pipe(defaultTo(defaultOptions()), addNewDefaultOptions))
+export const getOption = async name => getOptions().then(prop(name))
 
 export const updateOptionStg = curry(async (name, val)=> getOptions()
   .then(pipe(
