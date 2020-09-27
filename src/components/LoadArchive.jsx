@@ -45,7 +45,7 @@ export const ArchiveUploader = props => {
   // Parses json and stores in temp to be processed by BG
   function importArchive(){
     const result = this.result.replace(/^[a-z0-9A-Z\.]* = /, "");
-    const importedTweetArchive =  take(20000, JSON.parse(result));
+    const importedTweetArchive = JSON.parse(result);
     // 
     console.log('setting archive', importedTweetArchive)
     setData({temp_archive:importedTweetArchive}).then(()=>{

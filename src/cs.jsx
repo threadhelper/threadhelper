@@ -82,9 +82,12 @@ function rememberSub(sub){
   subscriptions.push(sub)
 }
 async function onLoad(thBarHome, thBarComp){
-  // const optionsChange$ = 
+
   const gotMsg$ = makeGotMsgObs().map(x=>x.m)
   const storageChange$ = makeStorageObs()
+  // storageChange$.log('storageChange$')
+  const latest$ = storageChange$.filter(x=>x.itemName=='latest_tweets').map(prop('newVal'))
+  // latest$.log('latest$')
   const sync$ = storageChange$.filter(x=>x.itemName=='sync').map(prop('newVal'))
   //TODO init val from stg
   const syncDisplay$ = storageChange$.filter(x=>x.itemName=='syncDisplay').map(prop('newVal')).toProperty(()=>'')

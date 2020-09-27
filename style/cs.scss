@@ -131,15 +131,18 @@
   }
 
   .console{
-    display: grid;
-    gap: 1rem;
-    grid-template-columns: 1fr 1fr 1fr 1fr;
+    
+  }
+
+  #filters{
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
     color: var(--main-txt-color);
     border: 1px solid var(--main-border-color);
     border-radius: 3px;
     padding: 8px 5px 8px 5px;
   }
-
 
   /* Dropdown Menu */
   @import "./icons.scss";

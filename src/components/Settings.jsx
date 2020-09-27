@@ -1,8 +1,8 @@
 import { h, render, Component } from 'preact';
 import { useState, useEffect, useRef } from 'preact/hooks';
 import GearIcon from '../../images/gear.svg';
-import { msgBG } from '../utils/dutils';
-import { defaultTo, pipe} from 'ramda'
+import { msgBG, setStg, applyToOptionStg } from '../utils/dutils';
+import { defaultTo, pipe, not} from 'ramda'
 
 
 
@@ -113,6 +113,11 @@ export function DropdownMenu(_props) {
         leftIcon={'🛠'}
         effect={()=>{msgBG({type:'make-index'})}}>
         Make Index
+      </DebugItem>
+      <DebugItem
+        leftIcon={'🛠'}
+        effect={()=>{applyToOptionStg('roboActive', not)}}>
+        Toggle roboActive
       </DebugItem>
     </div>
   );

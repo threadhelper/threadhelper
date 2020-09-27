@@ -78,13 +78,15 @@ const addNewDefaultOptions = (oldOptions) => mergeLeft(oldOptions,defaultOptions
 
 export const getOptions = async () => getData('options').then(pipe(defaultTo(defaultOptions()), addNewDefaultOptions))
 
-export const updateOptionStg = curry(async (name, val)=>
-  {
-  return getOptions().then(pipe(
+export const updateOptionStg = curry(async (name, val)=> getOptions()
+  .then(pipe(
       set(lensPath([name,'value']),val),
       tap(setStg('options')),
-    ))
-  })
+    )))
+
+export const applyToOptionStg = curry(async (name, fn)=>{
+  return getOptions().then(pipe(path([name, 'value']), fn, updateOptionStg(name)))
+})
 
 
 export function msgBG(msg = null){
@@ -154,8 +156,20 @@ export const makeStorageObs = () => {
 const isStgItemSame = x => (isNil(x.oldVal) && isNil(x.newVal)) || x.oldVal === x.newVal 
 
 
+export const makeStgPathObs = _path => makeStorageObs()
+  .filter(propEq('itemName', _path[0]))
+  .map(path(['newVal', ...slice(1, Infinity, _path)]))
+  .toProperty()
+
 // export const makeStgItemObs = itemName => {console.log('making stg item obs for ', itemName); return makeStorageObs().filter(propEq('itemName',itemName)).filter(pipe(isStgItemSame, not)).map(prop('newVal')).skipDuplicates()}
-export const makeStgItemObs = itemName => {console.log('making stg item obs for ', itemName); return makeStorageObs().filter(propEq('itemName',itemName)).map(prop('newVal')).toProperty()}
+export const makeStgItemObs = itemName => makeStgPathObs([itemName])
+
+// export const makeStgItemObs = itemName => {
+//   console.log('making stg item obs for ', itemName); 
+//   return makeStorageObs()
+//   .filter(propEq('itemName',itemName))
+//   .map(prop('newVal')).toProperty()}
+
 
 // export const makeStorageStream = (type) => makeStoragegObs().filter(propEq('type',type))
 

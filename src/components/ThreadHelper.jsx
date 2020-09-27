@@ -43,10 +43,16 @@ export default function ThreadHelper(props){
 
 function Sidebar(props){
   const [roboActive, setRoboActive] = useOption('roboActive')
+
+  useEffect(()=>{
+    console.log({roboActive})
+    return ()=>{  };
+  },[roboActive]);
+
   return(
     <div class="sidebar">
       <Header streams={props.streams}/>
-      {!roboActive ? <Robo active={props.active} streams={props.streams}/> : null}
+      {roboActive ? <Robo active={props.active} streams={props.streams}/> : null}
       <Search active={props.active} composeQuery={props.streams.composeQuery}/>
     </div>
   );

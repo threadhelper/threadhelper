@@ -21,23 +21,10 @@ export function Console(props){
   const [getRTs, setGetRTs] = useOption('getRTs')
   const [useBookmarks, setUseBookmarks] = useOption('useBookmarks')
   const [useReplies, setUseReplies] = useOption('useReplies')
-  const [stgQuery, setQuery] = useStorage('test_search_query', "")
 
-  
-  useEffect(()=>{
-    setQuery(query)
-    return ()=>{  };
-  },[query]);
-
-  useEffect(()=>{
-    console.log({stgQuery})
-    return ()=>{  };
-  },[stgQuery]);
 
   return (
     <div class="console">
-      <div><span>storage query test: {stgQuery}</span></div>
-      <br/>
       <div id='filters'>
         <span>{`Filters:`}</span>      
         <span class="getRTs"> 
@@ -57,16 +44,8 @@ export function Console(props){
   );
 }
 
-// function handleInputChange(set, event) {
-//   const target = event.target;
-//   const value = target.type === 'checkbox' ? target.checked : target.value;
-//   const name = target.name;
-  
-//   set(value)
-// }
-
 const handleInputChange = curry((_set, event) => {
-  console.log('handling input change', {event, _set})
+  // console.log('handling input change', {event, _set})
   pipe(
     prop('target'),
     target=>(target.type === 'checkbox' ? target.checked : target.value),

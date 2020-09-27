@@ -339,10 +339,10 @@ export async function main(){
   )
   const getAndPushLatest = pipe(
     getLatest,
-    inspect('got latest'),
-    andThen(
+    andThen(pipe(
       setStg('latest_tweets'),
-      )
+      andThen(inspect('set latest'))
+      ))
     )
 
   
