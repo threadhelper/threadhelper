@@ -136,7 +136,7 @@ const addTweets = async (index_json, res) => {
   
   const new_ids = difference(res.map(prop('id_str')), tweet_ids)
   const new_tweets = filter(x=>includes(x.id_str, new_ids), res)
-  console.log('adding tweets',res)
+  console.log('adding tweets',new_tweets)
   updateDB(new_tweets, [])
 
   let _index = loadIndex(index_json)

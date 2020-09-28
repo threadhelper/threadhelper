@@ -93,7 +93,7 @@ export const applyToOptionStg = curry(async (name, fn)=>{
 export function msgBG(msg = null){
   let message = isNil(msg) ? {type:"query", query_type: "update"} : msg
   chrome.runtime.sendMessage(message);
-  // console.log("messaging BG", message)
+  console.log("messaging BG", message)
 }
 
 export async function requestRoboTweet(query, reply_to){

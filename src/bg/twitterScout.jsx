@@ -4,7 +4,7 @@ import * as R from 'ramda';
 flattenModule(global,R)
 
 
-export const getUserInfo = async (getAuthInit) => await fetch(`https://api.twitter.com/1.1/account/verify_credentials.json`,getAuthInit()).then(x => x.json())
+export const fetchUserInfo = async (getAuthInit) => await fetch(`https://api.twitter.com/1.1/account/verify_credentials.json`,getAuthInit()).then(x => x.json())
 
 export const updateQuery = async (getAuthInit, username, count) => await fetch(makeUpdateQueryUrl(username, count), getAuthInit()).then(x => x.json())
 
@@ -85,8 +85,11 @@ const makeUpdateQueryUrl = makeTweetQueryUrl(-1)
 //   return meta
 // }
 
-export const idComp = (b,a)=>a.localeCompare(b,undefined,{numeric: true})
-
+export const idComp = (a,b)=>a.localeCompare(b,undefined,{numeric: true})
+// gt for ids
+const gtId = curry((a,b) => idComp(a,b) > 0)
+//lt for ids
+const ltId = curry((a,b) => idComp(a,b) < 0)
 
 function sortKeys(keys){
   return keys.sort(idComp)
@@ -244,120 +247,6 @@ const toTweetCommon = (tweet, t) => {
   return tweet
 }
 
-
-
-
-// // TOOD: make user and pic queue emit events 
-// const _toTweet = curry ((arch, user_info, entry) => {
-//   let return_tweet = {}
-//   let tweet = {};
-//   let user_queue = []
-//   let pic_tweet_queue = []
-
-//   entry = arch ? entry.tweet : entry;
-  
-//   let re = /RT @([a-zA-Z0-9_]+).*/
-//   let rt_tag = /RT @([a-zA-Z0-9_]+:)/
-//   let default_pic_url = 'https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png'
-//   try{
-//     if (entry != null){
-//       tweet.id = entry.id_str
-//       //Handing retweets in archive
-//       if(arch){
-//         let rt = re.exec(entry.full_text);  
-//         //tweet contents
-//         tweet.username = rt != null ? rt[1] : user_info.screen_name
-//         tweet.text = rt != null ? entry.full_text.replace(rt_tag,'') : entry.full_text
-//         // If I'm tweeting/retweeting myself
-//         if(tweet.username == user_info.screen_name){
-//           tweet.name = user_info.name
-//           tweet.profile_image = user_info.profile_image_url_https
-//         } 
-//         // if I'm retweeting someone else
-//         else{
-//           tweet.profile_image = default_pic_url
-//           try{
-//             let author = entry.entities.user_mentions.find(t=>{return t.screen_name.toLowerCase() == tweet.username.toLowerCase()})
-//             tweet.name = author != null ? author.name : tweet.username
-//             user_queue.push(author.id_str)
-//             pic_tweet_queue[entry.id_str] = author.id_str
-//             tweet.retweeted = true
-//           } catch(e){
-//             console.log("ERRORRRRRRRR", e)
-//             console.log("RT match",rt)
-//             console.log("tweet username",tweet.username)
-//             console.log(entry.entities.user_mentions)
-//           }
-//           //console.log(tweet); console.log(entry); wiz
-//         }
-//       }else{
-//         tweet.retweeted = entry.retweeted
-//         tweet.id = entry.id_str
-//         if(tweet.retweeted){
-//           if(entry.retweeted_status != null) tweet.orig_id = entry.retweeted_status.id_str
-//            entry = entry.retweeted_status != null ? entry.retweeted_status : entry;
-//           }
-//         //tweet contents
-//         tweet.username = entry.user.screen_name
-//         tweet.name = entry.user.name
-//         tweet.text = entry.full_text || entry.text
-//         tweet.profile_image = entry.user.profile_image_url_https
-        
-//       }
-//         // Basic info, same for everyone
-//         // tweet.id = entry.id,
-//         tweet.time = new Date(entry.created_at).getTime()
-//         // tweet.human_time = new Date(entry.created_at).toLocaleString()
-//         // Replies/mentions.
-//         tweet.reply_to = entry.in_reply_to_screen_name != null ? entry.in_reply_to_screen_name : null // null if not present.
-//         tweet.mentions = entry.entities.user_mentions.map(x => ({username: x.screen_name, indices: x.indices}))
-//         // URLs.
-//         tweet.urls = entry.entities.urls.map(x => ({current_text: x.url, display: x.display_url, expanded: x.expanded_url}))
-//         // Media.
-//         tweet.has_media = typeof entry.entities.media !== "undefined"
-//         tweet.media = null
-//         // Quote info.
-//         tweet.has_quote = entry.is_quote_status
-//         tweet.is_quote_up = typeof entry.quoted_status !== "undefined"
-//         tweet.quote = null
-//       // Add media info.
-//       if (tweet.has_media) {
-//         tweet.media = entry.entities.media.map(x => ({current_text: x.url, url: x.media_url_https}))
-//       }
-//       // Add full quote info.
-//       if (tweet.has_quote && tweet.is_quote_up) {
-//         tweet.quote = {
-//           // Basic info.
-//           text: entry.quoted_status.full_text || entry.quoted_status.text,
-//           name: entry.quoted_status.user.name,
-//           username: entry.quoted_status.user.screen_name,
-//           time: new Date(entry.quoted_status.created_at).getTime(),
-//           profile_image: entry.quoted_status.user.profile_image_url_https,
-//           // Replies/mentions.
-//           reply_to: entry.quoted_status.in_reply_to_screen_name,
-//           mentions: entry.quoted_status.entities.user_mentions.map(x => ({username: x.screen_name, indices: x.indices})),
-//           // URLs.
-//           urls: entry.quoted_status.entities.urls.map(x => ({current_text: x.url, display: x.display_url, expanded: x.expanded_url})),
-//           has_media: typeof entry.quoted_status.entities.media !== "undefined",
-//           media: null,
-//         }
-//         if (tweet.quote.has_media) {
-//           tweet.quote.media = entry.quoted_status.entities.media.map(x => ({current_text: x.url, url: x.media_url_https}))
-//         }
-//       }
-//     }
-//   } catch(e){
-//     console.log("error in totweet", e)
-//     console.log("error in totweet", entry)
-//     throw(e)
-//   }
-//   // wiz.user_queue = user_queue
-//   // wiz.pic_tweet_queue = pic_tweet_queue
-//   return tweet
-// })
-
-
-
 export const findDeletedIds = (currentIds, incomingIds) =>{
   if(isEmpty(currentIds)) return []
   // const minNew = reduce(minBy(idComp), '0', newTweets)
@@ -365,7 +254,7 @@ export const findDeletedIds = (currentIds, incomingIds) =>{
   const sortedNew = sortKeys(incomingIds)
   const minNew = sortedNew[0]
   const maxNew = sortedNew[sortedNew.length - 1]
-  const overlappingOldTweets = pipe(sortKeys,dropLastWhile(gt(maxNew)), dropWhile(lt(minNew)))(currentIds)
+  const overlappingOldTweets = pipe(sortKeys,dropLastWhile(gtId(maxNew)), dropWhile(ltId(minNew)))(currentIds)
   console.log(`counting deleted tweets from ${minNew} to ${maxNew}`)
   return difference(overlappingOldTweets, incomingIds)
 }
@@ -388,7 +277,8 @@ export async function getLatestTweets(n_tweets, filters, db_get, screen_name, ke
   (filters.useBookmarks || !isBookmark(t)) && 
   (filters.useReplies || !isReply(t))
 
-  for (const k of sortKeys(keys)){
+  
+  for (const k of reverse(sortKeys(keys))){
     const t = await db_get('tweets',k)
     isValidTweet(t) ? latest.push(t) : null
     if(isFull(latest)) break;

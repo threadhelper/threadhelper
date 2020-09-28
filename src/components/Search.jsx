@@ -1,4 +1,4 @@
-import { h, render, Component } from 'preact';
+  import { h, render, Component } from 'preact';
 import { useState, useRef, useEffect, useContext, useCallback } from 'preact/hooks';
 import { getData, msgBG, makeOnStorageChanged } from '../utils/dutils.jsx';
 import { Console } from './Console.jsx';
@@ -27,7 +27,7 @@ export function Search(props){
   
   // const decideShow = (searchResults, latestTweets)=>R.defaultTo([],!(isNil(searchResults) || isEmpty(searchResults)) ? searchResults : latestTweets)
   // const decideShow = (searchResults, latestTweets)=>{const sh = R.defaultTo([],!(isNil(searchResults) || isEmpty(searchResults) || R.isEmpty(query))  ? tap(()=> console.log('decided', {searchResults}),searchResults) : tap(()=> console.log('decided', {latestTweets}),searchResults));  return sh}
-  const showSearchRes = (searchResults, latestTweets)=>!(isNil(searchResults) || isEmpty(searchResults) || R.isEmpty(query))
+  const showSearchRes = (searchResults, latestTweets)=>!(isNil(searchResults) || R.isEmpty(query))
 
 
   // const searchStorageChange = async function(item, oldVal, newVal){

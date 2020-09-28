@@ -1,7 +1,7 @@
 //using this temporarily but eventually probably should refactor away from classes
 import "@babel/polyfill";
-// import * as browser from "webextension-polyfill";
-// import {getTwitterTabIds} from './utils/wutils.jsx'
+import * as browser from "webextension-polyfill";
+import {getTwitterTabIds} from './utils/wutils.jsx'
 import { flattenModule, inspect, toggleDebug, currentValue } from './utils/putils.jsx'
 import * as R from 'ramda';
 flattenModule(window,R)
@@ -12,7 +12,7 @@ import * as db from './bg/db.jsx'
 import {initWorker} from './bg/workerBoss.jsx'
 import {makeRoboRequest} from './bg/robo.jsx'
 import {makeIndex, loadIndex, updateIndex, search} from './bg/nlp.jsx'
-import {getUserInfo, updateQuery, tweetLookupQuery, timelineQuery, archToTweet, bookmarkToTweet, apiToTweet, getLatestTweets, getBookmarks} from './bg/twitterScout.jsx'
+import {fetchUserInfo, updateQuery, tweetLookupQuery, timelineQuery, archToTweet, bookmarkToTweet, apiToTweet, getLatestTweets, getBookmarks} from './bg/twitterScout.jsx'
 
 // Project business
 var DEBUG = true;
@@ -57,7 +57,8 @@ const _makeOptionObs = curry (async (optionsChange$,itemName) =>
   .map(path([['newVal'], itemName]))
   .map(pipe(
     defaultTo(prop(itemName,defaultOptions()))))
-  .map(inspect(`make option obs ${itemName}`)).toProperty(await (async () => getOption(itemName))))
+  .map(inspect(`make option obs ${itemName}`)).toProperty(await (async () => getOption(itemName)))
+  )
 const combineOptions = (...args) => pipe(reduce((a,b)=>assoc(b.name, b.value, a),{}))(args)
 
 
@@ -113,7 +114,7 @@ export async function main(){
   .skipDuplicates(compareAuths)
   .filter(validateAuth)
   .toProperty()
-  const userInfo$ = unique_auth$.flatMap(_=>Kefir.fromPromise(getUserInfo(getAuthInit))).filter(x=>x.id!=null).toProperty(()=>{return {id:null}}) // IMPURE userInfo$ :: auth -> user_info
+  const userInfo$ = unique_auth$.flatMap(_=>Kefir.fromPromise(fetchUserInfo(getAuthInit))).filter(x=>x.id!=null).toProperty(()=>{return {id:null}}) // IMPURE userInfo$ :: auth -> user_info
     // Ready
   const ready$ = Kefir.combine([ // ready$ :: user_info -> Bool
     workerReady$,
@@ -231,7 +232,6 @@ export async function main(){
   const isMidSearch$ = Kefir.fromEvents(window, 'midSearch').map(path(['detail', 'free'])).toProperty(()=>false)
   // isMidSearch$.log('midSearch')
 
-  // const searchResult$ = reqSearch$.skipUntilBy(query=>Kefir.fromPromise(searchTweets(query)))
   // TODO buffer and process last query
   const searchResult$ = reqSearch$.bufferWhileBy(isMidSearch$).map(last).flatMapFirst(query => {
     emitMidSearch(true); 
