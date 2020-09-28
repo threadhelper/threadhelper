@@ -3,7 +3,10 @@ import { useState, useRef, useEffect, useContext, useCallback } from 'preact/hoo
 import ReactHtmlParser, { processNodes, convertNodeToElement, htmlparser2 } from 'react-html-parser';
 import $ from 'jquery'
 import {getActiveComposer} from '../utils/wutils.jsx'
-
+import ReplyIcon from '../../images/reply.svg';
+import RetweetIcon from '../../images/retweet.svg';
+import LikeIcon from '../../images/like.svg';
+import ShareIcon from '../../images/share.svg';
 
 export function Tweet(props){
   // placeholder is just text
@@ -42,10 +45,24 @@ export function Tweet(props){
             <div class="th-header-dot">·</div>
             <div class="th-header-time">{timeDiff}</div>
           </div>
-          <div class="th-reply">{reply_text}</div>  
+          <div class="th-reply">{reply_text}</div>
           <div class="th-text">{text}</div>
           {maybeMedia}
           {maybeQuote}
+          <div class="th-icons">
+            <div class="th-icon-field">
+              <div class="th-reply-container"><ReplyIcon /></div>
+            </div>
+            <div class="th-icon-field">
+              <div class="th-rt-container"><RetweetIcon /></div>
+            </div>
+            <div class="th-icon-field">
+              <div class="th-like-container"><LikeIcon /></div>
+            </div>
+            <div class="th-icon-field">
+              <div class="th-share-container"><ShareIcon /></div>
+            </div>
+          </div>
         </div>
       </div>
       <div class="th-hover" onClick={onClick}>
