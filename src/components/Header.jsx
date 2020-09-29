@@ -16,7 +16,7 @@ export function Header(props){
   return (
     <div class="header">
       <SyncIcon streams={props.streams}/>
-      <span class="th-title">Thread Helper</span>
+      <span class="th-title">ThreadHelper</span>
       {!hasArchive ? <ArchiveUploader /> : null}
       <SettingsButton>
       </SettingsButton>

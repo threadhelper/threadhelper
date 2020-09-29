@@ -70,6 +70,7 @@ function rememberSub(sub){
   subscriptions.push(sub)
   return sub
 }
+const subObs = (obs, effect) => rememberSub(obs.observe({value:effect}))
 
 const _onLoad = () => onLoad(thBarHome, thBarComp)
 function main(){
@@ -125,13 +126,22 @@ async function onLoad(thBarHome, thBarComp){
 
   // Effects from streams
     // Actions
-  const _sub_actions = actions$.delay(2000).observe({value(_){handlePosting()},}); rememberSub(_sub_actions);
-  const _sub_targetedActions = targetedTweetActions$.observe({value:pipe(makeIdMsg, msgBG)}); rememberSub(_sub_targetedActions);
-  const _sub_theme = theme$.observe({value: updateTheme,}); rememberSub(_sub_theme);
-  const _sub_robo = robo$.observe({value: _=>requestRoboTweet(composeQuery$.currentValue(), replyTo$.currentValue())}); rememberSub(_sub_robo);
+  subObs(actions$.delay(1000), (_)=>{handlePosting()})
+  subObs(targetedTweetActions$, pipe(makeIdMsg, msgBG))
+  subObs(theme$, updateTheme)
+  subObs(robo$, _=>requestRoboTweet(composeQuery$.currentValue(), replyTo$.currentValue()))
     // Render Sidebar 
-  const _sub_float = floatSidebar$.observe({value: updateFloat,}); rememberSub(_sub_float);
-  const _sub_home = homeSidebar$.observe({ value: updateHome, }); rememberSub(_sub_home);
+  subObs(floatSidebar$, updateFloat)
+  subObs(homeSidebar$, updateHome)
+
+  
+  // const _sub_actions = actions$.delay(2000).observe({value:,}); rememberSub(_sub_actions);
+  // const _sub_targetedActions = targetedTweetActions$.observe({value:pipe(makeIdMsg, msgBG)}); rememberSub(_sub_targetedActions);
+  // const _sub_theme = theme$.observe({value: updateTheme,}); rememberSub(_sub_theme);
+  // const _sub_robo = robo$.observe({value: _=>requestRoboTweet(composeQuery$.currentValue(), replyTo$.currentValue())}); rememberSub(_sub_robo);
+  //   // Render Sidebar 
+  // const _sub_float = floatSidebar$.observe({value: updateFloat,}); rememberSub(_sub_float);
+  // const _sub_home = homeSidebar$.observe({ value: updateHome, }); rememberSub(_sub_home);
 
   // if(!await getData('sync')){
   //   // msgBG({type:"query", query_type: "update"})

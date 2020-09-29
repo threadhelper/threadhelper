@@ -1,5 +1,5 @@
-import {getData, setData, makeOnStorageChanged, inspect} from '../utils/dutils.jsx'
-import { flattenModule } from '../utils/putils.jsx'
+import {getData, setData, makeOnStorageChanged} from '../utils/dutils.jsx'
+import { flattenModule, inspect} from '../utils/putils.jsx'
 import * as R from 'ramda';
 flattenModule(global,R)
 
@@ -39,51 +39,6 @@ const makeTweetQueryUrl = curry( (max_id, username, count) => {
 
 const makeUpdateQueryUrl = makeTweetQueryUrl(-1)
 
-
-// function updateMeta(new_tweets, count){
-//   let old_meta = this.tweets_meta
-//   let len = Object.keys(new_tweets).length - 1
-//   let first_key = Object.keys(new_tweets)[0]
-//   let last_key = Object.keys(new_tweets)[len]
-//   let meta = {
-//     count: count, 
-//     max_id: Math.min(new_tweets[last_key].id, old_meta.max_id),
-//     max_time: Math.min(new_tweets[last_key].time, old_meta.max_time),
-//     since_id: Math.max(new_tweets[first_key].id, old_meta.since_id),
-//     since_time: Math.max(new_tweets[first_key].time, old_meta.since_time),
-//     last_updated: (new Date()).getTime(),
-//   }
-//   return meta
-// }
-
-// function makeTweetsMeta(tweets){
-//   let meta = {}
-//   if (tweets != null){
-//     if (Object.keys(tweets).length>0){
-//       let len = Object.keys(tweets).length - 1
-//       let first_key = Object.keys(tweets)[0]
-//       let last_key = Object.keys(tweets)[len]
-//       meta = {
-//         count: len, 
-//         max_id: tweets[last_key].id, 
-//         max_time: tweets[last_key].time,
-//         since_id: tweets[first_key].id, 
-//         since_time: tweets[first_key].time,
-//         last_updated: (new Date()).getTime(),
-//       }
-//     }
-//   } else{
-//     meta = {
-//       count: 0, 
-//       max_id: null, 
-//       max_time: null,
-//       since_id: null, 
-//       since_time: null,
-//       last_updated: null,
-//     }
-//   }
-//   return meta
-// }
 
 export const idComp = (a,b)=>a.localeCompare(b,undefined,{numeric: true})
 // gt for ids
@@ -263,6 +218,66 @@ const getDocUsername = (ref) => index.documentStore.getDoc(ref).username
 const isRT = propEq()
 const isBookmark = prop('is_bookmark')
 const isReply = x=>!isNil(x.reply_to) && x.reply_to === x.username
+
+// To see if a tweet can be sampled according to search filters
+const makeValidityTest = (filters, screen_name)=>{
+  const isRT = t=>((t.username != screen_name) && !t.is_bookmark)
+  const isBookmark = prop('is_bookmark')
+  const isReply = t=>!isNil(t.reply_to) && t.reply_to != t.username  
+  const isValidTweet = t => 
+  (filters.getRTs || !isRT(t)) && 
+  (filters.useBookmarks || !isBookmark(t)) && 
+  (filters.useReplies || !isReply(t))
+  return isValidTweet
+}
+// takeRandomSample :: [id] -> generator(id)
+export const genRandomSample = (keys)=>{
+  const rnd = Math.random(); 
+  return pipe(
+    length,
+    multiply(rnd), 
+    Math.floor, 
+    nth(__,keys))(keys)}
+
+// get random tweets as a serendipity generator
+// TODO make functional
+export const getDefaultTweets = curry(async (sampleFn, n_tweets, filters, db_get, screen_name, keys) => {
+  console.log('hi I am getDefaultTweets')
+  let sample = []
+  const isFull = (sample) => sample.length >= n_tweets || sample.length >= keys.length
+  // const isValidTweet = makeValidityTest(filters, screen_name)
+  const isRT = t=>((t.username != screen_name) && !t.is_bookmark)
+  const isBookmark = prop('is_bookmark')
+  const isReply = t=>!isNil(t.reply_to) && t.reply_to != t.username  
+  const isValidTweet = t => 
+  (filters.getRTs || !isRT(t)) && 
+  (filters.useBookmarks || !isBookmark(t)) && 
+  (filters.useReplies || !isReply(t))
+// 
+  // tryAddTweet :: id -> 
+  const tryAddTweet = pipe(
+    nth(__,keys),
+    db_get('tweets'),
+    andThen(when(isValidTweet,
+      t=>sample.push(t)))
+  )  
+  while(!isFull(sample)){
+    console.log('hi I am getDefaultTweets', sample)
+    await pipe(
+      sampleFn,
+      inspect('sampled id'),
+      db_get('tweets'),
+      andThen(pipe(
+        inspect('got tweet'),
+        when(
+          isValidTweet, 
+          t=>sample.push(t))))
+      )(keys)
+  }
+  return sample
+})
+
+export const getRandomSampleTweets = getDefaultTweets(genRandomSample)
 
 // TODO make functional
 export async function getLatestTweets(n_tweets, filters, db_get, screen_name, keys){
