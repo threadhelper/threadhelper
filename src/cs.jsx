@@ -1,33 +1,18 @@
 /* CS is here to manage the presence of components and events they're not supposed to access.
 
-Layout:
-x Process messages from BG
-
-x Create Sidebar
-- Inject Sidebar into twitter pages when appropriate
-  x home
-  - compose
-- Remove Sidebar from twitter pages when appropriate
-  x home
-  x compose
-
-- manage information about twitter use (inited in initLocalStorage)
-  x last_tweet_id // the last tweet whose page we were in
-  x current_reply_to // could be last_tweet_id, but could be a direct reply outside of a tweet page
-- manage inputs in twitter use
-  x tweet, 
-  x reply, 
-  x rt, 
-  x undo rt, 
-  x delete
-
-x define destruction and dispatch its event on start up
+. Process messages from BG
+. Create Sidebar
+. Inject Sidebar into twitter pages when appropriate
+. Remove Sidebar from twitter pages when appropriate
+. manage information about twitter use (inited in initLocalStorage)
+. manage inputs in twitter use
+. define destruction and dispatch its event on start up
 */
 
 import "@babel/polyfill";
 import { h, render, Component } from 'preact';
 // import { useState, useCallback } from 'preact/hooks';
-import { flattenModule, inspect, toggleDebug, currentValue } from './utils/putils.jsx'
+import { flattenModule, inspect, toggleDebug, currentValue, nullFn } from './utils/putils.jsx'
 import { updateTheme, getMode, isSidebar, getIdFromUrl, getCurrentUrl } from './utils/wutils.jsx'
 import { getData, setData, msgBG, makeGotMsgObs, makeStorageObs, getOptions, requestRoboTweet } from './utils/dutils.jsx';
 import { makeRoboStream, makeActionStream, makeComposeFocusObs, makeReplyObs, getHostTweetId, makeLastClickedObs, makeAddBookmarkStream, makeRemoveBookmarkStream, makeDeleteEventStream } from './ui/inputsHandler.jsx'
@@ -62,27 +47,24 @@ const minIdleTime = 3000;
 
 // Effects 
 const handlePosting = ()=>msgBG({type:'update-tweets'}) // handle twitter posting actions like tweets, rts and deletes
-
+// 
 
 // Stream clean up
 const subscriptions = []
-function rememberSub(sub){
-  subscriptions.push(sub)
-  return sub
-}
+const rememberSub = (sub) => {subscriptions.push(sub); return sub}
 const subObs = (obs, effect) => rememberSub(obs.observe({value:effect}))
 
 const _onLoad = () => onLoad(thBarHome, thBarComp)
 function main(){
   window.addEventListener('load', _onLoad, true);  
-  msgBG({type:"cs-created"})
-}
-
+  msgBG({type:"cs-created"})}
 async function onLoad(thBarHome, thBarComp){
   // Define streams
     // messages
   const gotMsg$ = makeGotMsgObs().map(x=>x.m)
-  const mode$ = gotMsg$.filter(m => m.type == "tab-change-url").map(m=>getMode(m.url))
+  const urlChange$ = gotMsg$.filter(m => m.type == "tab-change-url")
+  // urlChange$.log('urlChange$')
+  const mode$ = urlChange$.map(m=>getMode(m.url))
     // storage
   const storageChange$ = makeStorageObs()
   const latest$ = storageChange$.filter(x=>x.itemName=='latest_tweets').map(prop('newVal'))
@@ -106,7 +88,11 @@ async function onLoad(thBarHome, thBarComp){
   const delete$ = makeDeleteEventStream().map(inspect('delete')).map(_=>'delete-tweet')
   const targetedTweetActions$ = Kefir.merge([addBookmark$, removeBookmark$, delete$])
   const composeFocus$ = makeComposeFocusObs(); // stream for focus on compose box
-  const composeQuery$ = composeFocus$.filter(x => x != 'unfocused').flatMapLatest(e=>makeComposeObs(e.target)).toProperty(()=>'')
+  // const composeQuery$ = composeFocus$.filter(x => x != 'unfocused').flatMapLatest(e=>makeComposeObs(e.target)).toProperty(()=>'')
+  // const composeUnfocused$ = composeFocus$.filter(equals('unfocused')).map(_=>'')
+  const composeUnfocused$ = urlChange$.map(_=>'')
+  const composeContent$ = composeFocus$.filter(x => x != 'unfocused').flatMapLatest(e=>makeComposeObs(e.target))
+  const composeQuery$ = Kefir.merge([composeUnfocused$, composeContent$]).toProperty(()=>'')
   const stoppedWriting$ = composeQuery$.skipDuplicates().filter(x=>!isEmpty(x)).debounce(minIdleTime)  // to detect when writing has stopped for a bit
   const robo$ = Kefir.merge([makeRoboStream(), stoppedWriting$]).throttle(minIdleTime, {trailing: false})
   const thStreams = {
@@ -126,10 +112,13 @@ async function onLoad(thBarHome, thBarComp){
 
   // Effects from streams
     // Actions
+  targetedTweetActions$.log('targetedTweetActions')
+  subObs(lastClickedId$, (_)=>{})
+  subObs(composeQuery$, nullFn)
   subObs(actions$.delay(1000), (_)=>{handlePosting()})
   subObs(targetedTweetActions$, pipe(makeIdMsg, msgBG))
   subObs(theme$, updateTheme)
-  subObs(robo$, _=>requestRoboTweet(composeQuery$.currentValue(), replyTo$.currentValue()))
+  // subObs(robo$, _=>requestRoboTweet(composeQuery$.currentValue(), replyTo$.currentValue()))
     // Render Sidebar 
   subObs(floatSidebar$, updateFloat)
   subObs(homeSidebar$, updateHome)

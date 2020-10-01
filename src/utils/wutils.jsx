@@ -106,7 +106,7 @@ export function isFocused(selector){
 
 // get ID from the tweet card DOM element
 export function getTweetId(tweet){
-  console.log(tweet)
+  // console.log(tweet)
   let date = $(tweet).find('time')[0]
   let linkEl = date.parentNode
   let link = linkEl.href

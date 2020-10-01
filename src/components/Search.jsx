@@ -30,37 +30,6 @@ export function Search(props){
   const showSearchRes = (searchResults, latestTweets)=>!(isNil(searchResults) || R.isEmpty(query))
 
 
-  // const searchStorageChange = async function(item, oldVal, newVal){
-  //   if(!props.active) return
-  //   switch(item){
-  //     case "search_results":
-  //       if(newVal != null && newVal.length > 0){
-  //         console.log(`new search results `, newVal)
-  //         _setTweets(newVal)  
-  //       } else{
-  //         console.log('showing latest instead of search')
-  //         const latest = await getData("latest_tweets")
-  //         _setTweets( latest != null ? latest : [])
-  //       }
-  //       break;
-  //     case "latest_tweets":
-  //       console.log(`new latest tweets `, newVal)
-  //       // _setTweets(newVal != null ? newVal : [])
-  //       if(isMidSearch()){
-  //         const search_results = await getData("search_results")
-  //         if(search_results != null){
-  //           console.log('showing search results instead of latest')
-  //           _setTweets( search_results != null ? search_results : [])
-  //           break
-  //         }
-  //       }
-  //       console.log('showing latest')
-  //       _setTweets( newVal != null ? newVal : [])
-  //       break;
-  //     default:
-  //       break;
-  //   }
-  // };
 
   // // To subscribe to storage changes
   // useEffect(() => {
@@ -85,14 +54,14 @@ export function Search(props){
     return ()=>{  };
   },[query]);
 
-  useEffect(()=>{
-    console.log({searchResults})
-    return ()=>{  };
-  },[searchResults]);
-  useEffect(()=>{
-    console.log({latestTweets})
-    return ()=>{  };
-  },[latestTweets]);
+  // useEffect(()=>{
+  //   // console.log({searchResults})
+  //   return ()=>{  };
+  // },[searchResults]);
+  // useEffect(()=>{
+  //   // console.log({latestTweets})
+  //   return ()=>{  };
+  // },[latestTweets]);
 
 
   return (
@@ -103,10 +72,15 @@ export function Search(props){
   );
 }
 
+function prepTweets(list){
+  console.log('search tweets', list)
+  return defaultTo([],list)
+}
+
 function SearchResults(props){
   return(
   <div class="searchTweets"> 
-        {(defaultTo([],props.tweets)).map(tweet => (
+        {prepTweets(props.tweets).map(tweet => (
           // Without a key, Preact has to guess which tweets have
           // changed when re-rendering.
           <Tweet key={tweet.id} tweet={tweet} />

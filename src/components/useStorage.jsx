@@ -2,7 +2,7 @@ import { h, render, Component } from 'preact';
 import { useState, useEffect, useContext, useMemo } from 'preact/hooks';
 import {useStream, _useStream} from './useStream.jsx'
 import {getData, setData, setStg, makeStgItemObs} from '../utils/dutils.jsx'
-import {inspect} from '../utils/putils.jsx'
+import {inspect, nullFn} from '../utils/putils.jsx'
 import {pipe, andThen, prop, path, isNil, defaultTo} from 'ramda'
 
 
@@ -12,23 +12,24 @@ export function useStorage(name, default_val){
   const [storageItem, setStorageItem] = _useStream(useStgObs)
 
   const setStgItem = pipe(
-    inspect(`setting ${name}`),
+    // inspect(`setting ${name}`),
     setStg(name),
     andThen(pipe(
       prop([name]),
-      inspect(`set ${name}`),
+      // inspect(`set ${name}`),
       setStorageItem
       )))
     
   useEffect(() => {
-    useStgObs.log({name})
+
+    useStgObs.onValue(nullFn)
     //init
     getData(name).then(pipe(defaultTo(default_val), setStorageItem))
-    return () => {};
+    return () => {useStgObs.offValue(nullFn)};
   }, []);
 
   useEffect(()=>{
-    console.log({storageItem})
+    // console.log({storageItem})
     return ()=>{  };
   },[storageItem]);
 

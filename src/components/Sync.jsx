@@ -9,18 +9,23 @@ import { isNil } from 'ramda'
 
 export function SyncIcon(props){
 
-  const sync = useStorage('sync', false)
-  const [_syncDisplay, setSyncDisplay] = useStorage('syncDisplay', 'default sync display msg')
+  const [sync, setSync] = useStorage('sync', false)
+  const [syncDisplay, setSyncDisplay] = useStorage('syncDisplay', 'default sync display msg')
 
 
   function onSyncClick(){
-    console.log("clicked sync")
     msgBG({type:"query", query_type: "update"})
   }
 
+  useEffect(()=>{
+    console.log({sync})
+    return ()=>{  };
+  },[sync]);
+
+
   return (
     <div class={`sync ${sync ? 'synced' : 'unsynced'}`} onClick={onSyncClick}>
-      <span class="tooltiptext"> sync msg: {_syncDisplay} </span>  
+      <span class="tooltiptext"> sync msg: {syncDisplay} </span>  
     </div>
   );
 }

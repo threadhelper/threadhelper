@@ -93,7 +93,7 @@ function getTextFromElement(tgt){
 }
 
 function cleanSearchString(text){
-  return text.replace(url_regex, "").trim()
+  return text.replace(url_regex, "").replace(/(\r\n|\n|\r)/gm, "").trim()
 }
 
 function requestSearch(clean_text){

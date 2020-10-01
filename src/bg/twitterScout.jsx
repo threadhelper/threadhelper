@@ -3,17 +3,17 @@ import { flattenModule, inspect} from '../utils/putils.jsx'
 import * as R from 'ramda';
 flattenModule(global,R)
 
+// helper functions
+const getMaxId = (res) => res.length > 1 ? res[res.length - 1].id : null
 
+// Fetches, IMPURE
 export const fetchUserInfo = async (getAuthInit) => await fetch(`https://api.twitter.com/1.1/account/verify_credentials.json`,getAuthInit()).then(x => x.json())
-
 export const updateQuery = async (getAuthInit, username, count) => await fetch(makeUpdateQueryUrl(username, count), getAuthInit()).then(x => x.json())
-
 export const tweetLookupQuery = curry(async (getAuthInit, ids) => {
   console.trace('inside tweetLookupQuery', ids)
   return await fetch(`https://api.twitter.com/1.1/statuses/lookup.json?id=${R.join(",",ids)}`, getAuthInit()).then(x => x.json())
 })
 
-const getMaxId = (res) => res.length > 1 ? res[res.length - 1].id : null
 
 
 // fetch as many tweets as possible from the timeline
@@ -241,9 +241,10 @@ export const genRandomSample = (keys)=>{
 
 // get random tweets as a serendipity generator
 // TODO make functional
-export const getDefaultTweets = curry(async (sampleFn, n_tweets, filters, db_get, screen_name, keys) => {
-  console.log('hi I am getDefaultTweets')
+export const getDefaultTweets = curry(async (sampleFn, n_tweets, filters, db_get, screen_name, getKeys) => {
   let sample = []
+  const keys = await getKeys()
+  console.log('hi I am getDefaultTweets', {keys})
   const isFull = (sample) => sample.length >= n_tweets || sample.length >= keys.length
   // const isValidTweet = makeValidityTest(filters, screen_name)
   const isRT = t=>((t.username != screen_name) && !t.is_bookmark)
@@ -253,22 +254,12 @@ export const getDefaultTweets = curry(async (sampleFn, n_tweets, filters, db_get
   (filters.getRTs || !isRT(t)) && 
   (filters.useBookmarks || !isBookmark(t)) && 
   (filters.useReplies || !isReply(t))
-// 
-  // tryAddTweet :: id -> 
-  const tryAddTweet = pipe(
-    nth(__,keys),
-    db_get('tweets'),
-    andThen(when(isValidTweet,
-      t=>sample.push(t)))
-  )  
+
   while(!isFull(sample)){
-    console.log('hi I am getDefaultTweets', sample)
     await pipe(
       sampleFn,
-      inspect('sampled id'),
       db_get('tweets'),
       andThen(pipe(
-        inspect('got tweet'),
         when(
           isValidTweet, 
           t=>sample.push(t))))
@@ -280,7 +271,7 @@ export const getDefaultTweets = curry(async (sampleFn, n_tweets, filters, db_get
 export const getRandomSampleTweets = getDefaultTweets(genRandomSample)
 
 // TODO make functional
-export async function getLatestTweets(n_tweets, filters, db_get, screen_name, keys){
+export async function getLatestTweets(n_tweets, filters, db_get, screen_name, getKeys){
   // let keys = utils.db.getAllKeys('tweets')
   let latest = []
   const isFull = (latest) => latest.length >= n_tweets
@@ -293,7 +284,7 @@ export async function getLatestTweets(n_tweets, filters, db_get, screen_name, ke
   (filters.useReplies || !isReply(t))
 
   
-  for (const k of reverse(sortKeys(keys))){
+  for (const k of reverse(sortKeys(await getKeys()))){
     const t = await db_get('tweets',k)
     isValidTweet(t) ? latest.push(t) : null
     if(isFull(latest)) break;

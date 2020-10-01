@@ -52,6 +52,38 @@ export const get = curry( async (db, storeName, key) => {
   return db.get(storeName, key);
 })
 
+export const getMany = curry( async (db, storeName, keys) => {
+  const tx = db.transaction(storeName, 'readwrite');
+  const store = tx.objectStore(storeName);
+  let promises = []
+  try{
+    for(let key of keys){
+      promises.push(store.get(key))
+    }
+    promises.push(tx.done)
+    return await Promise.all(promises)        
+  } catch(e){
+    throw(e)
+  }
+})
+
+curry( async (db, storeName, item_list) => {
+  console.log('putting in db', {db})
+  const tx = db.transaction(storeName, 'readwrite');
+  const store = tx.objectStore(storeName);
+  let promises = []
+  try{
+    for(let item of item_list){
+      promises.push(store.put(item))
+    }
+    promises.push(tx.done)
+    return await Promise.all(promises)        
+  } catch(e){
+    throw(e)
+  }
+})
+
+
 export const del = curry( async (db, storeName, key_list) => {
   const tx = db.transaction(storeName, 'readwrite');
   const store = tx.objectStore(storeName);

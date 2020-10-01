@@ -22,8 +22,8 @@ export function Robo(props){
 
   async function onRoboClick(){
     if(props.active) {
-      requestRoboTweet(query, reply_to)
-      console.log({query,reply_to})
+      // requestRoboTweet(query, reply_to)
+      // console.log({query,reply_to})
     }
   }
 

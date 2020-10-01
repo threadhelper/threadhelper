@@ -1,8 +1,7 @@
 import * as elasticlunr from 'elasticlunr'
-import { flattenModule } from '../utils/putils.jsx'
+import { flattenModule, inspect } from '../utils/putils.jsx'
 import * as R from 'ramda';
 flattenModule(global,R)
-import {inspect} from '../utils/dutils.jsx'
 
 
 const tweet_fields = [
@@ -62,9 +61,9 @@ export const updateIndex = curry (async (index, tweets_to_add, ids_to_remove) =>
   index = await removeFromIndex(index,ids_to_remove) 
   return index
 })
-
+// 
 //** Find related tweets */
-export const getRelated = curry( async (n_tweets, index, query) => {
+export const getRelated = curry( async (index, query) => {
   //results are of the format {ref, doc}
   return index.search(query, {
     fields: {
@@ -106,9 +105,11 @@ export const getTopNResults = curry(async (filters, screen_name, n_tweets, index
     map(prop('ref')),
   )(results)
 })
-// 
+
 export const search = curry (async (filters, screen_name, n_tweets, index, query) => {
+  console.log('searching nlp', {filters, screen_name, n_tweets, index, query})
   return await pipe(
-    getRelated(n_tweets, index),
+    getRelated(index),
+    inspect(`related to ${query}`),
     andThen(getTopNResults(filters, screen_name, n_tweets, index)),
     )(query)})

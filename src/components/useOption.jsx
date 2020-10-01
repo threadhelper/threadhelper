@@ -4,8 +4,8 @@ import {useStream,_useStream} from './useStream.jsx'
 import {getData, setData, makeStgPathObs, updateOptionStg, getOptions} from '../utils/dutils.jsx'
 import {inspect} from '../utils/putils.jsx'
 import {pipe, andThen, prop, path} from 'ramda'
-// 
 
+// 
 export function useOption(name){
   const useStgObs = useMemo(()=>makeStgPathObs(['options',name,'value']),[name])
   // const [option, setOption] = useState(true);
