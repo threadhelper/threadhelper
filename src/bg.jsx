@@ -60,16 +60,18 @@ const stg_clear = ()=>chrome.storage.local.clear(()=>{
 // const makeMidSearchEvent = (_busy) => {return new CustomEvent("midSearch", {detail: {busy:_busy}})} 
 // const emitMidSearch = (busy) => {window.dispatchEvent(makeMidSearchEvent(busy));}
 // makeOptionsObs :: String -> a
-const _makeOptionObs = curry (async (optionsChange$,itemName) => 
-  optionsChange$.filter(x=>!isOptionSame(itemName,x))
+const _makeOptionObs = curry (async (optionsChange$,itemName) => {
+  const initVal = await getOption(itemName)
+  return optionsChange$.filter(x=>!isOptionSame(itemName,x))
   .map(path([['newVal'], itemName]))
   .map(pipe(
     defaultTo(prop(itemName,defaultOptions()))))
-  .map(inspect(`make option obs ${itemName}`)).toProperty(await (async () => getOption(itemName)))
-  )
+  .map(inspect(`make option obs ${itemName}`)).toProperty(()=>initVal)
+})
 const combineOptions = (...args) => pipe(reduce((a,b)=>assoc(b.name, b.value, a),{}))(args)
-
-
+  // stream utils
+const streamAnd = streams => Kefir.combine(streams, (...args)=>reduce(and, true, args))
+const toVal = (val,stream) => stream.map(()=>val).toProperty(()=>val)
 
 export async function main(){  
   // Extension business
@@ -82,6 +84,7 @@ export async function main(){
       // Messages
   const msg$ = makeGotMsgObs().map(x=>x.m) // msg$ :: () -> msg // msg :: {type,...} // Listens to chrome runtime onMessage
   const csStart$ = msg$.filter(propEq('type','cs-created'))
+  const csNotReady$ = toVal(false, csStart$).toProperty(()=>true)
       // Storage
   const storageChange$ = makeStorageObs() // storageChange$ :: () -> change  // change :: {itemName, oldVal, newVal} // Listens to changes in chrome.storage
   const optionsChange$ = storageChange$.filter(x=>x.itemName=='options') // optionsChange$ :: change -> change //.toProperty(await (async ()=>{return {oldVal:null, newVal:await getOptions()}}))
@@ -105,12 +108,13 @@ export async function main(){
   const worker = initWorker()
   const workerMsg$ = Kefir.fromEvents(worker,'message').map(prop('data'))
   const workerReady$ = workerMsg$.filter(propEq('type', 'ready')).map( x=>{return isNil(x) ? false : true}).toProperty(()=>false)
-  const updateTweets$ = workerMsg$.filter(propEq('type','updateTweets'))    // handles the return of a updateTweets action from worker
+  const updatedTweets$ = workerMsg$.filter(propEq('type','updateTweets'))    // handles the return of a updateTweets action from worker
   const removedTweet$ = workerMsg$.filter(propEq('type','removeTweets'))
   const addedTweet$ = workerMsg$.filter(propEq('type','addTweets'))
   const searchedIndex$ = workerMsg$.filter(propEq('type','searchIndex'))
   const gotDefaultTweets$ = workerMsg$.filter(propEq('type','getDefaultTweets'))
-  const anyTweetUpdate$ = Kefir.merge([updateTweets$, addedTweet$, removedTweet$]).map(prop('index_json')).toProperty()
+  // const anyTweetUpdate$ = Kefir.merge([updatedTweets$, addedTweet$, removedTweet$]).map(prop('index_json')).toProperty()
+  const anyTweetUpdate$ = Kefir.merge([updatedTweets$, addedTweet$, removedTweet$]).toProperty()
   const whenUpdated$ = anyTweetUpdate$.map(_=>getDateFormatted()).toProperty(getDateFormatted) // keeps track of when the last update to the tweet db was
 
     // DB
@@ -133,18 +137,23 @@ export async function main(){
     // index$.map( x=>{return isNil(x) ? false : true}),
     userInfo$.map( x=>{return isNil(x.id) ? false : true}),
   ], (...args)=>reduce(and, true, args)).toProperty(()=>false) 
-  const notReady$ = ready$.map(not)
+  const notReady$ = ready$.map(not) 
+  const initData$ = Kefir.merge([csStart$, ready$.bufferWhileBy(csNotReady$)]) // second term exists bc if csStart arrives before ready, then event won't fire
   const syncDisplay$ = Kefir.merge([ready$, anyTweetUpdate$,]) // triggers sync display update// ready$ :: user_info -> Bool
     // Tweet API
-  const reqUpdateTweets$ = msg$.filter(m => ['update-tweets', "new-tweet"].includes(m.type)).bufferWhileBy(notReady$).flatten() // reqUpdateTweets$ :: msg -> msg
-  const reqTimeline$ = Kefir.merge([ msg$.filter(m => ["update-timeline"].includes(m.type)), csStart$,]).bufferWhileBy(notReady$).flatten()  // reqTimeline$ :: msg -> msg
   const debugGetBookmarks$ = msg$.filter(propEq('type','get-bookmarks'))
-  const reqBookmarks$ = Kefir.merge([debugGetBookmarks$, csStart$]).bufferWhileBy(notReady$).flatten()
-  const fetchedUpdate$ = reqUpdateTweets$.flatMapLatest(_=>Kefir.fromPromise(updateQuery(getAuthInit, getUsername(), update_size))) // IMPURE
+  const reqUpdatedTweets$ = msg$.filter(m => ['update-tweets', "new-tweet"].includes(m.type)).bufferWhileBy(notReady$).flatten() // reqUpdatedTweets$ :: msg -> msg
+  const reqTimeline$ = Kefir.merge([ msg$.filter(m => ["update-timeline"].includes(m.type)), initData$]).bufferWhileBy(notReady$).flatten()  // reqTimeline$ :: msg -> msg
+  reqTimeline$.log('reqTimeline$')
+  const reqBookmarks$ = Kefir.merge([debugGetBookmarks$, initData$]).bufferWhileBy(notReady$).flatten()
+  reqBookmarks$.log('reqBookmarks$')
+  const fetchedUpdate$ = reqUpdatedTweets$.flatMapLatest(_=>Kefir.fromPromise(updateQuery(getAuthInit, getUsername(), update_size))) // IMPURE
   const fetchedTimeline$ = reqTimeline$.flatMapLatest(_=>Kefir.fromPromise(timelineQuery(getAuthInit, userInfo$.currentValue()))) // IMPURE
   const fetchedBookmarks$ = reqBookmarks$.flatMapLatest(_=>Kefir.fromPromise(getBookmarks(getAuthInit)))
   const fetchedTweets$ = Kefir.merge([fetchedUpdate$, fetchedTimeline$])//.map(toTweets)
   const addBookmark$ = msg$.filter(propEq('type','add-bookmark')).bufferWhileBy(notReady$).flatten()
+  const anyAPIReq$ = Kefir.merge([reqUpdatedTweets$, reqBookmarks$, reqTimeline$, addBookmark$,]) //this leaving early, should leave at the same time the request leaves
+  const fetchedAnyAPIReq$ = Kefir.merge([fetchedUpdate$, fetchedBookmarks$, fetchedTimeline$,])
   // Local Tweet Processing
   const deleteTweet$ = msg$.filter(propEq('type','delete-tweet')).bufferWhileBy(notReady$).flatten()
   const removeBookmark$ = msg$.filter(propEq('type','remove-bookmark')).bufferWhileBy(notReady$).flatten()
@@ -152,10 +161,11 @@ export async function main(){
   const reqArchiveLoad$ = msg$.filter(propSatisfies(x=>["temp-archive-stored", "load-archive"].includes(x), 'type')).bufferWhileBy(notReady$).flatten()
   const archiveLoadedTweets$ = reqArchiveLoad$.flatMapLatest(_=>Kefir.fromPromise(getData("temp_archive")))
     // Sync
-  const notLoading$ = Kefir.combine([reqArchiveLoad$.map(_=>true), archiveLoadedTweets$.map(_=>false),], 
-  (...args)=>reduce(and, true, args)).map(defaultTo(true)).toProperty(()=>true)
-  const syncLight$ = Kefir.combine([notLoading$, ready$], (...args)=>reduce(and, true, args)).map(defaultTo(false)).toProperty(()=>false)
-  // const isMidSearch$ = Kefir.fromEvents(window, 'midSearch').map(path(['detail', 'busy'])).toProperty(()=>false)
+  const anyWorkerReq$ = Kefir.merge([fetchedUpdate$, fetchedBookmarks$, fetchedTimeline$, removeBookmark$, reqRemoveTweet$, reqArchiveLoad$]) // like with anyAPIReq$, these should only be emitted as the worker request is sent but oh well
+  const notArchLoading$ = Kefir.merge([toVal(false, reqArchiveLoad$), toVal(true, archiveLoadedTweets$)]).map(defaultTo(true)).toProperty(()=>true)
+  const notFetchingAPI$ = Kefir.merge([toVal(false, anyAPIReq$), toVal(true, fetchedAnyAPIReq$)]).map(defaultTo(true)).toProperty(()=>true)
+  const notMidWorkerReq$ = Kefir.merge([toVal(false, anyWorkerReq$), toVal(true, anyTweetUpdate$)]).map(defaultTo(true)).toProperty(()=>true)
+  const syncLight$ = streamAnd([notArchLoading$, notFetchingAPI$, notMidWorkerReq$, ready$]).map(defaultTo(false)).toProperty(()=>false)
   // CS messages
   const searchQuery$ = msg$.filter(x=>x.type === "search").map(prop('query')).toProperty(()=>'')
   const reqRoboQuery$ = msg$.filter(x=>!isNil(x)).filter(propEq('type', 'robo-tweet')).bufferWhileBy(notReady$).flatten()
@@ -174,7 +184,7 @@ export async function main(){
     anyTweetUpdate$.filter(_=>!searchQueryExists()),
     msg$.filter(propEq('type', "get-latest")),
     fetchedTweets$.delay(100), // TODO: this makes us set the latest tweets a little after every tweets update, but we should be doing it based on db updates instead.
-  ]).bufferWhileBy(notReady$).flatten()
+  ]).throttle(1000).bufferWhileBy(notReady$).flatten()
 // 
   // Potential functions to import
     // Worker requests
@@ -253,6 +263,7 @@ export async function main(){
   // Effects from streams
     // Ready / sync
   ready$.log('READY')
+
   csStart$.log('csStart')
   workerReady$.log('workerReady')
   // workerMsg$.log('workerMsg$')
@@ -268,7 +279,7 @@ export async function main(){
   subObs(archiveLoadedTweets$, pipe(defaultTo([]), map(archToTweet(getUserInfo)), reqAddTweets)) // happens after loading temp_archive from stg, from file. Action imports it
   subObs(addBookmark$, addBookmark) // happens on requests to add a bookmark
   subObs(fetchedBookmarks$, pipe(defaultTo([]), map(bookmarkToTweet), reqSaveTweets,), )  // happens on requests to fetch all bookmarks
-  subObs(updateTweets$, clearTempArchive) // happens after tweets are updated by worker
+  subObs(updatedTweets$, clearTempArchive) // happens after tweets are updated by worker
   subObs(addedTweet$, clearTempArchive) // happens after tweets are added by worker
       // Search
   subObs(reqSearch$, reqSearch)

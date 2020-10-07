@@ -26,7 +26,7 @@ export function Console(props){
   return (
     <div class="console">
       <div id='filters'>
-        <span>{`Filters:`}</span>      
+        {/* <span>{`Filters:`}</span>       */}
         <span class="getRTs"> 
           <input id="getRTs" name="getRTs" class='filter-checkbox' type="checkbox" checked={getRTs} onChange={(e)=>handleInputChange(setGetRTs, e)}></input> 
           <label for="getRTs" >< RetweetIcon class='filter-icon' onClick={_ => _} /> </label>

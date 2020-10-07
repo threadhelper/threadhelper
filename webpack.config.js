@@ -1,7 +1,7 @@
 const ChromeExtensionReloader  = require('webpack-chrome-extension-reloader');
 
 module.exports = {
-  devtool: 'cheap-module-source-map',
+  devtool: 'source-map',
   mode: 'production',
   entry: {
     popup: './src/popup.jsx',

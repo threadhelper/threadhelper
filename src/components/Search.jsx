@@ -6,13 +6,13 @@ import { Tweet } from './Tweet.jsx';
 import { IOStreams } from './ThreadHelper.jsx';
 import { useStorage } from './useStorage.jsx';
 import { useStream } from './useStream.jsx';
-import { eqProps } from 'ramda';
 import { flattenModule } from '../utils/putils.jsx'
 import * as R from 'ramda';
 flattenModule(global,R)
 
 const isMidSearch = (query)=>query!=null && query.length>0
 function reqSearch(query){
+  console.log('reqSearch');
   msgBG({type:'search', query:query})
 }
 
@@ -27,7 +27,7 @@ export function Search(props){
   
   // const decideShow = (searchResults, latestTweets)=>R.defaultTo([],!(isNil(searchResults) || isEmpty(searchResults)) ? searchResults : latestTweets)
   // const decideShow = (searchResults, latestTweets)=>{const sh = R.defaultTo([],!(isNil(searchResults) || isEmpty(searchResults) || R.isEmpty(query))  ? tap(()=> console.log('decided', {searchResults}),searchResults) : tap(()=> console.log('decided', {latestTweets}),searchResults));  return sh}
-  const showSearchRes = (searchResults, latestTweets)=>!(isNil(searchResults) || R.isEmpty(query))
+  const showSearchRes = (searchResults, latestTweets)=>!(isNil(searchResults) || R.isEmpty(query.trim()))
 
 
 
@@ -36,7 +36,7 @@ export function Search(props){
   //   // console.log("adding search storage listener")
   //   const onStCh = makeOnStorageChanged(searchStorageChange)
   //   chrome.storage.onChanged.addListener(onStCh);
-  //   return () => {
+  //   return () => { 
   //     // console.log("removing search storage listener")
   //     chrome.storage.onChanged.removeListener(onStCh)
   //   };
@@ -50,7 +50,13 @@ export function Search(props){
 
 
   useEffect(()=>{
-    if(props.active && query != null) reqSearch(query)
+    R.pipe(
+      defaultTo(''),
+      when(
+        pipe(R.trim, either(isNil, isEmpty), not),
+        pipe(R.trim, reqSearch)))(query)
+    // const msg = (query.trim()) ? null : query.trim()
+    // if(props.active && msg != null) reqSearch(msg)
     return ()=>{  };
   },[query]);
 
@@ -80,7 +86,9 @@ function prepTweets(list){
 function SearchResults(props){
   return(
   <div class="searchTweets"> 
-        {prepTweets(props.tweets).map(tweet => (
+        {isEmpty(prepTweets(props.tweets)) 
+        ? "No search results."
+        : prepTweets(props.tweets).map(tweet => (
           // Without a key, Preact has to guess which tweets have
           // changed when re-rendering.
           <Tweet key={tweet.id} tweet={tweet} />

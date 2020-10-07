@@ -27,7 +27,7 @@ export function SettingsButton(props){
   )
 }
 
-const debug = true
+const debug = false
 
 export function DropdownMenu(_props) {
   const dropdownRef = useRef(null);

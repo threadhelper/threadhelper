@@ -140,7 +140,7 @@
     flex-direction: row;
     justify-content: space-between;
     color: var(--main-txt-color);
-    border: 1px solid var(--main-border-color);
+    /*order: 1px solid var(--main-border-color);*/
     border-radius: 3px;
     padding: 8px 5px 8px 5px;
   }
@@ -156,6 +156,7 @@
     height:auto; 
     overflow: hidden;
     flex-grow: 1;
+    padding-top: 5px;
   }
   .searchTweets{
     overflow-y: scroll;

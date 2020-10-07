@@ -84,16 +84,17 @@ function getTextFromElement(tgt){
     daddy = tgt.parentNode.parentNode.parentNode
   }
 
-  var text = ''
-  //console.log("daddy: ", daddy)
-  for (var ch of daddy.children){
-    text += ch.textContent + '\n'
-  }
-  return text
+  // var text = ''
+  // //console.log("daddy: ", daddy)
+  // for (var ch of daddy.children){
+  //   text += ch.textContent + '\n'
+  // }
+
+  return join('\n',map(prop(textContent),daddy.children))
 }
 
 function cleanSearchString(text){
-  return text.replace(url_regex, "").replace(/(\r\n|\n|\r)/gm, "").trim()
+  return text.replace(url_regex, "").trim()
 }
 
 function requestSearch(clean_text){

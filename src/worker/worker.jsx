@@ -10,7 +10,7 @@ flattenModule(global,R)
 import Kefir from 'kefir';
 
 // Project business
-var DEBUG = true;
+var DEBUG = false;
 toggleDebug(null, DEBUG)
 Kefir.Property.prototype.currentValue = currentValue
 
@@ -24,6 +24,14 @@ const msgBG = function(msg){return self.postMessage(msg)} // different from cs's
 const makeMidSearchEvent = (_busy) => {return new CustomEvent("midSearch", {detail: {busy:_busy}})} 
 const emitMidSearch = (busy) => {self.dispatchEvent(makeMidSearchEvent(busy));}
 
+// // Sync
+// let count = 0
+// const pendingReqs = []
+// const makeReqToken = ()=>count+1;
+// const sendSync = val=>msgBG({type:'sync', value:val})
+// const addReq = req => {pendingReqs.push(makeReqToken()); return pendingReqs}
+// const removeReq = req => {pendingReqs.push(req); return pendingReqs}
+
 // Functions, potential imports
 const updateSomeDB = curry(async (_getDb, new_tweets, deleted_ids)=>{ // IMPURE, updates idb // updateDB :: [a] -> [a] // returns only tweets new to idb
   console.log('updating store', { new_tweets, deleted_ids})
@@ -32,8 +40,6 @@ const updateSomeDB = curry(async (_getDb, new_tweets, deleted_ids)=>{ // IMPURE,
   isEmpty(new_tweets) ? null : db.put(_getDb())(storeName, new_tweets)
   return new_tweets
 })
-
-
 const initIndex = () => { //IMPURE, saves to db
   console.log('initing index')
   const newIndex = makeIndex()
@@ -71,8 +77,8 @@ _searchIndex$.log('_searchIndex$')
 const searchIndex$ = _searchIndex$.bufferWhileBy(isMidSearch$).map(last)
 searchIndex$.log('searchIndex$')
 const getDefaultTweets$ = makeMsgStream('getDefaultTweets')
-
-
+  // Sync
+const ready$ = index$.filter(pipe(isNil, not)).map(_ => true)
 
 // Functions, potential imports
 const getDb = ()=>db$.currentValue()
@@ -180,7 +186,7 @@ const getDefaultTweets = pipe(
   inspect('getDefault args'),
   args=>defaultTweetsFn(...args),
   andThen(pipe(
-    inspect('gottDefault'),
+    inspect('gotDefault'),
     assoc('res', __ , {type:'getDefaultTweets',}),
     msgBG)))
 
@@ -190,7 +196,7 @@ const getDefaultTweets = pipe(
 // Effects
 // receivedMsg$.log('worker got message:')
 // subObs(db$, ()=>msgBG({type:'ready'}))
-subObs(index$, ()=>msgBG({type:'ready'}))
+subObs(ready$, ()=>msgBG({type:'ready'}))
 subObs(dbClear$, dbClear)
 // subObs(getIndex$, getIndexReq)
 // subObs(setIndex$, setIndex)

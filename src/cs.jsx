@@ -57,8 +57,9 @@ const subObs = (obs, effect) => rememberSub(obs.observe({value:effect}))
 const _onLoad = () => onLoad(thBarHome, thBarComp)
 function main(){
   window.addEventListener('load', _onLoad, true);  
-  msgBG({type:"cs-created"})}
+}
 async function onLoad(thBarHome, thBarComp){
+  msgBG({type:"cs-created"})
   // Define streams
     // messages
   const gotMsg$ = makeGotMsgObs().map(x=>x.m)

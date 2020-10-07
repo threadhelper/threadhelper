@@ -77,10 +77,12 @@
   .filter-icon{
     height:calc(17px);
     width:calc(17px);
+    padding: 6px;
   }
   
   .filter-icon:hover{
-    
+    border-radius: 50%;
+    background-color: var(--neutral-color);
   }
   
   .filter-checkbox{
@@ -97,6 +99,7 @@
   }
 
   .settings-icon{
+    border-radius: 50%;
     fill:var(--neutral-color);
   }
   
