@@ -17,7 +17,6 @@
   padding: 0px 10px 10px 10px;
   flex-grow: 1;
   background-color: var(--main-bg-color);
-  width:80%;
 }
 
 .sug_home{
@@ -80,7 +79,7 @@
 
       .tooltiptext {
         width: 200%;
-        left: 0px;
+        left: -100px;
         right: 100%;
       }
 
@@ -101,6 +100,7 @@
       } 
       .tooltiptext {
         visibility: visible;
+
       }
     }
 
@@ -108,7 +108,7 @@
       transition: filter 300ms;
     }
     .icon-button:hover{
-      filter: brightness(0.8)
+      /*filter: brightness(0.8)*/
     }
     .title-container{
       text-align: left;

@@ -20,7 +20,7 @@ var DEBUG = true;
 toggleDebug(window, DEBUG)
 Kefir.Property.prototype.currentValue = currentValue
 
-
+// 
 // Stream clean up
 const subscriptions = []
 const rememberSub = (sub) => {subscriptions.push(sub); return sub}

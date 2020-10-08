@@ -57,6 +57,9 @@
     z-index: 1;
     top: 110%;
     margin-left: -20px; /*  Use half of the width (120/2 = 60), to center the tooltip */
+    a:visited {
+      color:var(--neutral-color);
+    }
   }
 
   .sync .tooltiptext::after {
