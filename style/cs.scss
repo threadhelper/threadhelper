@@ -65,9 +65,9 @@
   }
 
   .header{
-    display: inline-grid;
-    gap: 1rem;
-    grid-template-columns: 1fr 20fr 8fr 4fr;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
     margin-top: 15px;
     // margin-bottom: 10px;
     place-items: center;
@@ -109,13 +109,17 @@
     .icon-button:hover{
       filter: brightness(0.8)
     }
-
-    .th-title{
-      margin: 0;
-      font-weight: 900;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu, "Helvetica Neue", sans-serif;
-      font-size: 19px;
+    .title-container{
+      text-align: left;
+      flex-grow: 8;
+      .th-title{
+        margin: 0;
+        font-weight: 900;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu, "Helvetica Neue", sans-serif;
+        font-size: 19px;
+      }
     }
+    
   }
 
   .robo{
@@ -142,7 +146,7 @@
     color: var(--main-txt-color);
     /*order: 1px solid var(--main-border-color);*/
     border-radius: 3px;
-    padding: 8px 5px 8px 5px;
+    padding: 0px 5px 0px 5px;
   }
 
   /* Dropdown Menu */

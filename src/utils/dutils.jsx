@@ -1,5 +1,6 @@
 import Kefir from 'kefir';
 import { flattenModule, inspect } from './putils.jsx'
+import { defaultOptions } from './defaultStg.jsx'
 import * as R from 'ramda';
 flattenModule(global,R)
 
@@ -14,15 +15,6 @@ Kefir.Property.prototype.currentValue = function() {
 };
 
 
-// DEFAULT OPTIONS V IMPORTANT
-export const defaultOptions = () => {return {
-  name: 'options',
-  getRTs: {name:'getRTs', type:'searchFilter', value:true},
-  useBookmarks: {name:'useBookmarks', type:'searchFilter', value:true},
-  useReplies: {name:'useReplies', type:'searchFilter', value:true},
-  roboActive: {name:'roboActive', type:'featureFilter', value:false},
-  hasArchive: {name:'hasArchive', type:'flag', value:false},
-}}
 
 
 //returns a promise that gets a value from chrome local storage 

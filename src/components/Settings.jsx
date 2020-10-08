@@ -64,11 +64,11 @@ export function DropdownMenu(_props) {
 
   return (
     <div className="dropdown" ref={dropdownRef}>
-      <DropdownItem
+      {/* <DropdownItem
         // leftIcon={<GearIcon />}
         effect={()=>{}}>
         Load Archive
-      </DropdownItem>
+      </DropdownItem> */}
       <DropdownItem
         leftIcon={'⛔'}
         effect={onClearStorage}>

@@ -25,7 +25,7 @@ export function SyncIcon(props){
 
   return (
     <div class={`sync ${sync ? 'synced' : 'unsynced'}`} onClick={onSyncClick}>
-      <span class="tooltiptext"> sync msg: {syncDisplay} </span>  
+      <span class="tooltiptext"> {syncDisplay} </span>  
     </div>
   );
 }

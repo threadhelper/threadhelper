@@ -5,6 +5,7 @@ import { SyncIcon } from './Sync.jsx';
 import {SettingsButton} from './Settings.jsx';
 import GearIcon from '../../images/gear.svg';
 import { defaultTo, curry, propEq, find, take } from 'ramda'
+import { useStorage } from './useStorage.jsx';
 
 
 function LoadArchiveIcon(){  
@@ -19,6 +20,7 @@ function LoadArchiveIcon(){
 }
 
 export const ArchiveUploader = props => {
+  const [hasArchive, setHasArchive] = useStorage('hasArchive', false)
   // Create a reference to the hidden file input element
   const hiddenFileInput = useRef(null);
   
@@ -49,6 +51,7 @@ export const ArchiveUploader = props => {
     // 
     console.log('setting archive', importedTweetArchive)
     setData({temp_archive:importedTweetArchive}).then(()=>{
+      setHasArchive(true)
       msgBG({type:"temp-archive-stored"});
       hiddenFileInput.current.value = null;
     })

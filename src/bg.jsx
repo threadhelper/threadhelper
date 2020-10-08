@@ -1,18 +1,19 @@
 //using this temporarily but eventually probably should refactor away from classes
 import "@babel/polyfill";
 import * as browser from "webextension-polyfill";
-import {getTwitterTabIds} from './utils/wutils.jsx'
+import { getTwitterTabIds} from './utils/wutils.jsx'
 import { flattenModule, inspect, toggleDebug, currentValue, nullFn } from './utils/putils.jsx'
 import * as R from 'ramda';
-flattenModule(window,R)
+flattenModule(window,R) 
 import Kefir from 'kefir';
-import {msgCS, setStg, getData, setData, removeData, getOptions, getOption, defaultOptions, makeStorageObs, makeGotMsgObs, makeMsgStream} from './utils/dutils.jsx'
-import {makeAuthObs} from './bg/auth.jsx'
+import { msgCS, setStg, getData, setData, removeData, getOptions, getOption, makeStorageObs, makeGotMsgObs, makeMsgStream} from './utils/dutils.jsx'
+import { defaultOptions } from './utils/defaultStg.jsx'
+import { makeAuthObs} from './bg/auth.jsx'
 import * as db from './bg/db.jsx'
-import {initWorker} from './bg/workerBoss.jsx'
-import {makeRoboRequest} from './bg/robo.jsx'
-import {makeIndex, loadIndex, updateIndex, search} from './bg/nlp.jsx'
-import {fetchUserInfo, updateQuery, tweetLookupQuery, timelineQuery, archToTweet, bookmarkToTweet, apiToTweet, getRandomSampleTweets, getLatestTweets, getBookmarks} from './bg/twitterScout.jsx'
+import { initWorker} from './bg/workerBoss.jsx'
+import { makeRoboRequest} from './bg/robo.jsx'
+import { makeIndex, loadIndex, updateIndex, search} from './bg/nlp.jsx'
+import { fetchUserInfo, updateQuery, tweetLookupQuery, timelineQuery, archToTweet, bookmarkToTweet, apiToTweet, getRandomSampleTweets, getLatestTweets, getBookmarks} from './bg/twitterScout.jsx'
 
 // Project business
 var DEBUG = true;

@@ -49,7 +49,7 @@ export function Tweet(props){
           <div class="th-text">{text}</div>
           {maybeMedia}
           {maybeQuote}
-          <div class="th-icons">
+          {/* <div class="th-icons">
             <div class="th-icon-field">
               <div class="th-reply-container"><ReplyIcon /></div>
             </div>
@@ -62,7 +62,7 @@ export function Tweet(props){
             <div class="th-icon-field">
               <div class="th-share-container"><ShareIcon /></div>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
       <div class="th-hover" onClick={onClick}>
