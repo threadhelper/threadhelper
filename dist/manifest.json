@@ -1,7 +1,7 @@
 {
-  "name": "ReactiveTH",
-  "description": "TH but reactive",
-  "version": "0.0.0.1",
+  "name": "ThreadHelper",
+  "description": "A serendipity engine on the Twitter sidebar.",
+  "version": "0.2.0.1",
   "permissions": [
     "declarativeContent",
     "storage",
@@ -11,7 +11,7 @@
     "https://*.twitter.com/*"
   ],
   "browser_action": {
-    "default_title": "ReactiveTH",
+    "default_title": "ThreadHelper",
     "default_popup": "popup.html"
   },
   "manifest_version": 2,
@@ -23,5 +23,11 @@
   ],
   "background": {
     "scripts": ["background.js"]
+  },
+  "icons": {
+    "16": "images/extension/thread_16.png",
+    "32": "images/extension/thread_32.png",
+    "48": "images/extension/thread_48.png",
+    "128": "images/extension/thread_128.png"
   }
 }

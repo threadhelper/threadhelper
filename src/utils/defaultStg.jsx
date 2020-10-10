@@ -10,7 +10,11 @@ export const defaultOptions = () => {return {
 export const defaultStorage = () =>{
   return{
     options:defaultOptions(),
-    // hasArchive: {name:'hasArchive', type:'flag', value:false},
     hasArchive: false,
+    latest_tweets: [],
+    search_results: [],
+    temp_archive: [],
+    syncDisplay: `Hi, I don't have any tweets yet.`,
+    sync: false,
   }
 }

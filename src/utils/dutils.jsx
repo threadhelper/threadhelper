@@ -1,6 +1,6 @@
 import Kefir from 'kefir';
 import { flattenModule, inspect } from './putils.jsx'
-import { defaultOptions } from './defaultStg.jsx'
+import { defaultOptions, defaultStorage } from './defaultStg.jsx'
 import * as R from 'ramda';
 flattenModule(global,R)
 
@@ -65,6 +65,8 @@ export async function removeData(keys){
 export const setStg = curry( (key,val) => setData({[key]:val}) )
 
 export const updateStg = curry( (key,val) => setData({[key]:val}) )
+
+export const resetStorage = ()=>setData(defaultStorage())
 
 const addNewDefaultOptions = (oldOptions) => mergeLeft(oldOptions,defaultOptions())
 

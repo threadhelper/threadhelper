@@ -14,9 +14,9 @@ const sideBarSelector = '[data-testid="sidebarColumn"]'
 export const rtConfirmSelector = '[data-testid="retweetConfirm"]'
 export const unRtConfirmSelector = '[data-testid="unretweetConfirm"]'
 const deleteConfirmSelector = '[data-testid="confirmationSheetConfirm"]'
-// const bookmarkButtonSelector ='#layers > div.css-1dbjc4n.r-1d2f490.r-105ug2t.r-u8s1d.r-zchlnj.r-ipm5af > div > div > div > div:nth-child(2) > div.css-1dbjc4n.r-yfoy6g.r-1f0042m.r-xnswec.r-1ekmkwe.r-1udh08x.r-u8s1d > div > div > div > div:nth-child(2)'
-const bookmarkButtonSelector ='#layers > div.css-1dbjc4n.r-1d2f490.r-105ug2t.r-u8s1d.r-zchlnj.r-ipm5af > div > div > div > div:nth-child(2) > div.css-1dbjc4n.r-14lw9ot.r-1f0042m.r-1upvrn0.r-1ekmkwe.r-1udh08x.r-u8s1d > div > div > div > div:nth-child(2)'
-const bookmarkRemoveSelector ='#layers > div.css-1dbjc4n.r-1d2f490.r-105ug2t.r-u8s1d.r-zchlnj.r-ipm5af > div > div > div > div:nth-child(2) > div.css-1dbjc4n.r-14lw9ot.r-1f0042m.r-1upvrn0.r-1ekmkwe.r-1udh08x.r-u8s1d > div > div > div > div:nth-child(2) > div.css-1dbjc4n.r-16y2uox.r-1wbh5a2 > div > span'
+// const bookmarkButtonSelector ='#layers > div.css-1dbjc4n.r-1d2f490.r-105ug2t.r-u8s1d.r-zchlnj.r-ipm5af > div > div > div > div:nth-child(2) > div.css-1dbjc4n.r-14lw9ot.r-1f0042m.r-1upvrn0.r-1ekmkwe.r-1udh08x.r-u8s1d > div > div > div > div:nth-child(2) > div.css-1dbjc4n.r-16y2uox.r-1wbh5a2 > div > span'
+// const bookmarkRemoveSelector ='#layers > div.css-1dbjc4n.r-1d2f490.r-105ug2t.r-u8s1d.r-zchlnj.r-ipm5af > div > div > div > div:nth-child(2) > div.css-1dbjc4n.r-14lw9ot.r-1f0042m.r-1upvrn0.r-1ekmkwe.r-1udh08x.r-u8s1d > div > div > div > div:nth-child(2) > div.css-1dbjc4n.r-16y2uox.r-1wbh5a2 > div > span'
+const shareMenuItemSelector = '[role=menu] div[role=menuitem]'
 const replySelector = 'div[aria-label~="Reply"]'
 // const tweetCardSelector = 'article div[data-testid="tweet"]'
 const tweetCardSelector = 'article'
@@ -111,11 +111,11 @@ export function makeRoboStream(){
 // () -> event
 export const makeAddBookmarkStream = () => {
   const bookmarkShortCond = e => (e.key === 'b' && isTweetCardFocused()) 
-  return inputStream(bookmarkShortCond, docClickCondStream(bookmarkButtonSelector)).filter(e=>e.target.textContent.includes('Add'))//.map(x=>'bookmark')
+  return inputStream(bookmarkShortCond, docClickCondStream(shareMenuItemSelector)).filter(e=>e.target.textContent.includes('Add'))//.map(x=>'bookmark')
 }
 // () -> event
 export function makeRemoveBookmarkStream(){
-  return fromClick(docClickCondStream(bookmarkRemoveSelector)).filter(e=>e.target.textContent.includes('Remove'))//.map(x=>'remove_bookmark')
+  return fromClick(docClickCondStream(shareMenuItemSelector)).filter(e=>e.target.textContent.includes('Remove'))//.map(x=>'remove_bookmark')
 }
 
 

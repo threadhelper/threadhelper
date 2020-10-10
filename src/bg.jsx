@@ -1,17 +1,18 @@
 //using this temporarily but eventually probably should refactor away from classes
 import "@babel/polyfill";
 import * as browser from "webextension-polyfill";
+import  PromiseWorker from 'promise-worker'
 import { getTwitterTabIds} from './utils/wutils.jsx'
 import { flattenModule, inspect, toggleDebug, currentValue, nullFn } from './utils/putils.jsx'
 import * as R from 'ramda';
 flattenModule(window,R) 
 import Kefir from 'kefir';
-import { msgCS, setStg, getData, setData, removeData, getOptions, getOption, makeStorageObs, makeGotMsgObs, makeMsgStream} from './utils/dutils.jsx'
+import { msgCS, setStg, getData, removeData, getOptions, getOption, makeStorageObs, makeGotMsgObs, resetStorage} from './utils/dutils.jsx'
 import { defaultOptions } from './utils/defaultStg.jsx'
 import { makeAuthObs} from './bg/auth.jsx'
 import * as db from './bg/db.jsx'
 import { initWorker} from './bg/workerBoss.jsx'
-import { makeRoboRequest} from './bg/robo.jsx'
+// import { makeRoboRequest} from './bg/robo.jsx'
 import { makeIndex, loadIndex, updateIndex, search} from './bg/nlp.jsx'
 import { fetchUserInfo, updateQuery, tweetLookupQuery, timelineQuery, archToTweet, bookmarkToTweet, apiToTweet, getRandomSampleTweets, getLatestTweets, getBookmarks} from './bg/twitterScout.jsx'
 
@@ -35,6 +36,7 @@ const update_size = 200
 const n_tweets_results = 20
 const getDateFormatted = () => (new Date()).toLocaleString()
 const isExist = x=>!(isNil(x) || isEmpty(x))
+const saferMap = fn => pipe(defaultTo([]), map(fn)) // fn -> ([x] -> [fn(x)])
   // auth
 const makeInit = (auth)=>{
   return {
@@ -47,16 +49,14 @@ const makeInit = (auth)=>{
 }
 const compareAuths = (a,b)=>{return a.authorization == b.authorization && a.csrfToken == b.csrfToken}
 const validateAuth = x=>(x.authorization != null && x.csrfToken != null)
+  // worker
+const msgSomeWorker = curry( async (worker, msg) => worker.postMessage(msg)) // msgWorker :: worker -> msg -> Promise
+
   // db
-const howManyTweetsDb = async (_db)=> (await _db.getAllKeys('tweets')).length
+
   //chrome storage
 const isOptionSame = curry ((name, x)=> (isNil(x.oldVal) && isNil(x.newVal)) || (!isNil(x.oldVal) && !isNil(x.newVal) && (path(['oldVal', name, 'value'],x) === path(['newVal', name, 'value'],x))) )
-const stg_clear = ()=>chrome.storage.local.clear(()=>{
-  var error = chrome.runtime.lastError;
-  if (error) {
-      console.error(error);
-  }
-})
+
   // events
 // const makeMidSearchEvent = (_busy) => {return new CustomEvent("midSearch", {detail: {busy:_busy}})} 
 // const emitMidSearch = (busy) => {window.dispatchEvent(makeMidSearchEvent(busy));}
@@ -65,14 +65,15 @@ const _makeOptionObs = curry (async (optionsChange$,itemName) => {
   const initVal = await getOption(itemName)
   return optionsChange$.filter(x=>!isOptionSame(itemName,x))
   .map(path([['newVal'], itemName]))
-  .map(pipe(
-    defaultTo(prop(itemName,defaultOptions()))))
-  .map(inspect(`make option obs ${itemName}`)).toProperty(()=>initVal)
+  .map(defaultTo(prop(itemName,defaultOptions())))
+  // .map(inspect(`make option obs ${itemName}`))
+  .toProperty(()=>initVal)
 })
 const combineOptions = (...args) => pipe(reduce((a,b)=>assoc(b.name, b.value, a),{}))(args)
   // stream utils
 const streamAnd = streams => Kefir.combine(streams, (...args)=>reduce(and, true, args))
 const toVal = (val,stream) => stream.map(()=>val).toProperty(()=>val)
+const promiseStream = (stream, promise_fn) => stream.flatMapLatest(x=>Kefir.fromPromise(promise_fn(x)))
 
 export async function main(){  
   // Extension business
@@ -80,10 +81,66 @@ export async function main(){
   chrome.tabs.onActivated.addListener(onTabActivated);
   chrome.tabs.onUpdated.addListener(onTabUpdated);
 
+  const worker = initWorker()
+  const promiseWorker = new PromiseWorker(worker)
+
+// Potential functions to import
+  // Message builders
+  const makeReqSearchMsg = (query)=>{return { // MakeReqSearchMsg :: Strnig -> msg
+    type:'searchIndex', 
+    filters:getFilters(),
+    username: getUsername(),
+    n_results: n_tweets_results,
+    query: query,
+  }}
+  const makeReqDefaultTweetsMsg = () =>{return{ // makeReqDefaultTweetsMsg :: -> msg
+    type:'getDefaultTweets',
+    n_tweets: n_tweets_results, 
+    filters: getFilters(), 
+    // db_get, //send from worker 
+    screen_name: getUsername(),
+    // keys //send frm worker
+  }}
+    // Worker requests
+  // const msgWorker = msgSomeWorker(worker)  // msgWorker :: msg -> Promise
+  const msgPromiseWorker = msgSomeWorker(promiseWorker)
+  const howManyTweetsDb = async _ => msgPromiseWorker({type:'howManyTweetsDb'}) // howManyTweetsDb :: () -> Promise int
+  const updateTweets = async res => msgPromiseWorker({type:'updateTweets', res:res}) // updateTweets :: IMPURE [id] -> Promise ()
+  const addTweets = async res => msgPromiseWorker({type:'addTweets', res:res}) // addTweets :: IMPURE [id] -> Promise ()
+  const removeTweets = async ids => msgPromiseWorker({type:'removeTweets', res:ids}) // removeTweets :: IMPURE [id] -> Promise()
+  const removeTweet = async id => removeTweets([id])
+  const dbClear =  async () => msgPromiseWorker({type:'dbClear'}) // dbClear :: IMPURE () -> Promise ()
+  const resetData = _ => Promise.all([resetStorage(), dbClear()])
+  // const reqDbGet = ids =>{ msgPromiseWorker({type:'dbGet', ids:ids})} // reqDbGet :: IMPURE [id] -> Promise [tweet]
+  const doSearch = async query => msgPromiseWorker(makeReqSearchMsg(query)); // doSearch :: IMPURE String -> Promise [tweet]
+  const getDefaultTweets = async () => msgPromiseWorker(makeReqDefaultTweetsMsg())// getDefaultTweets :: IMPURE () -> Promise [tweet]
+ 
+    // DB functions
+    // chrome storage
+  const clearTempArchive = _=>removeData(["temp_archive"])
+  // 
+  // Stream value getters
+  // const getIndex = ()=>index$.currentValue()
+  const getAuthInit = ()=>makeInit(unique_auth$.currentValue())
+  const getUserInfo = () => userInfo$.currentValue()
+  const getUsername = () => userInfo$.currentValue().screen_name
+  const whenLastUpdate = ()=>whenUpdated$.currentValue()
+  const getFilters = ()=>searchFilters$.currentValue()
+
+  const makeSyncDisplayMsg = async ()=>{  // Potential import
+    const username = getUsername()
+    // const n_tweets = await howManyTweetsDb(_db)
+    const n_tweets = await howManyTweetsDb()
+    const dateTime = await whenLastUpdate()
+    return `Hi ${username}, I have ${n_tweets} tweets available. \n Last updated on ${dateTime}`
+  }
+
+
   // Define streams
     // Extension observers
       // Messages
   const msg$ = makeGotMsgObs().map(x=>x.m) // msg$ :: () -> msg // msg :: {type,...} // Listens to chrome runtime onMessage
+  const makeMsgStream = name => msg$.filter(propEq('type', name))
   const csStart$ = msg$.filter(propEq('type','cs-created'))
   const csNotReady$ = toVal(false, csStart$).toProperty(()=>true)
       // Storage
@@ -106,148 +163,143 @@ export async function main(){
   */
   // 
     // Worker
-  const worker = initWorker()
+      // Sync
   const workerMsg$ = Kefir.fromEvents(worker,'message').map(prop('data'))
   const workerReady$ = workerMsg$.filter(propEq('type', 'ready')).map( x=>{return isNil(x) ? false : true}).toProperty(()=>false)
-  const updatedTweets$ = workerMsg$.filter(propEq('type','updateTweets'))    // handles the return of a updateTweets action from worker
-  const removedTweet$ = workerMsg$.filter(propEq('type','removeTweets'))
-  const addedTweet$ = workerMsg$.filter(propEq('type','addTweets'))
-  const searchedIndex$ = workerMsg$.filter(propEq('type','searchIndex'))
-  const gotDefaultTweets$ = workerMsg$.filter(propEq('type','getDefaultTweets'))
-  // const anyTweetUpdate$ = Kefir.merge([updatedTweets$, addedTweet$, removedTweet$]).map(prop('index_json')).toProperty()
-  const anyTweetUpdate$ = Kefir.merge([updatedTweets$, addedTweet$, removedTweet$]).toProperty()
-  const whenUpdated$ = anyTweetUpdate$.map(_=>getDateFormatted()).toProperty(getDateFormatted) // keeps track of when the last update to the tweet db was
+      // IO
+  // const updatedTweets$ = workerMsg$.filter(propEq('type','updateTweets'))    // handles the return of a updateTweets action from worker
+  // const removedTweet$ = workerMsg$.filter(propEq('type','removeTweets'))
+  // const addedTweets$ = workerMsg$.filter(propEq('type','addTweets'))
+  // const anyTweetUpdate$ = Kefir.merge([updatedTweets$, addedTweets$, removedTweet$]).toProperty() 
+  // const gotDefaultTweets$ = workerMsg$.filter(propEq('type','getDefaultTweets'))
+  // const searchedIndex$ = workerMsg$.filter(propEq('type','searchIndex'))
 
+
+  
     // DB
-  const db_prom = db.open(  ) // Promise, IMPURE
-  const dbReady$ = Kefir.fromPromise(db_prom).map(pipe(isNil,not)).toProperty(()=>false).ignoreEnd()
-    // Index
-  // const getIndex$ = workerMsg$.filter(propEq('type','getIndex')).map(prop('index_json'),).toProperty() // handles the return of a getIndex action from worker
-  // const index$ = Kefir.merge([getIndex$, anyTweetUpdate$]).map(loadIndex).toProperty()
+  // const db_prom = db.open(  ) // Promise, IMPURE
+  // const dbReady$ = Kefir.fromPromise(db_prom).map(pipe(isNil,not)).toProperty(()=>false).ignoreEnd()
     // Auth
   const auth$ = makeAuthObs()
-  const unique_auth$ = auth$ // unique_auth$ :: auth -> auth
-  .skipDuplicates(compareAuths)
-  .filter(validateAuth)
-  .toProperty()
-  const userInfo$ = unique_auth$.flatMap(_=>Kefir.fromPromise(fetchUserInfo(getAuthInit))).filter(x=>x.id!=null).toProperty(()=>{return {id:null}}) // IMPURE userInfo$ :: auth -> user_info
+  const unique_auth$ = auth$.skipDuplicates(compareAuths).filter(validateAuth).toProperty() // unique_auth$ :: auth -> auth
+  // const userInfo$ = unique_auth$.flatMap(_=>Kefir.fromPromise(fetchUserInfo(getAuthInit))).filter(x=>x.id!=null).toProperty(()=>{return {id:null}}) // IMPURE userInfo$ :: user_info
+  const userInfo$ = promiseStream(unique_auth$, ()=>fetchUserInfo(getAuthInit)).filter(x=>x.id!=null).toProperty(()=>{return {id:null}}) // IMPURE userInfo$ :: user_info
     // Ready, Sync
-  const ready$ = Kefir.combine([ // ready$ :: user_info -> Bool
+  const ready$ = Kefir.combine([ // ready$ :: Bool
     workerReady$,
-    dbReady$,
-    // index$.map( x=>{return isNil(x) ? false : true}),
     userInfo$.map( x=>{return isNil(x.id) ? false : true}),
   ], (...args)=>reduce(and, true, args)).toProperty(()=>false) 
-  const notReady$ = ready$.map(not) 
-  const initData$ = Kefir.merge([csStart$, ready$.bufferWhileBy(csNotReady$)]) // second term exists bc if csStart arrives before ready, then event won't fire
-  const syncDisplay$ = Kefir.merge([ready$, anyTweetUpdate$,]) // triggers sync display update// ready$ :: user_info -> Bool
+  const notReady$ = ready$.map(not) // notReady$ :: Bool
+  const makeSafe = stream => stream.bufferWhileBy(notReady$).flatten() // makeSafe :: Stream -> Stream
+  const makeMsgStreamSafe = name => makeSafe(makeMsgStream(name)) // makeMsgStreamSafe :: String -> Stream msg
+// 
+  const reqClear$ = makeMsgStream("clear") // reqClear$ :: msg
+  const dataReset$ = promiseStream(reqClear$, resetData) // dbCleared$ :: msg
+  const initData$ = makeSafe(Kefir.merge([csStart$, ready$.bufferWhileBy(csNotReady$).flatten(), dataReset$])) // initData$ ::  // second term exists bc if csStart arrives before ready, then event won't fire
+  initData$.log('initData$')
     // Tweet API
-  const debugGetBookmarks$ = msg$.filter(propEq('type','get-bookmarks'))
-  const reqUpdatedTweets$ = msg$.filter(m => ['update-tweets', "new-tweet"].includes(m.type)).bufferWhileBy(notReady$).flatten() // reqUpdatedTweets$ :: msg -> msg
-  const reqTimeline$ = Kefir.merge([ msg$.filter(m => ["update-timeline"].includes(m.type)), initData$]).bufferWhileBy(notReady$).flatten()  // reqTimeline$ :: msg -> msg
-  reqTimeline$.log('reqTimeline$')
-  const reqBookmarks$ = Kefir.merge([debugGetBookmarks$, initData$]).bufferWhileBy(notReady$).flatten()
-  reqBookmarks$.log('reqBookmarks$')
-  const fetchedUpdate$ = reqUpdatedTweets$.flatMapLatest(_=>Kefir.fromPromise(updateQuery(getAuthInit, getUsername(), update_size))) // IMPURE
-  const fetchedTimeline$ = reqTimeline$.flatMapLatest(_=>Kefir.fromPromise(timelineQuery(getAuthInit, userInfo$.currentValue()))) // IMPURE
-  const fetchedBookmarks$ = reqBookmarks$.flatMapLatest(_=>Kefir.fromPromise(getBookmarks(getAuthInit)))
-  const fetchedTweets$ = Kefir.merge([fetchedUpdate$, fetchedTimeline$])//.map(toTweets)
-  const addBookmark$ = msg$.filter(propEq('type','add-bookmark')).bufferWhileBy(notReady$).flatten()
-  const anyAPIReq$ = Kefir.merge([reqUpdatedTweets$, reqBookmarks$, reqTimeline$, addBookmark$,]) //this leaving early, should leave at the same time the request leaves
-  const fetchedAnyAPIReq$ = Kefir.merge([fetchedUpdate$, fetchedBookmarks$, fetchedTimeline$,])
+  const debugGetBookmarks$ = makeMsgStreamSafe('get-bookmarks') // debugGetBookmarks$ :: msg
+  const reqUpdatedTweets$ = makeMsgStreamSafe('update-tweets') // reqUpdatedTweets$ :: msg
+  const updateTimeline$ = makeMsgStream("update-timeline") // reqUpdatedTweets$ :: msg
+
+  const reqTimeline$ = makeSafe(Kefir.merge([ updateTimeline$, initData$]))  // reqTimeline$ :: msg
+  const reqBookmarks$ = makeSafe(Kefir.merge([debugGetBookmarks$, initData$])) //.flatten() // reqBookmarks$ :: msg
+  // reqBookmarks$.log('reqBookmarks$')
+  const reqAddBookmark$ = makeMsgStreamSafe('add-bookmark') // reqAddBookmark$ :: msg
+  const reqBookmarkId$ = reqAddBookmark$.map(pipe(prop('id'), id=>[id])) // reqBookmarkId$ :: [id]
+  const anyAPIReq$ = Kefir.merge([reqUpdatedTweets$, reqBookmarks$, reqTimeline$, reqAddBookmark$,]) // anyAPIReq$ :: msg
+  // anyAPIReq$.log('anyAPIReq$')
+
+  const fetchedUpdate$ = promiseStream(reqUpdatedTweets$, _ => updateQuery(getAuthInit, getUsername(), update_size)) // IMPURE fetchedUpdate$ :: [apiTweet]
+  const fetchedTimeline$ = promiseStream(reqTimeline$, _ => timelineQuery(getAuthInit, getUserInfo())) // IMPURE fetchedTimeline$ :: [apiTweet]
+  const fetchedBookmarks$ = promiseStream( reqBookmarks$, _ => getBookmarks(getAuthInit)) // IMPURE fetchedBookmarks$ :: [apiBookmark]
+  const fetchedBookmark$ = promiseStream( reqBookmarkId$, tweetLookupQuery(getAuthInit)) // IMPURE fetchedBookmark$ :: [apiTweet]
+
+  const fetchedAnyAPIReq$ = Kefir.merge([fetchedUpdate$, fetchedTimeline$, fetchedBookmarks$, fetchedBookmark$,]) // fetchedAnyAPIReq$ :: [apiTweet]
+  // fetchedAnyAPIReq$.log('fetchedAnyAPIReq$')
+    // User submitted  
+  const reqArchiveLoad$ = makeMsgStreamSafe("temp-archive-stored") // reqArchiveLoad$ :: msg
+  const archiveLoadedTweets$ = promiseStream(reqArchiveLoad$, _=>getData("temp_archive")) // IMPURE archiveLoadedTweets$ :: [archTweet]
+
+  // const fetchedUpdate$ = reqUpdatedTweets$.flatMapLatest(_=>Kefir.fromPromise(updateQuery(getAuthInit, getUsername(), update_size))) // IMPURE
+  // const fetchedTimeline$ = reqTimeline$.flatMapLatest(_=>Kefir.fromPromise(timelineQuery(getAuthInit, userInfo$.currentValue()))) // IMPURE
+  // const fetchedBookmarks$ = reqBookmarks$.flatMapLatest(_=>Kefir.fromPromise(getBookmarks(getAuthInit)))
+  // subObs(fetchedTweets$, pipe(saferApiToTweet, updateTweets,)) // happens after fetching tweets from twitter API
+  // subObs(fetchedBookmarks$, pipe(, updateTweets,), )  // happens on requests to fetch all bookmarks
+  // subObs(archiveLoadedTweets$, pipe(defaultTo([]), map(archToTweet(getUserInfo)), addTweets)) // happens after loading temp_archive from stg, from file. Action imports it
+  const thTweets$ = Kefir.merge([ // thTweets$ :: [tweet] // tweet :: threadhelper_tweet
+    fetchedUpdate$.map(saferMap(apiToTweet)),
+    fetchedTimeline$.map(saferMap(apiToTweet)),
+    fetchedBookmarks$.map(saferMap(bookmarkToTweet)),
+    fetchedBookmark$.map(saferMap(apiToTweet)).map(assoc('is_bookmark', true)),
+    archiveLoadedTweets$.map(saferMap(archToTweet(getUserInfo)))
+  ])
+  thTweets$.log('thTweets$')
+  const fetchedTweets$ = Kefir.merge([fetchedUpdate$, fetchedTimeline$])//.map(toTweets) // fetchedTweets$ :: [apiTweet]
   // Local Tweet Processing
-  const deleteTweet$ = msg$.filter(propEq('type','delete-tweet')).bufferWhileBy(notReady$).flatten()
-  const removeBookmark$ = msg$.filter(propEq('type','remove-bookmark')).bufferWhileBy(notReady$).flatten()
-  const reqRemoveTweet$ = Kefir.merge([deleteTweet$, removeBookmark$]).map(prop('id'))
-  const reqArchiveLoad$ = msg$.filter(propSatisfies(x=>["temp-archive-stored", "load-archive"].includes(x), 'type')).bufferWhileBy(notReady$).flatten()
-  const archiveLoadedTweets$ = reqArchiveLoad$.flatMapLatest(_=>Kefir.fromPromise(getData("temp_archive")))
+  const reqDeleteTweet$ = makeMsgStreamSafe('delete-tweet') // reqDeleteTweet$ :: msg
+  const reqRemoveBookmark$ = makeMsgStreamSafe('remove-bookmark') // reqRemoveBookmark$ :: msg
+
+  const idsToRemove$ = Kefir.merge([reqDeleteTweet$, reqRemoveBookmark$]).map(prop('id')) // idsToRemove$ :: id
+  idsToRemove$.log('idsToRemove$')
+  
+  // Worker returns  
+  const addedTweets$ = promiseStream(thTweets$, addTweets) // addedTweets$ :: msg
+  addedTweets$.log('addedTweets$')
+  const removedTweet$ = promiseStream(idsToRemove$, removeTweet)  // removedTweet$ :: msg
+  removedTweet$.log('removedTweet$')
+  const updatedTweets$ = promiseStream(fetchedUpdate$, updateTweets) // updatedTweets$ :: msg    // fetchedUpdate$ gets added for a secnod time because update is the way we find deleted recent tweets
+  updatedTweets$.log('updatedTweets$')
+  
+  const anyTweetUpdate$ = Kefir.merge([updatedTweets$, addedTweets$, removedTweet$, dataReset$]).toProperty()  // anyTweetUpdate$ :: msg
+  anyTweetUpdate$.log('anyTweetUpdate$')  
+    // Misc
+  const whenUpdated$ = anyTweetUpdate$.map(_=>getDateFormatted()).toProperty(getDateFormatted) // keeps track of when the last update to the tweet db was
+  const syncDisplay$ = Kefir.merge([ready$, anyTweetUpdate$,]) // triggers sync display update// ready$ :: user_info -> Bool
+  syncDisplay$.log('syncDisplay$')
+// 
     // Sync
-  const anyWorkerReq$ = Kefir.merge([fetchedUpdate$, fetchedBookmarks$, fetchedTimeline$, removeBookmark$, reqRemoveTweet$, reqArchiveLoad$]) // like with anyAPIReq$, these should only be emitted as the worker request is sent but oh well
-  const notArchLoading$ = Kefir.merge([toVal(false, reqArchiveLoad$), toVal(true, archiveLoadedTweets$)]).map(defaultTo(true)).toProperty(()=>true)
-  const notFetchingAPI$ = Kefir.merge([toVal(false, anyAPIReq$), toVal(true, fetchedAnyAPIReq$)]).map(defaultTo(true)).toProperty(()=>true)
-  const notMidWorkerReq$ = Kefir.merge([toVal(false, anyWorkerReq$), toVal(true, anyTweetUpdate$)]).map(defaultTo(true)).toProperty(()=>true)
+  const anyWorkerReq$ = Kefir.merge([fetchedUpdate$, fetchedBookmarks$, fetchedTimeline$, reqRemoveBookmark$, idsToRemove$, reqArchiveLoad$]) // like with anyAPIReq$, these should only be emitted as the worker request is sent but oh well\
+  const makeFlag = curry((def, stream0, stream1) => Kefir.merge([toVal(false, stream0), toVal(true, stream1)]).map(defaultTo(def)).toProperty(()=>def))
+  const makeFlagT = makeFlag(true)
+  const notArchLoading$ = makeFlagT(reqArchiveLoad$, archiveLoadedTweets$)
+  const notFetchingAPI$ = makeFlagT(anyAPIReq$, fetchedAnyAPIReq$)
+  const notMidWorkerReq$ = makeFlagT(anyWorkerReq$, anyTweetUpdate$)
   const syncLight$ = streamAnd([notArchLoading$, notFetchingAPI$, notMidWorkerReq$, ready$]).map(defaultTo(false)).toProperty(()=>false)
   // CS messages
-  const searchQuery$ = msg$.filter(x=>x.type === "search").map(prop('query')).toProperty(()=>'')
-  const reqRoboQuery$ = msg$.filter(x=>!isNil(x)).filter(propEq('type', 'robo-tweet')).bufferWhileBy(notReady$).flatten()
-  const reqClear$ = msg$.filter(m => m.type === "clear").bufferWhileBy(dbReady$.map(not)).flatten()
-  const logAuth$ = msg$.filter(m => m.type === 'log-auth')
-  const getUserInfo$ = msg$.filter(m => m.type === 'get-user-info')
+  const searchQuery$ = makeMsgStream("search").map(prop('query')).toProperty(()=>'')
+  // const reqRoboQuery$ = msg$.filter(x=>!isNil(x)).filter(propEq('type', 'robo-tweet')).bufferWhileBy(notReady$).flatten()
+  const logAuth$ = makeMsgStream('log-auth')
+  const getUserInfo$ = makeMsgStream('get-user-info')
     // Search
-  const reqSearch$ = Kefir.merge([ 
+  const reqSearch$ = makeSafe(Kefir.merge([ 
     searchQuery$,
-    searchFilters$.map(_=>searchQuery$.currentValue()),//.filter(()=>searchQueryExists()).map(_=>searchQuery$.currentValue()),
-    anyTweetUpdate$.map(_=>searchQuery$.currentValue()),//.filter(()=>searchQueryExists()).map(_=>searchQuery$.currentValue()),
-    ]).bufferWhileBy(notReady$).flatten()
-  // const searchResult$ = reqSearch$.bufferWhileBy(isMidSearch$).map(last).flatMapFirst(makeQueryObs) // IMPURE
-  const getDefaultTweets$ = Kefir.merge([ // triggers getting and pushing default tweets
-    searchFilters$.filter(_=>!searchQueryExists()),
-    anyTweetUpdate$.filter(_=>!searchQueryExists()),
-    msg$.filter(propEq('type', "get-latest")),
-    fetchedTweets$.delay(100), // TODO: this makes us set the latest tweets a little after every tweets update, but we should be doing it based on db updates instead.
-  ]).throttle(1000).bufferWhileBy(notReady$).flatten()
-// 
-  // Potential functions to import
-    // Worker requests
-  // const reqSaveTweets = res=>{worker.postMessage({type:'updateTweets', index_json:getIndex().toJSON(), res:res})}
-  // const reqAddTweets = res=>{worker.postMessage({type:'addTweets', index_json:getIndex().toJSON(), res:res})}
-  // const reqRemoveTweets = ids=>{worker.postMessage({type:'removeTweets', index_json:getIndex().toJSON(), res:ids})}
-  const reqSaveTweets = res=>{worker.postMessage({type:'updateTweets', res:res})}
-  const reqAddTweets = res=>{worker.postMessage({type:'addTweets', res:res})}
-  const reqRemoveTweets = ids=>{worker.postMessage({type:'removeTweets', res:ids})}
-  const reqDbClear = ids=>{worker.postMessage({type:'dbClear'})}
-  // const reqDbGet = ids=>{worker.postMessage({type:'dbGet', ids:ids})}
-  const makeReqSearchMsg = (query)=>{return {
-    type:'searchIndex', 
-    filters:getFilters(),
-    username: getUsername(),
-    n_results: n_tweets_results,
-    query: query,
-  }}
-  const reqSearch = query=>{worker.postMessage(makeReqSearchMsg(query));}
-  const makeReqDefaultTweetsMsg = () =>{return{
-    type:'getDefaultTweets',
-    n_tweets: n_tweets_results, 
-    filters: getFilters(), 
-    // db_get, //send from worker 
-    screen_name: getUsername(),
-    // keys //send frm worker
-  }}
-  const reqGetDefaultTweets = ids=>{worker.postMessage(makeReqDefaultTweetsMsg())}
+    searchQuery$.sampledBy(searchFilters$),
+    searchQuery$.sampledBy(anyTweetUpdate$),
+    ]))
+    // doSearch
+  const reqDefaultTweets$ = makeSafe(Kefir.merge([  // reqDefaultTweets$ :: msg | String // triggers getting and pushing default tweets
+    // searchFilters$.filter(_=>!searchQueryExists()),
+    // anyTweetUpdate$.filter(_=>!searchQueryExists()),
+    searchQuery$.sampledBy(searchFilters$).filter(pipe(isExist,R.not)),
+    searchQuery$.sampledBy(anyTweetUpdate$).filter(pipe(isExist,R.not)),
+    makeMsgStream("get-latest"),
+    anyTweetUpdate$,
+  ])).bufferWhileBy(notReady$).map(last).throttle(1000) //.last()
+  reqDefaultTweets$.log('reqDefaultTweets$')
 
-    // DB functions
-  const _db = await db_prom // idb object
-    // chrome storage
-  const clearTempArchive = _=>removeData(["temp_archive"])
+  
+    // Worker returns
+  const gotDefaultTweets$ = promiseStream(reqDefaultTweets$, getDefaultTweets) // gotDefaultTweets$ :: [tweets]
+  const searchResults$ = promiseStream(reqSearch$, doSearch) // searchResults$ :: [tweets]
   // 
-  // Stream value getters
-  // const getIndex = ()=>index$.currentValue()
-  const getAuthInit = ()=>makeInit(unique_auth$.currentValue())
-  const getUserInfo = () => userInfo$.currentValue()
-  const getUsername = () => userInfo$.currentValue().screen_name
-  const whenLastUpdate = ()=>whenUpdated$.currentValue()
-  const getFilters = ()=>searchFilters$.currentValue()
-
-  const makeSyncDisplayMsg = async ()=>{  // Potential import
-    const username = getUsername()
-    const n_tweets = await howManyTweetsDb(_db)
-    const dateTime = await whenLastUpdate()
-    return `Hi ${username}, I have ${n_tweets} tweets available. \n Last updated on ${dateTime}`
-  }
-  const searchQueryExists = ()=>isExist(searchQuery$.currentValue())
+  
+  // const searchQueryExists = ()=>isExist(searchQuery$.currentValue())
   // Aux functions 
   // Effect functions
-  const storeApiTweets = pipe(defaultTo([]), map(apiToTweet), reqSaveTweets,)
-  const storeBookmarks = pipe(map(apiToTweet), map(assoc('is_bookmark', true)), reqAddTweets)
-  const addBookmark = pipe( prop('id'), x=>[x], tweetLookupQuery(getAuthInit), andThen(storeBookmarks) )
-  // const getTweetsFromDbById = async (ids) => await pipe( // getTweetsFromDbById :: [id] -> [tweets]
-  //   map(db_get('tweets')), 
-  //   filter(x=>not(isNil(x))),
-  //   (arr)=>Promise.all(arr),
-  // )(ids)
-  // const searchTweets = query=>search(getFilters(), getUsername(), n_tweets_results, getIndex(), query) // IMPURE, searchTweets :: String -> [tweet]
-  // const makeQueryObs = query => {emitMidSearch(true); return Kefir.fromPromise(searchTweets(query))} // IMPURE, emits "midSearch" event, makeQueryObs:: String -> Observer
-  // const defaultTweetsFn = getRandomSampleTweets
+
+  // const storeBookmarks = pipe(saferApiToTweet, map(assoc('is_bookmark', true)), addTweets)
+  // const addBookmark = pipe( prop('id'), x=>[x], tweetLookupQuery(getAuthInit), andThen(storeBookmarks) )
   // const getDefaultTweets = async _=>defaultTweetsFn( // IMPURE, getDefaultTweets :: -> [tweet]
   //   n_tweets_results, 
   //   getFilters(), 
@@ -255,11 +307,8 @@ export async function main(){
   //   getUsername(), 
   //   await _db.getAllKeys('tweets')
   // )
-  // const pushDefault = pipe(
-  //   setStg('latest_tweets'),
-  //   andThen(inspect('set latest'))
-  //   )
-  const reqRoboQueryEffects = m=>{setData({'roboSync':false}); makeRoboRequest(getAuthInit,m).then(roboTweet=> setData({'roboTweet':roboTweet, 'roboSync':true}))}
+
+  // const reqRoboQueryEffects = m=>{setData({'roboSync':false}); makeRoboRequest(getAuthInit,m).then(roboTweet=> setData({'roboTweet':roboTweet, 'roboSync':true}))}
   
   // Effects from streams
     // Ready / sync
@@ -267,41 +316,39 @@ export async function main(){
 
   csStart$.log('csStart')
   workerReady$.log('workerReady')
-  // workerMsg$.log('workerMsg$')
-  // msg$.log('msg$')
-  syncLight$.log('syncLight')
-  // subObs(workerReady$, ()=>worker.postMessage({type:'getIndex'}))
   subObs(syncDisplay$, pipe(_=>makeSyncDisplayMsg(), andThen(setStg('syncDisplay')))) // update sync display
   subObs(syncLight$, setStg('sync'))
     // Worker actions
       // Import tweets
-  subObs(fetchedTweets$, storeApiTweets) // happens after fetching tweets from twitter API
-  subObs(reqRemoveTweet$, id=>reqRemoveTweets([id])) // happens on a request to remove a tweet from DB
-  subObs(archiveLoadedTweets$, pipe(defaultTo([]), map(archToTweet(getUserInfo)), reqAddTweets)) // happens after loading temp_archive from stg, from file. Action imports it
-  subObs(addBookmark$, addBookmark) // happens on requests to add a bookmark
-  subObs(fetchedBookmarks$, pipe(defaultTo([]), map(bookmarkToTweet), reqSaveTweets,), )  // happens on requests to fetch all bookmarks
-  subObs(updatedTweets$, clearTempArchive) // happens after tweets are updated by worker
-  subObs(addedTweet$, clearTempArchive) // happens after tweets are added by worker
+  subObs(fetchedTweets$, nullFn) // happens after fetching tweets from twitter API
+  subObs(fetchedBookmarks$, nullFn)  // happens on requests to fetch all bookmarks
+  subObs(idsToRemove$, nullFn) // happens on a request to remove a tweet from DB
+  subObs(reqAddBookmark$, nullFn) // happens on requests to add a bookmark
+  subObs(archiveLoadedTweets$, clearTempArchive) // happens after tweets are updated by worker, should only happen after loading archive
+  // subObs(fetchedTweets$, pipe(saferApiToTweet, updateTweets,)) // happens after fetching tweets from twitter API
+  // subObs(fetchedBookmarks$, pipe(defaultTo([]), map(bookmarkToTweet), updateTweets,), )  // happens on requests to fetch all bookmarks
+  // subObs(idsToRemove$, removeTweet) // happens on a request to remove a tweet from DB
+  // subObs(reqAddBookmark$, pipe(saferApiToTweet, map(assoc('is_bookmark', true)), addTweets)) // happens on requests to add a bookmark
+  // subObs(archiveLoadedTweets$, pipe(defaultTo([]), map(archToTweet(getUserInfo)), addTweets)) // happens after loading temp_archive from stg, from file. Action imports it
       // Search
-  subObs(reqSearch$, reqSearch)
-  subObs(searchedIndex$, pipe(prop('res'), setStg('search_results')))
-  subObs(getDefaultTweets$, reqGetDefaultTweets)
+  // subObs(reqSearch$, doSearch)
+  subObs(searchResults$, pipe(prop('res'), setStg('search_results')))
+  subObs(reqDefaultTweets$, nullFn)
   subObs(gotDefaultTweets$, pipe(prop('res'), setStg('latest_tweets')))
   // bg search
   // subObs(searchResult$, pipe(getTweetsFromDbById, andThen(pipe(setStg('search_results'), andThen(x=>{emitMidSearch(false); return x;})))))
-  // subObs(getDefaultTweets$, pipe(getDefaultTweets, andThen(setStg('latest_tweets'))) )
+  // subObs(reqDefaultTweets$, pipe(getDefaultTweets, andThen(setStg('latest_tweets'))) )
     // DB
-  subObs(reqClear$, ()=>{reqDbClear(); stg_clear();})
-  // subObs(searchResult$, pipe(getTweetsFromDbById, andThen(pipe(setStg('search_results'), andThen(x=>{emitMidSearch(false); return x;})))))
-  // subObs(getDefaultTweets$, pipe(getDefaultTweets, andThen(pushDefault)) )
+  subObs(reqClear$, nullFn)
   // searchQuery
     // Robo
-  subObs(reqRoboQuery$, reqRoboQueryEffects)
+  // subObs(reqRoboQuery$, reqRoboQueryEffects)
     // Debug
   subObs(logAuth$, ()=>console.log(getAuthInit()))  
   subObs(getUserInfo$, ()=>getUserInfo(getAuthInit))
   // subObs(searchQuery$, nullFn)
   // searchQuery$.log('searchQuery$')
+  subObs(searchFilters$, nullFn)
   searchFilters$.log('searchFilters$')
 }
 

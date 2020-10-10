@@ -9,7 +9,7 @@ import { useStorage } from './useStorage.jsx';
 
 
 function LoadArchiveIcon(){  
-  const tooltip = <span class="tooltiptext"> Click here to upload your Twitter Archive here. <a href="https://twitter.com/settings/your_twitter_data">Download an archive of your data</a>, extract it and select data/tweet.js. </span>  
+  const tooltip = <span class="tooltiptext"> Click here to upload your Twitter Archive. <a href="https://twitter.com/settings/your_twitter_data">Download an archive of your data</a>, extract it and select data/tweet.js. </span>  
   
   return (
     <div class="archive_icon"> 

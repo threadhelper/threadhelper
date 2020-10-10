@@ -244,7 +244,6 @@ export const genRandomSample = (keys)=>{
 export const getDefaultTweets = curry(async (sampleFn, n_tweets, filters, db_get, screen_name, getKeys) => {
   let sample = []
   const keys = await getKeys()
-  console.log('hi I am getDefaultTweets', {keys})
   const isFull = (sample) => sample.length >= n_tweets || sample.length >= keys.length
   // const isValidTweet = makeValidityTest(filters, screen_name)
   const isRT = t=>((t.username != screen_name) && !t.is_bookmark)
@@ -379,11 +378,9 @@ export async function getBookmarks(getAuthInit){
   const init = getAuthInit();
   const url = "https://api.twitter.com/2/timeline/bookmark.json?include_profile_interstitial_type=1&include_blocking=1&include_blocked_by=1&include_followed_by=1&include_want_retweets=1&include_mute_edge=1&include_can_dm=1&include_can_media_tag=1&skip_status=1&cards_platform=Web-12&include_cards=1&include_composer_source=true&include_ext_alt_text=true&include_reply_count=1&tweet_mode=extended&include_entities=true&include_user_entities=true&include_ext_media_color=true&include_ext_media_availability=true&send_error_codes=true&simple_quoted_tweets=true&count=10000&ext=mediaStats%2CcameraMoment"
   const bookmarks = await fetch(url,init).then(x => x.json())
-  console.log('bookmarks', {bookmarks})
   let tweets = Object.values(bookmarks.globalObjects.tweets)
   const users = bookmarks.globalObjects.users
   tweets = tweets.map(tweet => ({ ...tweet, user: users[tweet.user_id_str] }))
-
   return values(tweets)
 }
 

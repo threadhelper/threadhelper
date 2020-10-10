@@ -6,7 +6,7 @@
   "scripts": {
     "build": "rm -rf dist && webpack && npm run copy:dist",
     "watch": "rm -rf dist && mkdir dist && NODE_ENV=development && npm run copy:dist && webpack --config webpack.config.js --mode=development --watch ",
-    "copy:dist": "cp ./src/popup.html ./dist && cp manifest.json ./dist",
+    "copy:dist": "cp ./src/popup.html ./dist && cp manifest.json ./dist && cp -r ./images ./dist",
     "test": "jest"
   },
   "keywords": [],
@@ -36,6 +36,7 @@
     "preact-svg-loader": "^0.2.1",
     "prettier": "^2.0.5",
     "prettier-webpack-plugin": "^1.2.0",
+    "promise-worker": "^2.0.1",
     "ramda": "^0.27.1",
     "react-html-parser": "^2.0.2",
     "resolve-url-loader": "^3.1.1",

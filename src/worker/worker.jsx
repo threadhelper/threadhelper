@@ -1,5 +1,6 @@
 
 import "@babel/polyfill";
+import {onWorkerPromise} from './promise-stream-worker.jsx'
 import * as db from '../bg/db.jsx'
 import * as elasticlunr from 'elasticlunr'
 import {makeIndex, updateIndex, search, loadIndex} from '../bg/nlp.jsx'
@@ -10,15 +11,15 @@ flattenModule(global,R)
 import Kefir from 'kefir';
 
 // Project business
-var DEBUG = false;
+var DEBUG = true;
 toggleDebug(null, DEBUG)
 Kefir.Property.prototype.currentValue = currentValue
 
 // Stream clean up
 const subscriptions = []
 const rememberSub = (sub) => {subscriptions.push(sub); return sub}
-const subObs = (obs, effect) => rememberSub(obs.observe({value:effect}))
-
+const subObs = (obs, effect) => rememberSub(obs.observe({value:effect})) // subscribe to an observer
+const subReq = (obs, effect) => subObs(obs, onWorkerPromise(effect)) // subscribe to an observer and return the result of the function to main as a promise 
 // Utils 
 const msgBG = function(msg){return self.postMessage(msg)} // different from cs's msgBG
 const makeMidSearchEvent = (_busy) => {return new CustomEvent("midSearch", {detail: {busy:_busy}})} 
@@ -56,29 +57,23 @@ const index$ = db$.flatMapFirst(_=>
   Kefir.fromPromise(db.get(getDb(), 'misc', 'index')).map(ifElse(isNil,_=>makeIndex(),loadIndex))).ignoreEnd().toProperty()
   // Kefir.fromPromise(db.get(getDb(), 'misc', 'index'))).map(when(isNil,_=>initIndex().toJSON())).ignoreEnd().toProperty()
 const noIndex$ = index$.map(isNil)
-index$.log('index$')
   // Messages
-const receivedMsg$ = Kefir.fromEvents(self,'message')
-const msg$ = receivedMsg$.map(prop('data'))//.bufferWhile(dbReady$).flatten()
-const makeMsgStream = (typeName) => msg$.filter(propEq('type',typeName)).bufferWhileBy(noDb$).flatten() // Function
+const msg$ = Kefir.fromEvents(self,'message')
+const makeMsgStream = (typeName) => msg$.filter(pathEq(['data',1,'type'],typeName)).bufferWhileBy(noDb$).flatten()//.map(prop('data')) // Function
   // DB
 const dbClear$ = makeMsgStream('dbClear')
+const howManyTweetsDb$ = makeMsgStream('howManyTweetsDb')
   // Index Updating
-// const getIndex$ = makeMsgStream('getIndex')
-// const setIndex$ = makeMsgStream('setIndex')
 const updateTweets$ = makeMsgStream('updateTweets')
 const addTweets$ = makeMsgStream('addTweets')
 const removeTweets$ = makeMsgStream('removeTweets')
   // Index reading
 const isMidSearch$ = Kefir.fromEvents(self, 'midSearch').map(path(['detail', 'busy'])).toProperty(()=>false)
-isMidSearch$.log('isMidSearch$')
 const _searchIndex$ = makeMsgStream('searchIndex').bufferWhileBy(noIndex$).flatten()
-_searchIndex$.log('_searchIndex$')
 const searchIndex$ = _searchIndex$.bufferWhileBy(isMidSearch$).map(last)
-searchIndex$.log('searchIndex$')
 const getDefaultTweets$ = makeMsgStream('getDefaultTweets')
   // Sync
-const ready$ = index$.filter(pipe(isNil, not)).map(_ => true)
+const ready$ = index$.filter(pipe(isNil, not)).map(_ => true) // index$ follows db$
 
 // Functions, potential imports
 const getDb = ()=>db$.currentValue()
@@ -96,7 +91,6 @@ const updateTweets = async (res) => {
   const new_tweets = pipe(filter(pipe(prop('id'), includes(__,new_ids))))(res)
   
   updateDB(new_tweets, deleted_ids)
-  // let _index = loadIndex(index_json)
   let _index = getIndex()
   _index = await updateIndex(_index, new_tweets, deleted_ids)
   const index_json = _index.toJSON()
@@ -130,34 +124,22 @@ const removeTweets = async (ids) => {
   return index_json
 }
 
+const getAllIds = async ()=> (await getDb().getAllKeys('tweets')) // getAllIds :: () -> [ids]
+
 // need to leave open db and empty index
-const dbClear = async () => {
-   await db.clear(getDb());
-   getIndex();
-  }
+const dbClear = pipe(_=>getAllIds(), andThen(removeTweets), andThen(_=>{return {type:'dbClear'}}))
 
+const howManyTweetsDb = async () => (await getDb().getAllKeys('tweets')).length
 
-// const getIndexReq = pipe(
-//   _=>db.get(getDb(), 'misc', 'index'),
-//   andThen(pipe(
-//     defaultTo(makeIndex().toJSON()),
-//     // inspect('getting index'),
-//     assoc('index_json', __, {type:`getIndex`}),
-//     msgBG,
-//     ))
-//     )
 const setIndex = pipe(
   x=>getDb().put('misc', x, 'index')
   )
-
-const indexUpdate = (typeName, updateFn)=>{return pipe(
-  // props(['index_json', 'res']), 
+// indexUpdate :: String -> 
+const indexUpdate = (opName, updateFn) => {return pipe(
+  inspect('indexUpdate'),
   props(['res']),
   args=>updateFn(...args), 
-  andThen(pipe(
-    // assoc('index_json', __, {type:typeName})  ,
-    _=>{return {type:typeName}},
-    msgBG )))}
+  andThen(_=>{return {type:opName}}))}
 const onUpdateTweets = indexUpdate('updateTweets', updateTweets)
 const onAddTweets = indexUpdate('addTweets', addTweets)
 const onRemoveTweets = indexUpdate('removeTweets', removeTweets)
@@ -170,6 +152,7 @@ const getTweetsFromDbById = async (ids) => await pipe( // getTweetsFromDbById ::
 // msg2Search :: msg search -> Promise [tweet]
 const msg2Search = curry((_getIndex, m) => {const index = _getIndex(); console.log({index,m}); return search(m.filters, m.username, m.n_results, _getIndex(), m.query)})
 const searchIndex = pipe( // async
+  // inspect('search'),
   tap(_=>emitMidSearch(true)),
   msg2Search(getIndex),
   andThen(pipe(
@@ -177,18 +160,19 @@ const searchIndex = pipe( // async
     andThen(pipe(
       tap(_=>emitMidSearch(false)),
       assoc('res', __ , {type:'searchIndex',}),
-      msgBG
       )))))
 const defaultTweetsFn = getRandomSampleTweets
 const msg2SampleArgs = m=>[m.n_tweets, m.filters, db.get(getDb()), m.screen_name, ()=>getDb().getAllKeys('tweets')]
 const getDefaultTweets = pipe(
+  // inspect('getDefaultTweets'),
   msg2SampleArgs,
-  inspect('getDefault args'),
+  // inspect('getDefault args'),
   args=>defaultTweetsFn(...args),
   andThen(pipe(
-    inspect('gotDefault'),
+    // inspect('gotDefault'),
     assoc('res', __ , {type:'getDefaultTweets',}),
-    msgBG)))
+    // msgBG,
+    )))
 
 
 // subObs(searchResult$, pipe(getTweetsFromDbById, andThen(pipe(setStg('search_results'), andThen(x=>{emitMidSearch(false); return x;})))))
@@ -197,13 +181,10 @@ const getDefaultTweets = pipe(
 // receivedMsg$.log('worker got message:')
 // subObs(db$, ()=>msgBG({type:'ready'}))
 subObs(ready$, ()=>msgBG({type:'ready'}))
-subObs(dbClear$, dbClear)
-// subObs(getIndex$, getIndexReq)
-// subObs(setIndex$, setIndex)
-subObs(searchIndex$, searchIndex)
-subObs(getDefaultTweets$, getDefaultTweets)
-subObs(updateTweets$, onUpdateTweets)
-subObs(addTweets$, onAddTweets)
-subObs(removeTweets$, onRemoveTweets)
-
-
+subReq(dbClear$, dbClear)
+subReq(updateTweets$, onUpdateTweets)
+subReq(addTweets$, onAddTweets)
+subReq(removeTweets$, onRemoveTweets)
+subReq(getDefaultTweets$, getDefaultTweets)
+subReq(searchIndex$, searchIndex)
+subReq(howManyTweetsDb$, howManyTweetsDb)
