@@ -25,7 +25,7 @@ export function useStorage(name, default_val){
     useStgObs.onValue(nullFn)
     //init
     getData(name).then(pipe(defaultTo(default_val), setStorageItem))
-    return () => {useStgObs.offValue(nullFn)};
+    return () => {useStgObs.offValue(nullFn); };
   }, []);
 
   useEffect(()=>{

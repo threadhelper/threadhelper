@@ -16,7 +16,7 @@ import { flattenModule, inspect, toggleDebug, currentValue, nullFn } from './uti
 import { updateTheme, getMode, isSidebar, getIdFromUrl, getCurrentUrl } from './utils/wutils.jsx'
 import { getData, setData, msgBG, makeGotMsgObs, makeStorageObs, getOptions, requestRoboTweet } from './utils/dutils.jsx';
 import { makeRoboStream, makeActionStream, makeComposeFocusObs, makeReplyObs, getHostTweetId, makeLastClickedObs, makeAddBookmarkStream, makeRemoveBookmarkStream, makeDeleteEventStream } from './ui/inputsHandler.jsx'
-import { makeSidebarHome, makeSidebarCompose, makeHomeSidebarObserver, makeFloatSidebarObserver, injectSidebarHome, injectDummy } from './ui/sidebarHandler.jsx'
+import { removeHomeSidebar, makeSidebarHome, makeSidebarCompose, makeHomeSidebarObserver, makeFloatSidebarObserver, injectSidebarHome, injectDummy } from './ui/sidebarHandler.jsx'
 import { makeComposeObs } from './ui/composeHandler.jsx'
 import { makeLastStatusObs, makeModeObs, makeBgColorObs } from './ui/tabsHandler.jsx'
 import css from '../style/cs.scss'
@@ -33,10 +33,12 @@ Kefir.Property.prototype.currentValue = currentValue
 // Sidebar functions
 let thBarHome = makeSidebarHome()
 let thBarComp = makeSidebarCompose()
-const activateSidebar = curry( (floatSidebarStream, inject, bar, thStreams) => {
-  inject(bar); render(<ThreadHelper streams={thStreams} float={floatSidebarStream}></ThreadHelper>, bar); })
-const activateFloatSidebar = activateSidebar(Kefir.never())
-const activateHomeSidebar = activateSidebar
+// const activateSidebar = curry( (floatSidebarStream, inject, bar, thStreams) => {
+//   inject(bar); render(<ThreadHelper streams={thStreams} float={floatSidebarStream}></ThreadHelper>, bar); })
+const activateSidebar = curry( (inject, bar, thStreams) => {
+  inject(bar); render(<ThreadHelper streams={thStreams}></ThreadHelper>, bar); })
+const activateFloatSidebar = activateSidebar(injectDummy, thBarComp)
+const activateHomeSidebar = activateSidebar(injectSidebarHome, thBarHome)
 const deactivateSidebar = (bar) => { render(null, bar) }
 
 
@@ -105,24 +107,40 @@ async function onLoad(thBarHome, thBarComp){
   }
   
   // Sidebar control
-  const updateFloat = value => value == 'render' ? activateFloatSidebar(injectDummy, thBarComp, thStreams) : deactivateSidebar(thBarComp) //function
-  const updateHome = value => value == 'render' ? activateHomeSidebar(floatSidebar$, injectSidebarHome, thBarHome, thStreams) : deactivateSidebar(thBarHome) //function
-  const floatSidebar$ = makeFloatSidebarObserver(thBarComp) // for floating sidebar in compose mode
-  const homeSidebar$ = makeHomeSidebarObserver(thBarHome) // for main site sidebar over recent trends
+  // const updateFloat = value => value == 'render' ? activateFloatSidebar(thStreams) : deactivateSidebar(thBarComp) //function
+  // const updateHome = value => value == 'render' ? activateHomeSidebar(thStreams) : deactivateSidebar(thBarHome) //function
+  const updateFloat = value => value ? activateFloatSidebar(thStreams) : deactivateSidebar(thBarComp) //function
+  const updateHome = value => value ? activateHomeSidebar(thStreams) : deactivateSidebar(thBarHome) //function
+  const floatSidebar$ = makeFloatSidebarObserver(thBarComp) // floatSidebar$ :: String || Element  // for floating sidebar in compose mode
+  floatSidebar$.log('floatSidebar$')
+  const floatActive$ = floatSidebar$.map(equals('render')).toProperty(()=>false) // floatActive$ ::Bool
+  floatActive$.log('floatActive$')
 
+  const homeSidebar$ = makeHomeSidebarObserver(thBarHome) // homeSidebar$ :: String || Element // for main site sidebar over recent trends
+  homeSidebar$.log('homeSidebar$')
+  const homeActive$ = homeSidebar$.map(equals('render')).toProperty(()=>false) // homeActive$ ::Bool
+  homeActive$.log('homeActive$')
+
+  
+  // floatActive$.onValue(x=>x?deactivateSidebar(thBarHome):nullFn)  
+  const homeActiveSafe$ = Kefir.combine([homeActive$, floatActive$.map(not)], and)
+  homeActiveSafe$.log('homeActiveSafe$')
+  
 
   // Effects from streams
     // Actions
   targetedTweetActions$.log('targetedTweetActions')
-  subObs(lastClickedId$, (_)=>{})
+  subObs(lastClickedId$, _=>{})
   subObs(composeQuery$, nullFn)
-  subObs(actions$.delay(1000), (_)=>{handlePosting()})
+  subObs(actions$.delay(1000), _=>{handlePosting()})
   subObs(targetedTweetActions$, pipe(makeIdMsg, msgBG))
   subObs(theme$, updateTheme)
   // subObs(robo$, _=>requestRoboTweet(composeQuery$.currentValue(), replyTo$.currentValue()))
     // Render Sidebar 
-  subObs(floatSidebar$, updateFloat)
-  subObs(homeSidebar$, updateHome)
+  // subObs(floatSidebar$, updateFloat)
+  subObs(floatActive$, updateFloat)
+  // subObs(homeSidebar$, updateHome)
+  subObs(homeActiveSafe$, updateHome)
 
   
   // const _sub_actions = actions$.delay(2000).observe({value:,}); rememberSub(_sub_actions);

@@ -12,9 +12,7 @@ import RetweetIcon from '../../images/retweet.svg';
 
 
 
-export function Console(props){
-  // Add `name` to the initial state
-  const query = useStream(props.composeQuery,'')
+export function Console(){
   // const [text, setText] = useState('[console text]');
   const [text, setText] = useState('[console text]');
   // TODO make these generate themselves

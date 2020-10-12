@@ -1,40 +1,42 @@
   import { h, render, Component } from 'preact';
 import { useState, useRef, useEffect, useContext, useCallback } from 'preact/hooks';
-import { getData, msgBG, makeOnStorageChanged } from '../utils/dutils.jsx';
+import { getData, setStg, msgBG, makeOnStorageChanged } from '../utils/dutils.jsx';
 import { Console } from './Console.jsx';
 import { Tweet } from './Tweet.jsx';
 import { IOStreams } from './ThreadHelper.jsx';
 import { useStorage } from './useStorage.jsx';
 import { useStream } from './useStream.jsx';
-import { flattenModule } from '../utils/putils.jsx'
+import { flattenModule, inspect } from '../utils/putils.jsx'
 import * as R from 'ramda';
 flattenModule(global,R)
 
-const isMidSearch = (query)=>query!=null && query.length>0
 function reqSearch(query){
-  console.log('reqSearch');
   msgBG({type:'search', query:query})
 }
+
 
 export function Search(props){
   const [tweets, setTweets] = useState([]);
   const query = useStream(props.composeQuery)
   const myRef = useRef(null);
   const _setTweets = (t)=>{setTweets(t);}
-
+  
   const [searchResults, setSearchResults] = useStorage('search_results',[]);
   const [latestTweets, setLatestTweets] = useStorage('latest_tweets',[]);
   
-  // const decideShow = (searchResults, latestTweets)=>R.defaultTo([],!(isNil(searchResults) || isEmpty(searchResults)) ? searchResults : latestTweets)
-  // const decideShow = (searchResults, latestTweets)=>{const sh = R.defaultTo([],!(isNil(searchResults) || isEmpty(searchResults) || R.isEmpty(query))  ? tap(()=> console.log('decided', {searchResults}),searchResults) : tap(()=> console.log('decided', {latestTweets}),searchResults));  return sh}
-  const showSearchRes = (searchResults, latestTweets)=>!(isNil(searchResults) || R.isEmpty(query.trim()))
+  const showSearchRes = (searchResults)=>!(isNil(searchResults) || R.isEmpty(query.trim()))
 
 
+  useEffect(async () => {
+    const initTweets = await getData('latest_tweets') 
+    setTweets(initTweets != null ? initTweets : [])
+  }, []);
 
+  
   // // To subscribe to storage changes
   // useEffect(() => {
   //   // console.log("adding search storage listener")
-  //   const onStCh = makeOnStorageChanged(searchStorageChange)
+  //   const onStCh = makeOnStorageChanged(inspect('storage changed'))
   //   chrome.storage.onChanged.addListener(onStCh);
   //   return () => { 
   //     // console.log("removing search storage listener")
@@ -42,14 +44,10 @@ export function Search(props){
   //   };
   // }, []);
 
-  useEffect(async () => {
-    const initTweets = await getData('latest_tweets') 
-    setTweets(initTweets != null ? initTweets : [])
-  }, []);
-
 
 
   useEffect(()=>{
+    setStg('poop', 1)
     R.pipe(
       defaultTo(''),
       when(
@@ -60,10 +58,10 @@ export function Search(props){
     return ()=>{  };
   },[query]);
 
-  // useEffect(()=>{
-  //   console.log({searchResults})
-  //   return ()=>{  };
-  // },[searchResults]);
+  useEffect(()=>{
+    console.log({searchResults})
+    return ()=>{  };
+  },[searchResults]);
   // useEffect(()=>{
   //   console.log({latestTweets})
   //   return ()=>{  };
@@ -72,8 +70,10 @@ export function Search(props){
 
   return (
     <div class="searchWidget" ref={myRef}>
-      <Console composeQuery={props.composeQuery}/>
-      {showSearchRes(searchResults, latestTweets) ? <SearchResults tweets={searchResults} /> : <SearchResults tweets={latestTweets} /> }
+      <Console/>
+      {showSearchRes(searchResults) 
+      ? <SearchResults tweets={searchResults} /> 
+      : <SearchResults tweets={latestTweets} /> }
     </div>
   );
 }

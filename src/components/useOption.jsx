@@ -30,24 +30,3 @@ export function useOption(name){
 
   return [option, setOptionBG]
 }
-
-// export function _useOption(name){
-//   const [option, setOption] = useState(true);
-  
-    
-//   useEffect(() => {
-//     //init
-//     getOptions().then(pipe(path([name, 'value']), setOption))
-//     return () => {};
-//   }, []);
-  
-  
-//   const setOptionBG = pipe(
-//     updateOptionStg(name),
-//     andThen(pipe(
-//       path([name, 'value']),
-//       setOption))
-//       )
-
-//   return [option, setOptionBG]
-// }

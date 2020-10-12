@@ -7,7 +7,7 @@ import { isNil } from 'ramda'
 
 
 
-export function SyncIcon(props){
+export function SyncIcon(){
 
   const [sync, setSync] = useStorage('sync', false)
   const [syncDisplay, setSyncDisplay] = useStorage('syncDisplay', 'default sync display msg')
@@ -18,7 +18,6 @@ export function SyncIcon(props){
   }
 
   useEffect(()=>{
-    console.log({sync})
     return ()=>{  };
   },[sync]);
 

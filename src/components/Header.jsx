@@ -10,13 +10,13 @@ import { useStorage } from './useStorage.jsx';
 
 
 
-export function Header(props){
+export function Header(){
   const [hasArchive, setHasArchive] = useStorage('hasArchive')
   const tooltip = <span class="tooltiptext"> Click here to upload your Twitter Archive here. <a href="https://twitter.com/settings/your_twitter_data">Download an archive of your data</a>, extract it and select data/tweet.js. </span>  
   
   return (
     <div class="header">
-      <SyncIcon streams={props.streams}/>
+      <SyncIcon/>
       <div class="title-container"> <span class="th-title">ThreadHelper</span></div>
       {!hasArchive ? <ArchiveUploader /> : null}
       <SettingsButton>
