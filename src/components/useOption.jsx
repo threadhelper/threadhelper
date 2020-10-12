@@ -2,7 +2,7 @@ import { h, render, Component } from 'preact';
 import { useState, useEffect, useMemo, useContext } from 'preact/hooks';
 import {useStream,_useStream} from './useStream.jsx'
 import {getData, setData, makeStgPathObs, updateOptionStg, getOptions} from '../utils/dutils.jsx'
-import {inspect} from '../utils/putils.jsx'
+import {inspect, nullFn} from '../utils/putils.jsx'
 import {pipe, andThen, prop, path} from 'ramda'
 
 // 
@@ -22,10 +22,10 @@ export function useOption(name){
   
     
   useEffect(() => {
-    useStgObs.log({name})
+    useStgObs.onValue(nullFn)
     //init
     getOptions().then(pipe(path([name, 'value']), setOption))
-    return () => {};
+    return () => {useStgObs.offValue(nullFn)};
   }, []);
 
   return [option, setOptionBG]

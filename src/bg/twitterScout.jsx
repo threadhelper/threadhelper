@@ -1,5 +1,6 @@
-import {getData, setData, makeOnStorageChanged} from '../utils/dutils.jsx'
-import { flattenModule, inspect} from '../utils/putils.jsx'
+import {getData, setData, makeOnStorageChanged} from '../utils/dutils.jsx';
+import { flattenModule, inspect} from '../utils/putils.jsx';
+import { unescape } from 'lodash';
 import * as R from 'ramda';
 flattenModule(global,R)
 
@@ -10,7 +11,6 @@ const getMaxId = (res) => res.length > 1 ? res[res.length - 1].id : null
 export const fetchUserInfo = async (getAuthInit) => await fetch(`https://api.twitter.com/1.1/account/verify_credentials.json`,getAuthInit()).then(x => x.json())
 export const updateQuery = async (getAuthInit, username, count) => await fetch(makeUpdateQueryUrl(username, count), getAuthInit()).then(x => x.json())
 export const tweetLookupQuery = curry(async (getAuthInit, ids) => {
-  console.trace('inside tweetLookupQuery', ids)
   return await fetch(`https://api.twitter.com/1.1/statuses/lookup.json?id=${R.join(",",ids)}`, getAuthInit()).then(x => x.json())
 })
 
@@ -63,28 +63,13 @@ const rt_tag = /RT @([a-zA-Z0-9_]+:)/
 const default_pic_url = 'https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png'
 
 
+
+// // bookmarkToTweet :: apiBookmark -> tweet
+// export const bookmarkToTweet = pipe(apiToTweet, assoc('is_bookmark', true))
+
 export const bookmarkToTweet = (entry)=>{
   let tweet = apiToTweet(entry)
-  tweet = toTweetCommon(tweet,entry)
   tweet.is_bookmark = true
-  // TODO: get QT from bookmarks, what follows is absolute placeholder
-  if (tweet.has_quote) { 
-    tweet.quote = {
-      // Basic info.
-      text: `bookmark tweet is quoting tweet ${entry.quoted_status_id_str}`,
-      name: '',
-      username: '',
-      time: new Date().getTime(),
-      profile_image: default_pic_url,
-      // Replies/mentions.
-      reply_to: '',
-      mentions: [],
-      // URLs.
-      urls: [],
-      has_media: false,
-      media: null,
-    }
-  }
   return tweet
 }
 
@@ -102,7 +87,7 @@ export const apiToTweet = (entry) => {
   //tweet contents
   tweet.username = entry.user.screen_name
   tweet.name = entry.user.name
-  tweet.text = entry.full_text || entry.text
+  tweet.text = unescape(entry.full_text || entry.text)
   tweet.profile_image = entry.user.profile_image_url_https
 
   tweet = toTweetCommon(tweet,entry)
@@ -110,7 +95,7 @@ export const apiToTweet = (entry) => {
   if (tweet.has_quote && tweet.is_quote_up) { 
     tweet.quote = {
       // Basic info.
-      text: entry.quoted_status.full_text || entry.quoted_status.text,
+      text: unescape(entry.quoted_status.full_text || entry.quoted_status.text),
       name: entry.quoted_status.user.name,
       username: entry.quoted_status.user.screen_name,
       time: new Date(entry.quoted_status.created_at).getTime(),
@@ -143,7 +128,7 @@ export const archToTweet = curry((getUserInfo, entry)=>{
 
   const init_tweet = {
     username : !isNil(rt) ? rt[1] : user_info.screen_name,
-    text: !isNil(rt) ? t.full_text.replace(rt_tag,'') : t.full_text,
+    text: unescape(!isNil(rt) ? t.full_text.replace(rt_tag,'') : t.full_text),
     name: isOwnTweet ? user_info.name : findAuthor(t).name,  // If I'm tweeting/retweeting myself
     profile_image: isOwnTweet ? user_info.profile_image_url_https : default_pic_url,
     retweeted: isOwnTweet ? false : true
@@ -154,7 +139,7 @@ export const archToTweet = curry((getUserInfo, entry)=>{
   if (tweet.has_quote && tweet.is_quote_up) { 
     tweet.quote = {
       // Basic info.
-      text: t.quoted_status.full_text || t.quoted_status.text,
+      text: unescape(t.quoted_status.full_text || t.quoted_status.text),
       name: t.quoted_status.user.name,
       username: t.quoted_status.user.screen_name,
       time: new Date(t.quoted_status.created_at).getTime(),
@@ -241,14 +226,15 @@ export const genRandomSample = (keys)=>{
 
 // get random tweets as a serendipity generator
 // TODO make functional
+
 export const getDefaultTweets = curry(async (sampleFn, n_tweets, filters, db_get, screen_name, getKeys) => {
   let sample = []
   const keys = await getKeys()
   const isFull = (sample) => sample.length >= n_tweets || sample.length >= keys.length
   // const isValidTweet = makeValidityTest(filters, screen_name)
-  const isRT = t=>((t.username != screen_name) && !t.is_bookmark)
-  const isBookmark = prop('is_bookmark')
-  const isReply = t=>!isNil(t.reply_to) && t.reply_to != t.username  
+  const isRT = t=>(!propEq('username', screen_name, t) && !prop('is_bookmark', t))
+  const isBookmark = prop('is_bookmark')  
+  const isReply = t=>!isNil(prop('reply_to', t)) && prop('reply_to', t) != prop('username', t)  
   const isValidTweet = t => 
   (filters.getRTs || !isRT(t)) && 
   (filters.useBookmarks || !isBookmark(t)) && 
@@ -374,14 +360,31 @@ export const getThreadAbove = curry(async (getAuthInit, counter, tid)=>{
 })
 
 
+const bookmark_url = "https://api.twitter.com/2/timeline/bookmark.json?include_profile_interstitial_type=1&include_blocking=1&include_blocked_by=1&include_followed_by=1&include_want_retweets=1&include_mute_edge=1&include_can_dm=1&include_can_media_tag=1&skip_status=1&cards_platform=Web-12&include_cards=1&include_composer_source=true&include_ext_alt_text=true&include_reply_count=1&tweet_mode=extended&include_entities=true&include_user_entities=true&include_ext_media_color=true&include_ext_media_availability=true&send_error_codes=true&simple_quoted_tweets=true&count=10000&ext=mediaStats%2CcameraMoment"
+const getBookmarkTweets = pipe(path(['globalObjects', 'tweets']), x=>Object.values(x))
+const getBookmarkUsers = pipe(path(['globalObjects', 'users']))
+const getQtId = pipe(prop('quoted_status_id_str'))
+// const assocUserToTweet = (users, tweet) => ({ ...tweet, user: users[tweet.user_id_str] })
+const assocUser =  curry((users, tweet) => assoc('user', users[tweet.user_id_str], tweet))
+// const assocQTs =  curry((qts, tweet) => assoc('quote', qts[tweet.quoted_status_id_str], tweet))
+const assocQTs =  curry((qts, tweet) => when(pipe(prop('quoted_status_id_str'), isNil, not),
+  pipe(assoc('quoted_status', qts[tweet.quoted_status_id_str]), assoc('is_quote_status', true),))(tweet))
+
 export async function getBookmarks(getAuthInit){
-  const init = getAuthInit();
-  const url = "https://api.twitter.com/2/timeline/bookmark.json?include_profile_interstitial_type=1&include_blocking=1&include_blocked_by=1&include_followed_by=1&include_want_retweets=1&include_mute_edge=1&include_can_dm=1&include_can_media_tag=1&skip_status=1&cards_platform=Web-12&include_cards=1&include_composer_source=true&include_ext_alt_text=true&include_reply_count=1&tweet_mode=extended&include_entities=true&include_user_entities=true&include_ext_media_color=true&include_ext_media_availability=true&send_error_codes=true&simple_quoted_tweets=true&count=10000&ext=mediaStats%2CcameraMoment"
-  const bookmarks = await fetch(url,init).then(x => x.json())
-  let tweets = Object.values(bookmarks.globalObjects.tweets)
-  const users = bookmarks.globalObjects.users
-  tweets = tweets.map(tweet => ({ ...tweet, user: users[tweet.user_id_str] }))
-  return values(tweets)
+  const getBookmarkQTs = pipe(getBookmarkTweets, map(getQtId), filter(pipe(isNil, not)), tweetLookupQuery(getAuthInit), andThen(indexBy(prop('id_str'))), andThen(inspect('afterlookupquery')))
+  const bookmarks = await fetch(bookmark_url,getAuthInit()).then(x => x.json())
+  
+  const assocUserToTweet = (users, tweet) => ({ ...tweet, user: users[tweet.user_id_str] })
+  // let tweets = Object.values(bookmarks.globalObjects.tweets)
+  const tweets = getBookmarkTweets(bookmarks)
+  const users = getBookmarkUsers(bookmarks)
+  const qts = await getBookmarkQTs(bookmarks)
+  // add users
+  const makeRes = pipe(getBookmarkTweets, map(assocUser(users)), map(assocQTs(qts)), inspect('bookmarks with qts'))
+  const res = await makeRes(bookmarks)
+  // QTs
+
+  return values(res)
 }
 
 

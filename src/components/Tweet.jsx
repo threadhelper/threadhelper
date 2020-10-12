@@ -13,6 +13,7 @@ export function Tweet(props){
   // const [tweet, setTweet] = useState(tweet);
   // console.log(props.tweet)
   const tweet = props.tweet
+  const id = tweet.id
   const getTweetUrl = tweet => `https://twitter.com/${tweet.username}/status/${tweet.id}`
 
   const timeDiff = getTimeDiff(tweet.time)

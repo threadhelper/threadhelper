@@ -29,6 +29,9 @@ const subObs = (obs, effect) => rememberSub(obs.observe({value:effect}))
 // 
 // Extension business
 const twitter_url = /https?:\/\/(www\.)?twitter.com\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/
+const makeOnInstalledEvent = (_busy) => {return new CustomEvent("midSearch", {detail: {busy:_busy}})} 
+const emitOnInstalled = (busy) => {self.dispatchEvent(makeMidSearchEvent(busy));}
+
 
 // Potential imports
   // misc
@@ -110,6 +113,7 @@ export async function main(){
   const removeTweets = async ids => msgPromiseWorker({type:'removeTweets', res:ids}) // removeTweets :: IMPURE [id] -> Promise()
   const removeTweet = async id => removeTweets([id])
   const dbClear =  async () => msgPromiseWorker({type:'dbClear'}) // dbClear :: IMPURE () -> Promise ()
+  const resetIndex =  async () => msgPromiseWorker({type:'resetIndex'}) // resetIndex :: IMPURE () -> Promise ()
   const resetData = _ => Promise.all([resetStorage(), dbClear()])
   // const reqDbGet = ids =>{ msgPromiseWorker({type:'dbGet', ids:ids})} // reqDbGet :: IMPURE [id] -> Promise [tweet]
   const doSearch = async query => msgPromiseWorker(makeReqSearchMsg(query)); // doSearch :: IMPURE String -> Promise [tweet]
@@ -118,6 +122,8 @@ export async function main(){
     // DB functions
     // chrome storage
   const clearTempArchive = _=>removeData(["temp_archive"])
+  
+  chrome.runtime.onInstalled.addListener(resetData);
   // 
   // Stream value getters
   // const getIndex = ()=>index$.currentValue()
@@ -195,7 +201,7 @@ export async function main(){
 // 
   const reqClear$ = makeMsgStream("clear") // reqClear$ :: msg
   const dataReset$ = promiseStream(reqClear$, resetData) // dbCleared$ :: msg
-  const initData$ = makeSafe(Kefir.merge([csStart$, ready$.bufferWhileBy(csNotReady$).flatten(), dataReset$])) // initData$ ::  // second term exists bc if csStart arrives before ready, then event won't fire
+  const initData$ = makeSafe(Kefir.merge([csStart$, ready$.bufferWhileBy(csNotReady$).flatten(), dataReset$])).throttle(100) // initData$ ::  // second term exists bc if csStart arrives before ready, then event won't fire
   initData$.log('initData$')
     // Tweet API
   const debugGetBookmarks$ = makeMsgStreamSafe('get-bookmarks') // debugGetBookmarks$ :: msg
@@ -221,12 +227,6 @@ export async function main(){
   const reqArchiveLoad$ = makeMsgStreamSafe("temp-archive-stored") // reqArchiveLoad$ :: msg
   const archiveLoadedTweets$ = promiseStream(reqArchiveLoad$, _=>getData("temp_archive")) // IMPURE archiveLoadedTweets$ :: [archTweet]
 
-  // const fetchedUpdate$ = reqUpdatedTweets$.flatMapLatest(_=>Kefir.fromPromise(updateQuery(getAuthInit, getUsername(), update_size))) // IMPURE
-  // const fetchedTimeline$ = reqTimeline$.flatMapLatest(_=>Kefir.fromPromise(timelineQuery(getAuthInit, userInfo$.currentValue()))) // IMPURE
-  // const fetchedBookmarks$ = reqBookmarks$.flatMapLatest(_=>Kefir.fromPromise(getBookmarks(getAuthInit)))
-  // subObs(fetchedTweets$, pipe(saferApiToTweet, updateTweets,)) // happens after fetching tweets from twitter API
-  // subObs(fetchedBookmarks$, pipe(, updateTweets,), )  // happens on requests to fetch all bookmarks
-  // subObs(archiveLoadedTweets$, pipe(defaultTo([]), map(archToTweet(getUserInfo)), addTweets)) // happens after loading temp_archive from stg, from file. Action imports it
   const thTweets$ = Kefir.merge([ // thTweets$ :: [tweet] // tweet :: threadhelper_tweet
     fetchedUpdate$.map(saferMap(apiToTweet)),
     fetchedTimeline$.map(saferMap(apiToTweet)),
@@ -274,15 +274,13 @@ export async function main(){
     // Search
   const reqSearch$ = makeSafe(Kefir.merge([ 
     searchQuery$,
-    searchQuery$.sampledBy(searchFilters$),
-    searchQuery$.sampledBy(anyTweetUpdate$),
+    searchQuery$.sampledBy(searchFilters$).filter((isExist)),
+    searchQuery$.sampledBy(anyTweetUpdate$).filter((isExist)),
     ]))
     // doSearch
   const reqDefaultTweets$ = makeSafe(Kefir.merge([  // reqDefaultTweets$ :: msg | String // triggers getting and pushing default tweets
-    // searchFilters$.filter(_=>!searchQueryExists()),
-    // anyTweetUpdate$.filter(_=>!searchQueryExists()),
-    searchQuery$.sampledBy(searchFilters$).filter(pipe(isExist,R.not)),
-    searchQuery$.sampledBy(anyTweetUpdate$).filter(pipe(isExist,R.not)),
+    searchQuery$.sampledBy(searchFilters$),//.filter(pipe(isExist,R.not)),
+    searchQuery$.sampledBy(anyTweetUpdate$),//.filter(pipe(isExist,R.not)),
     makeMsgStream("get-latest"),
     anyTweetUpdate$,
   ])).bufferWhileBy(notReady$).map(last).throttle(1000) //.last()
@@ -325,11 +323,6 @@ export async function main(){
   subObs(idsToRemove$, nullFn) // happens on a request to remove a tweet from DB
   subObs(reqAddBookmark$, nullFn) // happens on requests to add a bookmark
   subObs(archiveLoadedTweets$, clearTempArchive) // happens after tweets are updated by worker, should only happen after loading archive
-  // subObs(fetchedTweets$, pipe(saferApiToTweet, updateTweets,)) // happens after fetching tweets from twitter API
-  // subObs(fetchedBookmarks$, pipe(defaultTo([]), map(bookmarkToTweet), updateTweets,), )  // happens on requests to fetch all bookmarks
-  // subObs(idsToRemove$, removeTweet) // happens on a request to remove a tweet from DB
-  // subObs(reqAddBookmark$, pipe(saferApiToTweet, map(assoc('is_bookmark', true)), addTweets)) // happens on requests to add a bookmark
-  // subObs(archiveLoadedTweets$, pipe(defaultTo([]), map(archToTweet(getUserInfo)), addTweets)) // happens after loading temp_archive from stg, from file. Action imports it
       // Search
   // subObs(reqSearch$, doSearch)
   subObs(searchResults$, pipe(prop('res'), setStg('search_results')))
@@ -347,12 +340,11 @@ export async function main(){
   subObs(logAuth$, ()=>console.log(getAuthInit()))  
   subObs(getUserInfo$, ()=>getUserInfo(getAuthInit))
   // subObs(searchQuery$, nullFn)
-  // searchQuery$.log('searchQuery$')
   subObs(searchFilters$, nullFn)
   searchFilters$.log('searchFilters$')
 }
 
- 
+//  
 
 
 
@@ -360,7 +352,8 @@ function onInstalled() {
   chrome.declarativeContent.onPageChanged.removeRules(undefined, function() {
     chrome.declarativeContent.onPageChanged.addRules([
       {conditions: [new chrome.declarativeContent.PageStateMatcher({pageUrl: { urlContains: "twitter.com" }})],
-        actions: [new chrome.declarativeContent.ShowPageAction()]}]);});}
+        actions: [new chrome.declarativeContent.ShowPageAction()]}]);});
+      }
 
 // TODO emit to active tab
 function onTabActivated(activeInfo){

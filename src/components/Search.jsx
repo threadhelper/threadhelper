@@ -61,11 +61,11 @@ export function Search(props){
   },[query]);
 
   // useEffect(()=>{
-  //   // console.log({searchResults})
+  //   console.log({searchResults})
   //   return ()=>{  };
   // },[searchResults]);
   // useEffect(()=>{
-  //   // console.log({latestTweets})
+  //   console.log({latestTweets})
   //   return ()=>{  };
   // },[latestTweets]);
 
@@ -79,7 +79,6 @@ export function Search(props){
 }
 
 function prepTweets(list){
-  console.log('search tweets', list)
   return defaultTo([],list)
 }
 

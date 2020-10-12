@@ -41,25 +41,33 @@ const updateSomeDB = curry(async (_getDb, new_tweets, deleted_ids)=>{ // IMPURE,
   isEmpty(new_tweets) ? null : db.put(_getDb())(storeName, new_tweets)
   return new_tweets
 })
-const initIndex = () => { //IMPURE, saves to db
-  console.log('initing index')
-  const newIndex = makeIndex()
-  setIndex(newIndex.toJSON())
-  return newIndex
-}
+// const initIndex = async () => { //IMPURE, saves to db
+//   console.log('initing index')
+//   const newIndex = makeIndex()
+//   await updateIndex(newIndex, await getDb().getAll('tweets'), [])
+//   console.log('initing index')
+//   // setIndex(newIndex.toJSON())
+//   return newIndex
+// }
+
+const initIndex = async() => pipe(_=>getDb().getAll('tweets'), andThen(updateIndex(makeIndex(), __, [])), inspect('initIndex'))(1)
+
+const getIndexFromDb = () => db.get(getDb(), 'misc', 'index')
 
 // Streams
   // Db init
 const db$ = Kefir.fromPromise(db.open()).ignoreEnd().toProperty()
 const noDb$ = db$.map(isNil)
-  // index init
-const index$ = db$.flatMapFirst(_=>
-  Kefir.fromPromise(db.get(getDb(), 'misc', 'index')).map(ifElse(isNil,_=>makeIndex(),loadIndex))).ignoreEnd().toProperty()
-  // Kefir.fromPromise(db.get(getDb(), 'misc', 'index'))).map(when(isNil,_=>initIndex().toJSON())).ignoreEnd().toProperty()
-const noIndex$ = index$.map(isNil)
   // Messages
 const msg$ = Kefir.fromEvents(self,'message')
 const makeMsgStream = (typeName) => msg$.filter(pathEq(['data',1,'type'],typeName)).bufferWhileBy(noDb$).flatten()//.map(prop('data')) // Function
+  // index init
+const resetIndex$ = makeMsgStream('resetIndex')
+const index$ = Kefir.merge([db$, resetIndex$]).flatMapFirst(_=>
+  Kefir.fromPromise(pipe(getIndexFromDb, andThen(ifElse(isNil,_=>initIndex(),loadIndex)))(1))).ignoreEnd().toProperty()
+  // Kefir.fromPromise(db.get(getDb(), 'misc', 'index'))).map(when(isNil,_=>initIndex().toJSON())).ignoreEnd().toProperty()
+const noIndex$ = index$.map(isNil)
+
   // DB
 const dbClear$ = makeMsgStream('dbClear')
 const howManyTweetsDb$ = makeMsgStream('howManyTweetsDb')
@@ -89,7 +97,6 @@ const updateTweets = async (res) => {
   const deleted_ids = findDeletedIds(old_ids, res.map(prop('id')))
   const new_ids = difference(res.map(prop('id')), old_ids)
   const new_tweets = pipe(filter(pipe(prop('id'), includes(__,new_ids))))(res)
-  
   updateDB(new_tweets, deleted_ids)
   let _index = getIndex()
   _index = await updateIndex(_index, new_tweets, deleted_ids)
@@ -164,14 +171,10 @@ const searchIndex = pipe( // async
 const defaultTweetsFn = getRandomSampleTweets
 const msg2SampleArgs = m=>[m.n_tweets, m.filters, db.get(getDb()), m.screen_name, ()=>getDb().getAllKeys('tweets')]
 const getDefaultTweets = pipe(
-  // inspect('getDefaultTweets'),
   msg2SampleArgs,
-  // inspect('getDefault args'),
   args=>defaultTweetsFn(...args),
   andThen(pipe(
-    // inspect('gotDefault'),
     assoc('res', __ , {type:'getDefaultTweets',}),
-    // msgBG,
     )))
 
 

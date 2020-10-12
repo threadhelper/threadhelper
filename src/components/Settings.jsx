@@ -72,7 +72,7 @@ export function DropdownMenu(_props) {
       <DropdownItem
         leftIcon={'⛔'}
         effect={onClearStorage}>
-        Clear Storage
+        Reset Storage
       </DropdownItem>
       <DebugItem
         leftIcon={'🛠'}

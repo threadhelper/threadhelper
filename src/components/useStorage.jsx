@@ -38,34 +38,22 @@ export function useStorage(name, default_val){
 
 export function _useStorage(name, default_val){
   const useStgObs = useMemo(()=>makeStgItemObs(name),[name])
-  // const useStgObs = useMemo(()=>{const stgObs = makeStgItemObs(name); return makeStgItemObs(name)},[name])
-  // const stgObs = useStgObs
-  // const [storageStream, _] = useState(stgObs)
   const storageItem = useStream(useStgObs)
-
   const setStgItem = setStg(name)
-  // const setStgItem = pipe(
-  //   setStg(name), 
-  //   andThen(pipe(
-  //     // inspect(`set ${name}`), 
-  //     _=>getData(name), 
-  //     andThen(
-  //       // inspect(`got ${name}`)
-  //       ))))
+
   
   useEffect(() => {
-    useStgObs.log({name}) // no idea why but THIS IS CRUCIAL for the hook to work
+    useStgObs.onValue(nullFn) // THIS IS CRUCIAL bc streams don't do things if they aren't active
     // initialization
     getData(name).then(pipe(
-      inspect(`got ${name} from stg`),
       ifElse(
         isNil,
         ()=>setStgItem(default_val),
-        pipe(setStgItem, andThen(inspect('set after getting ')))
+        pipe(setStgItem)
         ),
       ))
 
-    return () => {useStgObs.offLog({useStgObs})};
+    return () => {useStgObs.offValue(nullFn)};
   }, []);
 
   
