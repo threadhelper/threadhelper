@@ -3,7 +3,7 @@ import "@babel/polyfill";
 import * as browser from "webextension-polyfill";
 import  PromiseWorker from 'promise-worker'
 import { getTwitterTabIds} from './utils/wutils.jsx'
-import { flattenModule, inspect, toggleDebug, currentValue, nullFn } from './utils/putils.jsx'
+import { flattenModule, inspect, toggleDebug, currentValue, nullFn, isExist } from './utils/putils.jsx'
 import * as R from 'ramda';
 flattenModule(window,R) 
 import Kefir from 'kefir';
@@ -38,8 +38,8 @@ const emitOnInstalled = (busy) => {self.dispatchEvent(makeMidSearchEvent(busy));
 const update_size = 200
 const n_tweets_results = 20
 const getDateFormatted = () => (new Date()).toLocaleString()
-const isExist = x=>!(isNil(x) || isEmpty(x))
-const saferMap = fn => pipe(defaultTo([]), map(fn)) // fn -> ([x] -> [fn(x)])
+// const isExist = x=>!(isNil(x) || isEmpty(x))
+const saferMap = fn => pipe(defaultTo([]), map(fn), filter(pipe(isNil, not))) // fn -> ([x] -> [fn(x)])
   // auth
 const makeInit = (auth)=>{
   return {

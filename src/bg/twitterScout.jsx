@@ -1,6 +1,6 @@
 import {getData, setData, makeOnStorageChanged} from '../utils/dutils.jsx';
 import { flattenModule, inspect} from '../utils/putils.jsx';
-import { unescape } from 'lodash';
+import { isNil, unescape } from 'lodash';
 import * as R from 'ramda';
 flattenModule(global,R)
 
@@ -17,7 +17,7 @@ export const tweetLookupQuery = curry(async (getAuthInit, ids) => {
 
 
 // fetch as many tweets as possible from the timeline
-export const timelineQuery = async (getAuthInit, user_info) => await query(getAuthInit, user_info.screen_name, user_info.statuses_count, -1, [])
+export const timelineQuery = async (getAuthInit, user_info) => await query(getAuthInit, prop('screen_name', user_info), prop('statuses_count', user_info), -1, [])
 
 
 const stop_condition = (res, count, max_id)=>(res.length >= count || !(max_id != null)) //stop if got enough tweets or if max_id is null (twitter not giving any more)
@@ -78,38 +78,39 @@ export const bookmarkToTweet = (entry)=>{
 // TOOD: make user and pic queue emit events 
 export const apiToTweet = (entry) => {
   let tweet = {};
-  tweet.retweeted = isNil(entry.retweeted) ? false : entry.retweeted
-  tweet.id = entry.id_str
+  tweet.retweeted = isNil(prop('retweeted',entry)) ? false : prop('retweeted',entry)
+  tweet.id = prop('id_str',entry)
   if(tweet.retweeted){
-    if(entry.retweeted_status != null) tweet.orig_id = entry.retweeted_status.id_str
-      entry = entry.retweeted_status != null ? entry.retweeted_status : entry;
+    if(prop('retweeted_status',entry) != null) tweet.orig_id = prop('retweeted_status',entry).id_str
+      entry = prop('retweeted_status',entry) != null ? prop('retweeted_status',entry) : entry;
     }
   //tweet contents
-  tweet.username = entry.user.screen_name
-  tweet.name = entry.user.name
-  tweet.text = unescape(entry.full_text || entry.text)
-  tweet.profile_image = entry.user.profile_image_url_https
+  tweet.username = path(['user','screen_name'], entry)
+  tweet.name = path(['user','name'], entry)
+  tweet.text = unescape(prop('full_text', entry) || prop('text', entry))
+  tweet.profile_image = path(['user', 'profile_image_url_https'], entry)
 
   tweet = toTweetCommon(tweet,entry)
   // Add full quote info.
-  if (tweet.has_quote && tweet.is_quote_up) { 
+  if (tweet.has_quote && tweet.is_quote_up && prop('quoted_status',entry)) { 
+    const quoted_status = prop('quoted_status',entry)
     tweet.quote = {
       // Basic info.
-      text: unescape(entry.quoted_status.full_text || entry.quoted_status.text),
-      name: entry.quoted_status.user.name,
-      username: entry.quoted_status.user.screen_name,
-      time: new Date(entry.quoted_status.created_at).getTime(),
-      profile_image: entry.quoted_status.user.profile_image_url_https,
+      text: unescape(prop('full_text', quoted_status) || prop('text', quoted_status)),
+      name: prop('user', quoted_status).name,
+      username: path(['user', 'screen_name'], quoted_status),
+      time: new Date(prop('created_at', quoted_status)).getTime(),
+      profile_image: path(['user','profile_image_url_https'], quoted_status),
       // Replies/mentions.
-      reply_to: entry.quoted_status.in_reply_to_screen_name,
-      mentions: entry.quoted_status.entities.user_mentions.map(x => ({username: x.screen_name, indices: x.indices})),
+      reply_to: prop('in_reply_to_screen_name', quoted_status),
+      mentions: path(['entities','user_mentions'], quoted_status).map(x => ({username: x.screen_name, indices: x.indices})),
       // URLs.
-      urls: entry.quoted_status.entities.urls.map(x => ({current_text: x.url, display: x.display_url, expanded: x.expanded_url})),
-      has_media: typeof entry.quoted_status.entities.media !== "undefined",
+      urls: path(['entities','urls'], quoted_status).map(x => ({current_text: x.url, display: x.display_url, expanded: x.expanded_url})),
+      has_media: typeof path(['entities','media'], quoted_status) !== "undefined",
       media: null,
     }
     if (tweet.quote.has_media) {
-      tweet.quote.media = entry.quoted_status.entities.media.map(x => ({current_text: x.url, url: x.media_url_https}))
+      tweet.quote.media = path(['entities','media'], quoted_status).map(x => ({current_text: x.url, url: x.media_url_https}))
     }
   }
   return tweet
@@ -122,38 +123,39 @@ export const archToTweet = curry((getUserInfo, entry)=>{
   let re = /RT @([a-zA-Z0-9_]+).*/
   let rt_tag = /RT @([a-zA-Z0-9_]+:)/
   let t = prop('tweet', entry)
-  let rt = re.exec(t.full_text);  
-  const isOwnTweet = isNil(rt) || rt[1] === user_info.screen_name
-  const findAuthor =  t=>t.entities.user_mentions.find(t=>{return t.screen_name.toLowerCase() === rt[1].toLowerCase()})
+  let rt = re.exec(prop('full_text', t));  
+  const isOwnTweet = isNil(rt) || rt[1] === prop('screen_name', user_info)
+  const findAuthor =  t=>prop('entities', t).user_mentions.find(t=>{return prop('screen_name', t).toLowerCase() === rt[1].toLowerCase()})
 
   const init_tweet = {
-    username : !isNil(rt) ? rt[1] : user_info.screen_name,
-    text: unescape(!isNil(rt) ? t.full_text.replace(rt_tag,'') : t.full_text),
-    name: isOwnTweet ? user_info.name : findAuthor(t).name,  // If I'm tweeting/retweeting myself
-    profile_image: isOwnTweet ? user_info.profile_image_url_https : default_pic_url,
+    username : !isNil(rt) ? rt[1] : prop('screen_name', user_info),
+    text: unescape(!isNil(rt) ? prop('full_text', t).replace(rt_tag,'') : prop('full_text', t)),
+    name: isOwnTweet ? prop('name', user_info) : findAuthor(t).name,  // If I'm tweeting/retweeting myself
+    profile_image: isOwnTweet ? prop('profile_image_url_https', user_info) : default_pic_url,
     retweeted: isOwnTweet ? false : true
   }
 
   let tweet = toTweetCommon(init_tweet,t)
   // Add full quote info.
-  if (tweet.has_quote && tweet.is_quote_up) { 
+  if (prop('has_quote', tweet) && prop('is_quote_up', tweet) && prop('quoted_status', tweet)) { 
+    const quoted_status = prop('quoted_status', tweet)
     tweet.quote = {
       // Basic info.
-      text: unescape(t.quoted_status.full_text || t.quoted_status.text),
-      name: t.quoted_status.user.name,
-      username: t.quoted_status.user.screen_name,
-      time: new Date(t.quoted_status.created_at).getTime(),
-      profile_image: t.quoted_status.user.profile_image_url_https,
+      text: unescape(prop('full_text', quoted_status) || prop('text', quoted_status)),
+      name: prop('user', quoted_status).name,
+      username: path(['user', 'screen_name'], quoted_status),
+      time: new Date(prop('created_at', quoted_status)).getTime(),
+      profile_image: path(['user', 'profile_image_url_https'], quoted_status),
       // Replies/mentions.
-      reply_to: t.quoted_status.in_reply_to_screen_name,
-      mentions: t.quoted_status.entities.user_mentions.map(x => ({username: x.screen_name, indices: x.indices})),
+      reply_to: prop('in_reply_to_screen_name', quoted_status),
+      mentions: path(['entities', 'user_mentions'], quoted_status).map(x => ({username: x.screen_name, indices: x.indices})),
       // URLs.
-      urls: t.quoted_status.entities.urls.map(x => ({current_text: x.url, display: x.display_url, expanded: x.expanded_url})),
-      has_media: typeof t.quoted_status.entities.media !== "undefined",
+      urls: path(['entities', 'urls'], quoted_status).map(x => ({current_text: x.url, display: x.display_url, expanded: x.expanded_url})),
+      has_media: typeof path(['entities', 'media'], quoted_status) !== "undefined",
       media: null,
     }
-    if (tweet.quote.has_media) {
-      tweet.quote.media = t.quoted_status.entities.media.map(x => ({current_text: x.url, url: x.media_url_https}))
+    if (prop('quote', tweet).has_media) {
+      tweet.quote.media = path(['entities', 'media'], quoted_status).map(x => ({current_text: x.url, url: x.media_url_https}))
     }
   }
   return tweet

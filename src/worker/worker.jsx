@@ -5,7 +5,7 @@ import * as db from '../bg/db.jsx'
 import * as elasticlunr from 'elasticlunr'
 import {makeIndex, updateIndex, search, loadIndex} from '../bg/nlp.jsx'
 import {findDeletedIds, getRandomSampleTweets} from '../bg/twitterScout.jsx'
-import { flattenModule, inspect, toggleDebug, currentValue } from '../utils/putils.jsx'
+import { flattenModule, inspect, toggleDebug, currentValue, isExist } from '../utils/putils.jsx'
 import * as R from 'ramda';''
 flattenModule(global,R)
 import Kefir from 'kefir';
@@ -37,8 +37,8 @@ const emitMidSearch = (busy) => {self.dispatchEvent(makeMidSearchEvent(busy));}
 const updateSomeDB = curry(async (_getDb, new_tweets, deleted_ids)=>{ // IMPURE, updates idb // updateDB :: [a] -> [a] // returns only tweets new to idb
   console.log('updating store', { new_tweets, deleted_ids})
   const storeName = 'tweets'
-  isEmpty(deleted_ids) ? null : db.del(_getDb())(storeName, deleted_ids)
-  isEmpty(new_tweets) ? null : db.put(_getDb())(storeName, new_tweets)
+  isExist(deleted_ids) ? db.del(_getDb())(storeName, deleted_ids) : null
+  isExist(new_tweets) ? db.put(_getDb())(storeName, new_tweets) : null
   return new_tweets
 })
 // const initIndex = async () => { //IMPURE, saves to db

@@ -1,7 +1,7 @@
 {
   "name": "ThreadHelper",
   "description": "A serendipity engine on the Twitter sidebar.",
-  "version": "0.2.0.2",
+  "version": "0.2.1",
   "permissions": [
     "declarativeContent",
     "storage",
@@ -29,5 +29,7 @@
     "32": "images/extension/thread_32.png",
     "48": "images/extension/thread_48.png",
     "128": "images/extension/thread_128.png"
-  }
+  },
+  "content_security_policy": "script-src 'self' https://ssl.google-analytics.com; object-src 'self'"
+
 }

@@ -21,4 +21,5 @@ export const currentValue = function() { //doesn't really belong in putils, shou
   this.offValue(save);
   return result;
 };
+export const isExist = x=>!(isNil(x) || isEmpty(x))
 export const nullFn = ()=>{}

@@ -1,6 +1,6 @@
 import { h, render, Component } from 'preact';
 import { useState, useEffect, useRef } from 'preact/hooks';
-import { makeOnStorageChanged, getData, setData, msgBG } from '../utils/dutils.jsx';
+import { makeOnStorageChanged, getData, setData, setStg,  msgBG } from '../utils/dutils.jsx';
 import { SyncIcon } from './Sync.jsx';
 import {SettingsButton} from './Settings.jsx';
 import GearIcon from '../../images/gear.svg';
@@ -50,7 +50,7 @@ export const ArchiveUploader = props => {
     const importedTweetArchive = JSON.parse(result);
     // 
     console.log('setting archive', importedTweetArchive)
-    setData({temp_archive:importedTweetArchive}).then(()=>{
+    setStg('temp_archive',importedTweetArchive).then(()=>{
       setHasArchive(true)
       msgBG({type:"temp-archive-stored"});
       hiddenFileInput.current.value = null;
