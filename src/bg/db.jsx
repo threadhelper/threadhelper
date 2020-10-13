@@ -95,10 +95,9 @@ export const del = curry( async (db, storeName, key_list) => {
     promises.push(tx.done)
     return await Promise.all(promises)        
   } catch(e){
-    console.log(promises)
-    throw(e)
+    console.log({promises, key_list})
+    // throw(e)
   }
-  return this.db.get(storeName, key);
 })
 
 // list as input

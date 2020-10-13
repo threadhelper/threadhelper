@@ -33,11 +33,15 @@ const emitMidSearch = (busy) => {self.dispatchEvent(makeMidSearchEvent(busy));}
 // const addReq = req => {pendingReqs.push(makeReqToken()); return pendingReqs}
 // const removeReq = req => {pendingReqs.push(req); return pendingReqs}
 
+const dbDel = (_getDb, storeName, deleted_ids) => {
+  db.del(_getDb())(storeName, deleted_ids)
+}
 // Functions, potential imports
 const updateSomeDB = curry(async (_getDb, new_tweets, deleted_ids)=>{ // IMPURE, updates idb // updateDB :: [a] -> [a] // returns only tweets new to idb
   console.log('updating store', { new_tweets, deleted_ids})
   const storeName = 'tweets'
-  isExist(deleted_ids) ? db.del(_getDb())(storeName, deleted_ids) : null
+  // isExist(deleted_ids) ? db.del(_getDb())(storeName, deleted_ids) : null
+  isExist(deleted_ids) ? dbDel(_getDb, storeName, deleted_ids) : null
   isExist(new_tweets) ? db.put(_getDb())(storeName, new_tweets) : null
   return new_tweets
 })
@@ -53,7 +57,7 @@ const updateSomeDB = curry(async (_getDb, new_tweets, deleted_ids)=>{ // IMPURE,
 const initIndex = async() => pipe(_=>getDb().getAll('tweets'), andThen(updateIndex(makeIndex(), __, [])), inspect('initIndex'))(1)
 
 const getIndexFromDb = () => db.get(getDb(), 'misc', 'index')
-
+// 
 // Streams
   // Db init
 const db$ = Kefir.fromPromise(db.open()).ignoreEnd().toProperty()
@@ -95,7 +99,7 @@ const updateTweets = async (res) => {
   const filteredRes = await db.filterDb(getDb(), 'tweets', propEq('is_bookmark', isBookmark))
   const old_ids = map(prop('id'),filteredRes)
   const deleted_ids = findDeletedIds(old_ids, res.map(prop('id')))
-  const new_ids = difference(res.map(prop('id')), old_ids)
+  const new_ids = difference(map(prop('id'), res), old_ids)
   const new_tweets = pipe(filter(pipe(prop('id'), includes(__,new_ids))))(res)
   updateDB(new_tweets, deleted_ids)
   let _index = getIndex()
@@ -108,10 +112,11 @@ const updateTweets = async (res) => {
 
 // const addTweets = async (index_json, res) => {
 const addTweets = async (res) => {
+  console.log('in [addTweets]',{res})
   const tweet_ids = await getDb().getAllKeys('tweets')
   const new_ids = difference(res.map(prop('id')), tweet_ids)
   const new_tweets = filter(x=>includes(x.id, new_ids), res)
-  console.log('adding tweets',new_tweets)
+  console.log('adding tweets',{new_ids, new_tweets})
   updateDB(new_tweets, [])
   let _index = getIndex()
   _index = await updateIndex(_index, new_tweets, []) //this should have an empty list wtf
@@ -144,8 +149,9 @@ const setIndex = pipe(
 // indexUpdate :: String -> 
 const indexUpdate = (opName, updateFn) => {return pipe(
   inspect('indexUpdate'),
-  props(['res']),
-  args=>updateFn(...args), 
+  prop('res'),
+  updateFn, 
+  // args=>updateFn(...args), 
   andThen(_=>{return {type:opName}}))}
 const onUpdateTweets = indexUpdate('updateTweets', updateTweets)
 const onAddTweets = indexUpdate('addTweets', addTweets)

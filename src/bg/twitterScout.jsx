@@ -41,7 +41,7 @@ const stop_condition = (res, count, max_id)=>(res.length >= count || !(max_id !=
 const query = curry( async (getAuthInit, username, count, max_id, res) => {
   if (stop_condition(res, count, max_id)) return res
 
-  const req_res = await fetch(makeTweetQueryUrl(max_id, username, count), getAuthInit()).then(x => x.json()).catch(inspect('ERROR query (timeline) rejected'))
+  const req_res = await fetch(makeTweetQueryUrl(max_id, username, count), getAuthInit()).then(x => x.json()).catch(pipe(inspect('ERROR query (timeline) rejected')))
     
   return await query(getAuthInit, username, count, getMaxId(req_res), res.concat(req_res))
 })

@@ -16,7 +16,7 @@ import { initWorker} from './bg/workerBoss.jsx'
 import { makeIndex, loadIndex, updateIndex, search} from './bg/nlp.jsx'
 import { fetchUserInfo, updateQuery, tweetLookupQuery, timelineQuery, getRandomSampleTweets, getLatestTweets, getBookmarks, } from './bg/twitterScout.jsx'
 import { validateTweet, archToTweet, bookmarkToTweet, apiToTweet} from './bg/tweetImporter.jsx'
-import { includes } from "lodash";
+import { includes, isEmpty } from "lodash";
 
 // Project business
 var DEBUG = true;
@@ -28,7 +28,7 @@ Kefir.Property.prototype.currentValue = currentValue
 const subscriptions = []
 const rememberSub = (sub) => {subscriptions.push(sub); return sub}
 const subObs = (obs, effect) => rememberSub(obs.observe({value:effect}))
-// 
+
 // Extension business
 const twitter_url = /https?:\/\/(www\.)?twitter.com\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/
 const makeOnInstalledEvent = (_busy) => {return new CustomEvent("midSearch", {detail: {busy:_busy}})} 
@@ -40,6 +40,7 @@ const emitOnInstalled = (busy) => {self.dispatchEvent(makeMidSearchEvent(busy));
 const update_size = 200
 const n_tweets_results = 20
 const getDateFormatted = () => (new Date()).toLocaleString()
+const apiBookmarkToTweet = pipe(apiToTweet, assoc('is_bookmark', true))
 
 const saferMap = fn => pipe( // saferMap :: [x] -> [x]
   defaultTo([]), 
@@ -153,6 +154,7 @@ export async function main(){
     // Extension observers
       // Messages
   const msg$ = makeGotMsgObs().map(x=>x.m) // msg$ :: () -> msg // msg :: {type,...} // Listens to chrome runtime onMessage
+  msg$.log('msg$')
   const makeMsgStream = name => msg$.filter(propEq('type', name))
   const csStart$ = msg$.filter(propEq('type','cs-created'))
   const csNotReady$ = toVal(false, csStart$).toProperty(T)
@@ -221,7 +223,7 @@ export async function main(){
   const reqAddBookmark$ = makeMsgStreamSafe('add-bookmark') // reqAddBookmark$ :: msg
   const reqBookmarkId$ = reqAddBookmark$.map(pipe(prop('id'), id=>[id])) // reqBookmarkId$ :: [id]
   const anyAPIReq$ = Kefir.merge([reqUpdatedTweets$, reqBookmarks$, reqTimeline$, reqAddBookmark$,]) // anyAPIReq$ :: msg
-  // anyAPIReq$.log('anyAPIReq$')
+  anyAPIReq$.log('anyAPIReq$')
 
   const fetchedUpdate$ = promiseStream(reqUpdatedTweets$, _ => updateQuery(getAuthInit, getUsername(), update_size)) // IMPURE fetchedUpdate$ :: [apiTweet]
   const fetchedTimeline$ = promiseStream(reqTimeline$, _ => timelineQuery(getAuthInit, getUserInfo())) // IMPURE fetchedTimeline$ :: [apiTweet]
@@ -229,7 +231,7 @@ export async function main(){
   const fetchedBookmark$ = promiseStream( reqBookmarkId$, tweetLookupQuery(getAuthInit)) // IMPURE fetchedBookmark$ :: [apiTweet]
 
   const fetchedAnyAPIReq$ = Kefir.merge([fetchedUpdate$, fetchedTimeline$, fetchedBookmarks$, fetchedBookmark$,]) // fetchedAnyAPIReq$ :: [apiTweet]
-  // fetchedAnyAPIReq$.log('fetchedAnyAPIReq$')
+  fetchedAnyAPIReq$.log('fetchedAnyAPIReq$')
     // User submitted  
   const reqArchiveLoad$ = makeMsgStreamSafe("temp-archive-stored") // reqArchiveLoad$ :: msg
   reqArchiveLoad$.log('reqArchiveLoad$')
@@ -237,13 +239,14 @@ export async function main(){
   const archiveLoadedTweets$ = promiseStream(reqArchiveLoad$, pipe(_=>getData("temp_archive"), andThen(map(extractTweetPropIfNeeded)))) // IMPURE archiveLoadedTweets$ :: [archTweet]
   archiveLoadedTweets$.log('archiveLoadedTweets$')
   const archTweets$ = archiveLoadedTweets$.map(saferMap(archToTweet(getUserInfo)))
+  
   const thTweets$ = Kefir.merge([ // thTweets$ :: [tweet] // tweet :: threadhelper_tweet
     fetchedUpdate$.map(saferMap(apiToTweet)),
     fetchedTimeline$.map(saferMap(apiToTweet)),
     fetchedBookmarks$.map(saferMap(bookmarkToTweet)),
-    fetchedBookmark$.map(saferMap(apiToTweet)).map(assoc('is_bookmark', true)),
+    fetchedBookmark$.map(saferMap(apiBookmarkToTweet)),
     archTweets$
-  ])
+  ]).filter(pipe(isEmpty, not))
   thTweets$.log('thTweets$')
   const fetchedTweets$ = Kefir.merge([fetchedUpdate$, fetchedTimeline$])//.map(toTweets) // fetchedTweets$ :: [apiTweet]
   // Local Tweet Processing
@@ -251,15 +254,15 @@ export async function main(){
   const reqRemoveBookmark$ = makeMsgStreamSafe('remove-bookmark') // reqRemoveBookmark$ :: msg
 
   const idsToRemove$ = Kefir.merge([reqDeleteTweet$, reqRemoveBookmark$]).map(prop('id')) // idsToRemove$ :: id
-  // idsToRemove$.log('idsToRemove$')
+  idsToRemove$.log('idsToRemove$')
   
   // Worker returns  
   const addedTweets$ = promiseStream(thTweets$, addTweets) // addedTweets$ :: msg
-  // addedTweets$.log('addedTweets$')
+  addedTweets$.log('addedTweets$')
   const removedTweet$ = promiseStream(idsToRemove$, removeTweet)  // removedTweet$ :: msg
-  // removedTweet$.log('removedTweet$')
+  removedTweet$.log('removedTweet$')
   const updatedTweets$ = promiseStream(fetchedUpdate$, updateTweets) // updatedTweets$ :: msg    // fetchedUpdate$ gets added for a secnod time because update is the way we find deleted recent tweets
-  // updatedTweets$.log('updatedTweets$')
+  updatedTweets$.log('updatedTweets$')
   
   const anyTweetUpdate$ = Kefir.merge([updatedTweets$, addedTweets$, removedTweet$, dataReset$]).toProperty()  // anyTweetUpdate$ :: msg
   anyTweetUpdate$.log('anyTweetUpdate$')  
