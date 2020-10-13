@@ -30,7 +30,7 @@ export const onWorkerPromise = curry((callback, e) => {
         message: error.message
       }])
     } else {
-      console.log('worker posting result message', {messageId, result})
+      // console.log('worker posting result message', {messageId, result})
       postMessage([messageId, null, result])
     }
   }

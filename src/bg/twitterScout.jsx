@@ -1,3 +1,4 @@
+import {delay}  from 'delay'
 import {getData, setData, makeOnStorageChanged} from '../utils/dutils.jsx';
 import { flattenModule, inspect} from '../utils/putils.jsx';
 import { isNil, unescape } from 'lodash';
@@ -6,6 +7,20 @@ flattenModule(global,R)
 
 // helper functions
 const getMaxId = (res) => res.length > 1 ? res[res.length - 1].id : null
+// loopRetry :: fn -> output
+const loopRetry = async (fn) => {
+  let success = false
+  let output = []
+  while(!success){
+    try{
+      output = await fn()
+      success = true  
+    }catch(e){
+      await delay(500)
+      console.log(`ERROR [${fn.name}] failed. Retrying...`, e)}
+  }
+  return output
+}
 
 // Fetches, IMPURE
 export const fetchUserInfo = async (getAuthInit) => await fetch(`https://api.twitter.com/1.1/account/verify_credentials.json`,getAuthInit()).then(x => x.json()).catch(inspect('ERROR fetchUserInfo rejected'))
@@ -245,7 +260,8 @@ const assocQTs =  curry((qts, tweet) => when(pipe(prop('quoted_status_id_str'), 
 
 const fetchBookmarks = getAuthInit => pipe(
     _=>fetch(bookmark_url,getAuthInit()),
-    otherwise(pipe(inspect('ERROR: rejected fetchBookmark'), defaultTo([]))),
+    inspect('fetched bookmarks'),
+    // otherwise(pipe(inspect('ERROR: rejected fetchBookmark'), defaultTo([]))),
     andThen(x => x.json()))(1)
 
 const getBookmarkQTs = getAuthInit => pipe(
@@ -258,13 +274,18 @@ const getBookmarkQTs = getAuthInit => pipe(
 
 // const assocUserToTweet = (users, tweet) => ({ ...tweet, user: users[tweet.user_id_str] })
 
+
+
 export async function getBookmarks(getAuthInit){
-  const bookmarks = await fetchBookmarks(getAuthInit)
+  const authFetchBookmarks = ()=>fetchBookmarks(getAuthInit)
+  let bookmarks = await loopRetry(authFetchBookmarks)
   const tweets = getBookmarkTweets(bookmarks)
   const users = getBookmarkUsers(bookmarks)
-  const qts = await getBookmarkQTs(getAuthInit)(bookmarks)
+  const authGetQTs = ()=>getBookmarkQTs(getAuthInit)(bookmarks)
+  const qts = await loopRetry(authGetQTs)
   const makeRes = pipe(getBookmarkTweets, map(assocUser(users)), map(assocQTs(qts)), inspect('bookmarks with qts'))
   const res = await makeRes(bookmarks)
+  console.log('getBookmarks',{bookmarks, qts, res})
   return values(res)
 }
 

@@ -23,3 +23,7 @@ export const currentValue = function() { //doesn't really belong in putils, shou
 };
 export const isExist = x=>!(isNil(x) || isEmpty(x))
 export const nullFn = ()=>{}
+export const renameKeys = (keysMap) => (obj) => Object.entries(obj).reduce(
+  (a, [k, v]) => k in keysMap ? {...a, [keysMap[k]]: v} : {...a, [k]: v},
+  {}
+)

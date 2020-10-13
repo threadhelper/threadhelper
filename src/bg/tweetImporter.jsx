@@ -1,6 +1,6 @@
 import {getData, setData, makeOnStorageChanged} from '../utils/dutils.jsx';
-import { flattenModule, inspect} from '../utils/putils.jsx';
-import { isNil, unescape } from 'lodash';
+import { flattenModule, inspect, renameKeys} from '../utils/putils.jsx';
+import { indexOf, isNil, unescape } from 'lodash';
 import * as R from 'ramda';
 flattenModule(global,R)
 
@@ -21,6 +21,7 @@ export const bookmarkToTweet = (entry)=>{
 
 // FUNCTIONAL ATTEMPT
 // TOOD: make user and pic queue emit events 
+// apiToTweet :: apiTweet -> tweet
 export const apiToTweet = (entry) => {
   let tweet = {};
   tweet.retweeted = isNil(prop('retweeted',entry)) ? false : prop('retweeted',entry)
@@ -62,75 +63,156 @@ export const apiToTweet = (entry) => {
   return tweet
 }
 
-// archToTweet :: archive_entry -> th_tweet
-export const archToTweet = curry((getUserInfo, entry)=>{
-  const user_info = getUserInfo()
-  const default_pic_url = 'https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png'
-  let re = /RT @([a-zA-Z0-9_]+).*/
-  let rt_tag = /RT @([a-zA-Z0-9_]+:)/
-  let t = prop('tweet', entry)
-  let rt = re.exec(prop('full_text', t));  
-  const isOwnTweet = isNil(rt) || rt[1] === prop('screen_name', user_info)
-  const findAuthor =  t=>path(['entities', 'user_mentions'], t).find(t=>{return prop('screen_name', t).toLowerCase() === rt[1].toLowerCase()})
+const findAuthor =  (rt, t) =>path(['entities', 'user_mentions'], t).find(t=>{return prop('screen_name', t).toLowerCase() === rt[1].toLowerCase()})
 
-  const init_tweet = {
-    username : !isNil(rt) ? rt[1] : prop('screen_name', user_info),
-    text: unescape(!isNil(rt) ? prop('full_text', t).replace(rt_tag,'') : prop('full_text', t)),
-    name: isOwnTweet ? prop('name', user_info) : prop('name', findAuthor(t)),  // If I'm tweeting/retweeting myself
-    profile_image: isOwnTweet ? prop('profile_image_url_https', user_info) : default_pic_url,
-    retweeted: isOwnTweet ? false : true
+const getRTAuthor = (user_info, rt, t) => {
+  if(isNil(rt)){
+    return prop('name', user_info)
+  }else{
+    let author = rt[1]
+    try{author = findAuthor(rt, t)}
+    catch(e){console.log('ERROR getRTAuthor ',{e, user_info, rt, t})}
+    return prop('name', author)
   }
+}
+
+const initArchRT = (user_info, rt,  t) => {
+  return {
+    username: isNil(rt) ? prop('screen_name', user_info) : rt[1],
+    text: unescape(isNil(rt) ? prop('full_text', t).replace(rt_tag,'') : prop('full_text', t)),
+    name: getRTAuthor(user_info, rt, t),
+    profile_image: default_pic_url,
+    retweeted: true,
+  }
+}
+const initArchTweet = (user_info, t) => {
+  return {
+    username: prop('screen_name', user_info),
+    text: unescape(prop('full_text', t)),
+    name: prop('name', user_info), 
+    profile_image: prop('profile_image_url_https', user_info),
+    retweeted: false,
+  }
+}
+
+// makeQuote :: archQuote -> quote
+const makeQuote = quoted_status => {
+  return {
+    // Basic info.
+    text: unescape(prop('full_text', quoted_status) || prop('text', quoted_status)),
+    name: path(['user', 'name'], quoted_status),
+    username: path(['user', 'screen_name'], quoted_status),
+    time: new Date(prop('created_at', quoted_status)).getTime(),
+    profile_image: path(['user', 'profile_image_url_https'], quoted_status),
+    // Replies/mentions.
+    reply_to: prop('in_reply_to_screen_name', quoted_status),
+    mentions: defaultTo([],path(['entities', 'user_mentions'], quoted_status).map(x => ({username: x.screen_name, indices: x.indices}))),
+    // URLs.
+    urls: path(['entities', 'urls'], quoted_status).map(x => ({current_text: x.url, display: x.display_url, expanded: x.expanded_url})),
+    has_media: !isNil(path(['entities', 'media'], quoted_status)),
+    media: defaultTo([], path(['entities', 'media'], quoted_status)).map(x => ({current_text: x.url, url: x.media_url_https})),
+  }
+}
+
+const _isOwnTweet = (rt, user_info) => (isNil(rt) || rt[1] === prop('screen_name', user_info))
+// archToTweet :: archTweet -> tweet
+export const archToTweet = curry((getUserInfo, t)=>{
+  const user_info = getUserInfo()
+  let rt = re.exec(prop('full_text', t));  
+  const isOwnTweet = _isOwnTweet(rt, user_info)
+  const init_tweet = isOwnTweet ? initArchTweet(user_info, t) : initArchRT(user_info, rt, t)
+  // const init_tweet = {
+  //   username : !isNil(rt) ? rt[1] : prop('screen_name', user_info),
+  //   text: unescape(!isNil(rt) ? prop('full_text', t).replace(rt_tag,'') : prop('full_text', t)),
+  //   name: isOwnTweet ? prop('name', user_info) : prop('name', findAuthor(rt, t)),  // If I'm tweeting/retweeting myself
+  //   profile_image: isOwnTweet ? prop('profile_image_url_https', user_info) : default_pic_url,
+  //   retweeted: isOwnTweet ? false : true
+  // }
 
   let tweet = toTweetCommon(init_tweet,t)
   // Add full quote info.
   if (prop('has_quote', tweet) && prop('is_quote_up', tweet) && prop('quoted_status', tweet)) { 
     const quoted_status = prop('quoted_status', tweet)
-    tweet.quote = {
-      // Basic info.
-      text: unescape(prop('full_text', quoted_status) || prop('text', quoted_status)),
-      name: path(['user', 'name'], quoted_status),
-      username: path(['user', 'screen_name'], quoted_status),
-      time: new Date(prop('created_at', quoted_status)).getTime(),
-      profile_image: path(['user', 'profile_image_url_https'], quoted_status),
-      // Replies/mentions.
-      reply_to: prop('in_reply_to_screen_name', quoted_status),
-      mentions: defaultTo([],path(['entities', 'user_mentions'], quoted_status).map(x => ({username: x.screen_name, indices: x.indices}))),
-      // URLs.
-      urls: path(['entities', 'urls'], quoted_status).map(x => ({current_text: x.url, display: x.display_url, expanded: x.expanded_url})),
-      has_media: typeof path(['entities', 'media'], quoted_status) !== "undefined",
-      media: null,
-    }
-    if (prop('quote', tweet).has_media) {
-      tweet.quote.media = path(['entities', 'media'], quoted_status).map(x => ({current_text: x.url, url: x.media_url_https}))
-    }
+    tweet.quote = makeQuote(quoted_status)
+    // if (prop('quote', tweet).has_media) {
+    //   tweet.quote.media = defaultTo([], path(['entities', 'media'], quoted_status)).map(x => ({current_text: x.url, url: x.media_url_https}))
+    // }
   }
   return tweet
 })
+// prop that defaults to null if undefined
+const propDefNull = (name, t) => R.defaultTo(null, prop(name, t)) // propDefNull :: x | null
 
+const getMentionsFromTweet = ifElse( // getMentionsFromTweet :: preTweet -> [mention] // preTweet :: apiTweet | archTweet
+  path(['entities','user_mentions']),
+  pipe(path(['entities', 'user_mentions']), map(x => ({username: prop('screen_name', x), indices: prop('indices', x)}))),
+  _=>[],)
+// !isNil(path(['entities','user_mentions'], t)) ? path(['entities', 'user_mentions'], t).map(x => ({username: x.screen_name, indices: x.indices})) : []
 
-const toTweetCommon = (tweet, t) => {
+const getUrlsFromTweet = ifElse( // getUrlsFromTweet :: preTweet -> [url]
+  path(['entities','urls']),
+  pipe(path(['entities', 'urls']), map(x => ({current_text: prop('url', x), display: prop('display_url', x), expanded: prop('expanded_url', x)}))),
+  _=>[],)
+  // !isNil(path(['entities','urls'], t)) ? path(['entities', 'urls'], t).map(x => ({current_text: x.url, display: x.display_url, expanded: x.expanded_url})) : []
+
+const getMediaTweet = pipe(path(['entities', 'media']), map(x => ({current_text: x.url, url: x.media_url_https}))) // getUrlsFromTweet :: preTweet -> [media]
+
+const toTweetCommon = (tweet_, t) => {
   // Basic info, same for everyone
-  tweet.id = t.id_str
-  // tweet.id = t.id,
-  tweet.time = new Date(t.created_at).getTime()
-  // tweet.human_time = new Date(t.created_at).toLocaleString()
+  tweet_.id = prop('id_str', t)
+  // tweet_.id = t.id,
+  tweet_.time = new Date(prop('created_at', t)).getTime()
+  // tweet_.human_time = new Date(prop('created_at', t)).toLocaleString()
   // Replies/mentions.
-  tweet.reply_to = !isNil(t.in_reply_to_screen_name) ? t.in_reply_to_screen_name : null // null if not present.
-  tweet.mentions = !isNil(path(['entities','user_mentions'], t)) ? t.entities.user_mentions.map(x => ({username: x.screen_name, indices: x.indices})) : []
+  tweet_.reply_to = propDefNull('in_reply_to_screen_name', t)// null if not present
+  tweet_.mentions = getMentionsFromTweet(t)
   // URLs.
-  tweet.urls = !isNil(path(['entities','urls'], t)) ? t.entities.urls.map(x => ({current_text: x.url, display: x.display_url, expanded: x.expanded_url})) : []
+  tweet_.urls = getUrlsFromTweet(t)
   // Media.
-  tweet.has_media = !isNil(path(['entities','media'], t))
-  tweet.media = null
+  tweet_.has_media = !isNil(path(['entities','media'], t))
+  tweet_.media = null
   // Quote info. 
-  tweet.has_quote = isNil(t.is_quote_status) ? false :t.is_quote_status
-  tweet.is_quote_up = !isNil(t.quoted_status)
-  tweet.quote = null
-  tweet.is_bookmark = false
+  tweet_.has_quote = defaultTo(false, prop('is_quote_status', t))
+  tweet_.is_quote_up = !isNil(prop('quoted_status', t))
+  tweet_.quote = null
+  tweet_.is_bookmark = false
   // Add media info.
-  if (tweet.has_media) {
-    tweet.media = t.entities.media.map(x => ({current_text: x.url, url: x.media_url_https}))
+  if (tweet_.has_media) {
+    tweet_.media = getMediaTweet(t)
   }
-  
-  return tweet
+  return tweet_
 }
+
+export const validateTweet = t => {
+  const valid = R.prop('id_str')
+  if(!valid) console.log('ERROR invalid tweet', valid)
+  return valid
+}
+
+// const toTweetCommon = (tweet_, t) => {
+//   // Basic info, same for everyone
+//   tweet_.id = prop('id_str', t)
+//   // tweet_.id = t.id,
+//   tweet_.time = new Date(prop('created_at', t)).getTime()
+//   // tweet_.human_time = new Date(prop('created_at', t)).toLocaleString()
+//   // Replies/mentions.
+//   tweet_.reply_to = !isNil(prop('in_reply_to_screen_name', t)) ? prop('in_reply_to_screen_name', t) : null // null if not present
+//   tweet_.mentions = !isNil(path(['entities','user_mentions'], t)) ? path(['entities', 'user_mentions'], t).map(x => ({username: x.screen_name, indices: x.indices})) : []
+//   // URLs.
+//   tweet_.urls = !isNil(path(['entities','urls'], t)) ? prop('entities', t).urls.map(x => ({current_text: x.url, display: x.display_url, expanded: x.expanded_url})) : []
+//   // Media.
+//   tweet_.has_media = !isNil(path(['entities','media'], t))
+//   tweet_.media = null
+//   // Quote info. 
+//   tweet_.has_quote = isNil(prop('is_quote_status', t)) ? false : prop('is_quote_status', t)
+//   tweet_.is_quote_up = !isNil(prop('quoted_status', t))
+//   tweet_.quote = null
+//   tweet_.is_bookmark = false
+//   // Add media info.
+//   if (tweet_.has_media) {
+//     tweet_.media = path(['entities', 'media'], t).map(x => ({current_text: x.url, url: x.media_url_https}))
+//   }
+  
+//   return tweet_
+// }
+
