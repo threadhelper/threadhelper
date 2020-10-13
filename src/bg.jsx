@@ -14,7 +14,9 @@ import * as db from './bg/db.jsx'
 import { initWorker} from './bg/workerBoss.jsx'
 // import { makeRoboRequest} from './bg/robo.jsx'
 import { makeIndex, loadIndex, updateIndex, search} from './bg/nlp.jsx'
-import { fetchUserInfo, updateQuery, tweetLookupQuery, timelineQuery, archToTweet, bookmarkToTweet, apiToTweet, getRandomSampleTweets, getLatestTweets, getBookmarks} from './bg/twitterScout.jsx'
+import { fetchUserInfo, updateQuery, tweetLookupQuery, timelineQuery, getRandomSampleTweets, getLatestTweets, getBookmarks} from './bg/twitterScout.jsx'
+import {  archToTweet, bookmarkToTweet, apiToTweet} from './bg/tweetImporter.jsx'
+import { includes } from "lodash";
 
 // Project business
 var DEBUG = true;
@@ -39,7 +41,7 @@ const update_size = 200
 const n_tweets_results = 20
 const getDateFormatted = () => (new Date()).toLocaleString()
 // const isExist = x=>!(isNil(x) || isEmpty(x))
-const saferMap = fn => pipe(defaultTo([]), map(fn), filter(pipe(isNil, not))) // fn -> ([x] -> [fn(x)])
+const saferMap = fn => pipe(defaultTo([]), filter(pipe(isNil, not)), map(fn)) // fn -> ([x] -> [fn(x)])
   // auth
 const makeInit = (auth)=>{
   return {
@@ -353,18 +355,20 @@ function onInstalled() {
     chrome.declarativeContent.onPageChanged.addRules([
       {conditions: [new chrome.declarativeContent.PageStateMatcher({pageUrl: { urlContains: "twitter.com" }})],
         actions: [new chrome.declarativeContent.ShowPageAction()]}]);});
-      }
+}
 
+let twitterTabs = []// twitterTabs :: int
 // TODO emit to active tab
 function onTabActivated(activeInfo){
   chrome.tabs.get(activeInfo.tabId, function(tab){
     if(tab.url != null){
       try{
-        let url = tab.url;
-        if (url.match(twitter_url)) {
-          // console.log("tab activated", tab)
-          // utils.tabId = tab.id
-          // utils.msgCS({type:"tab-activate", url:url, cs_id: tab.id})
+        if (tab.url.match(twitter_url)) {
+          console.log(`checking for reload: ${equals(twitterTabs[0],tab.id)}`,{twitterTabs, tabid:tab.id})
+          if(!twitterTabs.includes(tab.id)){
+            twitterTabs.push(tab.id)
+            chrome.tabs.reload(tab.id)
+          }
         }
       }catch(e){
         console.log(e)
@@ -381,4 +385,4 @@ function onTabUpdated(tabId, change, tab){
   }
 }    
 // 
-main()
+main();
