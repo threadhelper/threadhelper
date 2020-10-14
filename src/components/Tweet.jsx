@@ -336,7 +336,7 @@ function renderMedia(media, className) {
   let bottom = botImgs.length <= 0 ? "" : <div class="th-media-bottom">${botImgs}</div>
 
   return (
-  <div class="${className}">
+  <div class={className}>
     {top}
     {bottom}
   </div>
