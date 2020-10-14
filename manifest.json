@@ -1,7 +1,7 @@
 {
   "name": "ThreadHelper",
   "description": "A serendipity engine on the Twitter sidebar.",
-  "version": "0.2.1",
+  "version": "0.2.1.2",
   "permissions": [
     "declarativeContent",
     "storage",

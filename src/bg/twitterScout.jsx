@@ -55,12 +55,10 @@ const makeTweetQueryUrl = curry( (max_id, username, count) => {
 const makeUpdateQueryUrl = makeTweetQueryUrl(-1)
 
 
-export const idComp = (a,b)=>a.localeCompare(b,undefined,{numeric: true})
-// gt for ids
-const gtId = curry((a,b) => idComp(a,b) > 0)
-//lt for ids
-const ltId = curry((a,b) => idComp(a,b) < 0)
-
+// export const idComp = curry((a,b)=>a.localeCompare(b,undefined,{numeric: true})) // WRONG
+export const idComp = curry((a,b)=> BigInt(a) == BigInt(b) ? 0 : (BigInt(a) < BigInt(b) ? -1 : 1))
+const gtId = curry((a,b) => idComp(a,b) > 0) // gt for ids
+const ltId = curry((a,b) => idComp(a,b) < 0) //lt for ids
 const sortKeys = keys => keys.sort(idComp)
 
 
@@ -72,6 +70,7 @@ function sortTweets(tweetDict){
   return stobj
 }
 
+const overlap = (minNew, maxNew, currentIds) => pipe(sortKeys,dropLastWhile(gtId(__, maxNew)), dropWhile(ltId(__, minNew)))(currentIds)
 
 
 export const findDeletedIds = (currentIds, incomingIds) =>{
@@ -81,8 +80,8 @@ export const findDeletedIds = (currentIds, incomingIds) =>{
   const sortedNew = sortKeys(incomingIds)
   const minNew = sortedNew[0]
   const maxNew = sortedNew[sortedNew.length - 1]
-  const overlappingOldTweets = pipe(sortKeys,dropLastWhile(gtId(maxNew)), dropWhile(ltId(minNew)))(currentIds)
-  console.log(`counting deleted tweets from ${minNew} to ${maxNew}`)
+  const overlappingOldTweets = overlap(minNew, maxNew, currentIds)
+  console.log(`counting deleted tweets from ${minNew} to ${maxNew}`, {overlappingOldTweets, currentIds, incomingIds})
   return difference(overlappingOldTweets, incomingIds)
 }
 
@@ -262,7 +261,7 @@ const fetchBookmarks = getAuthInit => pipe(
     _=>fetch(bookmark_url,getAuthInit()),
     inspect('fetched bookmarks'),
     // otherwise(pipe(inspect('ERROR: rejected fetchBookmark'), defaultTo([]))),
-    andThen(x => x.json()))(1)
+    andThen(x => x.json()), otherwise(pipe(inspect('ERROR [fetchBookmarks] x to json'))))(1)
 
 const getBookmarkQTs = getAuthInit => pipe(
   getBookmarkTweets, 
