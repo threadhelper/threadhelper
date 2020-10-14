@@ -165,7 +165,7 @@ const toTweetCommon = (tweet_, t) => {
   // tweet_.human_time = new Date(prop('created_at', t)).toLocaleString()
   // Replies/mentions.
   tweet_.reply_to = propDefNull('in_reply_to_screen_name', t)// null if not present
-  tweet_.mentions = getMentionsFromTweet(t)
+  tweet_.mentions = defaultTo([], getMentionsFromTweet(t))
   // URLs.
   tweet_.urls = getUrlsFromTweet(t)
   // Media.

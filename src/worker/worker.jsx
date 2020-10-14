@@ -98,7 +98,10 @@ const updateTweets = async (res) => {
   const isBookmark = path([0,'is_bookmark'],res) // checks whether the first is a bookmark to judge whether they're all bookmarks
   const filteredRes = await db.filterDb(getDb(), 'tweets', propEq('is_bookmark', isBookmark))
   const old_ids = map(prop('id'),filteredRes)
-  const deleted_ids = findDeletedIds(old_ids, res.map(prop('id')))
+  let deleted_ids = []
+  try{deleted_ids = findDeletedIds(old_ids, res.map(prop('id')))}
+  catch(e){console.log('ERROR [findDeletedIds]', {e, old_ids, res})}
+
   const new_ids = difference(map(prop('id'), res), old_ids)
   const new_tweets = pipe(filter(pipe(prop('id'), includes(__,new_ids))))(res)
   updateDB(new_tweets, deleted_ids)
@@ -163,7 +166,7 @@ const getTweetsFromDbById = async (ids) => await pipe( // getTweetsFromDbById ::
 )(ids)
 
 // msg2Search :: msg search -> Promise [tweet]
-const msg2Search = curry((_getIndex, m) => {const index = _getIndex(); console.log({index,m}); return search(m.filters, m.username, m.n_results, _getIndex(), m.query)})
+const msg2Search = curry((_getIndex, m) => {const index = _getIndex(); return search(m.filters, m.username, m.n_results, _getIndex(), m.query)})
 const searchIndex = pipe( // async
   // inspect('search'),
   tap(_=>emitMidSearch(true)),

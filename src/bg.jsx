@@ -240,6 +240,7 @@ export async function main(){
   archiveLoadedTweets$.log('archiveLoadedTweets$')
   const archTweets$ = archiveLoadedTweets$.map(saferMap(archToTweet(getUserInfo)))
   
+  const thUpdate$ = fetchedUpdate$.map(saferMap(apiToTweet)) // thUpdate$ :: [tweet] // update as threadhelper tweets 
   const thTweets$ = Kefir.merge([ // thTweets$ :: [tweet] // tweet :: threadhelper_tweet
     fetchedUpdate$.map(saferMap(apiToTweet)),
     fetchedTimeline$.map(saferMap(apiToTweet)),
@@ -261,7 +262,7 @@ export async function main(){
   addedTweets$.log('addedTweets$')
   const removedTweet$ = promiseStream(idsToRemove$, removeTweet)  // removedTweet$ :: msg
   removedTweet$.log('removedTweet$')
-  const updatedTweets$ = promiseStream(fetchedUpdate$, updateTweets) // updatedTweets$ :: msg    // fetchedUpdate$ gets added for a secnod time because update is the way we find deleted recent tweets
+  const updatedTweets$ = promiseStream(thUpdate$, updateTweets) // updatedTweets$ :: msg    // fetchedUpdate$ gets added for a secnod time because update is the way we find deleted recent tweets
   updatedTweets$.log('updatedTweets$')
   
   const anyTweetUpdate$ = Kefir.merge([updatedTweets$, addedTweets$, removedTweet$, dataReset$]).toProperty()  // anyTweetUpdate$ :: msg

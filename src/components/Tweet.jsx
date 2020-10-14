@@ -17,7 +17,12 @@ export function Tweet(props){
   const getTweetUrl = tweet => `https://twitter.com/${tweet.username}/status/${tweet.id}`
 
   const timeDiff = getTimeDiff(tweet.time)
-  const reply_text = getReplyText(tweet.reply_to, tweet.mentions)
+  let reply_text = ""
+  try{
+    reply_text = getReplyText(tweet.reply_to, tweet.mentions)
+  } catch(e){
+    console.log('ERROR [getReplyText]',{e, tweet})
+  }
   const text = reformatText(tweet.text, tweet.reply_to, tweet.mentions, tweet.urls, tweet.media)
   const maybeMedia = tweet.has_media ? renderMedia(tweet.media, "th-media") : ""
   const maybeQuote = tweet.has_quote ? renderQuote(tweet.quote, tweet.has_media) : ""  
@@ -342,6 +347,11 @@ function renderQuote(quote, parent_has_media) {
   if (quote != null){
     let timeDiff = getTimeDiff(quote.time)
     let replyText = getReplyText(quote.reply_to, quote.mentions)
+    try{
+      replyText = getReplyText(quote.reply_to, quote.mentions)
+    } catch(e){
+      console.log('ERROR [getReplyText]',{e, quote})
+    }
     let text = reformatText(quote.text, quote.reply_to, quote.mentions, null, quote.media)
     let minimedia = ""
     let mainmedia = ""
