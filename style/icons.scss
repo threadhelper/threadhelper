@@ -94,7 +94,7 @@
 
   input[type="checkbox"]:checked + label{
     display:inline-block;
-    fill:var(--main-txt-color);
+    fill:rgb(29, 161, 242);
   }
   input[type="checkbox"] + label{
     display:inline-block;
