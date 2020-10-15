@@ -8,7 +8,7 @@
 . manage inputs in twitter use
 . define destruction and dispatch its event on start up
 */
-
+// 
 import "@babel/polyfill";
 import { h, render, Component } from 'preact';
 // import { useState, useCallback } from 'preact/hooks';

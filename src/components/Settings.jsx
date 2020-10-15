@@ -1,5 +1,7 @@
 import { h, render, Component } from 'preact';
-import { useState, useEffect, useRef } from 'preact/hooks';
+import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
+import ReactGA from 'react-ga';
+import { initGA, csEvent, PageView, UA_CODE } from '../utils/ga.jsx'
 import GearIcon from '../../images/gear.svg';
 import { msgBG, setStg, applyToOptionStg } from '../utils/dutils';
 import { defaultTo, pipe, not} from 'ramda'
@@ -15,11 +17,26 @@ export function SettingsButton(props){
     defaultTo(null),
     (e) => {return (!e.currentTarget.parentNode.parentNode.contains(e.relatedTarget)) ? setOpen(false) : null}
   )
+
+  const clickSettings = ()=>{
+    // ReactGA.event({
+    //   category: 'User',
+    //   action: 'Clicked Settings button',
+    //   label:''
+    // });
+    csEvent('User', 'Clicked Settings button', '')
+    setOpen(!open)
+  }
+
+  const onClickSettings = useCallback(
+    clickSettings,
+    [open]
+  );
   
   return (
     <div className="nav-item" >
       <div class="options icon-button" > 
-        < GearIcon class='settings-icon' onClick={() => setOpen(!open)} onBlur={closeMenu} /> 
+        < GearIcon class='settings-icon' onClick={onClickSettings} onBlur={closeMenu} /> 
       </div>
       {open && <DropdownMenu closeMenu={()=>setOpen(false)}/>}
       
@@ -33,10 +50,18 @@ export function DropdownMenu(_props) {
   const dropdownRef = useRef(null);
 
   function DropdownItem(props) {
+
+
+    const onClickItem = e=>{
+      csEvent('User', 'Settings click', props.id);      
+      props.effect(); 
+      _props.closeMenu();
+    }
+
     return (
-      <a href="#" className="menu-item" onClick={(e)=>{props.effect(); _props.closeMenu();}}>
+      <a href="#" className="menu-item" onClick={onClickItem}>
         <span className="icon-button">{props.leftIcon}</span>
-        {props.children}
+        {props.id}
         <span className="icon-right">{props.rightIcon}</span>
       </a>
     );
@@ -70,54 +95,54 @@ export function DropdownMenu(_props) {
         Load Archive
       </DropdownItem> */}
       <DropdownItem
+        id={'Reset Storage'}
         leftIcon={'⛔'}
         effect={onClearStorage}>
-        Reset Storage
       </DropdownItem>
       <DebugItem
+        id={'Assess Storage'}
         leftIcon={'🛠'}
         effect={onAssessStorage}>
-        Assess Storage
       </DebugItem>
       <DebugItem
+        id={'Log Auth'}
         leftIcon={'🛠'}
         effect={()=>{msgBG({type:'log-auth'})}}>
-        Log Auth
       </DebugItem>
       <DebugItem
+        id={'Get User Info'}
         leftIcon={'🛠'}
         effect={()=>{msgBG({type:'get-user-info'})}}>
-        Get User Info
       </DebugItem>
       <DebugItem
+        id={'Update Tweets'}
         leftIcon={'🛠'}
         effect={()=>{msgBG({type:'update-tweets'})}}>
-        Update Tweets
       </DebugItem>
       <DebugItem
+        id={'Update Timeline'}
         leftIcon={'🛠'}
         effect={()=>{msgBG({type:'update-timeline'})}}>
-        Update Timeline
       </DebugItem>
       <DebugItem
+        id={'Get Latest'}
         leftIcon={'🛠'}
         effect={()=>{msgBG({type:'get-latest'})}}>
-        Get Latest
       </DebugItem>
       <DebugItem
+        id={'Get Bookmarks'}
         leftIcon={'🛠'}
         effect={onGetBookmarks}>
-        Get Bookmarks
       </DebugItem>
       <DebugItem
+        id={'Make Index'}
         leftIcon={'🛠'}
         effect={()=>{msgBG({type:'make-index'})}}>
-        Make Index
       </DebugItem>
       <DebugItem
+        id={'Toggle roboActive'}
         leftIcon={'🛠'}
         effect={()=>{applyToOptionStg('roboActive', not)}}>
-        Toggle roboActive
       </DebugItem>
     </div>
   );

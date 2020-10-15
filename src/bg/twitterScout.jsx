@@ -61,7 +61,7 @@ const gtId = curry((a,b) => idComp(a,b) > 0) // gt for ids
 const ltId = curry((a,b) => idComp(a,b) < 0) //lt for ids
 const sortKeys = keys => keys.sort(idComp)
 
-
+// 
 // newest (largest id) first
 function sortTweets(tweetDict){
   let keys = Object.keys(tweetDict)

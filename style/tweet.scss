@@ -60,7 +60,16 @@
 
 .th-header-time {
   color: var(--neutral-color);
+  background-color: rgba(0, 0, 0, 0);
   flex: 0 0 auto;
+  z-index: 1;
+}
+.th-header-time-link {
+  color: var(--neutral-color);
+  text-decoration: none;
+}
+.th-header-time-link:hover {
+  text-decoration: "underline";
 }
 
 .th-reply {
@@ -157,7 +166,17 @@
 .th-quote-header-time {
   padding-left: 5px;
   color: var(--neutral-color);
+  background-color: rgba(0, 0, 0, 0);
   flex: 1 0 auto;
+  z-index: 1;
+}
+
+.th-quote-header-time-link {
+  color: var(--neutral-color);
+  text-decoration: none;
+}
+.th-quote-header-time-link:hover {
+  text-decoration: "underline";
 }
 
 .th-quote-reply {

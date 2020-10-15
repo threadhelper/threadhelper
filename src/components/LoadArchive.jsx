@@ -6,7 +6,8 @@ import {SettingsButton} from './Settings.jsx';
 import GearIcon from '../../images/gear.svg';
 import { defaultTo, curry, propEq, find, take } from 'ramda'
 import { useStorage } from './useStorage.jsx';
-
+import ReactGA from 'react-ga';
+import { initGA, csEvent, csException, PageView, UA_CODE } from '../utils/ga.jsx'
 
 function LoadArchiveIcon(){  
   const tooltip = <span class="tooltiptext"> Click here to upload your Twitter Archive. <a href="https://twitter.com/settings/your_twitter_data">Download an archive of your data</a>, extract it and select data/tweet.js. </span>  
@@ -28,6 +29,8 @@ export const ArchiveUploader = props => {
   // when the Button component is clicked
   const handleClick = event => {
     console.log('load archive clicked')
+    csEvent('User', 'Load Archive click', '');
+
     hiddenFileInput.current.click();
   };
   // Call a function (passed as a prop from the parent component)
@@ -40,7 +43,12 @@ export const ArchiveUploader = props => {
     reader.onload = importArchive;
     const file = find(propEq('name', "tweet.js"))(files);
     console.log('arch file', file)
-    reader.readAsText(file);  
+    try{
+      reader.readAsText(file);  
+    } catch(e){
+      console.log('ERROR: Couldn\'t load archive')
+      csException('Couldn\'t load archive', false);
+    }
   }
 
   
@@ -48,7 +56,9 @@ export const ArchiveUploader = props => {
   function importArchive(){
     const result = this.result.replace(/^[a-z0-9A-Z\.]* = /, "");
     const importedTweetArchive = JSON.parse(result);
-    // 
+    
+    csEvent('User', 'Loaded Archive', defaultTo(0, importedTweetArchive.length));
+
     console.log('setting archive', importedTweetArchive)
     setStg('temp_archive',importedTweetArchive).then(()=>{
       setHasArchive(true)

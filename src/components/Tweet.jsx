@@ -1,6 +1,7 @@
 import { h, render, Component } from 'preact';
 import { useState, useRef, useEffect, useContext, useCallback } from 'preact/hooks';
 import ReactHtmlParser, { processNodes, convertNodeToElement, htmlparser2 } from 'react-html-parser';
+import { initGA, csEvent, csException, PageView, UA_CODE } from '../utils/ga.jsx'
 import $ from 'jquery'
 import {getActiveComposer} from '../utils/wutils.jsx'
 import ReplyIcon from '../../images/reply.svg';
@@ -8,13 +9,13 @@ import RetweetIcon from '../../images/retweet.svg';
 import LikeIcon from '../../images/like.svg';
 import ShareIcon from '../../images/share.svg';
 
+const getTweetUrl = tweet => `https://twitter.com/${tweet.username}/status/${tweet.id}`
 export function Tweet(props){
   // placeholder is just text
   // const [tweet, setTweet] = useState(tweet);
   // console.log(props.tweet)
   const tweet = props.tweet
   const id = tweet.id
-  const getTweetUrl = tweet => `https://twitter.com/${tweet.username}/status/${tweet.id}`
 
   const timeDiff = getTimeDiff(tweet.time)
   let reply_text = ""
@@ -35,7 +36,10 @@ export function Tweet(props){
   // }
   
   //TODO REMOVE THESE COMMENTS
-  const onClick = (e)=>{return onClickTweet(tweet, getActiveComposer, e)}
+  const onClick = (e)=>{
+    csEvent('User', 'Clicked tweet');
+    return onClickTweet(tweet, getActiveComposer, e)
+  }
 
   
   return (
@@ -49,13 +53,13 @@ export function Tweet(props){
             <div class="th-header-name">{tweet.name}</div>
             <div class="th-header-username">@{tweet.username}</div>
             <div class="th-header-dot">·</div>
-            <div class="th-header-time">{timeDiff}</div>
+            <div class="th-header-time"><a class="th-header-time-link" href={getTweetUrl(tweet)}>{timeDiff}</a></div>
           </div>
           <div class="th-reply">{reply_text}</div>
           <div class="th-text">{text}</div>
           {maybeMedia}
           {maybeQuote}
-          {/* <div class="th-icons">
+          <div class="th-icons">
             <div class="th-icon-field">
               <div class="th-reply-container"><ReplyIcon /></div>
             </div>
@@ -68,7 +72,7 @@ export function Tweet(props){
             <div class="th-icon-field">
               <div class="th-share-container"><ShareIcon /></div>
             </div>
-          </div> */}
+          </div>
         </div>
       </div>
       <div class="th-hover" onClick={onClick}>
@@ -108,6 +112,7 @@ let onClickTweet = function(tweet, getActiveComposer, e){
   setTimeout(function() {
       copy.text("copy")
   }, 2000)
+  return 
 }
 
 
@@ -369,7 +374,7 @@ function renderQuote(quote, parent_has_media) {
         <div class="th-quote-header-name">{quote.name}</div>
         <div class="th-quote-header-username">@{quote.username}</div>
         <div class="th-header-dot">·</div>
-        <div class="th-quote-header-time">{timeDiff}</div>
+        <div class="th-quote-header-time"><a class="th-quote-header-time-link" href={getTweetUrl(quote)}>{timeDiff}</a></div>
       </div>
       <div class="th-quote-reply">{replyText}</div>
       <div class="th-quote-content">

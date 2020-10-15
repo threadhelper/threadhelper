@@ -1,6 +1,8 @@
 //using this temporarily but eventually probably should refactor away from classes
 import "@babel/polyfill";
 import * as browser from "webextension-polyfill";
+import ReactGA from 'react-ga';
+import { initGA, Event, Exception, PageView } from './utils/ga.jsx'
 import PromiseWorker from 'promise-worker'
 import { getTwitterTabIds} from './utils/wutils.jsx'
 import { flattenModule, inspect, toggleDebug, currentValue, nullFn, isExist } from './utils/putils.jsx'
@@ -18,12 +20,18 @@ import { fetchUserInfo, updateQuery, tweetLookupQuery, timelineQuery, getRandomS
 import { validateTweet, archToTweet, bookmarkToTweet, apiToTweet} from './bg/tweetImporter.jsx'
 import { includes, isEmpty } from "lodash";
 
+(function initAnalytics() {
+  initGA();
+})();
+PageView('/background.html')
+console.log('initialized GA in bg', ReactGA)
+
+
 // Project business
 var DEBUG = true;
 toggleDebug(window, DEBUG)
 Kefir.Property.prototype.currentValue = currentValue
 
-// 
 // Stream clean up
 const subscriptions = []
 const rememberSub = (sub) => {subscriptions.push(sub); return sub}
@@ -158,6 +166,9 @@ export async function main(){
   const makeMsgStream = name => msg$.filter(propEq('type', name))
   const csStart$ = msg$.filter(propEq('type','cs-created'))
   const csNotReady$ = toVal(false, csStart$).toProperty(T)
+      // Analytics
+  const csGaEvent$ = makeMsgStream('gaEvent').map(prop('event'))
+  const csGaException$ = makeMsgStream('gaException').map(prop('exception'))
       // Storage
   const storageChange$ = makeStorageObs() // storageChange$ :: () -> change  // change :: {itemName, oldVal, newVal} // Listens to changes in chrome.storage
   const optionsChange$ = storageChange$.filter(x=>x.itemName=='options') // optionsChange$ :: change -> change //.toProperty(await (async ()=>{return {oldVal:null, newVal:await getOptions()}}))
@@ -325,8 +336,10 @@ export async function main(){
   // Effects from streams
     // Ready / sync
   ready$.log('READY')
-
   csStart$.log('csStart')
+  csGaEvent$.log('csGaEvent$')
+  subObs(csGaEvent$, pipe(values,x=>Event(...x)))
+  subObs(csGaException$, pipe(values,x=>Exception(...x)))
   workerReady$.log('workerReady')
   subObs(syncDisplay$, pipe(_=>makeSyncDisplayMsg(), andThen(setStg('syncDisplay')))) // update sync display
   subObs(syncLight$, setStg('sync'))

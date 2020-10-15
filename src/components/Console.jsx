@@ -9,7 +9,8 @@ import {pipe, prop, curry} from 'ramda'
 import BookmarkIcon from '../../images/bookmark.svg';
 import ReplyIcon from '../../images/reply.svg';
 import RetweetIcon from '../../images/retweet.svg';
-
+import ReactGA from 'react-ga';
+import { initGA, csEvent, PageView, UA_CODE } from '../utils/ga.jsx'
 
 
 export function Console(){
@@ -20,6 +21,16 @@ export function Console(){
   const [useBookmarks, setUseBookmarks] = useOption('useBookmarks')
   const [useReplies, setUseReplies] = useOption('useReplies')
 
+  // useEffect(async () => {
+  //   ReactGA.initialize(UA_CODE, {
+  //     debug: true,
+  //     titleCase: false,
+  //   });
+  //   ReactGA.ga('set', 'checkProtocolTask', null);
+
+  //   console.log('initialized GA in popup', ReactGa)
+  //   // ReactGa.pageview('/popup');
+  // }, []);
 
   return (
     <div class="console">
@@ -44,9 +55,12 @@ export function Console(){
 
 const handleInputChange = curry((_set, event) => {
   // console.log('handling input change', {event, _set})
+  const getTargetVal = target=>(target.type === 'checkbox' ? target.checked : target.value)
+  csEvent('User', `Toggled filter ${event.target.id} to ${getTargetVal(event.target)}`, event.target.id, getTargetVal(event.target) ? 1 : 0,);
+  
   pipe(
     prop('target'),
-    target=>(target.type === 'checkbox' ? target.checked : target.value),
+    getTargetVal,
     _set
   )(event)
 })

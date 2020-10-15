@@ -1,18 +1,33 @@
+import ReactGA from "react-ga";
+import { msgBG } from "./dutils.jsx"
 
+export const UA_CODE = 'UA-170230545-2'
 
-const getGaq = ()=>{
-  var _gaq = _gaq || [];
-  _gaq.push(['_setAccount', 'UA-170230545-1']);
-  _gaq.push(['_trackPageview']);
-  return _gaq
-}
-
-export function activateTracking() {
-  var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-  ga.src = 'https://ssl.google-analytics.com/ga.js';
-  var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-}
-
-function trackButton(e) {
-  _gaq.push(['_trackEvent', e.target.id, 'clicked']);
+export const initGA = () => {
+  ReactGA.initialize(UA_CODE, {
+    debug: true,
+    titleCase: false,
+  });
+  ReactGA.ga('set', 'checkProtocolTask', null);
 };
+
+export const PageView = (name) => {
+  ReactGA.pageview(name);
+};
+
+export const Event = (category, action, label, value=0) => {
+  ReactGA.event({
+    category,
+    action,
+    label,
+    value
+  });
+};
+
+export const Exception = (description, fatal) => ReactGA.exception({
+  description: description,
+  fatal: fatal
+});
+
+export const csEvent = (category, action, label, value=0) => msgBG({type: 'gaEvent', event: {category, action, label, value}})
+export const csException = (description, fatal) => msgBG({type: 'gaException', exception: {description, fatal}})

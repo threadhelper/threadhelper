@@ -10,10 +10,10 @@ import { flattenModule, inspect } from '../utils/putils.jsx'
 import * as R from 'ramda';
 flattenModule(global,R)
 
+
 function reqSearch(query){
   msgBG({type:'search', query:query})
 }
-
 
 export function Search(props){
   const [tweets, setTweets] = useState([]);
