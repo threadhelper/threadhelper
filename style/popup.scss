@@ -47,7 +47,11 @@ a{
 }
 
 #feedback-type{
-  display:flex; justify-content: space-between; font-size:10px;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size:10px;
 }
 
 #feedback-button{

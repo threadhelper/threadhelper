@@ -314,7 +314,9 @@ export async function main(){
   
     // Worker returns
   const gotDefaultTweets$ = promiseStream(reqDefaultTweets$, getDefaultTweets) // gotDefaultTweets$ :: [tweets]
+  // const filteredDefaultTweets$
   const searchResults$ = promiseStream(reqSearch$, doSearch) // searchResults$ :: [tweets]
+  // const filteredSearchResults$ = 
   // 
   
   // const searchQueryExists = ()=>isExist(searchQuery$.currentValue())
@@ -352,9 +354,11 @@ export async function main(){
   subObs(archiveLoadedTweets$, clearTempArchive) // happens after tweets are updated by worker, should only happen after loading archive
       // Search
   // subObs(reqSearch$, doSearch)
-  subObs(searchResults$, pipe(prop('res'), setStg('search_results')))
   subObs(reqDefaultTweets$, nullFn)
+  subObs(searchResults$, pipe(prop('res'), setStg('search_results')))
+  // subObs(filteredSearchResults$, pipe(prop('res'), setStg('search_results')))
   subObs(gotDefaultTweets$, pipe(prop('res'), setStg('latest_tweets')))
+  // subObs(filteredDefaultTweets$, pipe(prop('res'), setStg('latest_tweets')))
   // bg search
   // subObs(searchResult$, pipe(getTweetsFromDbById, andThen(pipe(setStg('search_results'), andThen(x=>{emitMidSearch(false); return x;})))))
   // subObs(reqDefaultTweets$, pipe(getDefaultTweets, andThen(setStg('latest_tweets'))) )

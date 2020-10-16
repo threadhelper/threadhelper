@@ -22,9 +22,9 @@ export const FeedbackForm = (props) => {
       ></textarea>
 
       <div id={"feedback-type"} onChange={e=>setKind(e.target.value)}>
-          <input type="radio" value="feedback" name="feedback-type" checked="true"> Feedback </input>
-          <input type="radio" value="bug" name="feedback-type" onChange={e=>{e.preventDefault()}}> Bug Report </input>
-          <button id="feedback-button" onClick={onSubmit} name={'Submit'} onChange={e=>{e.preventDefault()}}>{'Submit'}</button> 
+          <span> <input type="radio" value="feedback" name="feedback-type" checked="true" /> Feedback </span>
+          <span> <input type="radio" value="bug" name="feedback-type" onChange={e=>{e.preventDefault()}}/> Bug Report </span>
+          <button id="feedback-button" onClick={onSubmit} name={'Submit'} onChange={e=>{e.preventDefault()}}>{'Submit'}</button>
       </div>
       <br />
       {submitted ? 'Thank you!' : null}

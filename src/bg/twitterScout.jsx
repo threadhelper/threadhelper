@@ -112,7 +112,7 @@ export const genRandomSample = (keys)=>{
 
 // get random tweets as a serendipity generator
 // TODO make functional
-
+// gets one by one
 export const getDefaultTweets = curry(async (sampleFn, n_tweets, filters, db_get, screen_name, getKeys) => {
   let sample = []
   const keys = await getKeys()
@@ -135,6 +135,34 @@ export const getDefaultTweets = curry(async (sampleFn, n_tweets, filters, db_get
           isValidTweet, 
           t=>sample.push(t))))
       )(keys)
+  }
+  return sample
+})
+
+// getRandomSample :: fn -> int -> [id]
+export const getRandomSample = curry( async (getKeys, n_tweets)=>{
+  const keys = await getKeys()
+  return pipe(range(0),_=>map(genRandomSample(keys)))(n_tweets)
+})
+
+
+// filterSample :: (fn, filters, String, [id]) -> [tweet]
+export const filterSample = curry( async (db_get, filters, screen_name, ids)=>{
+  let sample = []
+  const isRT = t=>(!propEq('username', screen_name, t) && !prop('is_bookmark', t))
+  const isBookmark = prop('is_bookmark')  
+  const isReply = t=>!isNil(prop('reply_to', t)) && prop('reply_to', t) != prop('username', t)  
+  const isValidTweet = t => 
+    (filters.getRTs || !isRT(t)) && 
+    (filters.useBookmarks || !isBookmark(t)) && 
+    (filters.useReplies || !isReply(t))
+  while(!isFull(sample)){
+    await pipe(
+      db_get('tweets'),
+      andThen(pipe(when(
+          isValidTweet, 
+          t=>sample.push(t))))
+      )(ids)
   }
   return sample
 })

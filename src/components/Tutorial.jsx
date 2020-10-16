@@ -13,7 +13,7 @@ const usePageN = (n0, nMax)=>{
 
 export function Tutorial(props){
   const tutorialPages = 
-  [{text:<span>Welcome to Thread Helper! 🧵 Just open Twitter and you should see our sidebar.</span>, img:null,},
+  [{text:<span>Welcome to Thread Helper! 🧵 Just open Twitter and you should see our sidebar. Have feedback? <a href="#" onClick={_=>setPage(pages.length)}>Click here and write it down.</a></span>, img:null,},
    {text:<span>{'[tutorial placeholder]'}</span>, img:null},
    {text:<span>Welcome to Thread Helper! 🧵 <a href="#" onClick={_=>setPage(1)}>Click here to follow the tutorial again.</a></span>, img:null}]
   const [pages, setPages] = useState(tutorialPages)

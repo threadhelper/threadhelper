@@ -12,8 +12,7 @@
     }
 
     &.synced {
-      /*background-color: rgb(0,200,0); */
-      background-color: var(--accent-color);
+      background-color: rgb(0,200,0);
     }
   
     &.unsynced{
@@ -95,8 +94,8 @@
 
   input[type="checkbox"]:checked + label{
     display:inline-block;
-    fill:var(--accent-color);
-    stroke: var(--accent-color);
+    fill:var(--main-txt-color);
+    stroke: var(--main-txt-color);
     stroke-width: 1px;
     stroke-linejoin: round;
   }
