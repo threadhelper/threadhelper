@@ -59,7 +59,7 @@ export function Tweet(props){
           <div class="th-text">{text}</div>
           {maybeMedia}
           {maybeQuote}
-          <div class="th-icons">
+          {/* <div class="th-icons">
             <div class="th-icon-field">
               <div class="th-reply-container"><ReplyIcon /></div>
             </div>
@@ -72,7 +72,7 @@ export function Tweet(props){
             <div class="th-icon-field">
               <div class="th-share-container"><ShareIcon /></div>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
       <div class="th-hover" onClick={onClick}>
@@ -338,7 +338,7 @@ function renderMedia(media, className) {
   }
 
   let top = <div class="th-media-top">{topImgs}</div>
-  let bottom = botImgs.length <= 0 ? "" : <div class="th-media-bottom">${botImgs}</div>
+  let bottom = botImgs.length <= 0 ? "" : <div class="th-media-bottom">{botImgs}</div>
 
   return (
   <div class={className}>

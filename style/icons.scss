@@ -12,11 +12,12 @@
     }
 
     &.synced {
-      background-color: rgb(0,200,0); 
+      /*background-color: rgb(0,200,0); */
+      background-color: var(--accent-color);
     }
   
     &.unsynced{
-      background-color: rgb(200,100,0); 
+      background-color: rgb(255, 94, 0); 
     }
   }
 
@@ -94,7 +95,10 @@
 
   input[type="checkbox"]:checked + label{
     display:inline-block;
-    fill:rgb(29, 161, 242);
+    fill:var(--accent-color);
+    stroke: var(--accent-color);
+    stroke-width: 1px;
+    stroke-linejoin: round;
   }
   input[type="checkbox"] + label{
     display:inline-block;
@@ -109,3 +113,5 @@
   .settings-icon:hover{
     fill:var(--main-txt-color);
   }
+  
+  

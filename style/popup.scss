@@ -1,0 +1,55 @@
+#tutorial-window{
+  display:flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+#block1{
+  height:100px;
+  display:flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+#block2{
+  vertical-align:bottom;
+}
+#tutorial-nav{
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  align-items: baseline;
+}
+#tutorial-nav-index{
+  vertical-align:bottom;
+}
+
+.float-right{
+  float:right;
+}
+
+.nav-arrow a{
+  font-size:16px;
+  font-weight: bold;
+  padding: 5px 5px 5px 5px;
+  text-decoration: none;
+  color: black;
+}
+a{
+  color:black;
+}
+
+#feedback-form{
+  background-color: #E0E8F0; 
+  width:100%;
+
+}
+#feedback-text{
+  width:97%;
+}
+
+#feedback-type{
+  display:flex; justify-content: space-between; font-size:10px;
+}
+
+#feedback-button{
+  font-size:10px;
+}

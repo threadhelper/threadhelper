@@ -228,7 +228,7 @@ export async function main(){
   const reqUpdatedTweets$ = makeMsgStreamSafe('update-tweets') // reqUpdatedTweets$ :: msg
   const updateTimeline$ = makeMsgStream("update-timeline") // reqUpdatedTweets$ :: msg
 
-  const reqTimeline$ = makeSafe(Kefir.merge([ updateTimeline$, initData$]))  // reqTimeline$ :: msg
+  const reqTimeline$ = makeSafe(Kefir.merge([updateTimeline$, initData$]))  // reqTimeline$ :: msg
   const reqBookmarks$ = makeSafe(Kefir.merge([debugGetBookmarks$, initData$])) //.flatten() // reqBookmarks$ :: msg
   // reqBookmarks$.log('reqBookmarks$')
   const reqAddBookmark$ = makeMsgStreamSafe('add-bookmark') // reqAddBookmark$ :: msg
@@ -238,8 +238,8 @@ export async function main(){
 
   const fetchedUpdate$ = promiseStream(reqUpdatedTweets$, _ => updateQuery(getAuthInit, getUsername(), update_size)) // IMPURE fetchedUpdate$ :: [apiTweet]
   const fetchedTimeline$ = promiseStream(reqTimeline$, _ => timelineQuery(getAuthInit, getUserInfo())) // IMPURE fetchedTimeline$ :: [apiTweet]
-  const fetchedBookmarks$ = promiseStream( reqBookmarks$, _ => getBookmarks(getAuthInit)) // IMPURE fetchedBookmarks$ :: [apiBookmark]
-  const fetchedBookmark$ = promiseStream( reqBookmarkId$, tweetLookupQuery(getAuthInit)) // IMPURE fetchedBookmark$ :: [apiTweet]
+  const fetchedBookmarks$ = promiseStream(reqBookmarks$, _ => getBookmarks(getAuthInit)) // IMPURE fetchedBookmarks$ :: [apiBookmark]
+  const fetchedBookmark$ = promiseStream(reqBookmarkId$, tweetLookupQuery(getAuthInit)) // IMPURE fetchedBookmark$ :: [apiTweet]
 
   const fetchedAnyAPIReq$ = Kefir.merge([fetchedUpdate$, fetchedTimeline$, fetchedBookmarks$, fetchedBookmark$,]) // fetchedAnyAPIReq$ :: [apiTweet]
   fetchedAnyAPIReq$.log('fetchedAnyAPIReq$')

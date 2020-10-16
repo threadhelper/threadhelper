@@ -89,7 +89,8 @@ export const getTopNResults = curry(async (filters, screen_name, n_tweets, index
   const isNotReply = x => isNil(x.reply_to) || x.reply_to === x.username
   const filterReplies = filter(either(_=>filters.useReplies, y=>isNotReply(index.documentStore.getDoc(y.ref))))
   const isBookmark = prop('is_bookmark')
-  const filterBookmarks = filter(pipe(isBookmark, not))
+  // const filterBookmarks = filter(pipe(isBookmark, not))
+  const filterBookmarks = filter(either(_=>filters.useBookmarks, y=>!index.documentStore.getDoc(y.ref).is_bookmark))
   return pipe(
     // filter(either(_=>filters.useBookmarks, pipe(not,isBookmark))),
     // filter(either(_=>filters.useReplies, pipe(not,isReply))),
