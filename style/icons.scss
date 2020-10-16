@@ -96,7 +96,7 @@
     display:inline-block;
     fill:var(--main-txt-color);
     stroke: var(--main-txt-color);
-    stroke-width: 1px;
+    stroke-width: 0.5px;
     stroke-linejoin: round;
   }
   input[type="checkbox"] + label{
