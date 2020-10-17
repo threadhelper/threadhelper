@@ -28,7 +28,7 @@ console.log('initialized GA in bg', ReactGA)
 
 
 // Project business
-var DEBUG = false;
+var DEBUG = true;
 toggleDebug(window, DEBUG)
 Kefir.Property.prototype.currentValue = currentValue
 

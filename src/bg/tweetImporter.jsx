@@ -25,18 +25,21 @@ export const bookmarkToTweet = (entry)=>{
 export const apiToTweet = (entry) => {
   let tweet = {};
   tweet.retweeted = isNil(prop('retweeted',entry)) ? false : prop('retweeted',entry)
-  tweet.id = prop('id_str',entry)
+  
+  let rt_entry = entry
   if(tweet.retweeted){
     if(prop('retweeted_status',entry) != null) tweet.orig_id = path(['retweeted_status', 'id_str'],entry)
-      entry = prop('retweeted_status',entry) != null ? prop('retweeted_status',entry) : entry;
+    rt_entry = prop('retweeted_status',entry) != null ? prop('retweeted_status',entry) : entry;
     }
-  //tweet contents
-  tweet.username = path(['user','screen_name'], entry)
-  tweet.name = path(['user','name'], entry)
-  tweet.text = unescape(prop('full_text', entry) || prop('text', entry))
-  tweet.profile_image = path(['user', 'profile_image_url_https'], entry)
 
-  tweet = toTweetCommon(tweet,entry)
+  tweet = toTweetCommon(tweet,rt_entry)
+  tweet.id = prop('id_str',entry)
+  //tweet contents
+  tweet.username = path(['user','screen_name'], rt_entry)
+  tweet.name = path(['user','name'], rt_entry)
+  tweet.text = unescape(prop('full_text', rt_entry) || prop('text', rt_entry))
+  tweet.profile_image = path(['user', 'profile_image_url_https'], rt_entry)
+  
   // Add full quote info.
   if (tweet.has_quote && tweet.is_quote_up && prop('quoted_status',entry)) { 
     const quoted_status = prop('quoted_status',entry)
