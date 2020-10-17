@@ -54,8 +54,15 @@ module.exports = {
       {
         test: /\.svg$/,
         use: ['preact-svg-loader'],
-    }
-      
+      },
+      {
+        test: /\.(png|jpe?g|gif)$/i,
+        use: [
+          {
+            loader: 'file-loader',
+          },
+        ],
+      }
     ]
   },
   resolve: {
