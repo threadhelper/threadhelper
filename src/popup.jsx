@@ -13,7 +13,7 @@ export function Welcome2TH(props){
       initGA();
     })();
     PageView('/popup.jsx')
-    console.log('initialized GA in CS', ReactGA)
+    // console.log('initialized GA in CS', ReactGA)
   }, []);
 
 

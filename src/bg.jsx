@@ -4,12 +4,12 @@ import * as browser from "webextension-polyfill";
 import ReactGA from 'react-ga';
 import { initGA, Event, Exception, PageView } from './utils/ga.jsx'
 import PromiseWorker from 'promise-worker'
-import { getTwitterTabIds} from './utils/wutils.jsx'
+// import { getTwitterTabIds} from './utils/wutils.jsx'
 import { flattenModule, inspect, toggleDebug, currentValue, nullFn, isExist } from './utils/putils.jsx'
 import * as R from 'ramda';
 flattenModule(window,R) 
 import Kefir from 'kefir';
-import { msgCS, setStg, getData, removeData, getOptions, getOption, makeStorageObs, makeGotMsgObs, resetStorage} from './utils/dutils.jsx'
+import { msgCS, setStg, getData, removeData, getOptions, getOption, makeStorageObs, makeStgItemObs, makeOptionObs, makeGotMsgObs, resetStorage} from './utils/dutils.jsx'
 import { defaultOptions } from './utils/defaultStg.jsx'
 import { makeAuthObs} from './bg/auth.jsx'
 import * as db from './bg/db.jsx'
@@ -18,7 +18,7 @@ import { initWorker} from './bg/workerBoss.jsx'
 import { makeIndex, loadIndex, updateIndex, search} from './bg/nlp.jsx'
 import { fetchUserInfo, updateQuery, tweetLookupQuery, timelineQuery, getRandomSampleTweets, getLatestTweets, getBookmarks, } from './bg/twitterScout.jsx'
 import { validateTweet, archToTweet, bookmarkToTweet, apiToTweet} from './bg/tweetImporter.jsx'
-import { includes, isEmpty } from "lodash";
+// import { includes, isEmpty } from "lodash";
 
 (function initAnalytics() {
   initGA();
@@ -28,7 +28,7 @@ console.log('initialized GA in bg', ReactGA)
 
 
 // Project business
-var DEBUG = true;
+var DEBUG = false;
 toggleDebug(window, DEBUG)
 Kefir.Property.prototype.currentValue = currentValue
 
@@ -82,11 +82,12 @@ const isOptionSame = curry ((name, x)=> (isNil(x.oldVal) && isNil(x.newVal)) || 
 // makeOptionsObs :: String -> a
 const _makeOptionObs = curry (async (optionsChange$,itemName) => {
   const initVal = await getOption(itemName)
-  return optionsChange$.filter(x=>!isOptionSame(itemName,x))
-  .map(path([['newVal'], itemName]))
-  .map(defaultTo(prop(itemName,defaultOptions())))
-  // .map(inspect(`make option obs ${itemName}`))
-  .toProperty(()=>initVal)
+  return makeOptionObs(optionsChange$,itemName).toProperty(()=>initVal)
+})
+// makeStgObs :: String -> a
+const _makeStgObs = curry (async (itemName) => {
+  const initVal = await getData(itemName)
+  return makeStgItemObs(itemName).toProperty(()=>initVal)
 })
 const combineOptions = (...args) => pipe(reduce((a,b)=>assoc(b.name, b.value, a),{}))(args)
   // stream utils
@@ -210,6 +211,7 @@ export async function main(){
   const unique_auth$ = auth$.skipDuplicates(compareAuths).filter(validateAuth).toProperty() // unique_auth$ :: auth -> auth
   // const userInfo$ = unique_auth$.flatMap(_=>Kefir.fromPromise(fetchUserInfo(getAuthInit))).filter(x=>x.id!=null).toProperty(()=>{return {id:null}}) // IMPURE userInfo$ :: user_info
   const userInfo$ = promiseStream(unique_auth$, ()=>fetchUserInfo(getAuthInit)).filter(x=>x.id!=null).toProperty(()=>{return {id:null}}) // IMPURE userInfo$ :: user_info
+  userInfo$.log('userInfo$')
     // Ready, Sync
   const ready$ = Kefir.combine([ // ready$ :: Bool
     workerReady$,
@@ -225,10 +227,16 @@ export async function main(){
   initData$.log('initData$')
     // Tweet API
   const debugGetBookmarks$ = makeMsgStreamSafe('get-bookmarks') // debugGetBookmarks$ :: msg
-  const reqUpdatedTweets$ = makeMsgStreamSafe('update-tweets') // reqUpdatedTweets$ :: msg
+  const updateTweets$ = makeMsgStreamSafe('update-tweets') // reqUpdatedTweets$ :: msg
   const updateTimeline$ = makeMsgStream("update-timeline") // reqUpdatedTweets$ :: msg
-
-  const reqTimeline$ = makeSafe(Kefir.merge([updateTimeline$, initData$]))  // reqTimeline$ :: msg
+  
+  const hasTimeline$ = (await _makeStgObs('hasTimeline'))
+  const missingTimeline$ = hasTimeline$.map(not)
+  missingTimeline$.log('missingTimeline$')
+  // const reqTimeline$ = makeSafe(Kefir.merge([updateTimeline$, initData$]))  // reqTimeline$ :: msg
+  const reqUpdatedTweets$ = makeSafe(Kefir.merge([updateTweets$, initData$.filterBy(hasTimeline$)])) // reqUpdatedTweets$ :: msg
+  const reqTimeline$ = makeSafe(Kefir.merge([updateTimeline$, initData$.filterBy(missingTimeline$)])) // reqTimeline$ :: msg
+  reqTimeline$.log('reqTimeline$')
   const reqBookmarks$ = makeSafe(Kefir.merge([debugGetBookmarks$, initData$])) //.flatten() // reqBookmarks$ :: msg
   // reqBookmarks$.log('reqBookmarks$')
   const reqAddBookmark$ = makeMsgStreamSafe('add-bookmark') // reqAddBookmark$ :: msg
@@ -335,6 +343,7 @@ export async function main(){
 
   // const reqRoboQueryEffects = m=>{setData({'roboSync':false}); makeRoboRequest(getAuthInit,m).then(roboTweet=> setData({'roboTweet':roboTweet, 'roboSync':true}))}
   
+  const checkGotTimeline = timeline => timeline.length > 3000 || timeline.length >= getUserInfo().statuses_count-1
   // Effects from streams
     // Ready / sync
   ready$.log('READY')
@@ -349,6 +358,7 @@ export async function main(){
       // Import tweets
   subObs(fetchedTweets$, nullFn) // happens after fetching tweets from twitter API
   subObs(fetchedBookmarks$, nullFn)  // happens on requests to fetch all bookmarks
+  subObs(fetchedTimeline$, pipe(when(checkGotTimeline, setStg('hasTimeline'))))
   subObs(idsToRemove$, nullFn) // happens on a request to remove a tweet from DB
   subObs(reqAddBookmark$, nullFn) // happens on requests to add a bookmark
   subObs(archiveLoadedTweets$, clearTempArchive) // happens after tweets are updated by worker, should only happen after loading archive
@@ -385,7 +395,7 @@ function onInstalled() {
     chrome.declarativeContent.onPageChanged.addRules([
       {conditions: [new chrome.declarativeContent.PageStateMatcher({pageUrl: { urlContains: "twitter.com" }})],
         actions: [new chrome.declarativeContent.ShowPageAction()]}]);});
-  twitterTabs.forEach(x=>chrome.tabs.reload(x)) // this shouldn't work bc installed is the first thing that happens
+  // twitterTabs.forEach(x=>chrome.tabs.reload(x)) // this shouldn't work bc installed is the first thing that happens
 }
 
 // TODO emit to active tab

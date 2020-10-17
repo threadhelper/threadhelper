@@ -1,4 +1,4 @@
-import $ from 'jquery'
+// import $ from 'jquery'
 
 export const url_regex = /(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})/;
 export const last_tweet_id = 0
@@ -125,7 +125,8 @@ export function isFocused(selector){
 // get ID from the tweet card DOM element
 export function getTweetId(tweet){
   // console.log(tweet)
-  let date = $(tweet).find('time')[0]
+  // let date = $(tweet).find('time')[0]
+  let date = tweet.querySelectorAll('time')[0]
   let linkEl = date.parentNode
   let link = linkEl.href
   let link_spl = link.split('/')

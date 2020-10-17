@@ -11,6 +11,7 @@ export const defaultStorage = () =>{
   return{
     options:defaultOptions(),
     hasArchive: false,
+    hasTimeline: false,
     latest_tweets: [],
     search_results: [],
     temp_archive: [],

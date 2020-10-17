@@ -26,7 +26,7 @@ flattenModule(window,R)
 import ThreadHelper from './components/ThreadHelper.jsx'
 
 // Project business 
-var DEBUG = true;
+var DEBUG = false;
 toggleDebug(window, DEBUG)
 Kefir.Property.prototype.currentValue = currentValue
 

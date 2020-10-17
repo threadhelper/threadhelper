@@ -194,11 +194,7 @@ const isOptionSame = curry ((name, x)=> isStgItemSame(x) || (!isNil(x.oldVal) &&
 export const makeOptionObs = curry ((optionsChange$, itemName) => 
   optionsChange$.filter(x=>!isOptionSame(itemName,x))
   .map(path([['newVal'], itemName]))
-  .map(pipe(
-    defaultTo(prop(itemName,defaultOptions()))
-    ))
-  // .map(inspect(`make option obs for ${itemName}`))/*.toProperty()*/
-  )
+  .map(defaultTo(prop(itemName,defaultOptions()))))
 
 const listSearchFilters = pipe(prop('newVal'), values, filter(propEq('type', 'searchFilter')), map(prop('name')), R.map(makeOptionObs),inspect('listsearchfilters'))
 const combineOptions = (...args) => pipe(inspect('combineopt'), reduce((a,b)=>assoc(b.name, b.value, a),{}))(args)

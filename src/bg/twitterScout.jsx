@@ -1,7 +1,7 @@
 import {delay}  from 'delay'
 import {getData, setData, makeOnStorageChanged} from '../utils/dutils.jsx';
 import { flattenModule, inspect} from '../utils/putils.jsx';
-import { isNil, unescape } from 'lodash';
+// import { unescape } from 'lodash';
 import * as R from 'ramda';
 flattenModule(global,R)
 
@@ -35,7 +35,7 @@ export const tweetLookupQuery = curry(async (getAuthInit, ids) => {
 export const timelineQuery = async (getAuthInit, user_info) => await query(getAuthInit, prop('screen_name', user_info), prop('statuses_count', user_info), -1, [])
 
 
-const stop_condition = (res, count, max_id)=>(res.length >= count || !(max_id != null)) //stop if got enough tweets or if max_id is null (twitter not giving any more)
+const stop_condition = (res, count, max_id)=>(res.length >= count || isNil(max_id)) //stop if got enough tweets or if max_id is null (twitter not giving any more)
 
 // res is the accumulator, should be called as [], max_id initialized as -1
 const query = curry( async (getAuthInit, username, count, max_id, res) => {

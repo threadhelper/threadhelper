@@ -99,6 +99,11 @@ export function DropdownMenu(_props) {
         leftIcon={'⛔'}
         effect={onClearStorage}>
       </DropdownItem>
+      <DropdownItem
+        id={'Update Timeline'}
+        leftIcon={'♻'}
+        effect={()=>{msgBG({type:'update-timeline'})}}>
+      </DropdownItem>
       <DebugItem
         id={'Assess Storage'}
         leftIcon={'🛠'}
@@ -118,11 +123,6 @@ export function DropdownMenu(_props) {
         id={'Update Tweets'}
         leftIcon={'🛠'}
         effect={()=>{msgBG({type:'update-tweets'})}}>
-      </DebugItem>
-      <DebugItem
-        id={'Update Timeline'}
-        leftIcon={'🛠'}
-        effect={()=>{msgBG({type:'update-timeline'})}}>
       </DebugItem>
       <DebugItem
         id={'Get Latest'}

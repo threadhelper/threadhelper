@@ -1,6 +1,6 @@
 import {getData, setData, makeOnStorageChanged} from '../utils/dutils.jsx';
 import { flattenModule, inspect, renameKeys} from '../utils/putils.jsx';
-import { indexOf, isNil, unescape } from 'lodash';
+import { unescape } from 'lodash';
 import * as R from 'ramda';
 flattenModule(global,R)
 

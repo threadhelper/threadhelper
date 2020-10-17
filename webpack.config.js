@@ -1,7 +1,9 @@
 const ChromeExtensionReloader  = require('webpack-chrome-extension-reloader');
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
+
 
 module.exports = {
-  devtool: 'source-map',
+  devtool: false,//'source-map',
   mode: 'production',
   entry: {
     popup: './src/popup.jsx',
@@ -21,7 +23,8 @@ module.exports = {
         contentScript: 'content-script', // Use the entry names, not the file name or the path
         background: 'background' // *REQUIRED
       }
-    })
+    }),
+    // new BundleAnalyzerPlugin()
   ],
   module: {
     rules: [
@@ -37,7 +40,7 @@ module.exports = {
                 "pragma": "h",
                 "pragmaFrag": "Fragment",
               }],
-              "@babel/plugin-proposal-class-properties"
+              "@babel/plugin-proposal-class-properties",
             ]
           }
         }

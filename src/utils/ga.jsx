@@ -5,7 +5,7 @@ export const UA_CODE = 'UA-170230545-2'
 
 export const initGA = () => {
   ReactGA.initialize(UA_CODE, {
-    debug: true,
+    debug: false,
     titleCase: false,
   });
   ReactGA.ga('set', 'checkProtocolTask', null);
