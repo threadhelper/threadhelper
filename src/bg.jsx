@@ -231,6 +231,7 @@ export async function main(){
   const updateTimeline$ = makeMsgStream("update-timeline") // reqUpdatedTweets$ :: msg
   
   const hasTimeline$ = (await _makeStgObs('hasTimeline'))
+  hasTimeline$.log('hasTimeline$')
   const missingTimeline$ = hasTimeline$.map(not)
   missingTimeline$.log('missingTimeline$')
   // const reqTimeline$ = makeSafe(Kefir.merge([updateTimeline$, initData$]))  // reqTimeline$ :: msg
