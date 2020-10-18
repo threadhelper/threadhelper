@@ -20,12 +20,18 @@ const usePageN = (n0, nMax)=>{
   return [page, incPage, decPage, setPage]
 }
 
+const VideoTutorial = ()=>{
+  // return (<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/voCpNvldCjk" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>)
+  return (<iframe width="100%" src="https://www.youtube-nocookie.com/embed/voCpNvldCjk" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>)
+
+}
+
 export function Tutorial(props){
   const [imgs, setImgs] = useState(tutorialImgLoader())
   const tutorialPages = 
   // [{text:<span>Welcome to Thread Helper! 🧵 Just open Twitter and you should see our sidebar. Have feedback? <a href="#" onClick={_=>setPage(pages.length)}>Click here and write it down.</a></span>, 
   [{text:<span>Welcome to Thread Helper! Just open Twitter and you should see our sidebar. Have feedback? <a href="#" onClick={_=>setPage(pages.length)}>Click here and write it down.</a></span>, 
-    img:null,},
+    img:VideoTutorial(),},
    {text:<span>{'ThreadHelper is a new app that finds you the tweets you need as you type.'}</span>, 
    img:getImage(img1)},
    {text:<span>{'As you type, the results on the sidebar change. You can click them to copy their link and easily paste them into the tweet you\'re writing to generate a quote tweet.'}</span>, 
