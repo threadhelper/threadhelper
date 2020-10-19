@@ -130,7 +130,7 @@ export async function main(){
   const removeTweet = async id => removeTweets([id])
   const dbClear =  async () => msgPromiseWorker({type:'dbClear'}) // dbClear :: IMPURE () -> Promise ()
   const resetIndex =  async () => msgPromiseWorker({type:'resetIndex'}) // resetIndex :: IMPURE () -> Promise ()
-  const resetData = _ => {console.log('[INFO] Resetting storage'); Promise.all([resetStorage(), dbClear()]) }
+  const resetData = _ => {console.log('[INFO] Resetting storage'); return Promise.all([resetStorage(), dbClear()]) }
   // const reqDbGet = ids =>{ msgPromiseWorker({type:'dbGet', ids:ids})} // reqDbGet :: IMPURE [id] -> Promise [tweet]
   const doSearch = async query => msgPromiseWorker(makeReqSearchMsg(query)); // doSearch :: IMPURE String -> Promise [tweet]
   const getDefaultTweets = async () => msgPromiseWorker(makeReqDefaultTweetsMsg())// getDefaultTweets :: IMPURE () -> Promise [tweet]
@@ -211,6 +211,9 @@ export async function main(){
   const notReady$ = ready$.map(not) // notReady$ :: Bool
   const makeSafe = stream => stream.bufferWhileBy(notReady$).flatten() // makeSafe :: Stream -> Stream
   const makeMsgStreamSafe = name => makeSafe(makeMsgStream(name)) // makeMsgStreamSafe :: String -> Stream msg
+  const errorFilter = stream => stream.filterErrors(e=>{
+    console.log('[ERROR]', {stream, e});
+    return false})
 // 
   const reqClear$ = makeMsgStream("clear") // reqClear$ :: msg
   const dataReset$ = promiseStream(reqClear$, resetData) // dbCleared$ :: msg
@@ -236,18 +239,18 @@ export async function main(){
   const anyAPIReq$ = Kefir.merge([reqUpdatedTweets$, reqBookmarks$, reqTimeline$, reqAddBookmark$,]) // anyAPIReq$ :: msg
   anyAPIReq$.log('[DEBUG] anyAPIReq$')
 
-  const fetchedUpdate$ = promiseStream(reqUpdatedTweets$, _ => updateQuery(getAuthInit, getUsername(), update_size)) // IMPURE fetchedUpdate$ :: [apiTweet]
-  const fetchedTimeline$ = promiseStream(reqTimeline$, _ => timelineQuery(getAuthInit, getUserInfo())) // IMPURE fetchedTimeline$ :: [apiTweet]
-  const fetchedBookmarks$ = promiseStream(reqBookmarks$, _ => getBookmarks(getAuthInit)) // IMPURE fetchedBookmarks$ :: [apiBookmark]
-  const fetchedBookmark$ = promiseStream(reqBookmarkId$, tweetLookupQuery(getAuthInit)) // IMPURE fetchedBookmark$ :: [apiTweet]
+  const fetchedUpdate$ = errorFilter(promiseStream(reqUpdatedTweets$, _ => updateQuery(getAuthInit, getUsername(), update_size))) // IMPURE fetchedUpdate$ :: [apiTweet]
+  const fetchedTimeline$ = errorFilter(promiseStream(reqTimeline$, _ => timelineQuery(getAuthInit, getUserInfo()))) // IMPURE fetchedTimeline$ :: [apiTweet]
+  const fetchedBookmarks$ = errorFilter(promiseStream(reqBookmarks$, _ => getBookmarks(getAuthInit))) // IMPURE fetchedBookmarks$ :: [apiBookmark]
+  const fetchedBookmark$ = errorFilter(promiseStream(reqBookmarkId$, tweetLookupQuery(getAuthInit))) // IMPURE fetchedBookmark$ :: [apiTweet]
 
-  const fetchedAnyAPIReq$ = Kefir.merge([fetchedUpdate$, fetchedTimeline$, fetchedBookmarks$, fetchedBookmark$,]) // fetchedAnyAPIReq$ :: [apiTweet]
+  const fetchedAnyAPIReq$ = errorFilter(Kefir.merge([fetchedUpdate$, fetchedTimeline$, fetchedBookmarks$, fetchedBookmark$,])) // fetchedAnyAPIReq$ :: [apiTweet]
   fetchedAnyAPIReq$.log('[DEBUG] fetchedAnyAPIReq$')
     // User submitted  
   const reqArchiveLoad$ = makeMsgStreamSafe("temp-archive-stored") // reqArchiveLoad$ :: msg
   reqArchiveLoad$.log('[DEBUG] reqArchiveLoad$')
   const extractTweetPropIfNeeded = ifElse(prop('tweet'), prop('tweet'), x=>x)
-  const archiveLoadedTweets$ = promiseStream(reqArchiveLoad$, pipe(_=>getData("temp_archive"), andThen(map(extractTweetPropIfNeeded)))) // IMPURE archiveLoadedTweets$ :: [archTweet]
+  const archiveLoadedTweets$ = errorFilter(promiseStream(reqArchiveLoad$, pipe(_=>getData("temp_archive"), andThen(map(extractTweetPropIfNeeded))))) // IMPURE archiveLoadedTweets$ :: [archTweet]
   archiveLoadedTweets$.log('[DEBUG] archiveLoadedTweets$')
   const archTweets$ = archiveLoadedTweets$.map(saferMap(archToTweet(getUserInfo)))
   
@@ -269,11 +272,11 @@ export async function main(){
   idsToRemove$.log('[DEBUG] idsToRemove$')
   
   // Worker returns  
-  const addedTweets$ = promiseStream(thTweets$, addTweets) // addedTweets$ :: msg
+  const addedTweets$ = errorFilter(promiseStream(thTweets$, addTweets)) // addedTweets$ :: msg
   addedTweets$.log('[DEBUG] addedTweets$')
-  const removedTweet$ = promiseStream(idsToRemove$, removeTweet)  // removedTweet$ :: msg
+  const removedTweet$ = errorFilter(promiseStream(idsToRemove$, removeTweet))  // removedTweet$ :: msg
   removedTweet$.log('[DEBUG] removedTweet$')
-  const updatedTweets$ = promiseStream(thUpdate$, updateTweets) // updatedTweets$ :: msg    // fetchedUpdate$ gets added for a secnod time because update is the way we find deleted recent tweets
+  const updatedTweets$ = errorFilter(promiseStream(thUpdate$, updateTweets)) // updatedTweets$ :: msg    // fetchedUpdate$ gets added for a secnod time because update is the way we find deleted recent tweets
   updatedTweets$.log('[DEBUG] updatedTweets$')
   
   const anyTweetUpdate$ = Kefir.merge([updatedTweets$, addedTweets$, removedTweet$, dataReset$]).toProperty()  // anyTweetUpdate$ :: msg
@@ -288,9 +291,13 @@ export async function main(){
   const makeFlag = curry((def, stream0, stream1) => Kefir.merge([toVal(false, stream0), toVal(true, stream1)]).map(defaultTo(def)).toProperty(()=>def))
   const makeFlagT = makeFlag(true)
   const notArchLoading$ = makeFlagT(reqArchiveLoad$, archiveLoadedTweets$)
+  notArchLoading$.log('[DEBUG] notArchLoading$')
   const notFetchingAPI$ = makeFlagT(anyAPIReq$, fetchedAnyAPIReq$)
+  notFetchingAPI$.log('[DEBUG] notFetchingAPI$')
   const notMidWorkerReq$ = makeFlagT(anyWorkerReq$, anyTweetUpdate$)
+  notMidWorkerReq$.log('[DEBUG] notMidWorkerReq$')
   const syncLight$ = streamAnd([notArchLoading$, notFetchingAPI$, notMidWorkerReq$, ready$]).map(defaultTo(false)).toProperty(F)
+  syncLight$.log('[DEBUG] syncLight$')
   // CS messages
   const searchQuery$ = makeMsgStream("search").map(prop('query')).toProperty(()=>'')
   // const reqRoboQuery$ = msg$.filter(x=>!isNil(x)).filter(propEq('type', 'robo-tweet')).bufferWhileBy(notReady$).flatten()
