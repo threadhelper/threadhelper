@@ -10,9 +10,9 @@ don't forget to `npm install`
 - just builds
 
 # Rough description of how it works
-cs.jsx listens to twitter page events, renders and displays sidebars
-bg.jsx gets action requests from cs.jsx, interacts with chrome.storage and Twitter API. 
-worker/worker.jsx gets search and database requests from bg.jsx 
+- cs.jsx listens to twitter page events, renders and displays sidebars
+- bg.jsx gets action requests from cs.jsx, interacts with chrome.storage and Twitter API. 
+- worker/worker.jsx gets search and database requests from bg.jsx 
 
 # Tech stack / Packages to know about
 Front the back to the front
