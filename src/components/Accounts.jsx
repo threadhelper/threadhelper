@@ -1,12 +1,11 @@
 import { h, render, Component } from 'preact';
 import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
 import { initGA, csEvent, PageView, UA_CODE } from '../utils/ga.jsx'
-import AccountIcon from '../../images/shuffle.svg';
+import AccountIcon from '../../images/account.svg';
 import {DropdownMenu} from './Dropdown.jsx'
 import { msgBG, setStg, applyToOptionStg } from '../utils/dutils';
 import { defaultTo, pipe, not} from 'ramda'
 
-const debug = false
 
 const items = [
   {id: 'Account name', leftIcon: '⛔', effect: ()=>{console.log('clicked account name')}},
@@ -34,9 +33,9 @@ export function AccountsButton(props){
   return (
     <div className="nav-item" >
       <div class="options icon-button" > 
-        < AccountIcon class='dropdown-icon' onClick={onClickSettings} onBlur={closeMenu} /> 
+        < AccountIcon class='filter-icon' onClick={onClickSettings} onBlur={closeMenu} /> 
       </div>
-      {open && <DropdownMenu name={'Accounts'} items={items} debugItems={[]} closeMenu={()=>setOpen(false)}/>}
+      {open && <DropdownMenu name={'Accounts'} items={items} debugItems={[]} closeMenu={()=>setOpen(false)} itemClickClose={false}/>}
     </div>
   )
 }

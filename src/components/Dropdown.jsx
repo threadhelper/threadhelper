@@ -5,6 +5,9 @@ import GearIcon from '../../images/gear.svg';
 import { msgBG, setStg, applyToOptionStg } from '../utils/dutils';
 import { defaultTo, pipe, not} from 'ramda'
 
+const debug = true
+
+
 export function DropdownMenu(_props) {
   const dropdownRef = useRef(null);
 
@@ -12,7 +15,7 @@ export function DropdownMenu(_props) {
     const onClickItem = e=>{
       csEvent('User', `${_props.name} dropdown click` , props.id);      
       props.effect(); 
-      _props.closeMenu();
+      defaultTo(true, _props.itemClickClose) ? _props.closeMenu() : null
     }
     return (
       <a href="#" className="menu-item" onClick={onClickItem}>

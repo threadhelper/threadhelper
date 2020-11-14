@@ -329,6 +329,7 @@ export async function main(){
   
     // Worker returns
   const gotDefaultTweets$ = promiseStream(reqDefaultTweets$, getDefaultTweets).map(prop('res')) // gotDefaultTweets$ :: [tweets]
+  gotDefaultTweets$.log('gotDefaultTweets$')
   const filterTweets = x=>filter(filterTweet(curVal(searchFilters$), getUsername()), x)
   const filteredDefaultTweets$ = Kefir.merge([gotDefaultTweets$, gotDefaultTweets$.sampledBy(searchFilters$)]).map(filterTweets)
   filteredDefaultTweets$.log('filteredDefaultTweets$')

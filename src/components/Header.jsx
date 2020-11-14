@@ -17,9 +17,9 @@ export function Header(){
   return (
     <div class="header">
       <SyncIcon/>
+      {/* <AccountsButton/> */}
       <div class="title-container"> <span class="th-title">ThreadHelper</span></div>
       {!hasArchive ? <ArchiveUploader /> : null}
-      <AccountsButton/>
       <SettingsButton/>
     </div>
   );

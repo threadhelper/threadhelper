@@ -25,7 +25,6 @@ function onGetBookmarks(){
 
 const items = [
   // {id: 'Load Archive', leftIcon: <GearIcon />, effect: ()=>{}},
-  {id: 'Reset Storage', leftIcon: '⛔', effect: onClearStorage},
   {id: 'Update Timeline', leftIcon: '♻', effect: ()=>{msgBG({type:'update-timeline'})}},
   {id: 'Reset Storage', leftIcon: '⛔', effect: onClearStorage},
 ]
@@ -53,6 +52,7 @@ export function SettingsButton(props){
 
   const clickSettings = ()=>{
     csEvent('User', 'Clicked Settings button', '')
+    console.log('Clicked Settings button')
     setOpen(!open)
   }
 
