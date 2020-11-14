@@ -32,7 +32,7 @@ export function Console(){
           <input id="useShuffle" name="useShuffle" class='filter-checkbox' type="checkbox" checked={idle2Shuffle(idleMode)} onChange={(e)=>handleInputChange(pipe(shuffle2Idle, setIdleMode), e)}></input> 
           <label for="useShuffle" >< ShuffleIcon class='filter-icon' onClick={_ => _} /> </label>
         </span>
-        <span>' '</span>
+        <span></span>
         <span class="getRTs"> 
           <input id="getRTs" name="getRTs" class='filter-checkbox' type="checkbox" checked={getRTs} onChange={(e)=>handleInputChange(setGetRTs, e)}></input> 
           <label for="getRTs" >< RetweetIcon class='filter-icon' onClick={_ => _} /> </label>

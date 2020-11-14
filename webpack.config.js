@@ -3,8 +3,8 @@ const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPl
 
 
 module.exports = {
-  devtool: false,
-  // devtool: 'eval-source-map',
+  // devtool: false,
+  devtool: 'source-map',
   mode: 'production',
   // mode: 'development',
   entry: {
