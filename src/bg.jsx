@@ -5,7 +5,7 @@ import ReactGA from 'react-ga';
 import { initGA, Event, Exception, PageView } from './utils/ga.jsx'
 import PromiseWorker from 'promise-worker'
 // import { getTwitterTabIds} from './utils/wutils.jsx'
-import { flattenModule, inspect, toggleDebug, currentValue, nullFn, isExist } from './utils/putils.jsx'
+import { flattenModule, delay, inspect, toggleDebug, currentValue, nullFn, isExist } from './utils/putils.jsx'
 import * as R from 'ramda';
 flattenModule(window,R) 
 import Kefir from 'kefir';
@@ -16,7 +16,8 @@ import * as db from './bg/db.jsx'
 import { initWorker} from './bg/workerBoss.jsx'
 // import { makeRoboRequest} from './bg/robo.jsx'
 import { makeIndex, loadIndex, updateIndex, search} from './bg/nlp.jsx'
-import { fetchUserInfo, updateQuery, tweetLookupQuery, timelineQuery, getRandomSampleTweets, getLatestTweets, getBookmarks, } from './bg/twitterScout.jsx'
+import { fetchUserInfo, updateQuery, tweetLookupQuery, timelineQuery, getBookmarks, } from './bg/twitterScout.jsx'
+import { getRandomSampleTweets, getLatestTweets, filterTweet } from './bg/search.jsx'
 import { validateTweet, archToTweet, bookmarkToTweet, apiToTweet} from './bg/tweetImporter.jsx'
 // import { includes, isEmpty } from "lodash";
 
@@ -46,7 +47,7 @@ const emitOnInstalled = (busy) => {self.dispatchEvent(makeMidSearchEvent(busy));
 // Potential imports
   // misc
 const update_size = 200
-const n_tweets_results = 20
+const n_tweets_results = 30
 const getDateFormatted = () => (new Date()).toLocaleString()
 const apiBookmarkToTweet = pipe(apiToTweet, assoc('is_bookmark', true))
 
@@ -108,7 +109,7 @@ export async function main(){
   // Message builders
   const makeReqSearchMsg = (query)=>{return { // MakeReqSearchMsg :: Strnig -> msg
     type:'searchIndex', 
-    filters:getFilters(),
+    filters:curVal(searchFilters$),
     username: getUsername(),
     n_results: n_tweets_results,
     query: query,
@@ -116,7 +117,8 @@ export async function main(){
   const makeReqDefaultTweetsMsg = () =>{return{ // makeReqDefaultTweetsMsg :: -> msg
     type:'getDefaultTweets',
     n_tweets: n_tweets_results, 
-    filters: getFilters(), 
+    filters: curVal(searchFilters$), 
+    idle_mode: curVal(idleMode$),
     // db_get, //send from worker 
     screen_name: getUsername(),
     // keys //send frm worker
@@ -124,6 +126,7 @@ export async function main(){
     // Worker requests
   // const msgWorker = msgSomeWorker(worker)  // msgWorker :: msg -> Promise
   const msgPromiseWorker = msgSomeWorker(promiseWorker)
+  const isWorkerReady = async () => {console.log('asking isWorkerReady'); return msgPromiseWorker({type:'isWorkerReady'})} // isWorkerReady :: () -> Promise int
   const howManyTweetsDb = async _ => msgPromiseWorker({type:'howManyTweetsDb'}) // howManyTweetsDb :: () -> Promise int
   const updateTweets = async res => msgPromiseWorker({type:'updateTweets', res:res}) // updateTweets :: IMPURE [id] -> Promise ()
   const addTweets = async res => msgPromiseWorker({type:'addTweets', res:res}) // addTweets :: IMPURE [id] -> Promise ()
@@ -144,17 +147,16 @@ export async function main(){
   // 
   // Stream value getters
   // const getIndex = ()=>index$.currentValue()
-  const getAuthInit = ()=>makeInit(unique_auth$.currentValue())
-  const getUserInfo = () => userInfo$.currentValue()
-  const getUsername = () => userInfo$.currentValue().screen_name
-  const whenLastUpdate = ()=>whenUpdated$.currentValue()
-  const getFilters = ()=>searchFilters$.currentValue()
+  const curVal = stream => stream.currentValue()
+  const getAuthInit = () => makeInit(curVal(unique_auth$))
+  const getUsername = () => curVal(userInfo$).screen_name
+
 
   const makeSyncDisplayMsg = async ()=>{  // Potential import
     const username = getUsername()
     // const n_tweets = await howManyTweetsDb(_db)
     const n_tweets = await howManyTweetsDb()
-    const dateTime = await whenLastUpdate()
+    const dateTime = await curVal(whenUpdated$)
     return `Hi ${username}, I have ${n_tweets} tweets available. \n Last updated on ${dateTime}`
   }
 
@@ -174,8 +176,12 @@ export async function main(){
   const storageChange$ = makeStorageObs() // storageChange$ :: () -> change  // change :: {itemName, oldVal, newVal} // Listens to changes in chrome.storage
   const optionsChange$ = storageChange$.filter(x=>x.itemName=='options') // optionsChange$ :: change -> change //.toProperty(await (async ()=>{return {oldVal:null, newVal:await getOptions()}}))
   const makeOptionObs = _makeOptionObs(optionsChange$) // Function
+        //Display options
+  const idleMode$ = (await makeOptionObs('idleMode')).map(prop('value')) // idleMode$ :: () -> String {'random', 'timeline'}
+  idleMode$.log('idleMode$')
         // Search filters
   const getRT$ = await makeOptionObs('getRTs') // getRT$ :: () -> Bool
+  getRT$.log('getRT$')
   const useBookmarks$ = await makeOptionObs('useBookmarks') // useBookmarks$ :: () -> Bool
   const useReplies$ = await makeOptionObs('useReplies') // useReplies$ :: () -> Bool
   const searchFilters$ = Kefir.combine([getRT$, useBookmarks$, useReplies$], combineOptions).toProperty()
@@ -188,11 +194,12 @@ export async function main(){
     combineOptions
     ).toProperty()
   */
-  // 
+  
     // Worker
       // Sync
   const workerMsg$ = Kefir.fromEvents(worker,'message').map(prop('data'))
   const workerReady$ = workerMsg$.filter(propEq('type', 'ready')).map( x=>{return isNil(x) ? false : true}).toProperty(F)
+  const askWorkerReady$ = workerReady$.filter(equals(false)).throttle(2500)
       // IO
   // const updatedTweets$ = workerMsg$.filter(propEq('type','updateTweets'))    // handles the return of a updateTweets action from worker
   // const removedTweet$ = workerMsg$.filter(propEq('type','removeTweets'))
@@ -246,7 +253,7 @@ export async function main(){
   anyAPIReq$.log('anyAPIReq$')
 
   const fetchedUpdate$ = promiseStream(reqUpdatedTweets$, _ => updateQuery(getAuthInit, getUsername(), update_size)) // IMPURE fetchedUpdate$ :: [apiTweet]
-  const fetchedTimeline$ = promiseStream(reqTimeline$, _ => timelineQuery(getAuthInit, getUserInfo())) // IMPURE fetchedTimeline$ :: [apiTweet]
+  const fetchedTimeline$ = promiseStream(reqTimeline$, _ => timelineQuery(getAuthInit, curVal(userInfo$))) // IMPURE fetchedTimeline$ :: [apiTweet]
   const fetchedBookmarks$ = promiseStream(reqBookmarks$, _ => getBookmarks(getAuthInit)) // IMPURE fetchedBookmarks$ :: [apiBookmark]
   const fetchedBookmark$ = promiseStream(reqBookmarkId$, tweetLookupQuery(getAuthInit)) // IMPURE fetchedBookmark$ :: [apiTweet]
 
@@ -258,7 +265,7 @@ export async function main(){
   const extractTweetPropIfNeeded = ifElse(prop('tweet'), prop('tweet'), x=>x)
   const archiveLoadedTweets$ = promiseStream(reqArchiveLoad$, pipe(_=>getData("temp_archive"), andThen(map(extractTweetPropIfNeeded)))) // IMPURE archiveLoadedTweets$ :: [archTweet]
   archiveLoadedTweets$.log('archiveLoadedTweets$')
-  const archTweets$ = archiveLoadedTweets$.map(saferMap(archToTweet(getUserInfo)))
+  const archTweets$ = archiveLoadedTweets$.map(saferMap(()=>curVal(userInfo$)))
   
   const thUpdate$ = fetchedUpdate$.map(saferMap(apiToTweet)) // thUpdate$ :: [tweet] // update as threadhelper tweets 
   const thTweets$ = Kefir.merge([ // thTweets$ :: [tweet] // tweet :: threadhelper_tweet
@@ -313,7 +320,8 @@ export async function main(){
     ]))
     // doSearch
   const reqDefaultTweets$ = makeSafe(Kefir.merge([  // reqDefaultTweets$ :: msg | String // triggers getting and pushing default tweets
-    searchQuery$.sampledBy(searchFilters$),//.filter(pipe(isExist,R.not)),
+    // searchQuery$.sampledBy(searchFilters$),//.filter(pipe(isExist,R.not)),
+    searchQuery$.sampledBy(idleMode$),//.filter(pipe(isExist,R.not)),
     searchQuery$.sampledBy(anyTweetUpdate$),//.filter(pipe(isExist,R.not)),
     makeMsgStream("get-latest"),
     anyTweetUpdate$,
@@ -322,9 +330,13 @@ export async function main(){
 
   
     // Worker returns
-  const gotDefaultTweets$ = promiseStream(reqDefaultTweets$, getDefaultTweets) // gotDefaultTweets$ :: [tweets]
-  // const filteredDefaultTweets$
-  const searchResults$ = promiseStream(reqSearch$, doSearch) // searchResults$ :: [tweets]
+  const gotDefaultTweets$ = promiseStream(reqDefaultTweets$, getDefaultTweets).map(prop('res')) // gotDefaultTweets$ :: [tweets]
+  gotDefaultTweets$.log('gotDefaultTweets$')
+  // const filterTweets = pipe(x=>{console.log(`filterTweets`,  {filters: curVal(searchFilters$), username:getUsername(), filterFn: filterTweet(curVal(searchFilters$), getUsername())}); return x}, filter(filterTweet(curVal(searchFilters$), getUsername())), inspect('after filterTweets'))
+  const filterTweets = x=>filter(filterTweet(curVal(searchFilters$), getUsername()), x)
+  const filteredDefaultTweets$ = Kefir.merge([gotDefaultTweets$, gotDefaultTweets$.sampledBy(searchFilters$)]).map(filterTweets)
+  filteredDefaultTweets$.log('filteredDefaultTweets$')
+  const searchResults$ = promiseStream(reqSearch$, doSearch).map(prop('res')) // searchResults$ :: [tweets]
   // const filteredSearchResults$ = 
   // 
   
@@ -344,7 +356,7 @@ export async function main(){
 
   // const reqRoboQueryEffects = m=>{setData({'roboSync':false}); makeRoboRequest(getAuthInit,m).then(roboTweet=> setData({'roboTweet':roboTweet, 'roboSync':true}))}
   
-  const checkGotTimeline = timeline => timeline.length > 3000 || timeline.length >= getUserInfo().statuses_count-1
+  const checkGotTimeline = timeline => timeline.length > 3000 || timeline.length >= curVal(userInfo$).statuses_count-1
   // Effects from streams
     // Ready / sync
   ready$.log('READY')
@@ -352,7 +364,10 @@ export async function main(){
   csGaEvent$.log('csGaEvent$')
   subObs(csGaEvent$, pipe(values,x=>Event(...x)))
   subObs(csGaException$, pipe(values,x=>Exception(...x)))
-  workerReady$.log('workerReady')
+  // workerReady$.log('workerReady')
+  // subObs(workerReady$, pipe(inspect('workerReady$'), filter(equals(false)), _=>delay(3000), andThen(()=>isWorkerReady())))
+  subObs(askWorkerReady$, _=>isWorkerReady())
+  
   subObs(syncDisplay$, pipe(_=>makeSyncDisplayMsg(), andThen(setStg('syncDisplay')))) // update sync display
   subObs(syncLight$, setStg('sync'))
     // Worker actions
@@ -364,11 +379,13 @@ export async function main(){
   subObs(reqAddBookmark$, nullFn) // happens on requests to add a bookmark
   subObs(archiveLoadedTweets$, clearTempArchive) // happens after tweets are updated by worker, should only happen after loading archive
       // Search
+  subObs(searchFilters$, nullFn)
+  searchFilters$.log('searchFilters$')
   // subObs(reqSearch$, doSearch)
   subObs(reqDefaultTweets$, nullFn)
-  subObs(searchResults$, pipe(prop('res'), setStg('search_results')))
+  subObs(searchResults$, pipe(setStg('search_results')))
   // subObs(filteredSearchResults$, pipe(prop('res'), setStg('search_results')))
-  subObs(gotDefaultTweets$, pipe(prop('res'), setStg('latest_tweets')))
+  subObs(filteredDefaultTweets$, pipe(setStg('latest_tweets')))
   // subObs(filteredDefaultTweets$, pipe(prop('res'), setStg('latest_tweets')))
   // bg search
   // subObs(searchResult$, pipe(getTweetsFromDbById, andThen(pipe(setStg('search_results'), andThen(x=>{emitMidSearch(false); return x;})))))
@@ -380,10 +397,9 @@ export async function main(){
   // subObs(reqRoboQuery$, reqRoboQueryEffects)
     // Debug
   subObs(logAuth$, ()=>console.log(getAuthInit()))  
-  subObs(getUserInfo$, ()=>getUserInfo(getAuthInit))
+  subObs(getUserInfo$, ()=>curVal(userInfo$))
   // subObs(searchQuery$, nullFn)
-  subObs(searchFilters$, nullFn)
-  searchFilters$.log('searchFilters$')
+  
 }
 
 //  
@@ -391,12 +407,16 @@ export async function main(){
 
 let twitterTabs = []// twitterTabs :: int
 
+
+
 function onInstalled() {
-  chrome.declarativeContent.onPageChanged.removeRules(undefined, function() {
-    chrome.declarativeContent.onPageChanged.addRules([
-      {conditions: [new chrome.declarativeContent.PageStateMatcher({pageUrl: { urlContains: "twitter.com" }})],
-        actions: [new chrome.declarativeContent.ShowPageAction()]}]);});
-  // twitterTabs.forEach(x=>chrome.tabs.reload(x)) // this shouldn't work bc installed is the first thing that happens
+  // chrome.declarativeContent.onPageChanged.removeRules(undefined, function() {
+  //   chrome.declarativeContent.onPageChanged.addRules([
+  //     {conditions: [new chrome.declarativeContent.PageStateMatcher({pageUrl: { urlContains: "twitter.com" }})],
+  //       actions: [new chrome.declarativeContent.ShowPageAction()]}]);});
+        // chrome.pageAction.show(tabId);
+        // chrome.pageAction.hide(tabId);
+
 }
 
 // TODO emit to active tab
@@ -413,6 +433,17 @@ function onTabActivated(activeInfo){
       }}});}
 
 function onTabUpdated(tabId, change, tab){
+  try{
+    console.log(`[DEBUG] onTabUpdated`, {change, tab})
+    if (change.status === 'complete' && tab.url.match(twitter_url)) {
+          chrome.browserAction.disable(tabId);
+      } else {
+          chrome.browserAction.enable(tabId);
+    }
+  } catch(e){
+    chrome.browserAction.disable(tabId);
+    console.log(`[ERROR] onTabUpdated`, {e, tab})
+    }
   if (tab.active && change.url) {
     if (change.url.match(twitter_url)){
       msgCS(tab.id,{type:"tab-change-url", url:change.url, cs_id: tab.id})

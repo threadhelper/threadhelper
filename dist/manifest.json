@@ -2,23 +2,32 @@
   "name": "ThreadHelper",
   "description": "A serendipity engine on the Twitter sidebar.",
   "version": "0.2.1.4",
+  "browser_action": {
+    "default_icon": {
+      "16": "images/extension/thread_16.png",
+      "32": "images/extension/thread_32.png",
+      "48": "images/extension/thread_48.png",
+      "128": "images/extension/thread_128.png"
+    },
+    "default_title": "ThreadHelper",      // optional; shown in tooltip
+    "default_popup": "popup.html"        // optional
+  },
   "permissions": [
-    "declarativeContent",
     "storage",
     "unlimitedStorage",
     "webRequest",
     "https://api.twitter.com/",
     "https://*.twitter.com/*"
   ],
-  "browser_action": {
-    "default_title": "ThreadHelper",
-    "default_popup": "popup.html"
-  },
   "manifest_version": 2,
   "content_scripts": [
     {
       "matches": ["https://*.twitter.com/*"],
       "js": ["content-script.js"]
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["testcs.js"]
     }
   ],
   "background": {
@@ -29,7 +38,5 @@
     "32": "images/extension/thread_32.png",
     "48": "images/extension/thread_48.png",
     "128": "images/extension/thread_128.png"
-  },
-  "content_security_policy": "script-src 'self' https://www.google-analytics.com/; object-src 'self'"
-
+  }
 }

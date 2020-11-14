@@ -1,3 +1,4 @@
+/* For interacting with Twitter API */
 import {delay}  from 'delay'
 import {getData, setData, makeOnStorageChanged} from '../utils/dutils.jsx';
 import { flattenModule, inspect} from '../utils/putils.jsx';
@@ -55,141 +56,6 @@ const makeTweetQueryUrl = curry( (max_id, username, count) => {
 const makeUpdateQueryUrl = makeTweetQueryUrl(-1)
 
 
-// export const idComp = curry((a,b)=>a.localeCompare(b,undefined,{numeric: true})) // WRONG
-export const idComp = curry((a,b)=> BigInt(a) == BigInt(b) ? 0 : (BigInt(a) < BigInt(b) ? -1 : 1))
-const gtId = curry((a,b) => idComp(a,b) > 0) // gt for ids
-const ltId = curry((a,b) => idComp(a,b) < 0) //lt for ids
-const sortKeys = keys => keys.sort(idComp)
-
-// 
-// newest (largest id) first
-function sortTweets(tweetDict){
-  let keys = Object.keys(tweetDict)
-  let skeys = sortKeys(keys)
-  let stobj = Object.fromEntries(skeys.map((k)=>{return[k,tweetDict[k]]}))
-  return stobj
-}
-
-const overlap = (minNew, maxNew, currentIds) => pipe(sortKeys,dropLastWhile(gtId(__, maxNew)), dropWhile(ltId(__, minNew)))(currentIds)
-
-
-export const findDeletedIds = (currentIds, incomingIds) =>{
-  if(isEmpty(currentIds)) return []
-  // const minNew = reduce(minBy(idComp), '0', newTweets)
-  // const maxNew = reduce(maxBy(idComp), Number.MAX_SAFE_INTEGER.toString(), newTweets)
-  const sortedNew = sortKeys(incomingIds)
-  const minNew = sortedNew[0]
-  const maxNew = sortedNew[sortedNew.length - 1]
-  const overlappingOldTweets = overlap(minNew, maxNew, currentIds)
-  console.log(`counting deleted tweets from ${minNew} to ${maxNew}`, {overlappingOldTweets, currentIds, incomingIds})
-  return difference(overlappingOldTweets, incomingIds)
-}
-
-const getDocUsername = (ref) => index.documentStore.getDoc(ref).username
-const isRT = propEq()
-const isBookmark = prop('is_bookmark')
-const isReply = x=>!isNil(x.reply_to) && x.reply_to === x.username
-
-// To see if a tweet can be sampled according to search filters
-const makeValidityTest = (filters, screen_name)=>{
-  const isRT = t=>((t.username != screen_name) && !t.is_bookmark)
-  const isBookmark = prop('is_bookmark')
-  const isReply = t=>!isNil(t.reply_to) && t.reply_to != t.username  
-  const isValidTweet = t => 
-  (filters.getRTs || !isRT(t)) && 
-  (filters.useBookmarks || !isBookmark(t)) && 
-  (filters.useReplies || !isReply(t))
-  return isValidTweet
-}
-// takeRandomSample :: [id] -> generator(id)
-export const genRandomSample = (keys)=>{
-  const rnd = Math.random(); 
-  return pipe(
-    length,
-    multiply(rnd), 
-    Math.floor, 
-    nth(__,keys))(keys)}
-
-// get random tweets as a serendipity generator
-// TODO make functional
-// gets one by one
-export const getDefaultTweets = curry(async (sampleFn, n_tweets, filters, db_get, screen_name, getKeys) => {
-  let sample = []
-  const keys = await getKeys()
-  const isFull = (sample) => sample.length >= n_tweets || sample.length >= keys.length
-  // const isValidTweet = makeValidityTest(filters, screen_name)
-  const isRT = t=>(!propEq('username', screen_name, t) && !prop('is_bookmark', t))
-  const isBookmark = prop('is_bookmark')  
-  const isReply = t=>!isNil(prop('reply_to', t)) && prop('reply_to', t) != prop('username', t)  
-  const isValidTweet = t => 
-  (filters.getRTs || !isRT(t)) && 
-  (filters.useBookmarks || !isBookmark(t)) && 
-  (filters.useReplies || !isReply(t))
-
-  while(!isFull(sample)){
-    await pipe(
-      sampleFn,
-      db_get('tweets'),
-      andThen(pipe(
-        when(
-          isValidTweet, 
-          t=>sample.push(t))))
-      )(keys)
-  }
-  return sample
-})
-
-// getRandomSample :: fn -> int -> [id]
-export const getRandomSample = curry( async (getKeys, n_tweets)=>{
-  const keys = await getKeys()
-  return pipe(range(0),_=>map(genRandomSample(keys)))(n_tweets)
-})
-
-
-// filterSample :: (fn, filters, String, [id]) -> [tweet]
-export const filterSample = curry( async (db_get, filters, screen_name, ids)=>{
-  let sample = []
-  const isRT = t=>(!propEq('username', screen_name, t) && !prop('is_bookmark', t))
-  const isBookmark = prop('is_bookmark')  
-  const isReply = t=>!isNil(prop('reply_to', t)) && prop('reply_to', t) != prop('username', t)  
-  const isValidTweet = t => 
-    (filters.getRTs || !isRT(t)) && 
-    (filters.useBookmarks || !isBookmark(t)) && 
-    (filters.useReplies || !isReply(t))
-  while(!isFull(sample)){
-    await pipe(
-      db_get('tweets'),
-      andThen(pipe(when(
-          isValidTweet, 
-          t=>sample.push(t))))
-      )(ids)
-  }
-  return sample
-})
-
-export const getRandomSampleTweets = getDefaultTweets(genRandomSample)
-
-// TODO make functional
-export async function getLatestTweets(n_tweets, filters, db_get, screen_name, getKeys){
-  // let keys = utils.db.getAllKeys('tweets')
-  let latest = []
-  const isFull = (latest) => latest.length >= n_tweets
-  const isRT = t=>((t.username != screen_name) && !t.is_bookmark)
-  const isBookmark = prop('is_bookmark')
-  const isReply = t=>!isNil(t.reply_to) && t.reply_to != t.username  
-  const isValidTweet = t => 
-  (filters.getRTs || !isRT(t)) && 
-  (filters.useBookmarks || !isBookmark(t)) && 
-  (filters.useReplies || !isReply(t))
-
-  
-  for (const k of reverse(sortKeys(await getKeys()))){
-    const t = await db_get('tweets',k)
-    isValidTweet(t) ? latest.push(t) : null
-    if(isFull(latest)) break;
-  }
-  return latest
-}
 
 async function getProfilePics(){
   console.log("getting profile pics")
@@ -315,7 +181,3 @@ export async function getBookmarks(getAuthInit){
   console.log('getBookmarks',{bookmarks, qts, res})
   return values(res)
 }
-
-
-
- 

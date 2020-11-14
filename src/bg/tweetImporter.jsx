@@ -219,3 +219,33 @@ export const validateTweet = t => {
 //   return tweet_
 // }
 
+
+// export const idComp = curry((a,b)=>a.localeCompare(b,undefined,{numeric: true})) // WRONG
+export const idComp = curry((a,b)=> BigInt(a) == BigInt(b) ? 0 : (BigInt(a) < BigInt(b) ? -1 : 1))
+const gtId = curry((a,b) => idComp(a,b) > 0) // gt for ids
+const ltId = curry((a,b) => idComp(a,b) < 0) //lt for ids
+export const sortKeys = keys => keys.sort(idComp)
+
+// 
+// newest (largest id) first
+function sortTweets(tweetDict){
+  let keys = Object.keys(tweetDict)
+  let skeys = sortKeys(keys)
+  let stobj = Object.fromEntries(skeys.map((k)=>{return[k,tweetDict[k]]}))
+  return stobj
+}
+
+const overlap = (minNew, maxNew, currentIds) => pipe(sortKeys,dropLastWhile(gtId(__, maxNew)), dropWhile(ltId(__, minNew)))(currentIds)
+
+
+export const findDeletedIds = (currentIds, incomingIds) =>{
+  if(isEmpty(currentIds)) return []
+  // const minNew = reduce(minBy(idComp), '0', newTweets)
+  // const maxNew = reduce(maxBy(idComp), Number.MAX_SAFE_INTEGER.toString(), newTweets)
+  const sortedNew = sortKeys(incomingIds)
+  const minNew = sortedNew[0]
+  const maxNew = sortedNew[sortedNew.length - 1]
+  const overlappingOldTweets = overlap(minNew, maxNew, currentIds)
+  console.log(`counting deleted tweets from ${minNew} to ${maxNew}`, {overlappingOldTweets, currentIds, incomingIds})
+  return difference(overlappingOldTweets, incomingIds)
+}

@@ -26,10 +26,10 @@ flattenModule(window,R)
 import ThreadHelper from './components/ThreadHelper.jsx'
 
 // Project business 
-var DEBUG = false;
+var DEBUG = true;
 toggleDebug(window, DEBUG)
 Kefir.Property.prototype.currentValue = currentValue
-
+console.log('hello from CS')
 // Sidebar functions
 let thBarHome = makeSidebarHome()
 let thBarComp = makeSidebarCompose()

@@ -6,7 +6,6 @@ import {SettingsButton} from './Settings.jsx';
 import GearIcon from '../../images/gear.svg';
 import { defaultTo, curry, propEq, find, take } from 'ramda'
 import { useStorage } from './useStorage.jsx';
-import ReactGA from 'react-ga';
 import { initGA, csEvent, csException, PageView, UA_CODE } from '../utils/ga.jsx'
 
 function LoadArchiveIcon(){  

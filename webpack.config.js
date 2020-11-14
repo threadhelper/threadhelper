@@ -3,11 +3,14 @@ const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPl
 
 
 module.exports = {
-  devtool: false,//'source-map',
+  devtool: false,
+  // devtool: 'eval-source-map',
   mode: 'production',
+  // mode: 'development',
   entry: {
     popup: './src/popup.jsx',
     'content-script': './src/cs.jsx',
+    'testcs': './src/testcs.jsx',
     background: './src/bg.jsx',
     worker: './src/worker/worker.jsx'
   },
@@ -20,7 +23,7 @@ module.exports = {
       port: 8080, // Which port use to create the server
       reloadPage: true, // Force the reload of the page also
       entries: { // The entries used for the content/background scripts
-        contentScript: 'content-script', // Use the entry names, not the file name or the path
+        contentScript: ['content-script', 'testcs'], // Use the entry names, not the file name or the path
         background: 'background' // *REQUIRED
       }
     }),

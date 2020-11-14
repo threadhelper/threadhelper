@@ -9,9 +9,8 @@ import {pipe, prop, curry} from 'ramda'
 import BookmarkIcon from '../../images/bookmark.svg';
 import ReplyIcon from '../../images/reply.svg';
 import RetweetIcon from '../../images/retweet.svg';
-import ReactGA from 'react-ga';
+import ShuffleIcon from '../../images/shuffle.svg';
 import { initGA, csEvent, PageView, UA_CODE } from '../utils/ga.jsx'
-
 
 export function Console(){
   // const [text, setText] = useState('[console text]');
@@ -20,22 +19,20 @@ export function Console(){
   const [getRTs, setGetRTs] = useOption('getRTs')
   const [useBookmarks, setUseBookmarks] = useOption('useBookmarks')
   const [useReplies, setUseReplies] = useOption('useReplies')
-
-  // useEffect(async () => {
-  //   ReactGA.initialize(UA_CODE, {
-  //     debug: true,
-  //     titleCase: false,
-  //   });
-  //   ReactGA.ga('set', 'checkProtocolTask', null);
-
-  //   console.log('initialized GA in popup', ReactGa)
-  //   // ReactGa.pageview('/popup');
-  // }, []);
+  const [idleMode, setIdleMode] = useOption('idleMode')
+  
+  const idle2Shuffle = idleMode => idleMode === 'random' ? true : false // String -> Bool
+  const shuffle2Idle = val => val ? 'random' : 'timeline' // Bool -> String
 
   return (
     <div class="console">
       <div id='filters'>
         {/* <span>{`Filters:`}</span>       */}
+        <span class="useShuffle"> 
+          <input id="useShuffle" name="useShuffle" class='filter-checkbox' type="checkbox" checked={idle2Shuffle(idleMode)} onChange={(e)=>handleInputChange(pipe(shuffle2Idle, setIdleMode), e)}></input> 
+          <label for="useShuffle" >< ShuffleIcon class='filter-icon' onClick={_ => _} /> </label>
+        </span>
+        <span>' '</span>
         <span class="getRTs"> 
           <input id="getRTs" name="getRTs" class='filter-checkbox' type="checkbox" checked={getRTs} onChange={(e)=>handleInputChange(setGetRTs, e)}></input> 
           <label for="getRTs" >< RetweetIcon class='filter-icon' onClick={_ => _} /> </label>
@@ -53,11 +50,9 @@ export function Console(){
   );
 }
 
+const getTargetVal = target=>(target.type === 'checkbox' ? target.checked : target.value)
 const handleInputChange = curry((_set, event) => {
-  // console.log('handling input change', {event, _set})
-  const getTargetVal = target=>(target.type === 'checkbox' ? target.checked : target.value)
   csEvent('User', `Toggled filter ${event.target.id} to ${getTargetVal(event.target)}`, event.target.id, getTargetVal(event.target) ? 1 : 0,);
-  
   pipe(
     prop('target'),
     getTargetVal,

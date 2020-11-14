@@ -2,7 +2,8 @@ import {curry, isNil} from 'ramda';
 
 //project utilities
 export const flattenModule = (window,R)=>Object.entries(R).forEach(([name, exported]) => window[name] = exported);
-export const inspect = curry ((prepend, x)=>{console.log(prepend, x); return x;})
+export const delay = ms => new Promise(res => setTimeout(res, ms));
+export const inspect = curry ((prepend, data)=>{console.log(prepend, data); return data;})
 export const toggleDebug = (window, debug) => {
   if(!debug){
     console.log("CANCELING CONSOLE")

@@ -1,6 +1,5 @@
 import { h, render, Component } from 'preact';
 import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
-import ReactGA from 'react-ga';
 import { initGA, csEvent, PageView, UA_CODE } from '../utils/ga.jsx'
 import GearIcon from '../../images/gear.svg';
 import { msgBG, setStg, applyToOptionStg } from '../utils/dutils';
@@ -19,11 +18,6 @@ export function SettingsButton(props){
   )
 
   const clickSettings = ()=>{
-    // ReactGA.event({
-    //   category: 'User',
-    //   action: 'Clicked Settings button',
-    //   label:''
-    // });
     csEvent('User', 'Clicked Settings button', '')
     setOpen(!open)
   }

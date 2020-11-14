@@ -4,7 +4,8 @@ import {onWorkerPromise} from './promise-stream-worker.jsx'
 import * as db from '../bg/db.jsx'
 import * as elasticlunr from 'elasticlunr'
 import {makeIndex, updateIndex, search, loadIndex} from '../bg/nlp.jsx'
-import {findDeletedIds, getRandomSampleTweets} from '../bg/twitterScout.jsx'
+import {getRandomSampleTweets, getLatestTweets} from '../bg/search.jsx'
+import {findDeletedIds} from '../bg/tweetImporter.jsx'
 import { flattenModule, inspect, toggleDebug, currentValue, isExist } from '../utils/putils.jsx'
 import * as R from 'ramda';''
 flattenModule(global,R)
@@ -85,7 +86,10 @@ const _searchIndex$ = makeMsgStream('searchIndex').bufferWhileBy(noIndex$).flatt
 const searchIndex$ = _searchIndex$.bufferWhileBy(isMidSearch$).map(last)
 const getDefaultTweets$ = makeMsgStream('getDefaultTweets')
   // Sync
-const ready$ = index$.filter(pipe(isNil, not)).map(_ => true) // index$ follows db$
+const ready$ = Kefir.merge([
+  index$.filter(pipe(isNil, not)), // index$ follows db$
+  makeMsgStream('isWorkerReady')
+  ]).map(_ => true)
 
 // Functions, potential imports
 const getDb = ()=>db$.currentValue()
@@ -177,12 +181,13 @@ const searchIndex = pipe( // async
       tap(_=>emitMidSearch(false)),
       assoc('res', __ , {type:'searchIndex',}),
       )))))
-const defaultTweetsFn = getRandomSampleTweets
-const msg2SampleArgs = m=>[m.n_tweets, m.filters, db.get(getDb()), m.screen_name, ()=>getDb().getAllKeys('tweets')]
+
+const idleFns = {random: getRandomSampleTweets, timeline: getLatestTweets}
+const msg2SampleArgs = m => [m.n_tweets, m.filters, db.get(getDb()), m.screen_name, ()=>getDb().getAllKeys('tweets')]
+const callGetIdleTweets = m => pipe(msg2SampleArgs, apply(idleFns[m.idle_mode]))(m)
 const getDefaultTweets = pipe(
-  msg2SampleArgs,
-  args=>defaultTweetsFn(...args),
-  andThen(pipe(
+    callGetIdleTweets,
+    andThen(pipe(
     assoc('res', __ , {type:'getDefaultTweets',}),
     )))
 

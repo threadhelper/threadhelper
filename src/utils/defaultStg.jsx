@@ -4,6 +4,7 @@ export const defaultOptions = () => {return {
   getRTs: {name:'getRTs', type:'searchFilter', value:true},
   useBookmarks: {name:'useBookmarks', type:'searchFilter', value:true},
   useReplies: {name:'useReplies', type:'searchFilter', value:true},
+  idleMode: {name:'idleMode', type:'idleMode', value:'timeline'}, // {'random', 'timeline'}
   roboActive: {name:'roboActive', type:'featureFilter', value:false},
 }}
 

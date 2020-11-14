@@ -62,7 +62,7 @@ export function Tutorial(props){
           <div id='tutorial-nav-next' class='nav-arrow float-right'><a href="#" onClick={incPage}>{' >'}</a></div> 
           <div id='tutorial-nav-index' class='float-right'>{page}/{pages.length}</div>
         </div>
-      <div id='block1' style="width: 100%">
+      <div id='block1'>
         <br />
         <TutorialPage text={pages[page-1].text} img={pages[page-1].img}></TutorialPage>
       </div>
@@ -75,7 +75,7 @@ export function Tutorial(props){
 
 export function TutorialPage(props){
   return (
-    <div id='tutorial' style="width: 280px">
+    <div id='tutorial'>
       {props.img}
       {props.text}
     </div>
