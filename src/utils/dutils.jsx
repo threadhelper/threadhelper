@@ -1,18 +1,10 @@
 import Kefir from 'kefir';
-import { flattenModule, inspect } from './putils.jsx'
+import { flattenModule, currentValue, inspect } from './putils.jsx'
 import { defaultOptions, defaultStorage } from './defaultStg.jsx'
 import * as R from 'ramda';
 flattenModule(global,R)
 
-Kefir.Property.prototype.currentValue = function() {
-  var result;
-  var save = function(x) {
-    result = x;
-  };
-  this.onValue(save);
-  this.offValue(save);
-  return result;
-};
+Kefir.Property.prototype.currentValue = currentValue;
 
 
 
@@ -25,7 +17,7 @@ export async function getData(key) {
         console.error(chrome.runtime.lastError.message);
         reject(chrome.runtime.lastError.message);
       } else {
-        // console.log(items[key])
+        console.log('[DEBUG] gotData',{key, val:items[key]})
         resolve(items[key]);
       }
     });
@@ -40,6 +32,7 @@ export async function setData(key_vals) {
         console.error(chrome.runtime.lastError.message);
         reject(chrome.runtime.lastError.message);
       } else {
+        console.log('[DEBUG] setData',{...key_vals})
         resolve(key_vals);
       }
     });

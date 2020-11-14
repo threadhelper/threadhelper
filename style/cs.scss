@@ -21,6 +21,12 @@
   background-color: var(--main-bg-color);
   overflow-x: hidden;
 }
+/* Maximum width applies to stuff with width lower than this*/
+@media (max-width: 200px) {
+  .sug_compose {
+    visibility: hidden;
+  }
+}
 
 .sug_home{
   border-radius:10px;

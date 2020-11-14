@@ -15,6 +15,7 @@
   "dependencies": {
     "dexie": "^3.0.2",
     "jquery": "^3.5.1",
+    "node-color-log": "^5.2.0",
     "preact": "^10.4.6",
     "zangodb": "^1.0.8"
   },
