@@ -99,6 +99,13 @@
     stroke-width: 0.5px;
     stroke-linejoin: round;
   }
+  input[type="checkbox"] + label img{
+    opacity: 0.2;
+  }
+
+  input[type="checkbox"]:checked + label img{
+    opacity: 1;
+  }
   input[type="checkbox"] + label{
     display:inline-block;
     fill:var(--neutral-color);
@@ -106,7 +113,7 @@
 
   
   .dropdown-icon{
-    border-radius: 50%;
+    border-radius: 40%;
     fill:var(--neutral-color);
   }
   

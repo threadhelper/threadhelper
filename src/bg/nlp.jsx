@@ -1,5 +1,6 @@
 import * as elasticlunr from 'elasticlunr'
 import { flattenModule, inspect } from '../utils/putils.jsx'
+import { makeValidateTweet } from './search.jsx'
 import * as R from 'ramda';
 flattenModule(global,R)
 
@@ -12,6 +13,7 @@ const tweet_fields = [
   "reply_to",
   "mentions",
   "is_bookmark",
+  "account"
 ]
 
 
@@ -79,38 +81,68 @@ export const getRelated = curry( async (index, query) => {
   // console.log("bg search results:", results)
 })
 
-
+const getDoc = curry((index, ref) => index.documentStore.getDoc(ref))
+const isFull = curry((n_tweets, latest) => latest.length >= n_tweets) 
 // getRes :: [idx_tweet] -> [db_tweet]
-export const getTopNResults = curry(async (filters, screen_name, n_tweets, index, results) => {
-  const getDocUsername = (ref) => index.documentStore.getDoc(ref).username
-  const isRT = (x)=>getDocUsername(x.ref) != screen_name
-
-  const filterRTs = filter(either(_=>filters.getRTs, y=>index.documentStore.getDoc(y.ref).username === screen_name || index.documentStore.getDoc(y.ref).is_bookmark))
-  const isNotReply = x => isNil(x.reply_to) || x.reply_to === x.username
-  const filterReplies = filter(either(_=>filters.useReplies, y=>isNotReply(index.documentStore.getDoc(y.ref))))
-  const isBookmark = prop('is_bookmark')
-  // const filterBookmarks = filter(pipe(isBookmark, not))
-  const filterBookmarks = filter(either(_=>filters.useBookmarks, y=>!index.documentStore.getDoc(y.ref).is_bookmark))
-  return pipe(
-    // filter(either(_=>filters.useBookmarks, pipe(not,isBookmark))),
-    // filter(either(_=>filters.useReplies, pipe(not,isReply))),
-    filterRTs,
-    filterReplies,
-    filterBookmarks,
+export const getTopNResults = curry(async (n_tweets, index, filters, accsShown, results) => {
+  
+  const isValidTweet = makeValidateTweet(filters, accsShown)
+  const _isFull = isFull(n_tweets)
+  // for(const res of results){
+  //   if(_isFull(sample)) break;
+  //   await pipe(
+  //     prop('ref'),
+  //     getDoc(index),
+  //     when(isValidTweet, t=>sample.push(t)),
+  //     )(res)
+  // }
+  // return map(prop('id'), sample)
+  // console.log('getTopNResults', {sample, docs:map(pipe(prop('ref'),getDoc(index)),results), isValidTweet, filters, accsShown, results})
+  const sample = pipe(
+    map(pipe(prop('ref'),
+    getDoc(index))),
+    filter(isValidTweet),
     take(n_tweets),
-    tap(x=>{
-      // console.log('hi',{x,pass:filter(y=>filters.getRTs || index.documentStore.getDoc(y.ref).username === screen_name, x), index, getRT:filters.getRTs, username:screen_name, names:map(y=>index.documentStore.getDoc(y.ref).username, x)})
-      // console.log('hi',{xdoc:map(y=>index.documentStore.getDoc(y.ref),x) ,pass:map(isNotReply, map(y=>index.documentStore.getDoc(y.ref),x)),  index, useRep:filters.useReplies, username:screen_name, names:map(y=>index.documentStore.getDoc(y.ref).username, x)})
-      // console.log('hi',{x,index})
-    }),
-    map(prop('ref')),
+    map(prop('id')),
   )(results)
+  return sample
 })
 
-export const search = curry (async (filters, screen_name, n_tweets, index, query) => {
-  console.log('searching nlp', {filters, screen_name, n_tweets, index, query})
+// getRes :: [idx_tweet] -> [db_tweet]
+// export const _getTopNResults = curry(async (filters, accsShown, n_tweets, index, results) => {
+//   const getDocUsername = (ref) => index.documentStore.getDoc(ref).username
+//   const activeAccNames = map(prop('screen_name'), accsShown)
+//   const activeAccIds = map(prop('id_str'), accsShown)
+  
+//   const isBookmark = prop('is_bookmark')
+//   const isRT = curry((activeAccNames, t) => (!includes(t.username, activeAccNames) && !t.is_bookmark))
+//   const isRT = (x)=>getDocUsername(x.ref) != screen_name
+//   const isNotReply = x => isNil(x.reply_to) || x.reply_to === x.username
+//   // const filterBookmarks = filter(pipe(isBookmark, not))
+//   const filterReplies = filter(either(_=>filters.useReplies, y=>isNotReply(index.documentStore.getDoc(y.ref))))
+//   const filterRTs = filter(either(_=>filters.getRTs, y=>index.documentStore.getDoc(y.ref).username === screen_name || index.documentStore.getDoc(y.ref).is_bookmark))
+//   const filterBookmarks = filter(either(_=>filters.useBookmarks, y=>!index.documentStore.getDoc(y.ref).is_bookmark))
+//   return pipe(
+//     inspect('getTopNResults'), 
+//     // filter(either(_=>filters.useBookmarks, pipe(not,isBookmark))),
+//     // filter(either(_=>filters.useReplies, pipe(not,isReply))),
+//     filterRTs,
+//     filterReplies,
+//     filterBookmarks,
+//     take(n_tweets),
+//     tap(x=>{
+//       // console.log('hi',{x,pass:filter(y=>filters.getRTs || index.documentStore.getDoc(y.ref).username === screen_name, x), index, getRT:filters.getRTs, username:screen_name, names:map(y=>index.documentStore.getDoc(y.ref).username, x)})
+//       // console.log('hi',{xdoc:map(y=>index.documentStore.getDoc(y.ref),x) ,pass:map(isNotReply, map(y=>index.documentStore.getDoc(y.ref),x)),  index, useRep:filters.useReplies, username:screen_name, names:map(y=>index.documentStore.getDoc(y.ref).username, x)})
+//       // console.log('hi',{x,index})
+//     }),
+//     map(prop('ref')),
+//   )(results)
+// })
+
+export const search = curry (async (filters, accsShown, n_tweets, index, query) => {
+  console.log('searching nlp', {filters, accsShown, n_tweets, index, query})
   return await pipe(
     getRelated(index),
     inspect(`related to ${query}`),
-    andThen(getTopNResults(filters, screen_name, n_tweets, index)),
+    andThen(getTopNResults(n_tweets, index, filters, accsShown)),
     )(query)})

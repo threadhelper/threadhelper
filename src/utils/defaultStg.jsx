@@ -12,7 +12,8 @@ export const defaultStorage = () =>{
   return{
     options:defaultOptions(),
     hasArchive: false,
-    hasTimeline: false,
+    hasTimeline: {}, // {id_str: Bool}
+    activeAccounts: [], //{screen_name: String, id_str: String, showTweets: Bool, ...}
     latest_tweets: [],
     search_results: [],
     temp_archive: [],

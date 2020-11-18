@@ -55,22 +55,34 @@ export async function removeData(keys){
   });
 }
 
-export const setStg = curry( (key,val) => setData({[key]:val}) )
-
+export const resetStorage = ()=>setData(defaultStorage())
+export const setStg = curry((key,val) => setData({[key]:val}))
+export const getStg = key => getData(key).then(pipe(defaultTo(defaultStorage()[key]), addNewDefault(key)))
 export const updateStg = curry( (key,val) => setData({[key]:val}) )
 
-export const resetStorage = ()=>setData(defaultStorage())
+// TODO: need to reliably return the default if path doesn't exist, see addNewDefaultOptions
+export const getStgPath = curry(_path => getStg(head(_path)).then(path(tail(_path))))
 
-const addNewDefaultOptions = (oldOptions) => mergeLeft(oldOptions,defaultOptions())
+
+const addNewDefault = curry((key, oldItem) => pipe(when(is(Object), mergeDeepLeft(__, defaultStorage()[key])))(oldItem))
+const addNewDefaultOptions = oldOptions => mergeDeepLeft(oldOptions,defaultOptions())
 
 export const getOptions = async () => getData('options').then(pipe(defaultTo(defaultOptions()), addNewDefaultOptions))
 export const getOption = async name => getOptions().then(prop(name))
 
-export const updateOptionStg = curry(async (name, val)=> getOptions()
-  .then(pipe(
-      set(lensPath([name,'value']),val),
-      tap(setStg('options')),
-    )))
+export const updateStgPath = curry(async (_path, val)=> getStg(head(_path)).then(pipe(
+  set(lensPath(tail(_path)),val),
+  tap(setStg(head(_path))),
+  inspect(`updatedStgPath ${_path}`),
+)))
+
+// TODO: this after the abovo TODO
+export const updateOptionStg = name => updateStgPath(['options', name, 'value'])
+
+// export const updateOptionStg = curry(async (name, val)=> getOptions().then(pipe(
+//       set(lensPath([name,'value']),val),
+//       tap(setStg('options')),
+//     )))
 
 export const applyToOptionStg = curry(async (name, fn)=>{
   return getOptions().then(pipe(path([name, 'value']), fn, updateOptionStg(name)))

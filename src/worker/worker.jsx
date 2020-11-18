@@ -35,15 +35,15 @@ const emitMidSearch = (busy) => {self.dispatchEvent(makeMidSearchEvent(busy));}
 // const removeReq = req => {pendingReqs.push(req); return pendingReqs}
 
 const dbDel = (_getDb, storeName, deleted_ids) => {
-  db.del(_getDb())(storeName, deleted_ids)
+  db.delMany(_getDb())(storeName, deleted_ids)
 }
+
 // Functions, potential imports
 const updateSomeDB = curry(async (_getDb, new_tweets, deleted_ids)=>{ // IMPURE, updates idb // updateDB :: [a] -> [a] // returns only tweets new to idb
   console.log('updating store', { new_tweets, deleted_ids})
   const storeName = 'tweets'
-  // isExist(deleted_ids) ? db.del(_getDb())(storeName, deleted_ids) : null
   isExist(deleted_ids) ? dbDel(_getDb, storeName, deleted_ids) : null
-  isExist(new_tweets) ? db.put(_getDb())(storeName, new_tweets) : null
+  isExist(new_tweets) ? db.putMany(_getDb())(storeName, new_tweets) : null
   return new_tweets
 })
 // const initIndex = async () => { //IMPURE, saves to db
@@ -57,7 +57,8 @@ const updateSomeDB = curry(async (_getDb, new_tweets, deleted_ids)=>{ // IMPURE,
 
 const initIndex = async() => pipe(_=>getDb().getAll('tweets'), andThen(updateIndex(makeIndex(), __, [])), inspect('initIndex'))(1)
 
-const getIndexFromDb = () => db.get(getDb(), 'misc', 'index')
+// const getIndexFromDb = () => db.get(getDb(), 'misc', 'index')
+const getIndexFromDb = () => getDb().get('misc', 'index')
 // 
 // Streams
   // Db init
@@ -72,10 +73,17 @@ const index$ = Kefir.merge([db$, resetIndex$]).flatMapFirst(_=>
   Kefir.fromPromise(pipe(getIndexFromDb, andThen(ifElse(isNil,_=>initIndex(),loadIndex)))(1))).ignoreEnd().toProperty()
   // Kefir.fromPromise(db.get(getDb(), 'misc', 'index'))).map(when(isNil,_=>initIndex().toJSON())).ignoreEnd().toProperty()
 const noIndex$ = index$.map(isNil)
-
+// 
   // DB
 const dbClear$ = makeMsgStream('dbClear')
 const howManyTweetsDb$ = makeMsgStream('howManyTweetsDb')
+  // Account updating
+const addAccount$ = makeMsgStream('addAccount')//.map(prop('res'))
+addAccount$.log('addAccount$')
+const removeAccount$ = makeMsgStream('removeAccount').map(prop('res'))
+  // User updating
+const addUser$ = makeMsgStream('addUser')
+const removeUser$ = makeMsgStream('removeUser')
   // Index Updating
 const updateTweets$ = makeMsgStream('updateTweets')
 const addTweets$ = makeMsgStream('addTweets')
@@ -84,7 +92,9 @@ const removeTweets$ = makeMsgStream('removeTweets')
 const isMidSearch$ = Kefir.fromEvents(self, 'midSearch').map(path(['detail', 'busy'])).toProperty(()=>false)
 const _searchIndex$ = makeMsgStream('searchIndex').bufferWhileBy(noIndex$).flatten()
 const searchIndex$ = _searchIndex$.bufferWhileBy(isMidSearch$).map(last)
+searchIndex$.log('searchIndex$')
 const getDefaultTweets$ = makeMsgStream('getDefaultTweets')
+// getDefaultTweets$.log('getDefaultTweets$')
   // Sync
 const ready$ = Kefir.merge([
   index$.filter(pipe(isNil, not)), // index$ follows db$
@@ -92,15 +102,26 @@ const ready$ = Kefir.merge([
   ]).map(_ => true)
 
 // Functions, potential imports
-const getDb = ()=>db$.currentValue()
+const curVal = stream => stream.currentValue()
+const getDb = () => curVal(db$)
 const updateDB = updateSomeDB(getDb)
-const getIndex = ()=>index$.currentValue()
+const getIndex = () => curVal(index$)
+const getAllIds = async () => (await getDb().getAllKeys('tweets')) // getAllIds :: () -> [ids]
+const howManyTweetsDb = async () => (await getAllIds()).length
+const getAllAccounts = async () => getDb().getAll('accounts')
 
 
-// const updateTweets = async (index_json, res) => {
+const onAddAccount = async user_info => getDb().put('accounts', user_info)
+const onRemoveAccount = async id_str => getDb().delete('accounts', id_str)
+const onAddUser = async () =>  async user_info => getDb().put('users', user_info)
+const onRemoveUser = async id_str => getDb().delete('users', id_str)
+
+
 const updateTweets = async (res) => {
   const isBookmark = path([0,'is_bookmark'],res) // checks whether the first is a bookmark to judge whether they're all bookmarks
-  const filteredRes = await db.filterDb(getDb(), 'tweets', propEq('is_bookmark', isBookmark))
+  const curAccount = path([0,'account'],res) // checks whether the first is a bookmark to judge whether they're all bookmarks
+  const filterCondition = both(propEq('is_bookmark', isBookmark), propEq('account', curAccount))
+  const filteredRes = await db.filterDb(getDb(), 'tweets', filterCondition)
   const old_ids = map(prop('id'),filteredRes)
   let deleted_ids = []
   try{deleted_ids = findDeletedIds(old_ids, res.map(prop('id')))}
@@ -117,7 +138,6 @@ const updateTweets = async (res) => {
   return index_json
 }
 
-// const addTweets = async (index_json, res) => {
 const addTweets = async (res) => {
   console.log('in [addTweets]',{res})
   const tweet_ids = await getDb().getAllKeys('tweets')
@@ -143,16 +163,11 @@ const removeTweets = async (ids) => {
   return index_json
 }
 
-const getAllIds = async ()=> (await getDb().getAllKeys('tweets')) // getAllIds :: () -> [ids]
-
 // need to leave open db and empty index
 const dbClear = pipe(_=>getAllIds(), andThen(removeTweets), andThen(_=>{return {type:'dbClear'}}))
 
-const howManyTweetsDb = async () => (await getDb().getAllKeys('tweets')).length
+const setIndex = pipe(x=>getDb().put('misc', x, 'index'))
 
-const setIndex = pipe(
-  x=>getDb().put('misc', x, 'index')
-  )
 // indexUpdate :: String -> 
 const indexUpdate = (opName, updateFn) => {return pipe(
   inspect('indexUpdate'),
@@ -170,9 +185,8 @@ const getTweetsFromDbById = async (ids) => await pipe( // getTweetsFromDbById ::
 )(ids)
 
 // msg2Search :: msg search -> Promise [tweet]
-const msg2Search = curry((_getIndex, m) => {const index = _getIndex(); return search(m.filters, m.username, m.n_results, _getIndex(), m.query)})
+const msg2Search = curry((_getIndex, m) => {const index = _getIndex(); return search(m.filters, m.accsShown, m.n_results, _getIndex(), m.query)})
 const searchIndex = pipe( // async
-  // inspect('search'),
   tap(_=>emitMidSearch(true)),
   msg2Search(getIndex),
   andThen(pipe(
@@ -183,13 +197,13 @@ const searchIndex = pipe( // async
       )))))
 
 const idleFns = {random: getRandomSampleTweets, timeline: getLatestTweets}
-const msg2SampleArgs = m => [m.n_tweets, m.filters, db.get(getDb()), m.screen_name, ()=>getDb().getAllKeys('tweets')]
+// const msg2SampleArgs = m => [m.n_tweets, m.filters, curry((store, key)=>getDb().get(store, key)), m.screen_name, ()=>getDb().getAllKeys('tweets')]
+const msg2SampleArgs = m => [m.n_tweets, m.filters, db.get(getDb()), m.accsShown, ()=>getDb().getAllKeys('tweets')]
 const callGetIdleTweets = m => pipe(msg2SampleArgs, apply(idleFns[m.idle_mode]))(m)
 const getDefaultTweets = pipe(
     callGetIdleTweets,
-    andThen(pipe(
-    assoc('res', __ , {type:'getDefaultTweets',}),
-    )))
+    inspect('worker getDefaultTweets'),
+    andThen(assoc('res', __ , {type:'getDefaultTweets',})))
 
 
 // subObs(searchResult$, pipe(getTweetsFromDbById, andThen(pipe(setStg('search_results'), andThen(x=>{emitMidSearch(false); return x;})))))
@@ -199,7 +213,11 @@ const getDefaultTweets = pipe(
 // subObs(db$, ()=>msgBG({type:'ready'}))
 subObs(ready$, ()=>msgBG({type:'ready'}))
 subReq(dbClear$, dbClear)
+subReq(addAccount$, pipe(inspect('subReq(addAccount$)'), prop('res'), onAddAccount, _=>getAllAccounts()))
+subReq(removeAccount$, pipe(onRemoveAccount, _=>getAllAccounts()))
 subReq(updateTweets$, onUpdateTweets)
+subReq(addUser$, onAddUser)
+subReq(removeUser$, onRemoveUser)
 subReq(addTweets$, onAddTweets)
 subReq(removeTweets$, onRemoveTweets)
 subReq(getDefaultTweets$, getDefaultTweets)

@@ -7,8 +7,7 @@
     position: absolute;
     z-index:2;
     top: 100px;
-    width: 115px;
-    transform: translateX(-75%);
+    width: 150px;
     background-color: var(--main-bg-color);
     border: var(--border);
     border-radius: var(--border-radius);
@@ -24,6 +23,9 @@
       }
     
       .menu-item {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
         height: 15px;
         display: flex;
         align-items: center;
@@ -31,6 +33,8 @@
         transition: background var(--speed);
         padding: 0.5rem;
         text-decoration: none;
+        cursor:default;
+
       }
     
       .menu-item .icon-button {
@@ -43,11 +47,42 @@
       }
     
       .menu-item:hover {
-        background-color: #525357;
+        background-color: rgba(0,0,0,0.1);
+      }
+
+      .menu-item .x-icon{
+        text-align: center;
+        height:calc(17px);
+        width:calc(17px);
+        padding: 6px;
+        cursor:pointer;
+        font-weight:800;
+        color: #ff000088;
+      }
+      .menu-item .x-icon:hover{
+        border-radius: 50%;
+        background-color: var(--neutral-color);
       }
     
       .icon-right {
         margin-left: auto;
       }
+      
+      .icon-img{
+        flex-grow: 0;
+        height: 30px;
+        border-radius: 50%;
+        cursor:pointer;
+      }
+
 
   }    
+
+  
+#settings-menu .dropdown{
+  transform: translateX(-75%);
+}
+
+#accounts-menu .dropdown{
+  transform: translate(0px);
+}

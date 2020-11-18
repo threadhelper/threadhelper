@@ -5,7 +5,7 @@ import {getData, setData, makeStgPathObs, updateOptionStg, getOptions} from '../
 import {inspect, nullFn} from '../utils/putils.jsx'
 import {pipe, andThen, prop, path} from 'ramda'
 
-// 
+
 export function useOption(name){
   const useStgObs = useMemo(()=>makeStgPathObs(['options',name,'value']),[name])
   // const [option, setOption] = useState(true);

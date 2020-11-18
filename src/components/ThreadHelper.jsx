@@ -8,7 +8,7 @@ import { Robo } from './Robo.jsx';
 import { Header } from './Header.jsx';
 import { Search } from './Search.jsx';
 import { useStream } from './useStream.jsx';
-import { useOption } from './useOption.jsx';
+import { useOption } from './useStorage.jsx';
 
 
 export default function ThreadHelper(props){

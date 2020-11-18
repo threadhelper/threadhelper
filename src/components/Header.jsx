@@ -6,8 +6,7 @@ import {SettingsButton} from './Settings.jsx';
 import {AccountsButton} from './Accounts.jsx';
 import {ArchiveUploader} from './LoadArchive.jsx';
 import GearIcon from '../../images/gear.svg';
-import { useOption } from './useOption.jsx';
-import { useStorage } from './useStorage.jsx';
+import { useStorage, useOption } from './useStorage.jsx';
 
 
 
@@ -17,7 +16,7 @@ export function Header(){
   return (
     <div class="header">
       <SyncIcon/>
-      {/* <AccountsButton/> */}
+      <AccountsButton/>
       <div class="title-container"> <span class="th-title">ThreadHelper</span></div>
       {!hasArchive ? <ArchiveUploader /> : null}
       <SettingsButton/>

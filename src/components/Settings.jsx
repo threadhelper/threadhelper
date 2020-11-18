@@ -62,7 +62,7 @@ export function SettingsButton(props){
   );
 
   return (
-    <div className="nav-item" >
+    <div id="settings-menu" className="nav-item" >
       <div class="options icon-button" > 
         < GearIcon class='dropdown-icon' onClick={onClickSettings} onBlur={closeMenu} /> 
       </div>

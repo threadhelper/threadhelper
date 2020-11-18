@@ -27,12 +27,13 @@ export const open = async () => {
             // If it isn't explicitly set, create a value by auto incrementing.
             // autoIncrement: true,
           });
-          const misc = db.createObjectStore('misc', {
-            // The 'id' property of the object will be the key.
-            // keyPath: 'key',
-            // If it isn't explicitly set, create a value by auto incrementing.
-            // autoIncrement: true,
+          const accounts = db.createObjectStore('accounts', { //for saving user_info of accounts 
+            keyPath: 'id_str',
           });
+          const users = db.createObjectStore('users', { //for saving user data like profile pics and bios
+            keyPath: 'id_str',
+          });
+          const misc = db.createObjectStore('misc', {          });
           // Create an index on the 'date' property of the objects.
           store.createIndex('time', 'time');
           // a placeholder case so that the switch block will
@@ -67,24 +68,7 @@ export const getMany = curry( async (db, storeName, keys) => {
   }
 })
 
-curry( async (db, storeName, item_list) => {
-  console.log('putting in db', {db})
-  const tx = db.transaction(storeName, 'readwrite');
-  const store = tx.objectStore(storeName);
-  let promises = []
-  try{
-    for(let item of item_list){
-      promises.push(store.put(item))
-    }
-    promises.push(tx.done)
-    return await Promise.all(promises)        
-  } catch(e){
-    throw(e)
-  }
-})
-
-
-export const del = curry( async (db, storeName, key_list) => {
+export const delMany = curry( async (db, storeName, key_list) => {
   const tx = db.transaction(storeName, 'readwrite');
   const store = tx.objectStore(storeName);
   let promises = []
@@ -102,7 +86,7 @@ export const del = curry( async (db, storeName, key_list) => {
 
 // list as input
 // used only to add tweets to the store
-export const put = curry( async (db, storeName, item_list) => {
+export const putMany = curry( async (db, storeName, item_list) => {
   console.log('putting in db', {db})
   const tx = db.transaction(storeName, 'readwrite');
   const store = tx.objectStore(storeName);
