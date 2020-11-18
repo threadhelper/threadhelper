@@ -52604,54 +52604,51 @@ function genLatestSample(keys) {
     while (1) {
       switch (_context2.prev = _context2.next) {
         case 0:
-          console.log('genLatestSample', {
-            keys: keys
-          });
-          console.time('reverse(sortKeys(keys))');
+          console.time('[TIME] reverse(sortKeys(keys))');
           sorted_keys = reverse(Object(_bg_tweetImporter_jsx__WEBPACK_IMPORTED_MODULE_0__["sortKeys"])(keys));
-          console.timeEnd('reverse(sortKeys(keys))');
+          console.timeEnd('[TIME] reverse(sortKeys(keys))');
           _iterator2 = _createForOfIteratorHelper(sorted_keys);
-          _context2.prev = 5;
+          _context2.prev = 4;
 
           _iterator2.s();
 
-        case 7:
+        case 6:
           if ((_step2 = _iterator2.n()).done) {
-            _context2.next = 13;
+            _context2.next = 12;
             break;
           }
 
           key = _step2.value;
-          _context2.next = 11;
+          _context2.next = 10;
           return key;
 
-        case 11:
-          _context2.next = 7;
+        case 10:
+          _context2.next = 6;
           break;
 
-        case 13:
-          _context2.next = 18;
+        case 12:
+          _context2.next = 17;
           break;
 
-        case 15:
-          _context2.prev = 15;
-          _context2.t0 = _context2["catch"](5);
+        case 14:
+          _context2.prev = 14;
+          _context2.t0 = _context2["catch"](4);
 
           _iterator2.e(_context2.t0);
 
-        case 18:
-          _context2.prev = 18;
+        case 17:
+          _context2.prev = 17;
 
           _iterator2.f();
 
-          return _context2.finish(18);
+          return _context2.finish(17);
 
-        case 21:
+        case 20:
         case "end":
           return _context2.stop();
       }
     }
-  }, _marked2, null, [[5, 15, 18, 21]]);
+  }, _marked2, null, [[4, 14, 17, 20]]);
 } // get random tweets as a serendipity generator
 // TODO make functional
 // gets one by one
@@ -52778,7 +52775,7 @@ var getLatestTweets = getDefaultTweets(genLatestSample); // getRandomSample :: f
 /*!**********************************!*\
   !*** ./src/bg/tweetImporter.jsx ***!
   \**********************************/
-/*! exports provided: bookmarkToTweet, apiToTweet, archToTweet, validateTweet, idComp, sortKeys, findDeletedIds */
+/*! exports provided: bookmarkToTweet, apiToTweet, archToTweet, validateTweet, idComp, sortKeys, findInnerDiff */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -52789,7 +52786,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "validateTweet", function() { return validateTweet; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "idComp", function() { return idComp; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "sortKeys", function() { return sortKeys; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "findDeletedIds", function() { return findDeletedIds; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "findInnerDiff", function() { return findInnerDiff; });
 /* harmony import */ var _utils_dutils_jsx__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/dutils.jsx */ "./src/utils/dutils.jsx");
 /* harmony import */ var _utils_putils_jsx__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/putils.jsx */ "./src/utils/putils.jsx");
 /* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! lodash */ "./node_modules/lodash/lodash.js");
@@ -53105,9 +53102,10 @@ function sortTweets(tweetDict) {
 
 var overlap = function overlap(minNew, maxNew, currentIds) {
   return pipe(sortKeys, dropLastWhile(gtId(__, maxNew)), dropWhile(ltId(__, minNew)))(currentIds);
-};
+}; // findInnerDiff :: [id] -> [id] -> [id] // finds currentIds ids in the range [min, max](incoming) which are missing in incomingIds
 
-var findDeletedIds = function findDeletedIds(currentIds, incomingIds) {
+
+var findInnerDiff = curry(function (currentIds, incomingIds) {
   if (isEmpty(currentIds)) return []; // const minNew = reduce(minBy(idComp), '0', newTweets)
   // const maxNew = reduce(maxBy(idComp), Number.MAX_SAFE_INTEGER.toString(), newTweets)
 
@@ -53121,7 +53119,7 @@ var findDeletedIds = function findDeletedIds(currentIds, incomingIds) {
     incomingIds: incomingIds
   });
   return difference(overlappingOldTweets, incomingIds);
-};
+});
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../../node_modules/webpack/buildin/global.js */ "./node_modules/webpack/buildin/global.js")))
 
 /***/ }),
@@ -53732,12 +53730,14 @@ var renameKeys = function renameKeys(keysMap) {
     }, {});
   };
 };
-var timeFn = function timeFn(text, fn) {
-  console.time(text);
-  var res = fn();
-  console.timeEnd(text);
-  return res;
-};
+var timeFn = Object(ramda__WEBPACK_IMPORTED_MODULE_0__["curry"])(function (text, fn) {
+  return function () {
+    console.time("[TIME] ".concat(text));
+    var res = fn.apply(void 0, arguments);
+    console.timeEnd("[TIME] ".concat(text));
+    return res;
+  };
+});
 
 /***/ }),
 
@@ -54031,12 +54031,13 @@ var howManyTweetsDb$ = makeMsgStream('howManyTweetsDb'); // Account updating
 var addAccount$ = makeMsgStream('addAccount'); //.map(prop('res'))
 
 addAccount$.log('addAccount$');
-var removeAccount$ = makeMsgStream('removeAccount').map(prop('res')); // User updating
+var removeAccount$ = makeMsgStream('removeAccount'); //.map(prop('res'))
+// User updating
 
 var addUser$ = makeMsgStream('addUser');
 var removeUser$ = makeMsgStream('removeUser'); // Index Updating
 
-var updateTweets$ = makeMsgStream('updateTweets');
+var updateTimeline$ = makeMsgStream('updateTimeline');
 var addTweets$ = makeMsgStream('addTweets');
 var removeTweets$ = makeMsgStream('removeTweets'); // Index reading
 
@@ -54061,7 +54062,7 @@ var curVal = function curVal(stream) {
   return stream.currentValue();
 };
 
-var getDb = function getDb() {
+var getDb = function getDb(_) {
   return curVal(db$);
 };
 
@@ -54072,13 +54073,13 @@ var getIndex = function getIndex() {
 };
 
 var getAllIds = /*#__PURE__*/function () {
-  var _ref3 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee3() {
+  var _ref3 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee3(storeName) {
     return regeneratorRuntime.wrap(function _callee3$(_context3) {
       while (1) {
         switch (_context3.prev = _context3.next) {
           case 0:
             _context3.next = 2;
-            return getDb().getAllKeys('tweets');
+            return getDb().getAllKeys(storeName);
 
           case 2:
             return _context3.abrupt("return", _context3.sent);
@@ -54091,20 +54092,20 @@ var getAllIds = /*#__PURE__*/function () {
     }, _callee3);
   }));
 
-  return function getAllIds() {
+  return function getAllIds(_x4) {
     return _ref3.apply(this, arguments);
   };
 }(); // getAllIds :: () -> [ids]
 
 
 var howManyTweetsDb = /*#__PURE__*/function () {
-  var _ref4 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee4() {
+  var _ref4 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee4(_) {
     return regeneratorRuntime.wrap(function _callee4$(_context4) {
       while (1) {
         switch (_context4.prev = _context4.next) {
           case 0:
             _context4.next = 2;
-            return getAllIds();
+            return getAllIds('tweets');
 
           case 2:
             return _context4.abrupt("return", _context4.sent.length);
@@ -54117,13 +54118,13 @@ var howManyTweetsDb = /*#__PURE__*/function () {
     }, _callee4);
   }));
 
-  return function howManyTweetsDb() {
+  return function howManyTweetsDb(_x5) {
     return _ref4.apply(this, arguments);
   };
 }();
 
 var getAllAccounts = /*#__PURE__*/function () {
-  var _ref5 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee5() {
+  var _ref5 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee5(_) {
     return regeneratorRuntime.wrap(function _callee5$(_context5) {
       while (1) {
         switch (_context5.prev = _context5.next) {
@@ -54138,7 +54139,7 @@ var getAllAccounts = /*#__PURE__*/function () {
     }, _callee5);
   }));
 
-  return function getAllAccounts() {
+  return function getAllAccounts(_x6) {
     return _ref5.apply(this, arguments);
   };
 }();
@@ -54159,12 +54160,12 @@ var onAddAccount = /*#__PURE__*/function () {
     }, _callee6);
   }));
 
-  return function onAddAccount(_x4) {
+  return function onAddAccount(_x7) {
     return _ref6.apply(this, arguments);
   };
 }();
 
-var onRemoveAccount = /*#__PURE__*/function () {
+var removeAccount = /*#__PURE__*/function () {
   var _ref7 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee7(id_str) {
     return regeneratorRuntime.wrap(function _callee7$(_context7) {
       while (1) {
@@ -54180,37 +54181,40 @@ var onRemoveAccount = /*#__PURE__*/function () {
     }, _callee7);
   }));
 
-  return function onRemoveAccount(_x5) {
+  return function removeAccount(_x8) {
     return _ref7.apply(this, arguments);
+  };
+}(); // const onRemoveAccount = async id_str => pipe(
+
+
+var onRemoveAccount = /*#__PURE__*/function () {
+  var _ref8 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee8(id) {
+    return regeneratorRuntime.wrap(function _callee8$(_context8) {
+      while (1) {
+        switch (_context8.prev = _context8.next) {
+          case 0:
+            return _context8.abrupt("return", pipe(tap(removeAccount), _bg_db_jsx__WEBPACK_IMPORTED_MODULE_2__["filterDb"](getDb(), 'tweets', propEq('account', __)), andThen(map(prop('id'))), updateDB([]))(id));
+
+          case 1:
+          case "end":
+            return _context8.stop();
+        }
+      }
+    }, _callee8);
+  }));
+
+  return function onRemoveAccount(_x9) {
+    return _ref8.apply(this, arguments);
   };
 }();
 
 var onAddUser = /*#__PURE__*/function () {
-  var _ref8 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee9() {
+  var _ref9 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee9(user_info) {
     return regeneratorRuntime.wrap(function _callee9$(_context9) {
       while (1) {
         switch (_context9.prev = _context9.next) {
           case 0:
-            return _context9.abrupt("return", /*#__PURE__*/function () {
-              var _ref9 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee8(user_info) {
-                return regeneratorRuntime.wrap(function _callee8$(_context8) {
-                  while (1) {
-                    switch (_context8.prev = _context8.next) {
-                      case 0:
-                        return _context8.abrupt("return", getDb().put('users', user_info));
-
-                      case 1:
-                      case "end":
-                        return _context8.stop();
-                    }
-                  }
-                }, _callee8);
-              }));
-
-              return function (_x6) {
-                return _ref9.apply(this, arguments);
-              };
-            }());
+            return _context9.abrupt("return", getDb().put('users', user_info));
 
           case 1:
           case "end":
@@ -54220,8 +54224,8 @@ var onAddUser = /*#__PURE__*/function () {
     }, _callee9);
   }));
 
-  return function onAddUser() {
-    return _ref8.apply(this, arguments);
+  return function onAddUser(_x10) {
+    return _ref9.apply(this, arguments);
   };
 }();
 
@@ -54241,34 +54245,149 @@ var onRemoveUser = /*#__PURE__*/function () {
     }, _callee10);
   }));
 
-  return function onRemoveUser(_x7) {
+  return function onRemoveUser(_x11) {
     return _ref10.apply(this, arguments);
   };
 }();
 
-var updateTweets = /*#__PURE__*/function () {
-  var _ref11 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee11(res) {
-    var isBookmark, curAccount, filterCondition, filteredRes, old_ids, deleted_ids, new_ids, new_tweets, _index, index_json;
-
+var _updateIndex = /*#__PURE__*/function () {
+  var _ref11 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee11(index, new_tweets, deleted_ids) {
     return regeneratorRuntime.wrap(function _callee11$(_context11) {
       while (1) {
         switch (_context11.prev = _context11.next) {
           case 0:
-            isBookmark = path([0, 'is_bookmark'], res); // checks whether the first is a bookmark to judge whether they're all bookmarks
+            return _context11.abrupt("return", pipe(_bg_nlp_jsx__WEBPACK_IMPORTED_MODULE_4__["updateIndex"], andThen(function (index) {
+              return index.toJSON();
+            }), function (index_json) {
+              return getDb().put('misc', index_json, 'index');
+            })(index, new_tweets, deleted_ids));
 
-            curAccount = path([0, 'account'], res); // checks whether the first is a bookmark to judge whether they're all bookmarks
+          case 1:
+          case "end":
+            return _context11.stop();
+        }
+      }
+    }, _callee11);
+  }));
 
-            filterCondition = both(propEq('is_bookmark', isBookmark), propEq('account', curAccount));
-            _context11.next = 5;
-            return _bg_db_jsx__WEBPACK_IMPORTED_MODULE_2__["filterDb"](getDb(), 'tweets', filterCondition);
+  return function _updateIndex(_x12, _x13, _x14) {
+    return _ref11.apply(this, arguments);
+  };
+}();
+
+var isBookmark = function isBookmark(res) {
+  return path([0, 'is_bookmark'], res);
+}; // checks whether the first is a bookmark to judge whether they're all bookmarks
+
+
+var curAccount = function curAccount(res) {
+  return path([0, 'account'], res);
+}; // checks whether the first is a bookmark to judge whether they're all bookmarks
+
+
+var filterCondition = function filterCondition(res) {
+  return both(propEq('is_bookmark', path([0, 'is_bookmark'], res)), propEq('account', path([0, 'account'], res)));
+};
+
+var findDeletedIds = /*#__PURE__*/function () {
+  var _ref12 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee12(oldIds, res) {
+    return regeneratorRuntime.wrap(function _callee12$(_context12) {
+      while (1) {
+        switch (_context12.prev = _context12.next) {
+          case 0:
+            return _context12.abrupt("return", pipe(map(prop('id')), tryCatch(Object(_bg_tweetImporter_jsx__WEBPACK_IMPORTED_MODULE_6__["findInnerDiff"])(oldIds), function (e) {
+              console.log('ERROR [findDeletedIds]', {
+                e: e,
+                oldIds: oldIds,
+                res: res
+              });
+              return [];
+            }))(res));
+
+          case 1:
+          case "end":
+            return _context12.stop();
+        }
+      }
+    }, _callee12);
+  }));
+
+  return function findDeletedIds(_x15, _x16) {
+    return _ref12.apply(this, arguments);
+  };
+}();
+
+var findNewTweets = /*#__PURE__*/function () {
+  var _ref13 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee13(oldIds, res) {
+    return regeneratorRuntime.wrap(function _callee13$(_context13) {
+      while (1) {
+        switch (_context13.prev = _context13.next) {
+          case 0:
+            return _context13.abrupt("return", pipe(map(prop('id')), difference(__, oldIds), function (newIds) {
+              return filter(propSatifies('id', includes(__, newIds)), res);
+            })(res));
+
+          case 1:
+          case "end":
+            return _context13.stop();
+        }
+      }
+    }, _callee13);
+  }));
+
+  return function findNewTweets(_x17, _x18) {
+    return _ref13.apply(this, arguments);
+  };
+}(); // getRelevantOldIds :: fn => [id]
+
+
+var getRelevantOldIds = function getRelevantOldIds(filterFn) {
+  return pipe(_bg_db_jsx__WEBPACK_IMPORTED_MODULE_2__["filterDb"](getDb(), 'tweets', filterFn), andThen(map(prop('id'))));
+};
+
+var updateTimeline = /*#__PURE__*/function () {
+  var _ref14 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee14(res) {
+    var oldIds, newTweets, deletedIds;
+    return regeneratorRuntime.wrap(function _callee14$(_context14) {
+      while (1) {
+        switch (_context14.prev = _context14.next) {
+          case 0:
+            oldIds = getRelevantOldIds(filterCondition(res));
+            newTweets = findNewTweets(oldIds, res);
+            deletedIds = findDeletedIds(oldIds, res);
+            updateDB(new_tweets, deleted_ids);
+            return _context14.abrupt("return", _updateIndex(getIndex(), new_tweets, deleted_ids));
 
           case 5:
-            filteredRes = _context11.sent;
+          case "end":
+            return _context14.stop();
+        }
+      }
+    }, _callee14);
+  }));
+
+  return function updateTimeline(_x19) {
+    return _ref14.apply(this, arguments);
+  };
+}();
+
+var _updateTimeline = /*#__PURE__*/function () {
+  var _ref15 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee15(res) {
+    var filteredRes, old_ids, deleted_ids, new_ids, new_tweets;
+    return regeneratorRuntime.wrap(function _callee15$(_context15) {
+      while (1) {
+        switch (_context15.prev = _context15.next) {
+          case 0:
+            _context15.next = 2;
+            return _bg_db_jsx__WEBPACK_IMPORTED_MODULE_2__["filterDb"](getDb(), 'tweets', filterCondition(res));
+
+          case 2:
+            filteredRes = _context15.sent;
             old_ids = map(prop('id'), filteredRes);
             deleted_ids = [];
 
             try {
-              deleted_ids = Object(_bg_tweetImporter_jsx__WEBPACK_IMPORTED_MODULE_6__["findDeletedIds"])(old_ids, res.map(prop('id')));
+              deleted_ids = Object(_bg_tweetImporter_jsx__WEBPACK_IMPORTED_MODULE_6__["findInnerDiff"])(old_ids, res.map(prop('id')));
             } catch (e) {
               console.log('ERROR [findDeletedIds]', {
                 e: e,
@@ -54278,51 +54397,45 @@ var updateTweets = /*#__PURE__*/function () {
             }
 
             new_ids = difference(map(prop('id'), res), old_ids);
-            new_tweets = pipe(filter(pipe(prop('id'), includes(__, new_ids))))(res);
-            updateDB(new_tweets, deleted_ids);
-            _index = getIndex();
-            _context11.next = 15;
-            return Object(_bg_nlp_jsx__WEBPACK_IMPORTED_MODULE_4__["updateIndex"])(_index, new_tweets, deleted_ids);
+            new_tweets = filter(propSatisfies('id', includes(__, new_ids)), res);
+            updateDB(new_tweets, deleted_ids); // let _index = getIndex()
+            // _index = await updateIndex(_index, new_tweets, deleted_ids)
+            // const index_json = _index.toJSON()
+            // console.log('putting db', {index_json})
+            // getDb().put('misc', index_json, 'index'); //re-store index
+            // return index_json
 
-          case 15:
-            _index = _context11.sent;
-            index_json = _index.toJSON();
-            console.log('putting db', {
-              index_json: index_json
-            });
-            getDb().put('misc', index_json, 'index'); //re-store index
+            return _context15.abrupt("return", _updateIndex(getIndex(), new_tweets, deleted_ids));
 
-            return _context11.abrupt("return", index_json);
-
-          case 20:
+          case 10:
           case "end":
-            return _context11.stop();
+            return _context15.stop();
         }
       }
-    }, _callee11);
+    }, _callee15);
   }));
 
-  return function updateTweets(_x8) {
-    return _ref11.apply(this, arguments);
+  return function _updateTimeline(_x20) {
+    return _ref15.apply(this, arguments);
   };
 }();
 
 var addTweets = /*#__PURE__*/function () {
-  var _ref12 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee12(res) {
+  var _ref16 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee16(res) {
     var tweet_ids, new_ids, new_tweets, _index, index_json;
 
-    return regeneratorRuntime.wrap(function _callee12$(_context12) {
+    return regeneratorRuntime.wrap(function _callee16$(_context16) {
       while (1) {
-        switch (_context12.prev = _context12.next) {
+        switch (_context16.prev = _context16.next) {
           case 0:
             console.log('in [addTweets]', {
               res: res
             });
-            _context12.next = 3;
+            _context16.next = 3;
             return getDb().getAllKeys('tweets');
 
           case 3:
-            tweet_ids = _context12.sent;
+            tweet_ids = _context16.sent;
             new_ids = difference(res.map(prop('id')), tweet_ids);
             new_tweets = filter(function (x) {
               return includes(x.id, new_ids);
@@ -54333,71 +54446,75 @@ var addTweets = /*#__PURE__*/function () {
             });
             updateDB(new_tweets, []);
             _index = getIndex();
-            _context12.next = 11;
+            _context16.next = 11;
             return Object(_bg_nlp_jsx__WEBPACK_IMPORTED_MODULE_4__["updateIndex"])(_index, new_tweets, []);
 
           case 11:
-            _index = _context12.sent;
+            _index = _context16.sent;
             //this should have an empty list wtf
             index_json = _index.toJSON();
             getDb().put('misc', index_json, 'index'); //re-store index
 
-            return _context12.abrupt("return", index_json);
+            return _context16.abrupt("return", index_json);
 
           case 15:
           case "end":
-            return _context12.stop();
+            return _context16.stop();
         }
       }
-    }, _callee12);
+    }, _callee16);
   }));
 
-  return function addTweets(_x9) {
-    return _ref12.apply(this, arguments);
+  return function addTweets(_x21) {
+    return _ref16.apply(this, arguments);
   };
 }(); // const removeTweets = async (index_json, ids) => {
 
 
 var removeTweets = /*#__PURE__*/function () {
-  var _ref13 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee13(ids) {
+  var _ref17 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee17(ids) {
     var _index, index_json;
 
-    return regeneratorRuntime.wrap(function _callee13$(_context13) {
+    return regeneratorRuntime.wrap(function _callee17$(_context17) {
       while (1) {
-        switch (_context13.prev = _context13.next) {
+        switch (_context17.prev = _context17.next) {
           case 0:
             console.log('remove', {
               ids: ids
             });
             updateDB([], ids);
             _index = getIndex();
-            _context13.next = 5;
+            _context17.next = 5;
             return Object(_bg_nlp_jsx__WEBPACK_IMPORTED_MODULE_4__["updateIndex"])(_index, [], ids);
 
           case 5:
-            _index = _context13.sent;
+            _index = _context17.sent;
             index_json = _index.toJSON();
             getDb().put('misc', index_json, 'index'); //re-store index
 
-            return _context13.abrupt("return", index_json);
+            return _context17.abrupt("return", index_json);
 
           case 9:
           case "end":
-            return _context13.stop();
+            return _context17.stop();
         }
       }
-    }, _callee13);
+    }, _callee17);
   }));
 
-  return function removeTweets(_x10) {
-    return _ref13.apply(this, arguments);
+  return function removeTweets(_x22) {
+    return _ref17.apply(this, arguments);
   };
 }(); // need to leave open db and empty index
 
 
-var dbClear = pipe(function (_) {
-  return getAllIds();
-}, andThen(removeTweets), andThen(function (_) {
+var dbClear = pipe(pipe(function (_) {
+  return getAllIds('tweets');
+}, andThen(removeTweets)), pipe(function (_) {
+  return getAllIds('accounts');
+}, andThen(onRemoveAccount)), pipe(function (_) {
+  return getAllIds('users');
+}, andThen(onRemoveUser)), andThen(function (_) {
   return {
     type: 'dbClear'
   };
@@ -54415,35 +54532,35 @@ var indexUpdate = function indexUpdate(opName, updateFn) {
   }));
 };
 
-var onUpdateTweets = indexUpdate('updateTweets', updateTweets);
+var onUpdateTimeline = indexUpdate('updateTimeline', updateTimeline);
 var onAddTweets = indexUpdate('addTweets', addTweets);
 var onRemoveTweets = indexUpdate('removeTweets', removeTweets);
 
 var getTweetsFromDbById = /*#__PURE__*/function () {
-  var _ref14 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee14(ids) {
-    return regeneratorRuntime.wrap(function _callee14$(_context14) {
+  var _ref18 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee18(ids) {
+    return regeneratorRuntime.wrap(function _callee18$(_context18) {
       while (1) {
-        switch (_context14.prev = _context14.next) {
+        switch (_context18.prev = _context18.next) {
           case 0:
-            _context14.next = 2;
+            _context18.next = 2;
             return pipe( // getTweetsFromDbById :: [id] -> [tweets]
             _bg_db_jsx__WEBPACK_IMPORTED_MODULE_2__["getMany"](getDb(), 'tweets'), andThen(filter(function (x) {
               return not(isNil(x));
             })))(ids);
 
           case 2:
-            return _context14.abrupt("return", _context14.sent);
+            return _context18.abrupt("return", _context18.sent);
 
           case 3:
           case "end":
-            return _context14.stop();
+            return _context18.stop();
         }
       }
-    }, _callee14);
+    }, _callee18);
   }));
 
-  return function getTweetsFromDbById(_x11) {
-    return _ref14.apply(this, arguments);
+  return function getTweetsFromDbById(_x23) {
+    return _ref18.apply(this, arguments);
   };
 }(); // msg2Search :: msg search -> Promise [tweet]
 
@@ -54489,19 +54606,20 @@ subObs(ready$, function () {
   });
 });
 subReq(dbClear$, dbClear);
-subReq(addAccount$, pipe(Object(_utils_putils_jsx__WEBPACK_IMPORTED_MODULE_7__["inspect"])('subReq(addAccount$)'), prop('res'), onAddAccount, function (_) {
+var addAccount = pipe(Object(_utils_putils_jsx__WEBPACK_IMPORTED_MODULE_7__["inspect"])('subReq(addAccount$)'), prop('res'), onAddAccount, function (_) {
+  return getAllAccounts();
+});
+subReq(addAccount$, Object(_utils_putils_jsx__WEBPACK_IMPORTED_MODULE_7__["timeFn"])('addAccount', addAccount));
+subReq(removeAccount$, pipe(prop('id'), onRemoveAccount, function (_) {
   return getAllAccounts();
 }));
-subReq(removeAccount$, pipe(onRemoveAccount, function (_) {
-  return getAllAccounts();
-}));
-subReq(updateTweets$, onUpdateTweets);
 subReq(addUser$, onAddUser);
 subReq(removeUser$, onRemoveUser);
-subReq(addTweets$, onAddTweets);
+subReq(updateTimeline$, Object(_utils_putils_jsx__WEBPACK_IMPORTED_MODULE_7__["timeFn"])('onUpdateTimeline', onUpdateTimeline));
+subReq(addTweets$, Object(_utils_putils_jsx__WEBPACK_IMPORTED_MODULE_7__["timeFn"])('onAddTweets', onAddTweets));
 subReq(removeTweets$, onRemoveTweets);
-subReq(getDefaultTweets$, getDefaultTweets);
-subReq(searchIndex$, searchIndex);
+subReq(getDefaultTweets$, Object(_utils_putils_jsx__WEBPACK_IMPORTED_MODULE_7__["timeFn"])('getDefaultTweets', getDefaultTweets));
+subReq(searchIndex$, Object(_utils_putils_jsx__WEBPACK_IMPORTED_MODULE_7__["timeFn"])('searchIndex', searchIndex));
 subReq(howManyTweetsDb$, howManyTweetsDb);
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../../node_modules/webpack/buildin/global.js */ "./node_modules/webpack/buildin/global.js")))
 

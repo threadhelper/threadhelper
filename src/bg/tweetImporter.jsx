@@ -237,8 +237,8 @@ function sortTweets(tweetDict){
 
 const overlap = (minNew, maxNew, currentIds) => pipe(sortKeys,dropLastWhile(gtId(__, maxNew)), dropWhile(ltId(__, minNew)))(currentIds)
 
-
-export const findDeletedIds = (currentIds, incomingIds) =>{
+// findInnerDiff :: [id] -> [id] -> [id] // finds currentIds ids in the range [min, max](incoming) which are missing in incomingIds
+export const findInnerDiff = curry((currentIds, incomingIds) =>{
   if(isEmpty(currentIds)) return []
   // const minNew = reduce(minBy(idComp), '0', newTweets)
   // const maxNew = reduce(maxBy(idComp), Number.MAX_SAFE_INTEGER.toString(), newTweets)
@@ -248,4 +248,4 @@ export const findDeletedIds = (currentIds, incomingIds) =>{
   const overlappingOldTweets = overlap(minNew, maxNew, currentIds)
   console.log(`counting deleted tweets from ${minNew} to ${maxNew}`, {overlappingOldTweets, currentIds, incomingIds})
   return difference(overlappingOldTweets, incomingIds)
-}
+})

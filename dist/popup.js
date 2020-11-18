@@ -35480,12 +35480,14 @@ var renameKeys = function renameKeys(keysMap) {
     }, {});
   };
 };
-var timeFn = function timeFn(text, fn) {
-  console.time(text);
-  var res = fn();
-  console.timeEnd(text);
-  return res;
-};
+var timeFn = Object(ramda__WEBPACK_IMPORTED_MODULE_0__["curry"])(function (text, fn) {
+  return function () {
+    console.time("[TIME] ".concat(text));
+    var res = fn.apply(void 0, arguments);
+    console.timeEnd("[TIME] ".concat(text));
+    return res;
+  };
+});
 
 /***/ }),
 

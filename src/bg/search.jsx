@@ -1,5 +1,5 @@
 import {sortKeys} from '../bg/tweetImporter.jsx'
-import {inspect} from '../utils/putils.jsx'
+import {inspect, timeFn} from '../utils/putils.jsx'
 const getDocUsername = (index, ref) => index.documentStore.getDoc(ref).username
 
 const isFull = curry((n_tweets, latest) => latest.length >= n_tweets)
@@ -23,11 +23,10 @@ export function* genRandomSample(keys){
   }
 }
 // genLatestSample :: [id] -> generator(id)
-export function*  genLatestSample(keys){
-  console.log('genLatestSample', {keys})
-  console.time('reverse(sortKeys(keys))')
+export function* genLatestSample(keys){
+  console.time('[TIME] reverse(sortKeys(keys))')
   const sorted_keys = reverse(sortKeys(keys))
-  console.timeEnd('reverse(sortKeys(keys))')
+  console.timeEnd('[TIME] reverse(sortKeys(keys))')
   for (let key of sorted_keys){
     yield key
   }

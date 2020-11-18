@@ -6,7 +6,7 @@ import { Tweet } from './Tweet.jsx';
 import { IOStreams } from './ThreadHelper.jsx';
 import { useStorage } from './useStorage.jsx';
 import { useStream } from './useStream.jsx';
-import { flattenModule, inspect } from '../utils/putils.jsx'
+import { flattenModule, isExist, inspect } from '../utils/putils.jsx'
 import * as R from 'ramda';
 flattenModule(global,R)
 
@@ -24,7 +24,8 @@ export function Search(props){
   const [searchResults, setSearchResults] = useStorage('search_results',[]);
   const [latestTweets, setLatestTweets] = useStorage('latest_tweets',[]);
   
-  const showSearchRes = (searchResults)=>!(isNil(searchResults) || R.isEmpty(query.trim()))
+  // const showSearchRes = (searchResults)=>!(isExist(searchResults) || R.isEmpty(query.trim()))
+  const showSearchRes = (searchResults)=>isExist(searchResults)
 
 
   useEffect(async () => {
@@ -47,12 +48,16 @@ export function Search(props){
 
 
   useEffect(()=>{
-    setStg('poop', 1)
+    setStg('boop', 1)
     R.pipe(
       defaultTo(''),
-      when(
-        pipe(R.trim, either(isNil, isEmpty), not),
-        pipe(R.trim, reqSearch)))(query)
+      R.trim,
+      // when(
+      //   pipe(either(isNil, isEmpty), not),
+      //   pipe(reqSearch)
+      //   ),
+      pipe(reqSearch),
+    )(query)
     // const msg = (query.trim()) ? null : query.trim()
     // if(props.active && msg != null) reqSearch(msg)
     return ()=>{  };

@@ -55220,12 +55220,13 @@ var makeOnInstalledEvent = function makeOnInstalledEvent(_busy) {
 
 var emitOnInstalled = function emitOnInstalled(busy) {
   self.dispatchEvent(makeMidSearchEvent(busy));
-}; // Potential imports
+}; // 
+// Potential imports
 // misc
 
 
 var update_size = 200;
-var n_tweets_results = 30;
+var n_tweets_results = 20;
 
 var getDateFormatted = function getDateFormatted() {
   return new Date().toLocaleString();
@@ -55240,7 +55241,7 @@ var list2Obj = curry(function (key, list) {
 
 var saferMap = function saferMap(fn) {
   return pipe( // saferMap :: [x] -> [x]
-  defaultTo([]), filter(pipe(isNil, not)), filter(_bg_tweetImporter_jsx__WEBPACK_IMPORTED_MODULE_15__["validateTweet"]), Object(_utils_putils_jsx__WEBPACK_IMPORTED_MODULE_5__["inspect"])('about to map in saferMap'), map(fn));
+  defaultTo([]), filter(pipe(isNil, not)), filter(_bg_tweetImporter_jsx__WEBPACK_IMPORTED_MODULE_15__["validateTweet"]), map(fn));
 }; // fn -> ([x] -> [fn(x)])
 // auth
 
@@ -55394,7 +55395,7 @@ function main() {
 
 function _main() {
   _main = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee19() {
-    var worker, promiseWorker, makeReqSearchMsg, makeReqDefaultTweetsMsg, msgPromiseWorker, isWorkerReady, howManyTweetsDb, addAccount, removeAccount, addUser, removeUser, updateTweets, addTweets, removeTweets, removeTweet, dbClear, resetIndex, resetData, doSearch, getDefaultTweets, clearTempArchive, curVal, getAuthInit, getUserInfo, getUsername, getAccId, getAccsShown, getFilters, filterTweets, accFilterTweets, makeSyncDisplayMsg, msg$, makeMsgStream, csStart$, csNotReady$, csGaEvent$, csGaException$, storageChange$, optionsChange$, makeOptionObs, idleMode$, getRT$, useBookmarks$, useReplies$, searchFilters$, workerMsg$, workerReady$, askWorkerReady$, auth$, unique_auth$, userInfo$, uniqueUserInfo$, incomingAccounts$, accounts$, accsShown$, activeAccIds$, activeAccNames$, filters$, ready$, notReady$, makeSafe, makeMsgStreamSafe, errorFilter, reqClear$, dataReset$, initData$, debugGetBookmarks$, updateTweets$, updateTimeline$, hasTimeline$, missingTimeline$, reqUpdatedTweets$, reqTimeline$, reqBookmarks$, reqAddBookmark$, reqBookmarkId$, anyAPIReq$, fetchedUpdate$, fetchedTimeline$, fetchedBookmarks$, fetchedBookmark$, fetchedAnyAPIReq$, reqArchiveLoad$, extractTweetPropIfNeeded, archiveLoadedTweets$, archTweets$, thUpdate$, curAccount, assocAccount, thTweets$, fetchedTweets$, reqDeleteTweet$, reqRemoveBookmark$, idsToRemove$, addedTweets$, removedTweet$, updatedTweets$, anyTweetUpdate$, whenUpdated$, syncDisplay$, anyWorkerReq$, makeFlag, makeFlagT, notArchLoading$, notFetchingAPI$, notMidWorkerReq$, syncLight$, searchQuery$, logAuth$, getUserInfo$, reqSearch$, reqDefaultTweets$, gotDefaultTweets$, filteredDefaultTweets$, searchResults$, checkGotTimeline;
+    var worker, promiseWorker, makeReqSearchMsg, makeReqDefaultTweetsMsg, msgPromiseWorker, isWorkerReady, howManyTweetsDb, addAccount, removeAccount, addUser, removeUser, updateTimeline, addTweets, removeTweets, removeTweet, dbClear, resetIndex, resetData, doSearch, getDefaultTweets, clearTempArchive, curVal, getAuthInit, getUserInfo, getUsername, getAccId, getAccsShown, getFilters, filterTweets, accFilterTweets, makeSyncDisplayMsg, msg$, makeMsgStream, reqReset$, dataReset$, removeAccount$, csStart$, csNotReady$, csGaEvent$, csGaException$, storageChange$, optionsChange$, makeOptionObs, idleMode$, getRT$, useBookmarks$, useReplies$, searchFilters$, workerMsg$, workerReady$, askWorkerReady$, auth$, unique_auth$, userInfo$, uniqueUserInfo$, incomingAccounts$, accountsUpdate$, accounts$, accsShown$, activeAccIds$, activeAccNames$, filters$, ready$, notReady$, makeSafe, makeMsgStreamSafe, errorFilter, initData$, debugGetBookmarks$, updateRecentTimeline$, updateTimeline$, hasTimeline$, missingTimeline$, reqUpdatedTweets$, reqTimeline$, reqBookmarks$, reqAddBookmark$, reqBookmarkId$, anyAPIReq$, fetchedUpdate$, fetchedTimeline$, fetchedBookmarks$, fetchedBookmark$, fetchedAnyAPIReq$, reqArchiveLoad$, extractTweetPropIfNeeded, archiveLoadedTweets$, archTweets$, thUpdate$, curAccount, assocAccount, thTweets$, fetchedTweets$, reqDeleteTweet$, reqRemoveBookmark$, idsToRemove$, addedTweets$, removedTweet$, updatedTimeline$, anyTweetUpdate$, whenUpdated$, syncDisplay$, anyWorkerReq$, makeFlag, makeFlagT, notArchLoading$, notFetchingAPI$, notMidWorkerReq$, syncLight$, searchQuery$, logAuth$, getUserInfo$, reqSearch$, reqDefaultTweets$, gotDefaultTweets$, filteredDefaultTweets$, searchResults$, checkGotTimeline;
     return regeneratorRuntime.wrap(function _callee19$(_context19) {
       while (1) {
         switch (_context19.prev = _context19.next) {
@@ -55508,18 +55509,18 @@ function _main() {
               return function addAccount(_x7) {
                 return _ref6.apply(this, arguments);
               };
-            }(); // updateTweets :: IMPURE [id] -> Promise ()
+            }(); // addAccount :: IMPURE [id] -> Promise ()
 
 
             removeAccount = /*#__PURE__*/function () {
-              var _ref7 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee7(userInfo) {
+              var _ref7 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee7(id) {
                 return regeneratorRuntime.wrap(function _callee7$(_context7) {
                   while (1) {
                     switch (_context7.prev = _context7.next) {
                       case 0:
                         return _context7.abrupt("return", msgPromiseWorker({
                           type: 'removeAccount',
-                          res: userInfo.id_str
+                          id: id
                         }));
 
                       case 1:
@@ -55533,7 +55534,7 @@ function _main() {
               return function removeAccount(_x8) {
                 return _ref7.apply(this, arguments);
               };
-            }(); // updateTweets :: IMPURE [id] -> Promise ()
+            }(); // removeAccount :: IMPURE [id] -> Promise ()
 
 
             addUser = /*#__PURE__*/function () {
@@ -55558,7 +55559,7 @@ function _main() {
               return function addUser(_x9) {
                 return _ref8.apply(this, arguments);
               };
-            }(); // updateTweets :: IMPURE [id] -> Promise ()
+            }(); // addUser :: IMPURE [id] -> Promise ()
 
 
             removeUser = /*#__PURE__*/function () {
@@ -55583,17 +55584,17 @@ function _main() {
               return function removeUser(_x10) {
                 return _ref9.apply(this, arguments);
               };
-            }(); // updateTweets :: IMPURE [id] -> Promise ()
+            }(); // removeUser :: IMPURE [id] -> Promise ()
 
 
-            updateTweets = /*#__PURE__*/function () {
+            updateTimeline = /*#__PURE__*/function () {
               var _ref10 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee10(res) {
                 return regeneratorRuntime.wrap(function _callee10$(_context10) {
                   while (1) {
                     switch (_context10.prev = _context10.next) {
                       case 0:
                         return _context10.abrupt("return", msgPromiseWorker({
-                          type: 'updateTweets',
+                          type: 'updateTimeline',
                           res: res
                         }));
 
@@ -55605,10 +55606,10 @@ function _main() {
                 }, _callee10);
               }));
 
-              return function updateTweets(_x11) {
+              return function updateTimeline(_x11) {
                 return _ref10.apply(this, arguments);
               };
-            }(); // updateTweets :: IMPURE [id] -> Promise ()
+            }(); // updateTimeline :: IMPURE [id] -> Promise ()
 
 
             addTweets = /*#__PURE__*/function () {
@@ -55874,6 +55875,12 @@ function _main() {
               return msg$.filter(propEq('type', name));
             };
 
+            reqReset$ = makeMsgStream("clear"); // reqReset$ :: msg
+
+            dataReset$ = promiseStream(reqReset$, resetData); // dbCleared$ :: msg
+
+            removeAccount$ = promiseStream(makeMsgStream('remove-account').map(prop('id')), removeAccount).toProperty(); // incomingAccounts$ :: [accounts]
+
             csStart$ = msg$.filter(propEq('type', 'cs-created'));
             csNotReady$ = toVal(false, csStart$).toProperty(T); // Analytics
 
@@ -55889,30 +55896,30 @@ function _main() {
             makeOptionObs = _makeOptionObs(optionsChange$); // Function
             //Display options
 
-            _context19.next = 47;
+            _context19.next = 50;
             return makeOptionObs('idleMode');
 
-          case 47:
+          case 50:
             idleMode$ = _context19.sent.map(prop('value'));
             // idleMode$ :: () -> String {'random', 'timeline'}
             idleMode$.log('idleMode$'); // Search filters
 
-            _context19.next = 51;
+            _context19.next = 54;
             return makeOptionObs('getRTs');
 
-          case 51:
+          case 54:
             getRT$ = _context19.sent;
             // getRT$ :: () -> Bool
             getRT$.log('getRT$');
-            _context19.next = 55;
+            _context19.next = 58;
             return makeOptionObs('useBookmarks');
 
-          case 55:
+          case 58:
             useBookmarks$ = _context19.sent;
-            _context19.next = 58;
+            _context19.next = 61;
             return makeOptionObs('useReplies');
 
-          case 58:
+          case 61:
             useReplies$ = _context19.sent;
             // useReplies$ :: () -> Bool
             searchFilters$ = kefir__WEBPACK_IMPORTED_MODULE_7__["default"].combine([getRT$, useBookmarks$, useReplies$], combineOptions).toProperty(); // ! IMPORTANT ! Generalized for filters, untested:
@@ -55952,13 +55959,14 @@ function _main() {
             userInfo$.log('[DEBUG] userInfo$');
             uniqueUserInfo$ = userInfo$.filter(pipe(propEq('id', null), not));
             uniqueUserInfo$.log('[DEBUG] uniqueUserInfo$');
-            incomingAccounts$ = promiseStream(uniqueUserInfo$, addAccount).map(list2Obj('id_str')).toProperty(); // incomingAccounts$ :: [accounts]
+            incomingAccounts$ = promiseStream(kefir__WEBPACK_IMPORTED_MODULE_7__["default"].merge([uniqueUserInfo$, uniqueUserInfo$.sampledBy(dataReset$)]), addAccount).map(list2Obj('id_str')).toProperty(); // incomingAccounts$ :: [accounts]
 
             incomingAccounts$.log('incomingAccounts$');
-            _context19.next = 73;
+            accountsUpdate$ = kefir__WEBPACK_IMPORTED_MODULE_7__["default"].merge([removeAccount$, incomingAccounts$]);
+            _context19.next = 77;
             return _makeStgObs('activeAccounts');
 
-          case 73:
+          case 77:
             accounts$ = _context19.sent;
             accounts$.log('accounts$');
             accsShown$ = accounts$.map(pipe(values, filter(either(pipe(prop('showTweets'), isNil), propEq('showTweets', true)))));
@@ -56002,30 +56010,26 @@ function _main() {
             }; // 
 
 
-            reqClear$ = makeMsgStream("clear"); // reqClear$ :: msg
-
-            dataReset$ = promiseStream(reqClear$, resetData); // dbCleared$ :: msg
-
             initData$ = makeSafe(kefir__WEBPACK_IMPORTED_MODULE_7__["default"].merge([csStart$, ready$.bufferWhileBy(csNotReady$).flatten(), dataReset$])).throttle(1000); // initData$ ::  // second term exists bc if csStart arrives before ready, then event won't fire
 
             initData$.log('[DEBUG] initData$'); // Tweet API
 
             debugGetBookmarks$ = makeMsgStreamSafe('get-bookmarks'); // debugGetBookmarks$ :: msg
 
-            updateTweets$ = makeMsgStreamSafe('update-tweets'); // reqUpdatedTweets$ :: msg
+            updateRecentTimeline$ = makeMsgStreamSafe('update-tweets'); // reqUpdatedTweets$ :: msg
 
             updateTimeline$ = makeMsgStream("update-timeline"); // reqUpdatedTweets$ :: msg
 
-            _context19.next = 96;
+            _context19.next = 98;
             return _makeStgObs('hasTimeline');
 
-          case 96:
+          case 98:
             hasTimeline$ = _context19.sent.map(pipe(Object(_utils_putils_jsx__WEBPACK_IMPORTED_MODULE_5__["inspect"])('hasTimeline'), prop(getAccId()), defaultTo(false)));
             hasTimeline$.log("[DEBUG]\xA0hasTimeline$");
             missingTimeline$ = hasTimeline$.map(not);
             missingTimeline$.log('missingTimeline$'); // const reqTimeline$ = makeSafe(Kefir.merge([updateTimeline$, initData$]))  // reqTimeline$ :: msg
 
-            reqUpdatedTweets$ = makeSafe(kefir__WEBPACK_IMPORTED_MODULE_7__["default"].merge([updateTweets$, initData$.filterBy(hasTimeline$)])); // reqUpdatedTweets$ :: msg
+            reqUpdatedTweets$ = makeSafe(kefir__WEBPACK_IMPORTED_MODULE_7__["default"].merge([updateRecentTimeline$, initData$.filterBy(hasTimeline$)])); // reqUpdatedTweets$ :: msg
 
             reqTimeline$ = makeSafe(kefir__WEBPACK_IMPORTED_MODULE_7__["default"].merge([updateTimeline$, initData$.filterBy(missingTimeline$)])); // reqTimeline$ :: msg
 
@@ -56055,6 +56059,7 @@ function _main() {
             })); // IMPURE fetchedBookmarks$ :: [apiBookmark]
 
             fetchedBookmark$ = errorFilter(promiseStream(reqBookmarkId$, Object(_bg_twitterScout_jsx__WEBPACK_IMPORTED_MODULE_13__["tweetLookupQuery"])(getAuthInit))); // IMPURE fetchedBookmark$ :: [apiTweet]
+            // 
 
             fetchedAnyAPIReq$ = errorFilter(kefir__WEBPACK_IMPORTED_MODULE_7__["default"].merge([fetchedUpdate$, fetchedTimeline$, fetchedBookmarks$, fetchedBookmark$])); // fetchedAnyAPIReq$ :: [apiTweet]
 
@@ -56105,10 +56110,10 @@ function _main() {
             removedTweet$ = errorFilter(promiseStream(idsToRemove$, removeTweet)); // removedTweet$ :: msg
 
             removedTweet$.log('[DEBUG] removedTweet$');
-            updatedTweets$ = errorFilter(promiseStream(thUpdate$, updateTweets)); // updatedTweets$ :: msg    // fetchedUpdate$ gets added for a secnod time because update is the way we find deleted recent tweets
+            updatedTimeline$ = errorFilter(promiseStream(thUpdate$, updateTimeline)); // updatedTimeline$ :: msg    // fetchedUpdate$ gets added for a secnod time because update is the way we find deleted recent tweets
 
-            updatedTweets$.log('[DEBUG] updatedTweets$');
-            anyTweetUpdate$ = kefir__WEBPACK_IMPORTED_MODULE_7__["default"].merge([updatedTweets$, addedTweets$, removedTweet$, dataReset$]).toProperty(); // anyTweetUpdate$ :: msg
+            updatedTimeline$.log('[DEBUG] updatedTimeline$');
+            anyTweetUpdate$ = kefir__WEBPACK_IMPORTED_MODULE_7__["default"].merge([updatedTimeline$, addedTweets$, removedTweet$, dataReset$]).toProperty(); // anyTweetUpdate$ :: msg
 
             anyTweetUpdate$.log('[DEBUG] anyTweetUpdate$'); // Misc
 
@@ -56158,7 +56163,6 @@ function _main() {
 
             gotDefaultTweets$ = promiseStream(reqDefaultTweets$, getDefaultTweets).map(prop('res')); // gotDefaultTweets$ :: [tweets]
 
-            gotDefaultTweets$.log('gotDefaultTweets$');
             filteredDefaultTweets$ = kefir__WEBPACK_IMPORTED_MODULE_7__["default"].merge([gotDefaultTweets$, gotDefaultTweets$.sampledBy(filters$)]).map(filter(function (x) {
               return Object(_bg_search_jsx__WEBPACK_IMPORTED_MODULE_14__["makeValidateTweet"])(getFilters(), getAccsShown());
             }));
@@ -56174,7 +56178,7 @@ function _main() {
             // Ready / sync
 
 
-            subObs(incomingAccounts$, Object(_utils_dutils_jsx__WEBPACK_IMPORTED_MODULE_8__["setStg"])('activeAccounts'));
+            subObs(accountsUpdate$, Object(_utils_dutils_jsx__WEBPACK_IMPORTED_MODULE_8__["setStg"])('activeAccounts'));
             ready$.log('[INFO] READY');
             csStart$.log('[INFO] csStart');
             csGaEvent$.log('[DEBUG] csGaEvent$');
@@ -56223,7 +56227,7 @@ function _main() {
             // subObs(reqDefaultTweets$, pipe(getDefaultTweets, andThen(setStg('latest_tweets'))) )
             // DB
 
-            subObs(reqClear$, _utils_putils_jsx__WEBPACK_IMPORTED_MODULE_5__["nullFn"]); // searchQuery
+            subObs(reqReset$, _utils_putils_jsx__WEBPACK_IMPORTED_MODULE_5__["nullFn"]); // searchQuery
             // Robo
             // subObs(reqRoboQuery$, reqRoboQueryEffects)
             // Debug
@@ -56235,7 +56239,7 @@ function _main() {
               return console.log(curVal(userInfo$));
             }); // subObs(searchQuery$, nullFn)
 
-          case 187:
+          case 188:
           case "end":
             return _context19.stop();
         }
@@ -56844,54 +56848,51 @@ function genLatestSample(keys) {
     while (1) {
       switch (_context2.prev = _context2.next) {
         case 0:
-          console.log('genLatestSample', {
-            keys: keys
-          });
-          console.time('reverse(sortKeys(keys))');
+          console.time('[TIME] reverse(sortKeys(keys))');
           sorted_keys = reverse(Object(_bg_tweetImporter_jsx__WEBPACK_IMPORTED_MODULE_0__["sortKeys"])(keys));
-          console.timeEnd('reverse(sortKeys(keys))');
+          console.timeEnd('[TIME] reverse(sortKeys(keys))');
           _iterator2 = _createForOfIteratorHelper(sorted_keys);
-          _context2.prev = 5;
+          _context2.prev = 4;
 
           _iterator2.s();
 
-        case 7:
+        case 6:
           if ((_step2 = _iterator2.n()).done) {
-            _context2.next = 13;
+            _context2.next = 12;
             break;
           }
 
           key = _step2.value;
-          _context2.next = 11;
+          _context2.next = 10;
           return key;
 
-        case 11:
-          _context2.next = 7;
+        case 10:
+          _context2.next = 6;
           break;
 
-        case 13:
-          _context2.next = 18;
+        case 12:
+          _context2.next = 17;
           break;
 
-        case 15:
-          _context2.prev = 15;
-          _context2.t0 = _context2["catch"](5);
+        case 14:
+          _context2.prev = 14;
+          _context2.t0 = _context2["catch"](4);
 
           _iterator2.e(_context2.t0);
 
-        case 18:
-          _context2.prev = 18;
+        case 17:
+          _context2.prev = 17;
 
           _iterator2.f();
 
-          return _context2.finish(18);
+          return _context2.finish(17);
 
-        case 21:
+        case 20:
         case "end":
           return _context2.stop();
       }
     }
-  }, _marked2, null, [[5, 15, 18, 21]]);
+  }, _marked2, null, [[4, 14, 17, 20]]);
 } // get random tweets as a serendipity generator
 // TODO make functional
 // gets one by one
@@ -57018,7 +57019,7 @@ var getLatestTweets = getDefaultTweets(genLatestSample); // getRandomSample :: f
 /*!**********************************!*\
   !*** ./src/bg/tweetImporter.jsx ***!
   \**********************************/
-/*! exports provided: bookmarkToTweet, apiToTweet, archToTweet, validateTweet, idComp, sortKeys, findDeletedIds */
+/*! exports provided: bookmarkToTweet, apiToTweet, archToTweet, validateTweet, idComp, sortKeys, findInnerDiff */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -57029,7 +57030,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "validateTweet", function() { return validateTweet; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "idComp", function() { return idComp; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "sortKeys", function() { return sortKeys; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "findDeletedIds", function() { return findDeletedIds; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "findInnerDiff", function() { return findInnerDiff; });
 /* harmony import */ var _utils_dutils_jsx__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/dutils.jsx */ "./src/utils/dutils.jsx");
 /* harmony import */ var _utils_putils_jsx__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/putils.jsx */ "./src/utils/putils.jsx");
 /* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! lodash */ "./node_modules/lodash/lodash.js");
@@ -57345,9 +57346,10 @@ function sortTweets(tweetDict) {
 
 var overlap = function overlap(minNew, maxNew, currentIds) {
   return pipe(sortKeys, dropLastWhile(gtId(__, maxNew)), dropWhile(ltId(__, minNew)))(currentIds);
-};
+}; // findInnerDiff :: [id] -> [id] -> [id] // finds currentIds ids in the range [min, max](incoming) which are missing in incomingIds
 
-var findDeletedIds = function findDeletedIds(currentIds, incomingIds) {
+
+var findInnerDiff = curry(function (currentIds, incomingIds) {
   if (isEmpty(currentIds)) return []; // const minNew = reduce(minBy(idComp), '0', newTweets)
   // const maxNew = reduce(maxBy(idComp), Number.MAX_SAFE_INTEGER.toString(), newTweets)
 
@@ -57361,7 +57363,7 @@ var findDeletedIds = function findDeletedIds(currentIds, incomingIds) {
     incomingIds: incomingIds
   });
   return difference(overlappingOldTweets, incomingIds);
-};
+});
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../../node_modules/webpack/buildin/global.js */ "./node_modules/webpack/buildin/global.js")))
 
 /***/ }),
@@ -58616,12 +58618,14 @@ var renameKeys = function renameKeys(keysMap) {
     }, {});
   };
 };
-var timeFn = function timeFn(text, fn) {
-  console.time(text);
-  var res = fn();
-  console.timeEnd(text);
-  return res;
-};
+var timeFn = Object(ramda__WEBPACK_IMPORTED_MODULE_0__["curry"])(function (text, fn) {
+  return function () {
+    console.time("[TIME] ".concat(text));
+    var res = fn.apply(void 0, arguments);
+    console.timeEnd("[TIME] ".concat(text));
+    return res;
+  };
+});
 
 /***/ })
 
