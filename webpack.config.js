@@ -3,10 +3,10 @@ const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPl
 
 
 module.exports = {
-  devtool: false,
-  // devtool: 'source-map',
-  mode: 'production',
-  // mode: 'development',
+  // devtool: false,
+  devtool: 'source-map',
+  // mode: 'production',
+  mode: 'development',
   entry: {
     popup: './src/popup.jsx',
     'content-script': './src/cs.jsx',

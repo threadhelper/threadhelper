@@ -24,7 +24,11 @@ export function* genRandomSample(keys){
 }
 // genLatestSample :: [id] -> generator(id)
 export function*  genLatestSample(keys){
-  for (let key of reverse(sortKeys(keys))){
+  console.log('genLatestSample', {keys})
+  console.time('reverse(sortKeys(keys))')
+  const sorted_keys = reverse(sortKeys(keys))
+  console.timeEnd('reverse(sortKeys(keys))')
+  for (let key of sorted_keys){
     yield key
   }
 }
@@ -39,6 +43,8 @@ export const getDefaultTweets = curry(async (sampleFn, n_tweets, filters, db_get
   const _isFull = isFull(n_tweets)  
   const isValidTweet = makeValidateTweet(filters, accsShown)
   const gen = sampleFn(keys)
+  console.log('getDefaultTweets', {isValidTweet, gen, accsShown})
+  if(isEmpty(accsShown)) return []
   while(!_isFull(sample)){
     const next = gen.next()
     if(next.done) break;
