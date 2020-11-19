@@ -87,7 +87,7 @@ export const delMany = curry( async (db, storeName, key_list) => {
 // list as input
 // used only to add tweets to the store
 export const putMany = curry( async (db, storeName, item_list) => {
-  console.log('putting in db', {db})
+  console.log('putting in db', {db, storeName, item_list})
   const tx = db.transaction(storeName, 'readwrite');
   const store = tx.objectStore(storeName);
   let promises = []
@@ -98,6 +98,7 @@ export const putMany = curry( async (db, storeName, item_list) => {
     promises.push(tx.done)
     return await Promise.all(promises)        
   } catch(e){
+    console.trace('[ERROR] putMany', {e, storeName, item_list})
     throw(e)
   }
 })

@@ -2,6 +2,7 @@ import { h, render, Component } from 'preact';
 import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
 import { initGA, csEvent, PageView, UA_CODE } from '../utils/ga.jsx'
 import GearIcon from '../../images/gear.svg';
+import { isExist } from '../utils/putils.jsx'
 import { msgBG, setStg, applyToOptionStg } from '../utils/dutils';
 import { defaultTo, pipe, not} from 'ramda'
 import {FilterButton} from './Console.jsx'
@@ -50,12 +51,15 @@ export function DropdownMenu(_props) {
       
     )
   }
+  const filterItems = defaultTo([], _props.filterItems)
+  const items = defaultTo([], _props.items)
+  const debugItems = defaultTo([], _props.debugItems)
 
   return (
     <div className="dropdown" ref={dropdownRef}>
-      {isNil(_props.filterItems) ? null : _props.filterItems.map( item => <FilterItem path={['activeAccounts', item.id, 'showTweets']} id={item.id} screen_name={item.screen_name} leftIcon={item.leftIcon} effect={item.effect} /> )}
-      {isNil(_props.items) ? null : _props.items.map( item => <DropdownItem id={item.id} leftIcon={item.leftIcon} effect={item.effect} /> )}
-      {isNil(_props.debugItems) ? null : _props.debugItems.map( item => <DebugItem id={item.id} leftIcon={item.leftIcon} effect={item.effect} /> )}
+      {filterItems.map( item => <FilterItem path={['activeAccounts', item.id, 'showTweets']} id={item.id} screen_name={item.screen_name} leftIcon={item.leftIcon} effect={item.effect} /> )}
+      {items.map( item => <DropdownItem id={item.id} leftIcon={item.leftIcon} effect={item.effect} /> )}
+      {debugItems.map( item => <DebugItem id={item.id} leftIcon={item.leftIcon} effect={item.effect} /> )}
     </div>
   );
 }

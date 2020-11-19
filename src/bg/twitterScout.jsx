@@ -23,11 +23,19 @@ const loopRetry = async (fn) => {
   return output
 }
 
+const fetchTweets = async (url, auth) => fetch(url, auth).then(x=>{if (x.ok){return x.json()}else{ console.log('[ERROR] Fetching tweets', x); throw new Error('Something went wrong')}}).catch(error=>console.log('[ERROR] catch Fetching tweets', error));
+
+
 // Fetches, IMPURE
-export const fetchUserInfo = async (getAuthInit) => await fetch(`https://api.twitter.com/1.1/account/verify_credentials.json`,getAuthInit()).then(x => x.json()).catch(inspect('ERROR fetchUserInfo rejected'))
-export const updateQuery = async (getAuthInit, username, count) => await fetch(makeUpdateQueryUrl(username, count), getAuthInit()).then(x => x.json()).catch(inspect('ERROR updateQuery rejected'))
+// export const fetchUserInfo = async (getAuthInit) => await fetch(`https://api.twitter.com/1.1/account/verify_credentials.json`,getAuthInit()).then(x => x.json()).catch(inspect('[ERROR] fetchUserInfo rejected'))
+// export const updateQuery = async (getAuthInit, username, count) => await fetch(makeUpdateQueryUrl(username, count), getAuthInit()).then(x => x.json()).catch(inspect('[ERROR] updateQuery rejected'))
+// export const tweetLookupQuery = curry(async (getAuthInit, ids) => {
+//   return await fetch(`https://api.twitter.com/1.1/statuses/lookup.json?id=${R.join(",",ids)}`, getAuthInit()).then(x => x.json()).catch(inspect('[ERROR] tweetLookupQuery rejected'))
+// })
+export const fetchUserInfo = async (getAuthInit) => await fetchTweets(`https://api.twitter.com/1.1/account/verify_credentials.json`,getAuthInit())
+export const updateQuery = async (getAuthInit, username, count) => await fetchTweets(makeUpdateQueryUrl(username, count), getAuthInit())
 export const tweetLookupQuery = curry(async (getAuthInit, ids) => {
-  return await fetch(`https://api.twitter.com/1.1/statuses/lookup.json?id=${R.join(",",ids)}`, getAuthInit()).then(x => x.json()).catch(inspect('ERROR tweetLookupQuery rejected'))
+  return await fetchTweets(`https://api.twitter.com/1.1/statuses/lookup.json?id=${R.join(",",ids)}`, getAuthInit())
 })
 
 
@@ -41,9 +49,7 @@ const stop_condition = (res, count, max_id)=>(res.length >= count || isNil(max_i
 // res is the accumulator, should be called as [], max_id initialized as -1
 const query = curry( async (getAuthInit, username, count, max_id, res) => {
   if (stop_condition(res, count, max_id)) return res
-
-  const req_res = await fetch(makeTweetQueryUrl(max_id, username, count), getAuthInit()).then(x => x.json()).catch(pipe(inspect('ERROR query (timeline) rejected')))
-    
+  const req_res = await fetchTweets(makeTweetQueryUrl(max_id, username, count), getAuthInit())
   return await query(getAuthInit, username, count, getMaxId(req_res), res.concat(req_res))
 })
 

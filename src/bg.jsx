@@ -245,9 +245,7 @@ export async function main(){
   const notReady$ = ready$.map(not) // notReady$ :: Bool
   const makeSafe = stream => stream.bufferWhileBy(notReady$).flatten() // makeSafe :: Stream -> Stream
   const makeMsgStreamSafe = name => makeSafe(makeMsgStream(name)) // makeMsgStreamSafe :: String -> Stream msg
-  const errorFilter = stream => stream.filterErrors(e=>{
-    console.log('[ERROR]', {stream, e});
-    return false})
+  const errorFilter = stream => stream.filterErrors(e=>{console.trace('[ERROR]', {stream, e});    return false})
 // 
   const initData$ = makeSafe(Kefir.merge([csStart$, ready$.bufferWhileBy(csNotReady$).flatten(), dataReset$])).throttle(1000) // initData$ ::  // second term exists bc if csStart arrives before ready, then event won't fire
   initData$.log('[DEBUG] initData$')
@@ -261,13 +259,14 @@ export async function main(){
   const missingTimeline$ = hasTimeline$.map(not)
   missingTimeline$.log('missingTimeline$')
   // const reqTimeline$ = makeSafe(Kefir.merge([updateTimeline$, initData$]))  // reqTimeline$ :: msg
-  const reqUpdatedTweets$ = makeSafe(Kefir.merge([updateRecentTimeline$, initData$.filterBy(hasTimeline$)])) // reqUpdatedTweets$ :: msg
-  const reqTimeline$ = makeSafe(Kefir.merge([updateTimeline$, initData$.filterBy(missingTimeline$)])) // reqTimeline$ :: msg
+  const reqUpdatedTweets$ = errorFilter(makeSafe(Kefir.merge([updateRecentTimeline$, initData$.filterBy(hasTimeline$)]))) // reqUpdatedTweets$ :: msg
+  reqUpdatedTweets$.log('[DEBUG] reqUpdatedTweets$')
+  const reqTimeline$ = errorFilter(makeSafe(Kefir.merge([updateTimeline$, initData$.filterBy(missingTimeline$)]))) // reqTimeline$ :: msg
   reqTimeline$.log('[DEBUG] reqTimeline$')
-  const reqBookmarks$ = makeSafe(Kefir.merge([debugGetBookmarks$, initData$])) //.flatten() // reqBookmarks$ :: msg
+  const reqBookmarks$ = errorFilter(makeSafe(Kefir.merge([debugGetBookmarks$, initData$]))) //.flatten() // reqBookmarks$ :: msg
   // reqBookmarks$.log('[DEBUG] reqBookmarks$')
   const reqAddBookmark$ = makeMsgStreamSafe('add-bookmark') // reqAddBookmark$ :: msg
-  const reqBookmarkId$ = reqAddBookmark$.map(pipe(prop('id'), id=>[id])) // reqBookmarkId$ :: [id]
+  const reqBookmarkId$ = errorFilter(reqAddBookmark$.map(pipe(prop('id'), id=>[id]))) // reqBookmarkId$ :: [id]
   const anyAPIReq$ = Kefir.merge([reqUpdatedTweets$, reqBookmarks$, reqTimeline$, reqAddBookmark$,]) // anyAPIReq$ :: msg
   anyAPIReq$.log('[DEBUG] anyAPIReq$')
 
@@ -275,7 +274,7 @@ export async function main(){
   const fetchedTimeline$ = errorFilter(promiseStream(reqTimeline$, _ => timelineQuery(getAuthInit, getUserInfo()))) // IMPURE fetchedTimeline$ :: [apiTweet]
   const fetchedBookmarks$ = errorFilter(promiseStream(reqBookmarks$, _ => getBookmarks(getAuthInit))) // IMPURE fetchedBookmarks$ :: [apiBookmark]
   const fetchedBookmark$ = errorFilter(promiseStream(reqBookmarkId$, tweetLookupQuery(getAuthInit))) // IMPURE fetchedBookmark$ :: [apiTweet]
-// 
+
   const fetchedAnyAPIReq$ = errorFilter(Kefir.merge([fetchedUpdate$, fetchedTimeline$, fetchedBookmarks$, fetchedBookmark$,])) // fetchedAnyAPIReq$ :: [apiTweet]
   fetchedAnyAPIReq$.log('[DEBUG] fetchedAnyAPIReq$')
     // User submitted  
@@ -320,7 +319,7 @@ export async function main(){
   const whenUpdated$ = anyTweetUpdate$.map(_=>getDateFormatted()).toProperty(getDateFormatted) // keeps track of when the last update to the tweet db was
   const syncDisplay$ = Kefir.merge([ready$, anyTweetUpdate$,]) // triggers sync display update// ready$ :: user_info -> Bool
   syncDisplay$.log('[DEBUG] syncDisplay$')
-// 
+
     // Sync
   const anyWorkerReq$ = Kefir.merge([fetchedUpdate$, fetchedBookmarks$, fetchedTimeline$, reqRemoveBookmark$, idsToRemove$, reqArchiveLoad$]) // like with anyAPIReq$, these should only be emitted as the worker request is sent but oh well\
   const makeFlag = curry((def, stream0, stream1) => Kefir.merge([toVal(false, stream0), toVal(true, stream1)]).map(defaultTo(def)).toProperty(()=>def))
