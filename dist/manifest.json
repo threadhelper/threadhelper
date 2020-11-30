@@ -38,5 +38,6 @@
     "32": "images/extension/thread_32.png",
     "48": "images/extension/thread_48.png",
     "128": "images/extension/thread_128.png"
-  }
+  },
+  "content_security_policy": "script-src 'self' https://www.google-analytics.com/; object-src 'self'"
 }
