@@ -7,14 +7,14 @@ don't forget to `npm install`
 
 npm run commands:
 
-`npm run serve`: 
+- `npm run serve`: 
     - web-dev-server for building front-end stuff with hot-module replacement
-`npm run web-ext`: 
+- `npm run web-ext`: 
     - build for development in firefox with live reloading (tkaes long time to start)
-`npm run build-dev`: 
+- `npm run build-dev`: 
     - builds dev version for testing and debugging, 
     - with webpack-extension-reloader, 
-`npm run build-prod`: 
+- `npm run build-prod`: 
     - builds final version for deployment, 
     - with webpack-bundle-analyzer
     - cleans before
