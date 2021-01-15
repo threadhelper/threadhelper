@@ -25,6 +25,7 @@ module.exports = function(configDirs) {
       // new CleanWebpackPlugin(),
       new ExtensionReloader({
         manifest: configDirs.PROJ_DIR + "/manifest.json",
+        port:3000,
       }),
     ]
     console.log('\x1b[36m%s\x1b[0m', 'Building for development...');

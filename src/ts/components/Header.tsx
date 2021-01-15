@@ -8,10 +8,8 @@ import {ArchiveUploader} from './LoadArchive';
 
 
 
-// const DEVING = process.env.DEV_MODE == 'serve'
 
 export function Header(){
-  // const [hasArchive, setHasArchive] = DEVING ? useState(true) : useStorage('hasArchive') 
   
   return (
     <div class="header">

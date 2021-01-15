@@ -6,7 +6,6 @@ import {inspect, nullFn} from '../utils/putils'
 import {pipe, andThen, prop, path, isNil, defaultTo} from 'ramda'
 import { defaultOptions, defaultStorage as _defaultStorage, devStorage } from '../utils/defaultStg';
 
-const DEVING = process.env.DEV_MODE == 'serve'
 
 
 export function useStorage(name, default_val){
@@ -23,7 +22,7 @@ export function useStorage(name, default_val){
   useEffect(() => {
     useStgObs.onValue(nullFn)
     //init
-    getData(name).then(pipe(defaultTo(DEVING ? devStorage()[name] : default_val), setStorageItem))
+    getData(name).then(pipe(defaultTo(default_val), setStorageItem))
     return () => {useStgObs.offValue(nullFn); };
   }, []);
 
@@ -48,7 +47,7 @@ export function useStgPath(_path, default_val: undefined){
   useEffect(() => {
     useStgObs.onValue(nullFn)
     //init
-    getStgPath(_path).then(pipe(defaultTo(DEVING ? devStorage()[name] : default_val), setStorageItem))
+    getStgPath(_path).then(pipe(defaultTo(default_val), setStorageItem))
     return () => {useStgObs.offValue(nullFn); };
   }, []);
 

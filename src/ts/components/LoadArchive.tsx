@@ -6,11 +6,8 @@ import { prop, propEq, propSatisfies, path, pathEq, hasPath, assoc, assocPath, v
 import { head, tail, take, isEmpty, any, all, find, includes, last, dropWhile, dropLastWhile, difference, append, fromPairs, forEach, nth, pluck, reverse, uniq, slice} from 'ramda' // List
 import { equals, ifElse, when, both, either, isNil, is, defaultTo, and, or, not, T, F, gt, lt, gte, lte, max, min, sort, sortBy, split, trim, multiply } from 'ramda' // Logic, Type, Relation, String, Math
 
-import { useStorage as _useStorage } from '../hooks/useStorage';
+import { useStorage } from '../hooks/useStorage';
 import { initGA, csEvent, csException, PageView, UA_CODE } from '../utils/ga'
-
-const DEVING = process.env.DEV_MODE == 'serve'
-const useStorage = DEVING ? (name: string) => useState(name) : _useStorage
 
 
 function LoadArchiveIcon(){  

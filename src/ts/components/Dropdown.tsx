@@ -6,13 +6,9 @@ import { __, curry, pipe, andThen, map, filter, reduce, tap, apply, tryCatch} fr
 import { equals, ifElse, when, both, either, isNil, is, defaultTo, and, or, not, T, F, gt, lt, gte, lte, max, min, sort, sortBy, split, trim, multiply } from 'ramda' // Logic, Type, Relation, String, Math
 
 import {FilterButton} from './Console'
-import { useStgPath as _useStgPath } from '../hooks/useStorage';
+import { useStgPath } from '../hooks/useStorage';
 
 const debug = false
-
-const DEVING = process.env.DEV_MODE == 'serve'
-const useStgPath = DEVING ? (name: string, init:any) => useState(init) : _useStgPath
-
 
 export function DropdownMenu(_props: { name: any; itemClickClose: any; closeMenu: () => any; componentItems: any; filterItems: any; items: any; debugItems: any; }) {
   const dropdownRef = useRef(null);

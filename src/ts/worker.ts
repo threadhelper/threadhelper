@@ -3,11 +3,11 @@ import "@babel/polyfill";
 // import "regenerator-runtime/runtime";
 import { onWorkerPromise } from './worker/promise-stream-worker';
 import { IndexSearchResult, Msg, SearchResult, WorkerLog, WorkerMsg, TweetResWorkerMsg, Msg2Worker, WriteAccMsg } from './types/msgTypes'
-import * as db from './bg/db';
+import * as db from './worker/db';
 import * as elasticlunr from 'elasticlunr';
-import { makeIndex, updateIndex, search, loadIndex } from './bg/nlp';
-import { getRandomSampleTweets, getLatestTweets } from './bg/search';
-import { doSemanticSearch, reqSemIndexTweets } from './bg/semantic';
+import { makeIndex, updateIndex, search, loadIndex } from './worker/nlp';
+import { getRandomSampleTweets, getLatestTweets } from './worker/search';
+import { doSemanticSearch, reqSemIndexTweets } from './worker/semantic';
 import { findInnerDiff } from './bg/tweetImporter';
 import { flattenModule, wInspect, toggleDebug, currentValue, isExist, wTimeFn } from './utils/putils';
 import * as R from 'ramda';
@@ -21,7 +21,7 @@ import { User } from "twitter-d";
 
 const wSelf:Worker = self as any
 // Project business
-// var DEBUG = true;
+// var DEBUG = process.env.NODE_ENV != 'production';
 // toggleDebug(null, DEBUG);
 // toggleDebug(wSelf, DEBUG);
 (Kefir.Property.prototype as any).currentValue = currentValue;
@@ -284,9 +284,7 @@ const msg2SampleArgs = (m: {
 const callGetIdleTweets = (m: {idle_mode: string | number;}) => pipe(msg2SampleArgs, apply(idleFns[m.idle_mode]))(m);
 const getDefaultTweets = pipe(
     callGetIdleTweets, 
-    inspect('[DEBUG] getDefaultTweets 0'),
     andThen(map(tweet=>{return {tweet}})),
-    inspect('[DEBUG] getDefaultTweets 1'),
     andThen(assoc('res', __, { type: 'getDefaultTweets', })));
 
 

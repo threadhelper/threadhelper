@@ -75,7 +75,7 @@ module.exports = function(configDirs) {return {
         },
         {
             test: /\.css$/i,
-            use: [isDevelopment ? 'style-loader' : MiniCssExtractPlugin.loader, "css-loader"]
+            use: ['style-loader', "css-loader"]
         }
         ]
     },

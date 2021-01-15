@@ -9,11 +9,9 @@ import { prop, propEq, propSatisfies, path, pathEq, hasPath, assoc, assocPath, v
 import { head, tail, take, isEmpty, any, all, includes, last, dropWhile, dropLastWhile, difference, append, fromPairs, forEach, nth, pluck, reverse, uniq, slice } from 'ramda'; // List
 import { equals, ifElse, when, both, either, isNil, is, defaultTo, and, or, not, T, F, gt, lt, gte, lte, max, min, sort, sortBy, split, trim, multiply } from 'ramda'; // Logic, Type, Relation, String, Math
 import { inspect } from '../utils/putils';
-import { useStorage as _useStorage } from '../hooks/useStorage';
+import { useStorage } from '../hooks/useStorage';
 import { FullUser } from 'twitter-d';
 
-const DEVING = process.env.DEV_MODE == 'serve'
-const useStorage = DEVING ? (name: string, init:any) => useState(init) : _useStorage
 
 const accountFilterAvi = (url: string) => {
     const FilterAvi = props => {

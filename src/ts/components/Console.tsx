@@ -1,6 +1,6 @@
 import { h, render, Component } from 'preact';
 import { useState, useEffect, useContext } from 'preact/hooks';
-import { useOption as _useOption } from '../hooks/useStorage';
+import { useOption } from '../hooks/useStorage';
 import { __, curry, pipe, andThen, map, filter, reduce, tap, apply, tryCatch} from 'ramda' // Function
 import { prop, propEq, propSatisfies, path, pathEq, hasPath, assoc, assocPath, values, mergeLeft, mergeDeepLeft, keys, lens, lensProp, lensPath, pick, project, set, length } from 'ramda' // Object
 import { head, tail, take, isEmpty, any, all,  includes, last, dropWhile, dropLastWhile, difference, append, fromPairs, forEach, nth, pluck, reverse, uniq, slice} from 'ramda' // List
@@ -12,9 +12,6 @@ import RetweetIcon from '../../images/retweet.svg';
 import ShuffleIcon from '../../images/shuffle.svg';
 import LightningIcon from '../../images/lightning.svg';
 import { initGA, csEvent, PageView, UA_CODE } from '../utils/ga'
-
-const DEVING = process.env.DEV_MODE == 'serve'
-const useOption = DEVING ? (name: string) => useState(name) : _useOption
 
 
 export function FilterButton(props: { Icon: any; name: string; useFilter: boolean; setFilter: any; }){

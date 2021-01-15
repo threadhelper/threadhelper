@@ -1,5 +1,5 @@
-const accounts = {
-    "1245046280210075649":{
+const accounts = [
+    {
         "id":1245046280210075600,
         "id_str":"1245046280210075649",
         "name":"birb",
@@ -110,7 +110,7 @@ const accounts = {
         },
         "require_some_consent":false
     },
-    "781942492753235968":{
+    {
         "id":781942492753236000,
         "id_str":"781942492753235968",
         "name":"shannon",
@@ -200,6 +200,6 @@ const accounts = {
             "status":"confirmed"
             }],
     }
-}
+]
 
 export default accounts;

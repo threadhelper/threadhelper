@@ -1,7 +1,7 @@
 import Kefir, { Emitter, Observable, Stream } from 'kefir';
-import {StorageChange} from '../types/stgTypes'
-import {MsgWrapper, Msg, UrlMsg} from '../types/msgTypes'
-import { flattenModule, currentValue, inspect } from './putils';
+import {StorageChange, StorageInterface} from '../types/stgTypes'
+import {MsgWrapper, Msg} from '../types/msgTypes'
+import { currentValue, inspect } from './putils';
 import { defaultOptions, defaultStorage as _defaultStorage, devStorage } from './defaultStg';
 import * as R from 'ramda';
 import { __, curry, pipe, andThen, map, filter, reduce, tap, apply, tryCatch } from 'ramda'; // Function
@@ -10,35 +10,44 @@ import { head, tail, take, isEmpty, any, all, includes, last, dropWhile, dropLas
 import { equals, ifElse, when, both, either, isNil, is, defaultTo, and, or, not, T, F, gt, lt, gte, lte, max, min, sort, sortBy, split, trim, multiply } from 'ramda'; // Logic, Type, Relation, String, Math
 import { Option, Options } from '../types/stgTypes';
 (Kefir.Property.prototype as any).currentValue = currentValue;
-import chromeMock from 'chrome-api-mock';
+import chromeMock from 'sinon-chrome/extensions';
 
-
+let defaultStorage:()=>(StorageInterface) = ()=>{}
 const DEVING = process.env.DEV_MODE == 'serve'
-global.chrome = DEVING ? chromeMock.getChromeInstance() : global.chrome
-const defaultStorage = DEVING ? devStorage : _defaultStorage
-console.log('dutils defaultStorage', {DEVING, defaultStorage, chrome: global.chrome, chromeMock, mock: chromeMock.getChromeInstance() })
+
+if (!DEVING){
+    defaultStorage = _defaultStorage
+}else{
+    global.chrome = chromeMock
+    defaultStorage = devStorage
+    const makeStub = x=>{chrome.storage.local.get.withArgs([x[0]]).yields(x[1]);}
+    Object.entries(devStorage()).forEach(makeStub);
+
+    console.log('dutils', {DEVING, chrome: global.chrome, defaultStorage:defaultStorage()})
+    setData(defaultStorage())
+}
 
 //returns a promise that gets a value from chrome local storage 
-export async function getData(key: string) {
+export async function getData(key: string): Promise<any> {
     return new Promise(function (resolve, reject) {
-        // chrome.storage.local.get(key, function (items: {
-        chrome.storage.sync.get([key], function (items: {[x: string]: unknown;}) {
+        // chrome.storage.local.get([key], function (items: {[x: string]: unknown;}) {
+        chrome.storage.local.get([key], function (result) {
             if (chrome.runtime.lastError) {
                 console.error(chrome.runtime.lastError.message);
                 reject(chrome.runtime.lastError.message);
             }
             else {
-                console.log('stg got', {key,})
-                resolve(items[key]);
+                console.log('stg got', {key, result})
+                resolve(DEVING ? result : result[key]);
+                // resolve(result);
             }
         });
     });
 }
 //returns a promise that sets an object with key value pairs into chrome local storage 
-export async function setData(key_vals) {
+export async function setData(key_vals:Object): Promise<any> {
     return new Promise(function (resolve, reject) {
-        // chrome.storage.local.set(key_vals, () => {
-        chrome.storage.sync.set(key_vals, () => {
+        chrome.storage.local.set(key_vals, () => {
             if (chrome.runtime.lastError) {
                 console.error(chrome.runtime.lastError.message);
                 reject(chrome.runtime.lastError.message);
@@ -52,10 +61,9 @@ export async function setData(key_vals) {
 }
 // Delete data from storage
 // takes an array of keys
-export async function removeData(keys) {
+export async function removeData(keys:string[]) {
     return new Promise(function (resolve, reject) {
-        chrome.storage.sync.remove(keys, function () {
-        // chrome.storage.local.remove(keys, function () {
+        chrome.storage.local.remove(keys, function () {
             //console.log("removed", keys)
             if (chrome.runtime.lastError) {
                 console.error(chrome.runtime.lastError.message);
@@ -131,8 +139,7 @@ const makeEventObs = curry((event: chrome.events.Event<any>, makeEmit, initVal: 
     });
 });
 export const makeStorageChangeObs = ():Observable<StorageChange, Error> => {
-    const makeEmitStgCH = (emitter: Emitter<StorageChange, Error>
-    ) => makeOnStorageChanged((stgCh: StorageChange): any => emitter.emit(stgCh));
+    const makeEmitStgCH = (emitter: Emitter<StorageChange, Error>) => makeOnStorageChanged((stgCh: StorageChange): any => emitter.emit(stgCh));
     return makeEventObs(chrome.storage.onChanged, makeEmitStgCH, { itemName: null, oldVal: null, newVal: null });
 };
 // shallow

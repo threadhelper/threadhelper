@@ -3,7 +3,7 @@ import { useState, useRef, useEffect, useContext, useCallback } from 'preact/hoo
 import { getData, setStg, msgBG, makeOnStorageChanged } from '../utils/dutils';
 import { Console } from './Console';
 import { Tweet as TweetCard } from './Tweet';
-import { useStorage as _useStorage } from '../hooks/useStorage';
+import { useStorage } from '../hooks/useStorage';
 import { useStream } from '../hooks/useStream';
 import { flattenModule, isExist, inspect } from '../utils/putils'
 import * as R from 'ramda';``
@@ -15,16 +15,7 @@ import { equals, ifElse, when, both, either, isNil, is, defaultTo, and, or, not,
 import { Status as Tweet } from 'twitter-d';
 import { thTweet } from '../types/tweetTypes';
 import { SearchResult } from '../types/msgTypes';
-import { defaultOptions, defaultStorage as defaultStorage, devStorage } from '../utils/defaultStg';
-
-
-const DEVING = process.env.DEV_MODE == 'serve'
-const useStorage = DEVING ? (name: string, init:any) => useState(devStorage()[name]) : _useStorage
-
-
-// function reqSearch(query:string){
-//   msgBG({type:'search', query:query})
-// }
+import { defaultOptions, defaultStorage, devStorage } from '../utils/defaultStg';
 
 export function Search(props:any){
   const [tweets, setTweets] = useState([]);

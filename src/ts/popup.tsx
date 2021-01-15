@@ -4,8 +4,14 @@ import "@babel/polyfill";
 import css from '../style/popup.css'; console.log('hi css', {css});
 import { h, render } from 'preact';
 import { useEffect, useCallback } from 'preact/hooks';
+import { toggleDebug } from './utils/putils';
 import Tutorial from './components/Tutorial'
 import { initGA, Event, PageView, UA_CODE } from './utils/ga'
+
+// Project business 
+var DEBUG = process.env.NODE_ENV != 'production';
+toggleDebug(window, DEBUG);
+
 
 export function Welcome2TH(props){
   useEffect(async () => {

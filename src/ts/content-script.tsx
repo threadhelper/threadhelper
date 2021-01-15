@@ -22,10 +22,10 @@ import { curProp, StorageChange, UrlModes } from './types/types'
 import { UrlMsg } from './types/msgTypes'
 import * as window from './global';
 import ThreadHelper from './components/ThreadHelper';
-import { makeComposeObs } from './ui/composeHandler';
-import { getHostTweetId, makeActionStream, makeAddBookmarkStream, makeComposeFocusObs, makeDeleteEventStream, makeLastClickedObs, makeRemoveBookmarkStream, makeReplyObs, makeRoboStream } from './ui/inputsHandler';
-import { injectDummy, injectSidebarHome, makeFloatSidebarObserver, makeHomeSidebarObserver, makeSidebarCompose, makeSidebarHome } from './ui/sidebarHandler';
-import { makeBgColorObs, makeLastStatusObs } from './ui/tabsHandler';
+import { makeComposeObs } from './domInterface/composeHandler';
+import { getHostTweetId, makeActionStream, makeAddBookmarkStream, makeComposeFocusObs, makeDeleteEventStream, makeLastClickedObs, makeRemoveBookmarkStream, makeReplyObs, makeRoboStream } from './domInterface/inputsHandler';
+import { injectDummy, injectSidebarHome, makeFloatSidebarObserver, makeHomeSidebarObserver, makeSidebarCompose, makeSidebarHome } from './domInterface/sidebarHandler';
+import { makeBgColorObs, makeLastStatusObs } from './domInterface/tabsHandler';
 import { makeGotMsgObs, makeStorageChangeObs, msgBG } from './utils/dutils';
 import { currentValue, flattenModule, inspect, nullFn, toggleDebug } from './utils/putils';
 import { getMode, updateTheme } from './utils/wutils';
@@ -33,8 +33,9 @@ import { __, curry, pipe, andThen, map, filter, reduce, tap, apply, tryCatch } f
 import { prop, propEq, propSatisfies, path, pathEq, hasPath, assoc, assocPath, values, mergeLeft, mergeDeepLeft, keys, lens, lensProp, lensPath, pick, project, set, length } from 'ramda'; // Object
 import { head, tail, take, isEmpty, any, all, includes, last, dropWhile, dropLastWhile, difference, append, fromPairs, forEach, nth, pluck, reverse, uniq, slice } from 'ramda'; // List
 import { equals, ifElse, when, both, either, isNil, is, defaultTo, and, or, not, F, gt, lt, gte, lte, max, min, sort, sortBy, split, trim, multiply } from 'ramda'; // Logic, Type, Relation, String, Math
+
 // Project business 
-var DEBUG = true;
+var DEBUG = process.env.NODE_ENV != 'production';
 toggleDebug(window, DEBUG);
 (Kefir.Property.prototype as any).currentValue = currentValue;
 // Sidebar functions

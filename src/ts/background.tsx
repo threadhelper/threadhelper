@@ -24,22 +24,21 @@ import { msgCS, setStg, getData, removeData, getOptions, getOption, makeStorageC
 import { defaultOptions } from './utils/defaultStg';
 import { makeAuthObs } from './bg/auth';
 import { initWorker } from './bg/workerBoss';
-import { makeIndex, loadIndex, updateIndex, search } from './bg/nlp';
 import { fetchUserInfo, updateQuery, tweetLookupQuery, timelineQuery, getBookmarks, } from './bg/twitterScout';
-import { getRandomSampleTweets, getLatestTweets, filterTweet, accFilterTweet, makeValidateTweet } from './bg/search';
+import { makeValidateTweet } from './worker/search';
 import { validateTweet, archToTweet, bookmarkToTweet, apiToTweet } from './bg/tweetImporter';
-import { StorageChange, SearchFilters, SearchMode, IdleMode } from "types/stgTypes";
-import { thTweet } from "types/tweetTypes";
-import { Msg, TweetResult, TweetResWorkerMsg, WorkerMsg } from "types/msgTypes";
+import { StorageChange, SearchFilters, SearchMode, IdleMode } from "./types/stgTypes";
+import { thTweet } from "./types/tweetTypes";
+import { Msg, TweetResult, TweetResWorkerMsg, WorkerMsg } from "./types/msgTypes";
 // Analytics //IMPORTANT: this block must come before setting the currentValue for Kefir. Property and I have no idea why
 (function initAnalytics() { initGA(); })();
 PageView('/background.html');
 
 // Project business
-var DEBUG = true;
+var DEBUG = process.env.NODE_ENV != 'production';
 toggleDebug(window, DEBUG);
 (Kefir.Property.prototype as any).currentValue = currentValue;
-// 
+
 // Stream clean up
 const subscriptions: any[] = [];
 const rememberSub = (sub) => { subscriptions.push(sub); return sub; };
@@ -305,6 +304,7 @@ export async function main() {
     userInfo$.log('[DEBUG] uniqueUserInfo$');
     notReady$.log('[DEBUG] notReady$');
     initData$.log('[DEBUG] initData$');
+    idleMode$.log('[DEBUG] idleMode$')
     reqUpdatedTweets$.log('[DEBUG] reqUpdatedTweets$');
     reqTimeline$.log('[DEBUG] reqTimeline$');
     reqBookmarks$.log('[DEBUG] reqBookmarks$');
@@ -328,7 +328,6 @@ export async function main() {
     // csGaEvent$.log('[DEBUG] csGaEvent$');
     accounts$.log('[DEBUG] accounts$');
     accsShown$.log('[DEBUG] accsShown$');
-    filteredDefaultTweets$.log('[DEBUG] filteredDefaultTweets$');
     searchResults$.log('[DEBUG] searchResults$')
     wMsgEvent$.log('wMsgEvent$')
     workerReady$.log('[DEBUG] workerReady$')
@@ -339,10 +338,12 @@ export async function main() {
     wordSearchQuery$.log('[DEBUG] wordSearchQuery$')
     reqFullTextSearch$.log('reqFullTextSearch$')
     reqSemanticSearch$.log('reqSemanticSearch$')
-    gotDefaultTweets$.log('gotDefaultTweets$')
+    defaultsWorkerMsg$.log('[DEBUG] defaultsWorkerMsg$')
+    gotDefaultTweets$.log('[DEBUG] gotDefaultTweets$')
+    filteredDefaultTweets$.log('[DEBUG] filteredDefaultTweets$');
     searchWorkerMsg$.log('[DEBUG] searchWorkerMsg$')
-    fullTextSearchRes$.log('fullTextSearchRes$')
-    semanticSearchRes$.log('semanticSearch$')
+    fullTextSearchRes$.log('[DEBUG] fullTextSearchRes$')
+    semanticSearchRes$.log('[DEBUG] semanticSearch$')
 }
 
 const onUpdated = (previousVersion)=>{

@@ -8,7 +8,7 @@ export const defaultOptions = (): Options => {return {
   useReplies: {name:'useReplies', type:'searchFilter', value:true},
   idleMode: {name:'idleMode', type:'idleMode', value:'timeline'}, // {'random', 'timeline'}
   roboActive: {name:'roboActive', type:'featureFilter', value:false},
-  searchMode: {name:'searchMode', type:'searchMode', value:'semantic'}, // {'fulltext', 'semantic'}
+  searchMode: {name:'searchMode', type:'searchMode', value:'fulltext'}, // {'fulltext', 'semantic'}
 }}
 
 export const defaultStorage = (): StorageInterface => {
