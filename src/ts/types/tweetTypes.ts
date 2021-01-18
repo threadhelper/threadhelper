@@ -8,11 +8,13 @@ export interface thUrl {
     display:string,
     expanded:string,
 }
+
+export type TweetId = string;
 export interface thTweet { 
     account: string,
     has_media?: boolean; 
     has_quote?: boolean, 
-    id: string; 
+    id: TweetId; 
     is_bookmark: boolean,
     is_quote_up: false,
     media: (thImg | any)[],
@@ -29,7 +31,7 @@ export interface thTweet {
 }
 
 export interface IndexTweet {
-    id: string;
+    id: TweetId;
     text: string; 
     name: string; 
     username: string; 

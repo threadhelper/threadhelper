@@ -1,0 +1,14 @@
+{
+    "presets": [
+        "@babel/preset-env",
+        "@babel/preset-react",
+        "@babel/preset-typescript",
+      ],
+    "plugins": [
+        ["@babel/plugin-transform-react-jsx", {
+            "throwIfNamespace": false, // defaults to true
+            "runtime": "automatic", // defaults to classic
+            "importSource": "preact" // defaults to react
+          }]
+    ]
+}

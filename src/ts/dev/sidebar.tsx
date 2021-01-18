@@ -7,7 +7,7 @@ import { h, render } from 'preact';
 import ThreadHelper from '../components/ThreadHelper';
 import * as css from '../../style/cs.css'; console.log('hi css', css)
 import { updateTheme } from '../utils/wutils';
-
+import { devStorage } from '../utils/defaultStg';
 
 
 console.log('Console DEVING', {DEV_MODE: process.env.DEV_MODE})

@@ -37,7 +37,6 @@ export async function getData(key: string): Promise<any> {
                 reject(chrome.runtime.lastError.message);
             }
             else {
-                console.log('stg got', {key, result})
                 resolve(DEVING ? result : result[key]);
                 // resolve(result);
             }
@@ -53,7 +52,6 @@ export async function setData(key_vals:Object): Promise<any> {
                 reject(chrome.runtime.lastError.message);
             }
             else {
-                console.log('[DEBUG] setData', { ...key_vals });
                 resolve(key_vals);
             }
         });

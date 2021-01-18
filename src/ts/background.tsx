@@ -3,7 +3,6 @@ import "@babel/polyfill";
 // import "regenerator-runtime/runtime";
 
 import * as browser from "webextension-polyfill";
-// @ts-expect-error ts-migrate(1192) FIXME: Module '"/mnt/c/Users/frsc/Documents/Projects/th/r... Remove this comment to see the full error message
 import ReactGA from 'react-ga';
 import { Status as Tweet, User } from 'twitter-d';
 import { curProp, fetchInit } from './types/types'
@@ -16,7 +15,7 @@ import { twitter_url, getDateFormatted, apiBookmarkToTweet, saferTweetMap, makeI
 import { isWorkerReady, howManyTweetsDb, addAccount, removeAccount, addUser, removeUser, updateTimeline, addTweets, removeTweets, removeTweet, dbClear, resetIndex, getDefaultTweets, clearTempArchive, resetData } from './utils/bgUtils';
 import { update_size, n_tweets_results } from './utils/params';
 import { __, curry, pipe, andThen, map, filter, reduce, tap, apply, tryCatch, otherwise } from 'ramda'; // Function
-import { prop, propEq, propSatisfies, path, pathEq, hasPath, assoc, assocPath, values, mergeLeft, mergeDeepLeft, keys, lens, lensProp, lensPath, pick, project, set, length } from 'ramda'; // Object
+import { prop, propEq, propSatisfies, path, pathEq, pathSatisfies, hasPath, assoc, assocPath, values, mergeLeft, mergeDeepLeft, keys, lens, lensProp, lensPath, pick, project, set, length } from 'ramda'; // Object
 import { head, tail, take, isEmpty, any, all, includes, last, dropWhile, dropLastWhile, difference, append, fromPairs, forEach, nth, pluck, reverse, uniq, slice } from 'ramda'; // List
 import { equals, ifElse, when, both, either, isNil, is, defaultTo, and, or, not, T, F, gt, lt, gte, lte, max, min, sort, sortBy, split, trim, multiply } from 'ramda'; // Logic, Type, Relation, String, Math
 import Kefir, { Observable } from 'kefir';
@@ -29,7 +28,7 @@ import { makeValidateTweet } from './worker/search';
 import { validateTweet, archToTweet, bookmarkToTweet, apiToTweet } from './bg/tweetImporter';
 import { StorageChange, SearchFilters, SearchMode, IdleMode } from "./types/stgTypes";
 import { thTweet } from "./types/tweetTypes";
-import { Msg, TweetResult, TweetResWorkerMsg, WorkerMsg } from "./types/msgTypes";
+import { Msg, TweetResult, TweetResWorkerMsg, WorkerMsg, ReqDefaultTweetsMsg } from "./types/msgTypes";
 // Analytics //IMPORTANT: this block must come before setting the currentValue for Kefir. Property and I have no idea why
 (function initAnalytics() { initGA(); })();
 PageView('/background.html');
@@ -99,7 +98,7 @@ export async function main() {
             e => {console.error('[ERROR] pWorkerMsg$ Couldnt parse', {e, x}); throw e}
         )(x)
         ).ignoreErrors() // msgs sent as stringified json
-    const pWorkerMsg$ = wMsgEvent$.filter(propSatisfies(x=>R.type(x)=="Object", 'data')) // msgs from Promise Worker
+    const pWorkerMsg$ = wMsgEvent$.filter(pathSatisfies(x=>R.type(x)=="Object", ['data', 2])).map(path(['data', 2])) // msgs from Promise Worker
     const workerReady$ = workerMsg$.filter(propEq('type', 'ready')).map(R.T).toProperty(R.F);
     const _workerReady = _=>curVal(workerReady$)
     
@@ -206,7 +205,7 @@ export async function main() {
     const syncLight$ = streamAnd([notArchLoading$, notFetchingAPI$, notMidWorkerReq$, ready$]).map(defaultTo(false)).toProperty(F);
     // Search query
     const isWordEnd = pipe(last, R.match(/[^a-zA-Z0-9]/g), isEmpty, not) // true if it's not in the middle of a word
-    const searchQuery$ = msgStream("search").map(prop('query')).toProperty();     // const searchQuery$ = msgStream("search").map(prop('query')).toProperty(() => '');
+    const searchQuery$ = msgStream("search").map(prop('query')).toProperty() as curProp<string>;     // const searchQuery$ = msgStream("search").map(prop('query')).toProperty(() => '');
     const emptyQuery$ = searchQuery$.map(trim).filter(isEmpty)     //TODO: can't trim in cs bc I need the final space
     const wordSearchQuery$ = searchQuery$.filter(isWordEnd).map(R.trim).skipDuplicates()
     // Search and default reqs
@@ -218,18 +217,16 @@ export async function main() {
     ]).thru(waitFor(notReady$)).bufferWhileBy(searchMode$.map(mode=>!equals('fulltext', mode))).map(last);
     const reqSemanticSearch$ = wordSearchQuery$.thru(waitFor(notReady$)).bufferWhileBy(searchMode$.map(mode=>!equals('semantic', mode))).map(last);
     const reqSearch$ = Kefir.merge([reqFullTextSearch$, reqSemanticSearch$]).thru(waitFor(notReady$));
+
+    const defaultsWorkerMsg$ = Kefir.combine<ReqDefaultTweetsMsg>([searchFilters$, idleMode$, accsShown$], makeReqDefaultTweetsMsg)
+
     const reqDefaultTweets$ = Kefir.merge([
-        searchQuery$.sampledBy(filters$),
-        searchQuery$.sampledBy(idleMode$),
-        searchQuery$.sampledBy(anyTweetUpdate$),
-        msgStream("get-latest"),
+        defaultsWorkerMsg$, 
         anyTweetUpdate$,
-    ]).thru(waitFor(notReady$)).bufferWhileBy(notReady$).map(last).throttle(1000); //.last()
+    ]).thru(waitFor(notReady$)).bufferWhileBy(notReady$).map(last); //.last()
 
     // Search worker returns
-    const defaultsWorkerMsg$ = Kefir.combine([searchFilters$, idleMode$, accsShown$], makeReqDefaultTweetsMsg)
-    const gotDefaultTweets$ = defaultsWorkerMsg$
-        .sampledBy(reqDefaultTweets$)
+    const gotDefaultTweets$ = Kefir.merge([defaultsWorkerMsg$, defaultsWorkerMsg$.sampledBy(reqDefaultTweets$)])
         .thru<Observable<TweetResWorkerMsg, any>>(promiseStream(msg => pWorker.postMessage(msg)))
         .map(prop('res')); // gotDefaultTweets$ :: [tweets]
     const defaultTweets$ = Kefir.merge([gotDefaultTweets$, gotDefaultTweets$.sampledBy(filters$)])
@@ -239,7 +236,7 @@ export async function main() {
     const filterDefaults = (filters:SearchFilters, accs: User[], results:TweetResult[]) => R.filter(pipe(
         result=>makeValidateTweet(filters, accs)(prop('tweet', result)),
         ), results)
-    const filteredDefaultTweets$ = Kefir.combine([searchFilters$, accsShown$, defaultTweets$], filterDefaults) // const filteredDefaultTweets$ = Kefir.merge([gotDefaultTweets$, gotDefaultTweets$.sampledBy(filters$)]).map(filter(x => validateSidebarTweet(getFilters(), getAccsShown())));
+    const filteredDefaultTweets$ = Kefir.combine<TweetResult[]>([searchFilters$, accsShown$, defaultTweets$], filterDefaults) // const filteredDefaultTweets$ = Kefir.merge([gotDefaultTweets$, gotDefaultTweets$.sampledBy(filters$)]).map(filter(x => validateSidebarTweet(getFilters(), getAccsShown())));
     
     // const searchResults$ = promiseStream(reqSearch$, searchFn(1)).map(prop('res')); // searchResults$ :: [tweets]
     // const searchResults$ = reqSearch$.thru(promiseStream(doSearch(pWorker, getSearchMode, getFilters, accsShown$))).map(prop('res')); // searchResults$ :: [tweets]
@@ -305,23 +302,23 @@ export async function main() {
     notReady$.log('[DEBUG] notReady$');
     initData$.log('[DEBUG] initData$');
     idleMode$.log('[DEBUG] idleMode$')
-    reqUpdatedTweets$.log('[DEBUG] reqUpdatedTweets$');
-    reqTimeline$.log('[DEBUG] reqTimeline$');
-    reqBookmarks$.log('[DEBUG] reqBookmarks$');
-    anyAPIReq$.log('[DEBUG] anyAPIReq$');
-    fetchedAnyAPIReq$.log('[DEBUG] fetchedAnyAPIReq$');
-    reqArchiveLoad$.log('[DEBUG] reqArchiveLoad$');
-    archiveLoadedTweets$.log('[DEBUG] archiveLoadedTweets$');
-    thTweets$.log('[DEBUG] thTweets$');
-    idsToRemove$.log('[DEBUG] idsToRemove$');
-    addedTweets$.log('[DEBUG] addedTweets$');
-    removedTweet$.log('[DEBUG] removedTweet$');
-    updatedTimeline$.log('[DEBUG] updatedTimeline$');
-    anyTweetUpdate$.log('[DEBUG] anyTweetUpdate$');
-    updateSyncDisplay$.log('[DEBUG] updateSyncDisplay$');
-    notArchLoading$.log('[DEBUG] notArchLoading$');
-    notFetchingAPI$.log('[DEBUG] notFetchingAPI$');
-    notMidWorkerReq$.log('[DEBUG] notMidWorkerReq$');
+    // reqUpdatedTweets$.log('[DEBUG] reqUpdatedTweets$');
+    // reqTimeline$.log('[DEBUG] reqTimeline$');
+    // reqBookmarks$.log('[DEBUG] reqBookmarks$');
+    // anyAPIReq$.log('[DEBUG] anyAPIReq$');
+    // fetchedAnyAPIReq$.log('[DEBUG] fetchedAnyAPIReq$');
+    // reqArchiveLoad$.log('[DEBUG] reqArchiveLoad$');
+    // archiveLoadedTweets$.log('[DEBUG] archiveLoadedTweets$');
+    // thTweets$.log('[DEBUG] thTweets$');
+    // idsToRemove$.log('[DEBUG] idsToRemove$');
+    // addedTweets$.log('[DEBUG] addedTweets$');
+    // removedTweet$.log('[DEBUG] removedTweet$');
+    // updatedTimeline$.log('[DEBUG] updatedTimeline$');
+    // anyTweetUpdate$.log('[DEBUG] anyTweetUpdate$');
+    // updateSyncDisplay$.log('[DEBUG] updateSyncDisplay$');
+    // notArchLoading$.log('[DEBUG] notArchLoading$');
+    // notFetchingAPI$.log('[DEBUG] notFetchingAPI$');
+    // notMidWorkerReq$.log('[DEBUG] notMidWorkerReq$');
     syncLight$.log('[DEBUG] syncLight$');
     reqSearch$.log('[DEBUG] reqSearch$')
     reqDefaultTweets$.log('[DEBUG] reqDefaultTweets$');
@@ -329,21 +326,23 @@ export async function main() {
     accounts$.log('[DEBUG] accounts$');
     accsShown$.log('[DEBUG] accsShown$');
     searchResults$.log('[DEBUG] searchResults$')
-    wMsgEvent$.log('wMsgEvent$')
+    // wMsgEvent$.log('wMsgEvent$')
+    // workerMsg$.log('workerMsg$')
+    pWorkerMsg$.log('pWorkerMsg$')
     workerReady$.log('[DEBUG] workerReady$')
     askWorkerReady$.log('askWorkerReady$')
     incomingAccounts$.log('[DEBUG] incomingAccounts$');
-    searchQuery$.log('[DEBUG] searchQuery$')
-    emptyQuery$.log('emptyQuery$')
-    wordSearchQuery$.log('[DEBUG] wordSearchQuery$')
-    reqFullTextSearch$.log('reqFullTextSearch$')
-    reqSemanticSearch$.log('reqSemanticSearch$')
+    // searchQuery$.log('[DEBUG] searchQuery$')
+    // emptyQuery$.log('emptyQuery$')
+    // wordSearchQuery$.log('[DEBUG] wordSearchQuery$')
+    // reqFullTextSearch$.log('reqFullTextSearch$')
+    // reqSemanticSearch$.log('reqSemanticSearch$')
     defaultsWorkerMsg$.log('[DEBUG] defaultsWorkerMsg$')
-    gotDefaultTweets$.log('[DEBUG] gotDefaultTweets$')
-    filteredDefaultTweets$.log('[DEBUG] filteredDefaultTweets$');
-    searchWorkerMsg$.log('[DEBUG] searchWorkerMsg$')
-    fullTextSearchRes$.log('[DEBUG] fullTextSearchRes$')
-    semanticSearchRes$.log('[DEBUG] semanticSearch$')
+    // gotDefaultTweets$.log('[DEBUG] gotDefaultTweets$')
+    // filteredDefaultTweets$.log('[DEBUG] filteredDefaultTweets$');
+    // searchWorkerMsg$.log('[DEBUG] searchWorkerMsg$')
+    // fullTextSearchRes$.log('[DEBUG] fullTextSearchRes$')
+    // semanticSearchRes$.log('[DEBUG] semanticSearch$')
 }
 
 const onUpdated = (previousVersion)=>{

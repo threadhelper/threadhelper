@@ -1,7 +1,7 @@
 /* For interacting with Twitter API */
 import { Status as Tweet } from 'twitter-d';
 import { User } from 'twitter-d';
-import { delay } from 'delay';
+import delay from 'delay';
 import { fetchInit } from '../types/types'
 import { getData, setData, makeOnStorageChanged } from '../utils/dutils';
 import { inspect } from '../utils/putils';
@@ -21,7 +21,7 @@ const loopRetry = async <T,> (fn:(arg0:any)=>any):Promise<T> => {
         try {
             output = await fn();
             success = true;
-            console.log('[DEBUG] Loop succeeded')
+            // console.log('[DEBUG] Loop succeeded')
         }
         catch (e) {
             retryCount += 1;

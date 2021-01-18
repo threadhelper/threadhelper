@@ -7,13 +7,18 @@
       "dom.iterable",
       "esnext"
     ],
-    "allowJs": true,
+    "noImplicitAny": false, //
+    "checkJs": false,//
+    "allowJs": true,//
     "skipLibCheck": true,
+    "declaration": true,//
+    "emitDeclarationOnly": true,//
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "forceConsistentCasingInFileNames": false,
     "module": "esnext",
+    "module": "commonjs",
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "jsx": "react",

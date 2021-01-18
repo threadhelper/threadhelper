@@ -59,4 +59,5 @@ export const renameKeys = (keysMap: { [x: string]: any; }) => (obj: ArrayLike<un
   (a, [k, v]) => k in keysMap ? {...a, [keysMap[k]]: v} : {...a, [k]: v},
   {}
 )
-export const list2Obj = curry((key: string, list: any[]):object => pipe(map(x=>[x[key], x]), fromPairs)(list))
+// export const list2Obj = curry((key: string, list: {key:string}[]):object => pipe(map(x=>[x[key], x]), fromPairs)(list))
+export const list2Obj = curry((key: string, list: {key:string}[]):object => fromPairs(map(x=>[x[key], x], list)))

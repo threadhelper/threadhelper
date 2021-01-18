@@ -2,7 +2,7 @@ import "@babel/polyfill";
 // import "core-js/stable";
 // import "regenerator-runtime/runtime";
 import { onWorkerPromise } from './worker/promise-stream-worker';
-import { IndexSearchResult, Msg, SearchResult, WorkerLog, WorkerMsg, TweetResWorkerMsg, Msg2Worker, WriteAccMsg } from './types/msgTypes'
+import { IndexSearchResult, Msg, SearchResult, WorkerLog, ReqDefaultTweetsMsg, WorkerMsg, TweetResWorkerMsg, Msg2Worker, WriteAccMsg } from './types/msgTypes'
 import * as db from './worker/db';
 import * as elasticlunr from 'elasticlunr';
 import { makeIndex, updateIndex, search, loadIndex } from './worker/nlp';
@@ -16,8 +16,9 @@ import { prop, propEq, propSatisfies, path, pathEq, hasPath, assoc, assocPath, v
 import { head, tail, take, isEmpty, any, all, includes, last, dropWhile, dropLastWhile, difference, append, fromPairs, forEach, nth, pluck, reverse, uniq, slice } from 'ramda'; // List
 import { equals, ifElse, when, both, either, isNil, is, defaultTo, and, or, not, F, gt, lt, gte, lte, max, min, sort, sortBy, split, trim, multiply } from 'ramda'; // Logic, Type, Relation, String, Math
 import Kefir, { Subscription } from 'kefir';
-import { IndexTweet, thTweet } from "types/tweetTypes";
+import { IndexTweet, thTweet, TweetId } from "types/tweetTypes";
 import { User } from "twitter-d";
+import { IdleMode, SearchFilters } from "./types/stgTypes";
 
 const wSelf:Worker = self as any
 // Project business
@@ -267,26 +268,26 @@ const semanticSearch = pipe<any, any, Promise<IndexSearchResult[]>, Promise<Sear
     tap(_ => emitMidSearch(true)), 
     semSearchFromMsg, 
     andThen(makeSearchResponse), 
-    andThen(pipe(
+    andThen(pipe<any,any,any>(
         tap(_ => emitMidSearch(false)), 
         assoc('res', __, { type: 'searchIndex', source:'semantic'})
         ))
     );
 // const doSemanticSearch = pipe<string, object, object, object[], string[]>(semanticSearch, prop('res'), values, map(pipe<object, string[], string>(values, nth(0))))
 
+type DbGet =  (storeName: string) => (id: TweetId) => Promise<thTweet>
 const idleFns = { random: getRandomSampleTweets, timeline: getLatestTweets };
 // const msg2SampleArgs = m => [m.n_tweets, m.filters, curry((store, key)=>getDb(1).get(store, key)), m.screen_name, ()=>getDb(1).getAllKeys('tweets')]
-const msg2SampleArgs = (m: {
-    n_tweets: any;
-    filters: any;
-    accsShown: any;
-}) => [m.n_tweets, m.filters, db.get(getDb(1)), m.accsShown, () => getDb(1).getAllKeys('tweets')];
-const callGetIdleTweets = (m: {idle_mode: string | number;}) => pipe(msg2SampleArgs, apply(idleFns[m.idle_mode]))(m);
-const getDefaultTweets = pipe(
-    callGetIdleTweets, 
-    andThen(map(tweet=>{return {tweet}})),
-    andThen(assoc('res', __, { type: 'getDefaultTweets', })));
-
+const msg2SampleArgs = (m: ReqDefaultTweetsMsg): [n_tweets: number, filters: SearchFilters, db_get: DbGet, accsShown: User[], getKeys: () => Promise<TweetId[]>] => [m.n_tweets, m.filters, db.get(getDb(1)), m.accsShown, () => getDb(1).getAllKeys('tweets')];
+const callGetIdleTweets = (m: ReqDefaultTweetsMsg):Promise<thTweet[]> => pipe<any,any, any>(()=>m, msg2SampleArgs, apply(idleFns[m.idle_mode]))();
+const getDefaultTweets = async (m: ReqDefaultTweetsMsg): Promise<TweetResWorkerMsg> =>{
+    return pipe<any,any,any,any>(
+        ()=>m,
+        callGetIdleTweets, 
+        andThen(map(tweet=>{return {tweet}})),
+        andThen(assoc('res', __, { type: 'getDefaultTweets', 'msg': m })),
+    )();
+}
 
 // subObs(searchResult$, pipe(getTweetsFromDbById, andThen(pipe(setStg('search_results'), andThen(x=>{emitMidSearch(false); return x;})))))
 // Effects

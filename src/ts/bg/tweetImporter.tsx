@@ -259,7 +259,7 @@ export const validateTweet = (t:object): boolean => {
 export const idComp = curry((a, b) => BigInt(a) == BigInt(b) ? 0 : (BigInt(a) < BigInt(b) ? -1 : 1));
 const gtId = curry((a, b) => idComp(a, b) > 0); // gt for ids
 const ltId = curry((a, b) => idComp(a, b) < 0); //lt for ids
-export const sortKeys = (keys: readonly unknown[]) => (keys as any).sort(idComp);
+export const sortKeys = (keys: string[]) => keys.sort(idComp);
 // 
 // newest (largest id) first
 function sortTweets(tweetDict: {
@@ -267,7 +267,6 @@ function sortTweets(tweetDict: {
 }) {
     let keys = Object.keys(tweetDict);
     let skeys = sortKeys(keys);
-    // @ts-expect-error ts-migrate(2550) FIXME: Property 'fromEntries' does not exist on type 'Obj... Remove this comment to see the full error message
     let stobj = Object.fromEntries(skeys.map((k: string | number) => { return [k, tweetDict[k]]; }));
     return stobj;
 }

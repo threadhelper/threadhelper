@@ -1,6 +1,6 @@
 import { FullUser, User } from "twitter-d";
 import { IdleMode, SearchFilters, SearchMode } from "./stgTypes";
-import { thTweet } from "./tweetTypes";
+import { thTweet, TweetId } from "./tweetTypes";
 
 export interface Msg{
     type: string,
@@ -8,7 +8,7 @@ export interface Msg{
     query?: string; 
     reply_to?: string,
     url?: string,
-    id?: string,
+    id?: TweetId,
     
 }
 
@@ -82,4 +82,5 @@ export interface DefaultResult extends TweetResult{
 
 export interface TweetResWorkerMsg extends WorkerMsg{
     res: TweetResult[],
+    msg?: Msg2Worker,
 }

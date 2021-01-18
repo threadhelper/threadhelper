@@ -35,7 +35,21 @@ const initIndex = function(this: any){
   // idx.saveDocument(false); // this reduces index size but has inconveniences (getDocument always returns null)
 }
 
-export const makeIndex = () => elasticlunr(initIndex);
+function _makeIndex(config) {
+  var idx = new elasticlunr.Index;
+
+  idx.pipeline.add(
+    elasticlunr.trimmer,
+    elasticlunr.stopWordFilter,
+    elasticlunr.stemmer
+  );
+
+  if (config) config.call(idx, idx);
+
+  return idx;
+}
+
+export const makeIndex = () => _makeIndex(initIndex);
 
 
 // IMPURE
