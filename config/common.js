@@ -3,6 +3,10 @@ const MiniCssExtractPlugin = require("mini-css-extract-plugin")
 const webpack = require("webpack")
 const HtmlPlugin = require("html-webpack-plugin")
 const CopyWebpackPlugin = require('copy-webpack-plugin');
+const WebpackExtensionManifestPlugin = require('webpack-extension-manifest-plugin');
+const baseManifest = require('./baseManifest.js');
+const pkg = require('./package.json');
+
 
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
@@ -92,13 +96,19 @@ module.exports = function(configDirs) {return {
             template: configDirs.HTML_DIR+"/popup.html",
             chunks: ['popup']
           }),
-        new CopyWebpackPlugin({
-            patterns: [
-                { from: 'manifest.json', to: '[name].[ext]' },
-                { from: 'public', to: 'public' },
-                // { from: 'styles', to: 'styles' },
-            ]
-        }),
+        // new CopyWebpackPlugin({
+        //     patterns: [
+        //         { from: 'manifest.json', to: '[name].[ext]' },
+        //         { from: 'public', to: 'public' },
+        //         // { from: 'styles', to: 'styles' },
+        //     ]
+        // }),
+        new WebpackExtensionManifestPlugin({
+            config: {
+              base: baseManifest,
+              extend: {version: pkg.version}
+            }
+          })  
     ].filter(Boolean),
     }
 }
