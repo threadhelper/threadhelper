@@ -49,7 +49,7 @@ export function Console(){
     <div class="console">
       <div id='filters'>
         < FilterButton name={"useShuffle"} useFilter={idle2Bool(idleMode)} setFilter={pipe(bool2Idle, setIdleMode)} Icon={ShuffleIcon}/>
-        < FilterButton name={"searchMode"} useFilter={searchMode2Bool(searchMode)} setFilter={pipe(bool2SearchMode, setSearchMode)} Icon={LightningIcon}/>
+        {/* < FilterButton name={"searchMode"} useFilter={searchMode2Bool(searchMode)} setFilter={pipe(bool2SearchMode, setSearchMode)} Icon={LightningIcon}/> */}
         <span></span>
         < FilterButton name={"getRTs"} useFilter={getRTs} setFilter={setGetRTs} Icon={RetweetIcon}/>
         < FilterButton name={"useBookmarks"} useFilter={useBookmarks} setFilter={setUseBookmarks} Icon={BookmarkIcon}/>
