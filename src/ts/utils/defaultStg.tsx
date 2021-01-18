@@ -22,6 +22,7 @@ export const defaultStorage = (): StorageInterface => {
     temp_archive: [],
     syncDisplay: `Hi, I don't have any tweets yet.`,
     sync: false,
+    query:'',
   }
 }
 
@@ -38,5 +39,6 @@ export const devStorage = (): StorageInterface => {
     temp_archive: [],
     syncDisplay: `Hi, I don't have any tweets yet.`,
     sync: true,
+    query:'',
   }
 }

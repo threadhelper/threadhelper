@@ -11,6 +11,7 @@ export interface StorageInterface{
     temp_archive: object,
     syncDisplay: string,
     sync: boolean,
+    query:string,
 }
 
 export interface SearchResult {tweet:thTweet, score?:number}[]

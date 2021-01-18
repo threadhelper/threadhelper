@@ -4,13 +4,14 @@ import ReactHtmlParser, { processNodes, convertNodeToElement, htmlparser2 } from
 import { initGA, csEvent, csException, PageView, UA_CODE } from '../utils/ga'
 import $ from 'jquery'
 import {getActiveComposer} from '../utils/wutils'
-import {thTweet} from '../types/types'
+import {thTweet} from '../types/tweetTypes'
 // import ReplyIcon from '../../images/reply.svg';
 // import RetweetIcon from '../../images/retweet.svg';
 // import LikeIcon from '../../images/like.svg';
 // import ShareIcon from '../../images/share.svg';
 import {defaultTo, isNil} from 'ramda'
 
+const DEVING = process.env.DEV_MODE == 'serve'
 
 const getTweetUrl = (tweet: thTweet) => `https://twitter.com/${tweet.username}/status/${tweet.id}`
 
@@ -82,7 +83,7 @@ export function Tweet(props: { tweet: thTweet; score?: number}){
       <div class="th-hover" onClick={onClick}>
         <textarea style="display: none" id={`th-link-${tweet.id}`} class="th-link">{getTweetUrl(tweet)}</textarea>
         <div class="th-hover-copy">copy</div>
-        {isNil(props.score) ? null : <div class="th-hover-copy">{`\nscore: ${props.score.toFixed(2)}`}</div>}
+        {isNil(props.score) || !DEVING ? null : <div class="th-hover-copy">{`\nscore: ${props.score.toFixed(2)}`}</div>}
       </div>
     </div>
     );

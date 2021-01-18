@@ -10,22 +10,23 @@ import { head, tail, take, isEmpty, any, all, includes, last, dropWhile, dropLas
 import { equals, ifElse, when, both, either, isNil, is, defaultTo, and, or, not, T, F, gt, lt, gte, lte, max, min, sort, sortBy, split, trim, multiply } from 'ramda'; // Logic, Type, Relation, String, Math
 import { Option, Options } from '../types/stgTypes';
 (Kefir.Property.prototype as any).currentValue = currentValue;
-import chromeMock from 'sinon-chrome/extensions';
 
-let defaultStorage:()=>(StorageInterface) = ()=>{}
+// import chromeMock from 'sinon-chrome/extensions';
+
+let defaultStorage:()=>(StorageInterface) = _defaultStorage
+
 const DEVING = process.env.DEV_MODE == 'serve'
+// if (!DEVING){
+//     // defaultStorage = _defaultStorage
+// }else{
+//     global.chrome = chromeMock
+//     defaultStorage = devStorage
+//     const makeStub = x=>{chrome.storage.local.get.withArgs([x[0]]).yields(x[1]);}
+//     Object.entries(devStorage()).forEach(makeStub);
 
-if (!DEVING){
-    defaultStorage = _defaultStorage
-}else{
-    global.chrome = chromeMock
-    defaultStorage = devStorage
-    const makeStub = x=>{chrome.storage.local.get.withArgs([x[0]]).yields(x[1]);}
-    Object.entries(devStorage()).forEach(makeStub);
-
-    console.log('dutils', {DEVING, chrome: global.chrome, defaultStorage:defaultStorage()})
-    setData(defaultStorage())
-}
+//     console.log('dutils', {DEVING, chrome: global.chrome, defaultStorage:defaultStorage()})
+//     setData(defaultStorage())
+// }
 
 //returns a promise that gets a value from chrome local storage 
 export async function getData(key: string): Promise<any> {

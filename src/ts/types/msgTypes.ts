@@ -12,6 +12,13 @@ export interface Msg{
     
 }
 
+export interface GaMsg extends Msg{
+    event: Event
+}
+export interface GaException extends Msg{
+    exception: any
+}
+
 export interface Msg2Worker extends Msg{
     res?: {}
 }

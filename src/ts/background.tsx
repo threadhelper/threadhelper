@@ -19,7 +19,7 @@ import { prop, propEq, propSatisfies, path, pathEq, pathSatisfies, hasPath, asso
 import { head, tail, take, isEmpty, any, all, includes, last, dropWhile, dropLastWhile, difference, append, fromPairs, forEach, nth, pluck, reverse, uniq, slice } from 'ramda'; // List
 import { equals, ifElse, when, both, either, isNil, is, defaultTo, and, or, not, T, F, gt, lt, gte, lte, max, min, sort, sortBy, split, trim, multiply } from 'ramda'; // Logic, Type, Relation, String, Math
 import Kefir, { Observable } from 'kefir';
-import { msgCS, setStg, getData, removeData, getOptions, getOption, makeStorageChangeObs as makeStorageChangeObs, updateStgPath, makeStgItemObs, makeOptionObs, makeGotMsgObs, resetStorage } from './utils/dutils';
+import { msgCS, setStg, getData, removeData, getOptions, getOption, makeStorageChangeObs as makeStorageChangeObs, updateStgPath, makeStgItemObs, makeOptionObs, makeGotMsgObs, resetStorage, makeStgPathObs } from './utils/dutils';
 import { defaultOptions } from './utils/defaultStg';
 import { makeAuthObs } from './bg/auth';
 import { initWorker } from './bg/workerBoss';
@@ -28,7 +28,7 @@ import { makeValidateTweet } from './worker/search';
 import { validateTweet, archToTweet, bookmarkToTweet, apiToTweet } from './bg/tweetImporter';
 import { StorageChange, SearchFilters, SearchMode, IdleMode } from "./types/stgTypes";
 import { thTweet } from "./types/tweetTypes";
-import { Msg, TweetResult, TweetResWorkerMsg, WorkerMsg, ReqDefaultTweetsMsg } from "./types/msgTypes";
+import { Msg, TweetResult, TweetResWorkerMsg, WorkerMsg, ReqDefaultTweetsMsg, GaMsg, GaException, ReqSearchMsg } from "./types/msgTypes";
 // Analytics //IMPORTANT: this block must come before setting the currentValue for Kefir. Property and I have no idea why
 (function initAnalytics() { initGA(); })();
 PageView('/background.html');
@@ -78,7 +78,7 @@ export async function main() {
 
     const csStart$ = msg$.filter(propEq('type', 'cs-created')).map(_=>true).toProperty(()=>false);      const csNotReady$ = csStart$.map(not); // const csNotReady$ = toVal(false, csStart$)
     //      Analytics
-    const csGaEvent$ = msgStream('gaEvent').map(prop('event'));     const csGaException$ = msgStream('gaException').map(prop('exception'));
+    const csGaEvent$ = (msgStream('gaEvent') as Observable<GaMsg, any>).map(prop('event'));     const csGaException$ = (msgStream('gaException') as Observable<GaException, any>).map(prop('exception'));
     //      Storage
     const optionsChange$ = makeStorageChangeObs().filter((propEq('itemName', 'options')));      const makeOptionObs = _makeOptionObs(optionsChange$); // const storageChange$ = makeStorageChangeObs();  
     
@@ -206,27 +206,29 @@ export async function main() {
     // Search query
     const isWordEnd = pipe(last, R.match(/[^a-zA-Z0-9]/g), isEmpty, not) // true if it's not in the middle of a word
     const searchQuery$ = msgStream("search").map(prop('query')).toProperty() as curProp<string>;     // const searchQuery$ = msgStream("search").map(prop('query')).toProperty(() => '');
+    // const searchQuery$ = makeStgItemObs('query') // const storageChange$ = makeStorageChangeObs();  
     const emptyQuery$ = searchQuery$.map(trim).filter(isEmpty)     //TODO: can't trim in cs bc I need the final space
     const wordSearchQuery$ = searchQuery$.filter(isWordEnd).map(R.trim).skipDuplicates()
     // Search and default reqs
+    const searchWorkerMsg$ = (Kefir.combine([searchMode$, searchFilters$, accsShown$, searchQuery$], makeReqSearchMsg) as Observable<ReqSearchMsg, Error>)
+
     const reqFullTextSearch$ = Kefir.merge([
-        // searchQuery$,
-        searchQuery$.filter(pipe(isEmpty, not)),
-        searchQuery$.sampledBy(filters$).filter(isExist),
-        searchQuery$.sampledBy(anyTweetUpdate$).filter((isExist)),
-    ]).thru(waitFor(notReady$)).bufferWhileBy(searchMode$.map(mode=>!equals('fulltext', mode))).map(last);
-    const reqSemanticSearch$ = wordSearchQuery$.thru(waitFor(notReady$)).bufferWhileBy(searchMode$.map(mode=>!equals('semantic', mode))).map(last);
-    const reqSearch$ = Kefir.merge([reqFullTextSearch$, reqSemanticSearch$]).thru(waitFor(notReady$));
+        searchWorkerMsg$.filter(pipe(prop('query'), isEmpty, not)),
+        searchWorkerMsg$.sampledBy(anyTweetUpdate$).filter(pipe(prop('query'), isEmpty, not)),
+    ]).thru(waitFor(notReady$)).bufferWhileBy(searchMode$.map(mode=>!equals('fulltext', mode))).map(last) as Observable<string, Error>;
+    const reqSemanticSearch$ = wordSearchQuery$.thru(waitFor(notReady$)).bufferWhileBy(searchMode$.map(mode=>!equals('semantic', mode))).map(last) as Observable<string, Error>;
+    // const reqSearch$ = Kefir.merge([reqFullTextSearch$, reqSemanticSearch$]).thru(waitFor(notReady$));
+    
 
     const defaultsWorkerMsg$ = Kefir.combine<ReqDefaultTweetsMsg>([searchFilters$, idleMode$, accsShown$], makeReqDefaultTweetsMsg)
-
+// 
     const reqDefaultTweets$ = Kefir.merge([
         defaultsWorkerMsg$, 
         anyTweetUpdate$,
     ]).thru(waitFor(notReady$)).bufferWhileBy(notReady$).map(last); //.last()
 
     // Search worker returns
-    const gotDefaultTweets$ = Kefir.merge([defaultsWorkerMsg$, defaultsWorkerMsg$.sampledBy(reqDefaultTweets$)])
+    const gotDefaultTweets$ = defaultsWorkerMsg$.sampledBy(reqDefaultTweets$)
         .thru<Observable<TweetResWorkerMsg, any>>(promiseStream(msg => pWorker.postMessage(msg)))
         .map(prop('res')); // gotDefaultTweets$ :: [tweets]
     const defaultTweets$ = Kefir.merge([gotDefaultTweets$, gotDefaultTweets$.sampledBy(filters$)])
@@ -241,13 +243,13 @@ export async function main() {
     // const searchResults$ = promiseStream(reqSearch$, searchFn(1)).map(prop('res')); // searchResults$ :: [tweets]
     // const searchResults$ = reqSearch$.thru(promiseStream(doSearch(pWorker, getSearchMode, getFilters, accsShown$))).map(prop('res')); // searchResults$ :: [tweets]
     // IDEA: instead of getting curVals, combine streams into the message and pass it through the stream
-    const searchWorkerMsg$ = Kefir.combine([searchMode$, searchFilters$, accsShown$, reqSearch$], makeReqSearchMsg)
     const fullTextSearchRes$ = searchWorkerMsg$
         .sampledBy(reqFullTextSearch$)
         .thru<Observable<TweetResWorkerMsg,any>>(promiseStream(msg => pWorker.postMessage(msg)))
         .map(prop('res')); // searchResults$ :: [tweets]
 
-    const semanticSearchRes$ = searchWorkerMsg$     
+    const semanticSearchRes$ = searchWorkerMsg$  
+        .sampledBy(reqSemanticSearch$)   
         .thru<Observable<TweetResWorkerMsg,any>>(promiseStream(msg => pWorker.postMessage(msg)))
         .map(prop('res')); // searchResults$ :: [tweets]
     // const searchResults$ = searchWorkerMsg$.sampledBy(reqSearch$).thru(promiseStream(msg => pWorker.postMessage(msg))).map(prop('res')); // searchResults$ :: [tweets]
@@ -320,7 +322,6 @@ export async function main() {
     // notFetchingAPI$.log('[DEBUG] notFetchingAPI$');
     // notMidWorkerReq$.log('[DEBUG] notMidWorkerReq$');
     syncLight$.log('[DEBUG] syncLight$');
-    reqSearch$.log('[DEBUG] reqSearch$')
     reqDefaultTweets$.log('[DEBUG] reqDefaultTweets$');
     // csGaEvent$.log('[DEBUG] csGaEvent$');
     accounts$.log('[DEBUG] accounts$');
@@ -332,7 +333,7 @@ export async function main() {
     workerReady$.log('[DEBUG] workerReady$')
     askWorkerReady$.log('askWorkerReady$')
     incomingAccounts$.log('[DEBUG] incomingAccounts$');
-    // searchQuery$.log('[DEBUG] searchQuery$')
+    searchQuery$.log('[DEBUG] searchQuery$')
     // emptyQuery$.log('emptyQuery$')
     // wordSearchQuery$.log('[DEBUG] wordSearchQuery$')
     // reqFullTextSearch$.log('reqFullTextSearch$')

@@ -238,15 +238,18 @@ const makeSearchResponse = async (results:IndexSearchResult[]): Promise<SearchRe
 //     andThen(renameKeys({ref: 'tweet'})))
 
 
-const fulltextSearch = pipe<any, any, Promise<IndexSearchResult[]>, Promise<SearchResult[]>, Promise<TweetResWorkerMsg>>(
+const fulltextSearch = async (m: ReqDefaultTweetsMsg): Promise<TweetResWorkerMsg> =>{
+    return pipe<any, any, Promise<IndexSearchResult[]>, Promise<SearchResult[]>, Promise<TweetResWorkerMsg>>(
+    ()=>m,
     tap(_ => emitMidSearch(true)), 
     ftSearchFromMsg(getIndex), 
     andThen(makeSearchResponse), 
-    andThen(pipe(
+    andThen(pipe<any,any,any>(
         tap(_ => emitMidSearch(false)), 
-        assoc('res', __, { type: 'searchIndex', source:'fulltext'})
+        assoc('res', __, { type: 'searchIndex', msg: m})
         ))
-    );
+    )();
+}
 
 const semSearchFromMsg = curry((m: {query: string;}) => 
     // { const index = _getIndex(); return semanticSearch(m.filters, m.accsShown, m.n_results, _getIndex(), m.query); });
@@ -264,15 +267,18 @@ const semSearchFromMsg = curry((m: {query: string;}) =>
 
 
 
-const semanticSearch = pipe<any, any, Promise<IndexSearchResult[]>, Promise<SearchResult[]>, Promise<TweetResWorkerMsg>>(
-    tap(_ => emitMidSearch(true)), 
-    semSearchFromMsg, 
-    andThen(makeSearchResponse), 
-    andThen(pipe<any,any,any>(
-        tap(_ => emitMidSearch(false)), 
-        assoc('res', __, { type: 'searchIndex', source:'semantic'})
-        ))
-    );
+const semanticSearch =  async (m: ReqDefaultTweetsMsg): Promise<TweetResWorkerMsg> =>{
+    return pipe<any, any, Promise<IndexSearchResult[]>, Promise<SearchResult[]>, Promise<TweetResWorkerMsg>>(
+        ()=>m,
+        tap(_ => emitMidSearch(true)), 
+        semSearchFromMsg, 
+        andThen(makeSearchResponse), 
+        andThen(pipe<any,any,any>(
+            tap(_ => emitMidSearch(false)), 
+            assoc('res', __, { type: 'searchIndex', msg:m})
+            ))
+    )();
+}
 // const doSemanticSearch = pipe<string, object, object, object[], string[]>(semanticSearch, prop('res'), values, map(pipe<object, string[], string>(values, nth(0))))
 
 type DbGet =  (storeName: string) => (id: TweetId) => Promise<thTweet>
@@ -285,7 +291,7 @@ const getDefaultTweets = async (m: ReqDefaultTweetsMsg): Promise<TweetResWorkerM
         ()=>m,
         callGetIdleTweets, 
         andThen(map(tweet=>{return {tweet}})),
-        andThen(assoc('res', __, { type: 'getDefaultTweets', 'msg': m })),
+        andThen(assoc('res', __, { type: 'getDefaultTweets', msg: m })),
     )();
 }
 
@@ -301,10 +307,10 @@ subReq(addAccount$, onAddAccount);
 subReq(removeAccount$, pipe(prop('id'), onRemoveAccount));
 subReq(addUser$, onAddUser);
 subReq(removeUser$, onRemoveUser);
-subReq(updateTimeline$, timeFn('onUpdateTimeline', onUpdateTimeline));
-subReq(addTweets$, timeFn('onAddTweets', onAddTweets));
+subReq(updateTimeline$, onUpdateTimeline);
+subReq(addTweets$, onAddTweets);
 subReq(removeTweets$, onRemoveTweets);
-subReq(getDefaultTweets$, timeFn('getDefaultTweets', getDefaultTweets));
-subReq(ftSearchReq$, timeFn('ftSearchReq', fulltextSearch));
-subReq(semSearchReq$, timeFn('semSearchReq', semanticSearch));
+subReq(getDefaultTweets$, getDefaultTweets);
+subReq(ftSearchReq$, fulltextSearch);
+subReq(semSearchReq$, semanticSearch);
 subReq(howManyTweetsDb$, howManyTweetsDb);

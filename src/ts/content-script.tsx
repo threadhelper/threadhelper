@@ -26,7 +26,7 @@ import { makeComposeObs } from './domInterface/composeHandler';
 import { getHostTweetId, makeActionStream, makeAddBookmarkStream, makeComposeFocusObs, makeDeleteEventStream, makeLastClickedObs, makeRemoveBookmarkStream, makeReplyObs, makeRoboStream } from './domInterface/inputsHandler';
 import { injectDummy, injectSidebarHome, makeFloatSidebarObserver, makeHomeSidebarObserver, makeSidebarCompose, makeSidebarHome } from './domInterface/sidebarHandler';
 import { makeBgColorObs, makeLastStatusObs } from './domInterface/tabsHandler';
-import { makeGotMsgObs, makeStorageChangeObs, msgBG } from './utils/dutils';
+import { makeGotMsgObs, makeStorageChangeObs, msgBG, setStg } from './utils/dutils';
 import { currentValue, flattenModule, inspect, nullFn, toggleDebug } from './utils/putils';
 import { getMode, updateTheme } from './utils/wutils';
 import { __, curry, pipe, andThen, map, filter, reduce, tap, apply, tryCatch } from 'ramda'; // Function
@@ -56,6 +56,10 @@ const minIdleTime = 3000;
 // Effects 
 const handlePosting = () => msgBG({ type: 'update-tweets' }); // handle twitter posting actions like tweets, rts and deletes
 const reqSearch = R.pipe<any, string, void>(defaultTo(''), q => msgBG({type:'search', query:q}),);
+// const reqSearch = R.pipe<any, string, void>(
+//     defaultTo(''), 
+//     query => {
+//         setStg('query', query)});
 // Stream clean up
 const subscriptions: Subscription[] = [];
 const rememberSub = (sub:Subscription) => { subscriptions.push(sub); return sub; };
