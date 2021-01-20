@@ -28,16 +28,16 @@
   display: flex;
   -webkit-box-orient: horizontal;
   -webkit-box-direction: normal;
-      -ms-flex-direction: row;
-          flex-direction: row;
+  -ms-flex-direction: row;
+  flex-direction: row;
   -webkit-box-pack: justify;
-      -ms-flex-pack: justify;
-          justify-content: space-between;
+  -ms-flex-pack: justify;
+  justify-content: space-between;
   height: 15px;
   display: flex;
   -webkit-box-align: center;
-      -ms-flex-align: center;
-          align-items: center;
+  -ms-flex-align: center;
+  align-items: center;
   border-radius: var(--border-radius);
   -webkit-transition: background var(--speed);
   transition: background var(--speed);
@@ -52,7 +52,7 @@
 
 .dropdown .menu-item .icon-button:hover {
   -webkit-filter: none;
-          filter: none;
+  filter: none;
 }
 
 .dropdown .menu-item:hover {
@@ -80,8 +80,8 @@
 
 .dropdown .icon-img {
   -webkit-box-flex: 0;
-      -ms-flex-positive: 0;
-          flex-grow: 0;
+  -ms-flex-positive: 0;
+  flex-grow: 0;
   height: 30px;
   border-radius: 50%;
   cursor: pointer;
@@ -89,11 +89,11 @@
 
 #settings-menu .dropdown {
   -webkit-transform: translateX(-75%);
-          transform: translateX(-75%);
+  transform: translateX(-75%);
 }
 
 #accounts-menu .dropdown {
   -webkit-transform: translate(0px);
-          transform: translate(0px);
+  transform: translate(0px);
 }
 /*# sourceMappingURL=dropdown.css.map */

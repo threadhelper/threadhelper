@@ -10,7 +10,7 @@
       "128": "public/extension/thread_128.png"
     },
     "default_title": "ThreadHelper",
-    "default_popup": "popup.html"        
+    "default_popup": "popup.html"
   },
   "permissions": [
     "storage",
@@ -39,5 +39,4 @@
     "128": "public/extension/thread_128.png"
   },
   "content_security_policy": "script-src 'self'; object-src 'self';"
-
 }
