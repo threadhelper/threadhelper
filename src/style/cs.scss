@@ -1,4 +1,4 @@
-:root{
+:root {
   --neutral-color: #697882;
   --text-size: 13px;
   --accent-color: rgb(0, 157, 255);
@@ -10,9 +10,8 @@
   */
 }
 
-
-.sug_compose{
-  width:80%;
+.sug_compose {
+  width: 80%;
   pointer-events: auto;
   margin: 20px 10px 20px 10px;
   border-radius: 10px;
@@ -28,17 +27,16 @@
   }
 }
 
-.sug_home{
-  border-radius:10px;
+.sug_home {
+  border-radius: 10px;
   background-color: var(--main-bg-color);
   padding: 0px 10px 10px 10px;
-  margin-bottom:20px;
+  margin-bottom: 20px;
   overflow-x: hidden;
 }
 
 /* Dropdown Menu */
-@import "./icons.scss";
-
+@import './icons.scss';
 
 .sidebar {
   /*display: grid;
@@ -49,9 +47,10 @@
   flex-direction: column;
 
   white-space: pre-wrap;
-  word-break: break-all; 
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu, "Helvetica Neue", sans-serif;
-  font-size: var(--text-size);  
+  word-break: break-all;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    Ubuntu, 'Helvetica Neue', sans-serif;
+  font-size: var(--text-size);
   color: var(--main-txt-color);
 
   /* Don't break out */
@@ -66,19 +65,18 @@
   -moz-hyphens: auto;
   -webkit-hyphens: auto;
   hyphens: auto;
-  
+
   overflow-x: hidden;
   overflow-y: hidden;
 
+  height: 90vh;
 
-  height:90vh;
-
-  div{
+  div {
     // background-color: yellow;
-    background-color: var(--main-bg-color)
+    background-color: var(--main-bg-color);
   }
 
-  .header{
+  .header {
     display: flex;
     flex-direction: row;
     justify-content: space-between;
@@ -86,7 +84,7 @@
     // margin-bottom: 10px;
     place-items: center;
 
-    .archive_icon{
+    .archive_icon {
       right: 0%;
       position: relative;
       color: var(--main-txt-color);
@@ -98,13 +96,13 @@
         right: 100%;
       }
 
-      button{
-        background:none;
-        border:none;
+      button {
+        background: none;
+        border: none;
         // color: var(--neutral-color);
         color: var(--main-txt-color);
       }
-      
+
       .tooltiptext::after {
         right: 75%;
         margin-right: 0px;
@@ -113,50 +111,48 @@
     // .archive_icon:hover {
     //   button{
     //     color: var(--main-txt-color);
-    //   } 
+    //   }
     //   .tooltiptext {
     //     visibility: visible;
 
     //   }
-    }
-
-    .icon-button{
-      transition: filter 300ms;
-    }
-    .icon-button:hover{
-      /*filter: brightness(0.8)*/
-    }
-    .title-container{
-      text-align: left;
-      flex-grow: 8;
-      .th-title{
-        margin: 0;
-        font-weight: 900;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu, "Helvetica Neue", sans-serif;
-        font-size: 19px;
-      }
-    }
-    
   }
 
-.robo{
+  .icon-button {
+    transition: filter 300ms;
+  }
+  .icon-button:hover {
+    /*filter: brightness(0.8)*/
+  }
+  .title-container {
+    text-align: left;
+    flex-grow: 8;
+    .th-title {
+      margin: 0;
+      font-weight: 900;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+        Roboto, Ubuntu, 'Helvetica Neue', sans-serif;
+      font-size: 19px;
+    }
+  }
+}
+
+.robo {
   display: flex;
   flex-direction: row;
   border: 1px solid var(--main-border-color);
   border-radius: 3px;
   padding: 8px 5px 8px 5px;
-  
 }
 
-.getRTs{
+.getRTs {
   float: right;
 }
 
-.console{
-  
+.console {
 }
 
-#filters{
+#filters {
   display: flex;
   flex-direction: row;
   justify-content: space-between;
@@ -166,40 +162,31 @@
   padding: 0px 5px 0px 5px;
 }
 
-
-
-.searchWidget{
+.searchWidget {
   display: flex;
   flex-direction: column;
   white-space: pre-wrap;
-  height:auto; 
+  height: auto;
   overflow: hidden;
   flex-grow: 1;
   padding-top: 5px;
 }
-.searchTweets{
+.searchTweets {
   overflow-y: scroll;
   overflow-x: hidden;
 }
 
-.th-text{
+.th-text {
   width: 100%;
   white-space: pre-wrap;
 }
 
-  
 /* Dropdown Menu */
-@import "./dropdown.scss";
-
-
-
-
+@import './dropdown.scss';
 
 /* tweets */
-@import "./tweet.scss";
+@import './tweet.scss';
 
-
-    
 /* width */
 .searchTweets::-webkit-scrollbar {
   width: 10px;
@@ -219,7 +206,6 @@
 .searchTweets::-webkit-scrollbar-thumb:hover {
   background: var(--main-txt-color);
 }
-
 
 .dummyContainer {
   position: fixed;
