@@ -3,6 +3,10 @@
 ## Development Instructions
 built extension is in ./dist, so load that into the browser
 
+dev version lives at `http://localhost:3000`
+
+sidebar lives at `http://localhost:3000/sidebar.html`
+
 don't forget to `npm install`
 
 npm run commands:
