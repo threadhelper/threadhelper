@@ -167,7 +167,7 @@ const getBgColor = (x: HTMLElement) => x.style.backgroundColor;
 const minIdleTime = 3000;
 // Effects
 const handlePosting = () => msgBG({ type: 'update-tweets' }); // handle twitter posting actions like tweets, rts and deletes
-const reqSearch = R.pipe<any, string, void>(defaultTo(''), q =>
+const reqSearch = R.pipe<any, string, void>(defaultTo(''), (q) =>
   msgBG({ type: 'search', query: q })
 );
 // const reqSearch = R.pipe<any, string, void>(
@@ -223,7 +223,7 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
   const getTargetId = getHostTweetId(lastStatus$);
   const lastClickedId$ = (makeLastClickedObs()
     .map(getTargetId)
-    .filter(x => !isNil(x))
+    .filter((x) => !isNil(x))
     .toProperty() as unknown) as curProp<string>;
   const makeIdMsg = makeIdObsMsg(lastClickedId$); // function
   //          actions
@@ -233,13 +233,13 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
     .toProperty(() => null) as curProp<string>;
   const addBookmark$ = makeAddBookmarkStream()
     .map(inspect('add bookmark'))
-    .map(_ => 'add-bookmark');
+    .map((_) => 'add-bookmark');
   const removeBookmark$ = makeRemoveBookmarkStream()
     .map(inspect('remove bookmark'))
-    .map(_ => 'remove-bookmark');
+    .map((_) => 'remove-bookmark');
   const delete$ = makeDeleteEventStream()
     .map(inspect('delete'))
-    .map(_ => 'delete-tweet');
+    .map((_) => 'delete-tweet');
   const targetedTweetActions$ = Kefir.merge([
     addBookmark$,
     removeBookmark$,
@@ -248,20 +248,20 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
   const [composeFocus$, composeFocusOut$] = makeComposeFocusObs(); // stream for focus on compose box
   composeFocus$.log('composeFocus$');
   const composeUnfocused$ = Kefir.merge([
-    composeFocusOut$.map(_ => ''),
-    urlChange$.map(_ => ''),
+    composeFocusOut$.map((_) => ''),
+    urlChange$.map((_) => ''),
   ]);
   const composeContent$ = composeFocus$.flatMapLatest((e: Event) =>
     makeComposeObs(e.target as HTMLElement)
   );
   composeContent$.log('composeContent$');
   const composeQuery$ = Kefir.merge([
-    urlChange$.map(_ => ''),
+    urlChange$.map((_) => ''),
     composeContent$,
   ]).toProperty(() => '');
   const stoppedWriting$ = composeQuery$
     .skipDuplicates()
-    .filter(x => !isEmpty(x))
+    .filter((x) => !isEmpty(x))
     .debounce(minIdleTime); // to detect when writing has stopped for a bit
   const robo$ = Kefir.merge([
     makeRoboStream(),
@@ -294,9 +294,9 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
   // Effects from streams
   //  Actions
   targetedTweetActions$.log('targetedTweetActions');
-  subObs(lastClickedId$, _ => {});
+  subObs(lastClickedId$, (_) => {});
   subObs(composeQuery$, reqSearch),
-    subObs(actions$.delay(1000), _ => {
+    subObs(actions$.delay(1000), (_) => {
       handlePosting();
     });
   subObs(targetedTweetActions$, pipe(makeIdMsg, msgBG));

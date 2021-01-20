@@ -87,7 +87,7 @@ export const flattenModule = (
   window: { [x: string]: unknown },
   R: ArrayLike<unknown> | { [s: string]: unknown }
 ) => Object.entries(R).forEach(([name, exported]) => (window[name] = exported));
-export const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+export const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 export const inspect = curry((prepend, data) => {
   console.log(prepend, data);
   return data;
@@ -147,7 +147,7 @@ export const promiseStream = curry(
     promise_fn: (arg0: T) => Promise<S>,
     stream: Observable<T, any>
   ): Observable<S, any> => {
-    return stream.flatMapLatest(x => Kefir.fromPromise(promise_fn(x)));
+    return stream.flatMapLatest((x) => Kefir.fromPromise(promise_fn(x)));
   }
 );
 export const waitFor = curry(
@@ -163,14 +163,14 @@ export const makeMsgStream = curry(
 // export const makeMsgStreamSafe = (msg$, name) => makeSafe(makeMsgStream(msg$, name)) // makeMsgStreamSafe :: String -> Stream msg
 export const errorFilter = curry(
   <T,>(name: string, stream: Observable<T, any>): Observable<T, any> =>
-    stream.filterErrors(e => {
+    stream.filterErrors((e) => {
       console.error(`[ERROR] from ${name}`, { stream, e });
       return false;
     })
 );
 
 // Functional utils
-export const isExist = x => !(isNil(x) || isEmpty(x));
+export const isExist = (x) => !(isNil(x) || isEmpty(x));
 export const nullFn = () => {};
 export const renameKeys = (keysMap: { [x: string]: any }) => (
   obj: ArrayLike<unknown> | { [s: string]: unknown }
@@ -182,5 +182,5 @@ export const renameKeys = (keysMap: { [x: string]: any }) => (
   );
 // export const list2Obj = curry((key: string, list: {key:string}[]):object => pipe(map(x=>[x[key], x]), fromPairs)(list))
 export const list2Obj = curry((key: string, list: { key: string }[]): object =>
-  fromPairs(map(x => [x[key], x], list))
+  fromPairs(map((x) => [x[key], x], list))
 );

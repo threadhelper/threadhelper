@@ -1,75 +1,72 @@
-
-.sync{
-  height: 10px; 
+.sync {
+  height: 10px;
   width: 10px;
   border-radius: 50%;
   margin-right: 5px;
   position: relative;
-  
-  .tooltiptext{
+
+  .tooltiptext {
     width: 200px;
     left: 100%;
   }
-
 }
-
 
 .synced {
   // background-color: rgb(0,200,0);
-  fill: rgb(0,200,0);
-  stroke: rgb(0,200,0);
+  fill: rgb(0, 200, 0);
+  stroke: rgb(0, 200, 0);
 }
 
-.unsynced{
-  // background-color: rgb(255, 94, 0); 
+.unsynced {
+  // background-color: rgb(255, 94, 0);
   fill: rgb(255, 94, 0);
   stroke: rgb(255, 94, 0);
 }
-.robo-sync{  
+.robo-sync {
   position: relative;
 
   &.unsynced::before {
-    content: "...";
+    content: '...';
   }
   &.synced::before {
-    content: "";
+    content: '';
   }
 
-  .tooltiptext{
+  .tooltiptext {
     width: 200px;
     left: 100%;
   }
   /* Show the tooltip text when you mouse over the tooltip container */
-  
+
   &:hover .tooltiptext {
     visibility: visible;
   }
 }
 
 /*For archive loading button*/
-.tooltiptext{
+.tooltiptext {
   visibility: hidden;
-  background-color:var(--main-txt-color);
+  background-color: var(--main-txt-color);
   color: var(--main-bg-color);
   text-align: center;
   font-weight: 100;
   padding: 5px 0;
   border-radius: 6px;
-  
+
   /* Position the tooltip text - see examples below! */
   position: absolute;
   z-index: 1;
   top: 110%;
   margin-left: -20px; /*  Use half of the width (120/2 = 60), to center the tooltip */
   a:visited {
-    color:var(--main-bg-color);
+    color: var(--main-bg-color);
   }
 }
 
 .sync .tooltiptext::after {
-  content: " ";
+  content: ' ';
   position: absolute;
-  bottom: 100%;  /* At the top of the tooltip */
+  bottom: 100%; /* At the top of the tooltip */
   left: 10px;
   margin-left: 0px;
   border-width: 5px;
@@ -81,9 +78,9 @@
   visibility: visible;
 }
 
-.account-icon{
-  height:calc(17px);
-  width:calc(17px);
+.account-icon {
+  height: calc(17px);
+  width: calc(17px);
   padding: 6px;
   // fill:var(--main-txt-color);
   // stroke: var(--main-txt-color);
@@ -92,24 +89,24 @@
   border-radius: 50%;
 }
 
-#accounts-menu{
+#accounts-menu {
   position: relative;
 }
 
-#accounts-menu{    
-  .tooltiptext{
+#accounts-menu {
+  .tooltiptext {
     width: 200px;
     left: 100%;
-  }   
-  .dropdown{
-    top:30px;
-  } 
+  }
+  .dropdown {
+    top: 30px;
+  }
 }
 
 #accounts-menu .tooltiptext::after {
-  content: " ";
+  content: ' ';
   position: absolute;
-  bottom: 100%;  /* At the top of the tooltip */
+  bottom: 100%; /* At the top of the tooltip */
   left: 10px;
   margin-left: 0px;
   border-width: 5px;
@@ -121,48 +118,45 @@
   visibility: visible;
 }
 
-
-.filter-icon{
-  height:calc(17px);
-  width:calc(17px);
+.filter-icon {
+  height: calc(17px);
+  width: calc(17px);
   padding: 6px;
   border-radius: 50%;
 }
 
-.hoverHighlight:hover{
+.hoverHighlight:hover {
   background-color: var(--neutral-color);
 }
 
-.filter-checkbox{
-  display:none;
+.filter-checkbox {
+  display: none;
 }
 
-input[type="checkbox"]:checked + label{
-  display:inline-block;
-  fill:var(--main-txt-color);
+input[type='checkbox']:checked + label {
+  display: inline-block;
+  fill: var(--main-txt-color);
   stroke: var(--main-txt-color);
   stroke-width: 0.5px;
   stroke-linejoin: round;
 }
-input[type="checkbox"] + label img{
+input[type='checkbox'] + label img {
   opacity: 0.2;
 }
 
-input[type="checkbox"]:checked + label img{
+input[type='checkbox']:checked + label img {
   opacity: 1;
 }
-input[type="checkbox"] + label{
-  display:inline-block;
-  fill:var(--neutral-color);
+input[type='checkbox'] + label {
+  display: inline-block;
+  fill: var(--neutral-color);
 }
 
-
-.dropdown-icon{
+.dropdown-icon {
   border-radius: 40%;
-  fill:var(--neutral-color);
+  fill: var(--neutral-color);
 }
 
-.dropdown-icon:hover{
-  fill:var(--main-txt-color);
+.dropdown-icon:hover {
+  fill: var(--main-txt-color);
 }
-

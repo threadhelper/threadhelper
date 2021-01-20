@@ -208,7 +208,7 @@ toggleDebug(window, DEBUG);
 
 // Stream clean up
 const subscriptions: any[] = [];
-const rememberSub = sub => {
+const rememberSub = (sub) => {
   subscriptions.push(sub);
   return sub;
 };
@@ -252,12 +252,12 @@ export async function main() {
   const msgStream = makeMsgStream(msg$);
   const reqReset$ = msgStream('clear');
   const dataReset$ = reqReset$.thru<Observable<any, any>>(
-    promiseStream(_ => resetData(pWorker))
+    promiseStream((_) => resetData(pWorker))
   );
 
   const csStart$ = msg$
     .filter(propEq('type', 'cs-created'))
-    .map(_ => true)
+    .map((_) => true)
     .toProperty(() => false);
   const csNotReady$ = csStart$.map(not); // const csNotReady$ = toVal(false, csStart$)
   //      Analytics
@@ -291,13 +291,13 @@ export async function main() {
 
   const wMsgEvent$ = Kefir.fromEvents<MessageEvent, any>(worker, 'message');
   const workerMsg$ = wMsgEvent$
-    .filter(propSatisfies(x => R.type(x) == 'String', 'data'))
+    .filter(propSatisfies((x) => R.type(x) == 'String', 'data'))
     .map(prop('data'))
     .map((x: string) =>
       tryCatch(
         //trycatch is here bc firefox handles requests faster if they're completely stringified rather than partially but I haven't made sure that all workerMsgs are stringified, especially PromiseWorker ones
         (x: string) => JSON.parse(x) as WorkerMsg,
-        e => {
+        (e) => {
           console.error('[ERROR] pWorkerMsg$ Couldnt parse', { e, x });
           throw e;
         }
@@ -305,15 +305,15 @@ export async function main() {
     )
     .ignoreErrors(); // msgs sent as stringified json
   const pWorkerMsg$ = wMsgEvent$
-    .filter(pathSatisfies(x => R.type(x) == 'Object', ['data', 2]))
+    .filter(pathSatisfies((x) => R.type(x) == 'Object', ['data', 2]))
     .map(path(['data', 2])); // msgs from Promise Worker
   const workerReady$ = workerMsg$
     .filter(propEq('type', 'ready'))
     .map(R.T)
     .toProperty(R.F);
-  const _workerReady = _ => curVal(workerReady$);
+  const _workerReady = (_) => curVal(workerReady$);
 
-  const askWorkerReady$ = Kefir.repeat(i => {
+  const askWorkerReady$ = Kefir.repeat((i) => {
     if (i < 5 && !_workerReady(1)) {
       console.log(`[DEBUG] asking isWorkerReady i=${i}`, {
         workerReady: _workerReady(1),
@@ -416,7 +416,7 @@ export async function main() {
     .thru(waitFor(notReady$))
     .thru(errorFilter('reqBookmarks$')); // asks for update on explicit req and on initData
   const reqBookmarkId$ = reqAddBookmark$
-    .map(pipe(prop('id'), id => [id]))
+    .map(pipe(prop('id'), (id) => [id]))
     .thru(errorFilter('reqBookmarkId$'));
   const anyAPIReq$ = Kefir.merge([
     reqUpdatedTweets$,
@@ -427,14 +427,14 @@ export async function main() {
   // Tweet API promise returns
   const fetchedUpdate$ = reqUpdatedTweets$
     .thru(
-      promiseStream(_ => updateQuery(getAuthInit, getUsername(), update_size))
+      promiseStream((_) => updateQuery(getAuthInit, getUsername(), update_size))
     )
     .thru(errorFilter('fetchedUpdate$')); // const fetchedUpdate$ = promiseStream(reqUpdatedTweets$, _ => updateQuery(getAuthInit, getUsername(), update_size)).thru(errorFilter('fetchedUpdate$'));
   const fetchedTimeline$ = reqTimeline$
-    .thru(promiseStream(_ => timelineQuery(getAuthInit, getUserInfo())))
+    .thru(promiseStream((_) => timelineQuery(getAuthInit, getUserInfo())))
     .thru(errorFilter('fetchedTimeline$'));
   const fetchedBookmarks$ = reqBookmarks$
-    .thru(promiseStream(_ => getBookmarks(getAuthInit)))
+    .thru(promiseStream((_) => getBookmarks(getAuthInit)))
     .thru(errorFilter('fetchedBookmarks$'));
   const fetchedBookmark$ = reqBookmarkId$
     .thru(promiseStream(tweetLookupQuery(getAuthInit)))
@@ -447,12 +447,16 @@ export async function main() {
   ]).thru(errorFilter('fetchedAnyAPIReq$'));
   // User submitted tweets
   const reqArchiveLoad$ = msgStreamSafe('temp-archive-stored'); // reqArchiveLoad$ :: msg
-  const extractTweetPropIfNeeded = ifElse(prop('tweet'), prop('tweet'), x => x);
+  const extractTweetPropIfNeeded = ifElse(
+    prop('tweet'),
+    prop('tweet'),
+    (x) => x
+  );
   const archiveLoadedTweets$ = reqArchiveLoad$
     .thru(
       promiseStream(
         pipe(
-          _ => getData('temp_archive'),
+          (_) => getData('temp_archive'),
           andThen(map(extractTweetPropIfNeeded))
         )
       )
@@ -461,7 +465,7 @@ export async function main() {
   const thUpdate$ = fetchedUpdate$.map(saferTweetMap(apiToTweet));
   //
   // const curAccount = pipe(_ => userInfo$, curVal, prop('id_str'));
-  const assocAccount = x => pipe(assoc('account', getAccId(1)))(x);
+  const assocAccount = (x) => pipe(assoc('account', getAccId(1)))(x);
   const thTweets$ = Kefir.merge([
     thUpdate$, //fetchedUpdate$.map(saferTweetMap(apiToTweet)),
     fetchedTimeline$.map(saferTweetMap(apiToTweet)),
@@ -495,10 +499,10 @@ export async function main() {
     dataReset$,
   ]).toProperty(); // anyTweetUpdate$ :: msg
   const whenUpdated$ = anyTweetUpdate$
-    .map(_ => getDateFormatted())
+    .map((_) => getDateFormatted())
     .toProperty(getDateFormatted); // keeps track of when the last update to the tweet db was
   const updateSyncDisplay$ = Kefir.merge([ready$, anyTweetUpdate$]).map(
-    _ => true
+    (_) => true
   ); // triggers sync display update// ready$ :: user_info -> Bool
   // Sync
   const anyWorkerReq$ = Kefir.merge([
@@ -533,7 +537,7 @@ export async function main() {
     results: TweetResult[]
   ) =>
     R.filter(
-      pipe(result => makeValidateTweet(filters, accs)(prop('tweet', result))),
+      pipe((result) => makeValidateTweet(filters, accs)(prop('tweet', result))),
       results
     );
 
@@ -559,22 +563,22 @@ export async function main() {
       .filter(pipe(prop('query'), isEmpty, not)),
   ])
     .thru(waitFor(notReady$))
-    .bufferWhileBy(searchMode$.map(mode => !equals('fulltext', mode)))
+    .bufferWhileBy(searchMode$.map((mode) => !equals('fulltext', mode)))
     .map(last) as Observable<string, Error>;
   const reqSemanticSearch$ = wordSearchQuery$
     .thru(waitFor(notReady$))
-    .bufferWhileBy(searchMode$.map(mode => !equals('semantic', mode)))
+    .bufferWhileBy(searchMode$.map((mode) => !equals('semantic', mode)))
     .map(last) as Observable<string, Error>;
   const fullTextSearchRes$ = searchWorkerMsg$
     .sampledBy(reqFullTextSearch$)
     .thru<Observable<TweetResWorkerMsg, any>>(
-      promiseStream(msg => pWorker.postMessage(msg))
+      promiseStream((msg) => pWorker.postMessage(msg))
     )
     .map(prop('res')); // searchResults$ :: [tweets]
   const semanticSearchRes$ = searchWorkerMsg$
     .sampledBy(reqSemanticSearch$)
     .thru<Observable<TweetResWorkerMsg, any>>(
-      promiseStream(msg => pWorker.postMessage(msg))
+      promiseStream((msg) => pWorker.postMessage(msg))
     )
     .map(prop('res')); // searchResults$ :: [tweets]
   // const searchResults$ = searchWorkerMsg$.sampledBy(reqSearch$).thru(promiseStream(msg => pWorker.postMessage(msg))).map(prop('res')); // searchResults$ :: [tweets]
@@ -603,7 +607,7 @@ export async function main() {
     .map(last); //.delay(100); //.last()
   const gotDefaultTweets$ = reqDefaultTweets$ // Search worker returns
     .thru<Observable<TweetResWorkerMsg, any>>(
-      promiseStream(msg => pWorker.postMessage(msg))
+      promiseStream((msg) => pWorker.postMessage(msg))
     )
     .map(prop('res')); // gotDefaultTweets$ :: [tweets]
   const defaultTweets$ = Kefir.merge([
@@ -621,12 +625,12 @@ export async function main() {
   const apiRes$ = Kefir.merge([
     apiQuery$.filter(isEmpty).map([]),
     apiQuery$
-      .filter(q => !isEmpty(q))
+      .filter((q) => !isEmpty(q))
       .thru(promiseStream(searchAPI(getAuthInit)))
       .thru(errorFilter('fetchedUpdate$')),
   ]);
   const thApiRes$ = apiRes$.map(saferTweetMap(apiToTweet)).map(
-    map(tweet => {
+    map((tweet) => {
       return { tweet };
     })
   );
@@ -642,17 +646,17 @@ export async function main() {
   subObs({ accountsUpdate$ }, setStg('activeAccounts'));
   subObs(
     { csGaEvent$ },
-    pipe(values, x => Event(...x))
+    pipe(values, (x) => Event(...x))
   );
   subObs(
     { csGaException$ },
-    pipe(values, x => Exception(...x))
+    pipe(values, (x) => Exception(...x))
   );
-  subObs({ askWorkerReady$ }, _ => isWorkerReady(pWorker));
+  subObs({ askWorkerReady$ }, (_) => isWorkerReady(pWorker));
   subObs(
     { updateSyncDisplay$ },
     pipe(
-      _ => makeSyncDisplayMsg(pWorker, getUsername, whenUpdated$),
+      (_) => makeSyncDisplayMsg(pWorker, getUsername, whenUpdated$),
       andThen(setStg('syncDisplay'))
     )
   ); // update sync display
@@ -664,7 +668,7 @@ export async function main() {
   subObs(
     { fetchedTimeline$ },
     pipe(
-      when(checkGotTimeline, _ =>
+      when(checkGotTimeline, (_) =>
         updateStgPath(['hasTimeline', getAccId()], true)
       )
     )
@@ -742,7 +746,7 @@ export async function main() {
   thApiRes$.log('DEBUG] thApiRes$');
 }
 
-const onUpdated = previousVersion => {
+const onUpdated = (previousVersion) => {
   console.log(`[INFO] updated from version ${previousVersion}`);
 };
 

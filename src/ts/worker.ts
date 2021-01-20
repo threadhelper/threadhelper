@@ -120,7 +120,7 @@ const wSelf: Worker = self as any;
 (Kefir.Property.prototype as any).currentValue = currentValue;
 // Stream clean up
 const subscriptions: Subscription[] = [];
-const rememberSub = sub => {
+const rememberSub = (sub) => {
   subscriptions.push(sub);
   return sub;
 };
@@ -169,7 +169,7 @@ const updateSomeDB = curry(
 );
 const initIndex = async () =>
   pipe(
-    _ => getDb(1).getAll('tweets'),
+    (_) => getDb(1).getAll('tweets'),
     andThen(updateIndex(makeIndex(), __, []))
   )(1);
 const getIndexFromDb = () => getDb(1).get('misc', 'index');
@@ -191,11 +191,11 @@ const makeMsgStream = (typeName: string) =>
 const resetIndex$ = makeMsgStream('resetIndex');
 resetIndex$.onValue(consoleLog('resetIndex$'));
 const index$ = Kefir.merge([db$, resetIndex$])
-  .flatMapFirst(_ =>
+  .flatMapFirst((_) =>
     Kefir.fromPromise(
       pipe(
         getIndexFromDb,
-        andThen(ifElse(isNil, _ => initIndex(), loadIndex))
+        andThen(ifElse(isNil, (_) => initIndex(), loadIndex))
       )(1)
     )
   )
@@ -248,23 +248,23 @@ const getDefaultTweets$ = makeMsgStream('getDefaultTweets');
 const ready$ = Kefir.merge([
   index$.filter(pipe(isNil, not)),
   makeMsgStream('isWorkerReady'),
-]).map(_ => true);
+]).map((_) => true);
 ready$.onValue(consoleLog('ready$'));
 // Functions, potential imports
-const curVal = stream => stream.currentValue();
+const curVal = (stream) => stream.currentValue();
 const getDb = (_: any) => curVal(db$);
 const updateDB = updateSomeDB(getDb);
 const getIndex = () => curVal(index$);
 const getAllIds = async (storeName: string) =>
   await getDb(1).getAllKeys(storeName); // getAllIds :: () -> [ids]
-const howManyTweetsDb = async _ => (await getAllIds('tweets')).length;
+const howManyTweetsDb = async (_) => (await getAllIds('tweets')).length;
 const getAllAccounts = async (_: Promise<any>) => getDb(1).getAll('accounts');
 const addAccount = async (user_info: User): Promise<any> =>
   getDb(1).put('accounts', user_info);
 const onAddAccount = pipe<WriteAccMsg, User, Promise<any>, Promise<User[]>>(
   prop('res'),
   addAccount,
-  andThen(_ => getAllAccounts(_))
+  andThen((_) => getAllAccounts(_))
 );
 const removeAccount = async (id_str: string): Promise<any> =>
   getDb(1).delete('accounts', id_str);
@@ -273,12 +273,12 @@ const onRemoveAccount = async (id: string) =>
     tap(removeAccount),
     db.filterDb(getDb(1), 'tweets', propEq('account', __)),
     andThen(map(prop('id'))),
-    andThen(ids => updateDB([], ids)),
+    andThen((ids) => updateDB([], ids)),
     // andThen(id => updateDB([], [id])),
-    andThen(_ => getAllAccounts(_))
+    andThen((_) => getAllAccounts(_))
   )(id);
-const onAddUser = async user_info => getDb(1).put('users', user_info);
-const onRemoveUser = async id_str => getDb(1).delete('users', id_str);
+const onAddUser = async (user_info) => getDb(1).put('users', user_info);
+const onRemoveUser = async (id_str) => getDb(1).delete('users', id_str);
 const _updateIndex = async (
   index: elasticlunr.Index<IndexTweet>,
   new_tweets: thTweet[],
@@ -301,19 +301,19 @@ const _updateIndex = async (
   return pipe(
     (index, tweets_to_add, ids_to_remove) =>
       updateIndex(index, tweets_to_add, ids_to_remove),
-    andThen(index => index.toJSON()),
-    andThen(index_json => getDb(1).put('misc', index_json, 'index'))
+    andThen((index) => index.toJSON()),
+    andThen((index_json) => getDb(1).put('misc', index_json, 'index'))
   )(index, new_tweets, deleted_ids);
 };
-const isBookmark = res => path([0, 'is_bookmark'], res); // checks whether the first is a bookmark to judge whether they're all bookmarks
-const curAccount = res => path([0, 'account'], res); // checks whether the first is a bookmark to judge whether they're all bookmarks
+const isBookmark = (res) => path([0, 'is_bookmark'], res); // checks whether the first is a bookmark to judge whether they're all bookmarks
+const curAccount = (res) => path([0, 'account'], res); // checks whether the first is a bookmark to judge whether they're all bookmarks
 const filterCondition = (res: readonly Record<'id', unknown>[]) =>
   both(
     propEq('is_bookmark', path([0, 'is_bookmark'], res)),
     propEq('account', path([0, 'account'], res))
   );
 const findDeletedIds = async (oldIds, res: thTweet[]): Promise<any> => {
-  const onErrorFindingDeletedIds = e => {
+  const onErrorFindingDeletedIds = (e) => {
     console.log('ERROR [findDeletedIds]', { e, oldIds, res });
     return [];
   };
@@ -327,7 +327,7 @@ const findNewTweets = curry(
     pipe(
       // map(prop('id')),
       // difference(__, oldIds),
-      filter(propSatisfies(id => !includes(id, oldIds), 'id'))
+      filter(propSatisfies((id) => !includes(id, oldIds), 'id'))
     )(res)
 );
 
@@ -343,7 +343,7 @@ const updateTimeline = async (res: thTweet[]) => {
   return _updateIndex(getIndex(), newTweets, deletedIds);
 };
 
-const addTweets = async res => {
+const addTweets = async (res) => {
   const newTweets = await findNewTweets(await getAllIds('tweets'), res);
   updateDB(newTweets, []);
   return _updateIndex(getIndex(), newTweets, []);
@@ -355,21 +355,21 @@ const removeTweets = async (ids: string[]) => {
 };
 // need to leave open db and empty index
 const dbClear = pipe(
-  pipe(_ => getAllIds('tweets'), andThen(removeTweets)),
-  pipe(_ => getAllIds('accounts'), andThen(onRemoveAccount)),
-  pipe(_ => getAllIds('users'), andThen(onRemoveUser)),
-  andThen(_ => {
+  pipe((_) => getAllIds('tweets'), andThen(removeTweets)),
+  pipe((_) => getAllIds('accounts'), andThen(onRemoveAccount)),
+  pipe((_) => getAllIds('users'), andThen(onRemoveUser)),
+  andThen((_) => {
     return { type: 'dbClear' };
   })
 );
-const setIndex = pipe(x => getDb(1).put('misc', x, 'index'));
+const setIndex = pipe((x) => getDb(1).put('misc', x, 'index'));
 // indexUpdate :: String ->
 const indexUpdate = (opName: string, updateFn) => {
   return pipe(
     prop('res'),
     updateFn,
     // args=>updateFn(...args),
-    andThen(_ => {
+    andThen((_) => {
       return { type: opName };
     })
   );
@@ -384,7 +384,7 @@ const getTweetsFromDbById = async (ids: string[]): Promise<thTweet[]> =>
     () => ids,
     // ids => db.getMany(getDb(1), 'tweets', ids), andThen(filter(x => not(isNil(x)))))(ids);
     map(getTweetByID),
-    andThen(filter(x => not(isNil(x))))
+    andThen(filter((x) => not(isNil(x))))
   )();
 
 // searchFromMsg :: msg search -> Promise [tweet]
@@ -433,12 +433,12 @@ const fulltextSearch = async (
     Promise<TweetResWorkerMsg>
   >(
     () => m,
-    tap(_ => emitMidSearch(true)),
+    tap((_) => emitMidSearch(true)),
     ftSearchFromMsg(getIndex),
     andThen(makeSearchResponse),
     andThen(
       pipe<any, any, any>(
-        tap(_ => emitMidSearch(false)),
+        tap((_) => emitMidSearch(false)),
         assoc('res', __, { type: 'searchIndex', msg: m })
       )
     )
@@ -473,12 +473,12 @@ const semanticSearch = async (
     Promise<TweetResWorkerMsg>
   >(
     () => m,
-    tap(_ => emitMidSearch(true)),
+    tap((_) => emitMidSearch(true)),
     semSearchFromMsg,
     andThen(makeSearchResponse),
     andThen(
       pipe<any, any, any>(
-        tap(_ => emitMidSearch(false)),
+        tap((_) => emitMidSearch(false)),
         assoc('res', __, { type: 'searchIndex', msg: m })
       )
     )
@@ -513,7 +513,7 @@ const getDefaultTweets = async (
     () => m,
     callGetIdleTweets,
     andThen(
-      map(tweet => {
+      map((tweet) => {
         return { tweet };
       })
     ),
