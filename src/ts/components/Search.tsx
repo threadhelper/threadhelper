@@ -1,5 +1,5 @@
   import { h, render, Component } from 'preact';
-import { useState, useRef, useEffect, useContext, useCallback } from 'preact/hooks';
+import { useState, useRef, useEffect, useReducer, useCallback } from 'preact/hooks';
 import { getData, setStg, msgBG, makeOnStorageChanged } from '../utils/dutils';
 import { Console } from './Console';
 import { Tweet as TweetCard } from './Tweet';
@@ -17,18 +17,47 @@ import { thTweet } from '../types/tweetTypes';
 import { SearchResult } from '../types/msgTypes';
 import { defaultOptions, defaultStorage, devStorage } from '../utils/defaultStg';
 
+
+
 export function Search(props:any){
   const [tweets, setTweets] = useState([]);
   // const query = useStream(props.composeQuery, '')
   const myRef = useRef(null);
   const _setTweets = (t: any[] | ((prevState: any[]) => any[]))=>{setTweets(t);}
+
   
   const [searchResults, setSearchResults] = useStorage('search_results',[]);
   const [latestTweets, setLatestTweets] = useStorage('latest_tweets',[]);
-  
+  const [apiResults, setApiResults] = useStorage('api_results',[]);
+
+  const updateFeedDisplay = (state, action) => {
+    switch (action) {
+      case 'searchResults': return searchResults;
+      case 'latestTweets': return latestTweets;
+      case 'apiResults': return apiResults;
+      default: throw new Error('Unexpected action');
+    }
+  };
+
+  const [feedDisplay, dispatchFeedDisplay] = useReducer(updateFeedDisplay, 'latestTweets');
+
+  // 
   // const showSearchRes = (searchResults)=>!(isExist(searchResults) || R.isEmpty(query.trim()))
   const showSearchRes = (searchResults:any[])=>isExist(searchResults)
-
+  const showFeed = _=>pipe(
+    ()=>[searchResults, apiResults, latestTweets], 
+    filter(x=>!isEmpty(x)), 
+    R.head,
+    )()
+  const showWhat = ()=>{
+    if(!isExist(searchResults)){
+      dispatchFeedDisplay('searchResults')
+    } else if(!isExist(apiResults)){
+      dispatchFeedDisplay('apiResults')
+    } else{
+      dispatchFeedDisplay('latestTweets')
+    }
+  }
 
   useEffect(async () => {
     const initTweets : any = await getData('latest_tweets') 
@@ -36,33 +65,20 @@ export function Search(props:any){
     return ()=>{}
   }, []);
 
-// // 
-//   useEffect(()=>{
-//     R.pipe(
-//       defaultTo(''),
-//       // R.trim,
-//       reqSearch,
-//     )(query)
-//     return ()=>{  };
-//   },[query]);
 
-  useEffect(()=>{
-    console.log({searchResults})
-    return ()=>{  };
-  },[searchResults]);
-
-  useEffect(()=>{
-    console.log({latestTweets})
-    return ()=>{  };
-  },[latestTweets]);
+  useEffect(()=>{dispatchFeedDisplay('latestTweets'); return ()=>{  };},[latestTweets]);
+  useEffect(()=>{dispatchFeedDisplay('apiResults'); return ()=>{  };},[apiResults]);
+  useEffect(()=>{dispatchFeedDisplay('searchResults'); return ()=>{  };},[searchResults]);
 
 
   return (
     <div class="searchWidget" ref={myRef}>
-      {/* <Console/> */}
+      {/* <Console/>
       {showSearchRes(searchResults) 
       ? <SearchResults results={searchResults} /> 
-      : <SearchResults results={latestTweets} /> }
+      : <SearchResults results={latestTweets} /> } */}
+      {/* <SearchResults results={feedDisplay} /> */}
+      <SearchResults results={showFeed(1)} />
     </div>
   );
 }

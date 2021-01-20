@@ -34,7 +34,7 @@ export function makeAuthObs(): Observable<Credentials,any> {
         };
         //needed for it to work on chrome
         chrome.webRequest.onBeforeSendHeaders.addListener(chromePrep, { urls: ["https://api.twitter.com/*"] }, webRequestOptions);
-        const sendCredentials = () => {
+        const emitCredentials = () => {
             const _credentials = {
                 name: "credentials",
                 authorization,
@@ -44,18 +44,14 @@ export function makeAuthObs(): Observable<Credentials,any> {
         };
         const onSendHeaders = async (details: {tabId: any; requestHeaders: any[];}) => {
             tabId = details.tabId;
-            const _authorization = details.requestHeaders.find((h: {
-                name: string;
-            }) => h.name.toLowerCase() === "authorization");
-            const _csrfToken = details.requestHeaders.find((h: {
-                name: string;
-            }) => h.name.toLowerCase() === "x-csrf-token");
+            const _authorization = details.requestHeaders.find((h: {name: string;}) => h.name.toLowerCase() === "authorization");
+            const _csrfToken = details.requestHeaders.find((h: {name: string;}) => h.name.toLowerCase() === "x-csrf-token");
             // just return if fields don't exist
             if (!(_authorization != null) || !(_csrfToken != null))
                 return;
             authorization = _authorization.value;
             csrfToken = _csrfToken.value;
-            sendCredentials();
+            emitCredentials();
         };
         chrome.webRequest.onSendHeaders.addListener(onSendHeaders, { urls: ["https://api.twitter.com/*"] }, ["requestHeaders"]);
         return () => {

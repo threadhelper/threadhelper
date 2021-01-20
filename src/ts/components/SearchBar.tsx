@@ -1,8 +1,8 @@
-import { h, render, Component } from 'preact';
+import { h, render, Component, cloneElement } from 'preact';
 import { useState, useEffect, useContext } from 'preact/hooks';
 import { makeOnStorageChanged } from '../utils/dutils';
 import { useStream } from '../hooks/useStream';
-import { useStorage, useOption } from '../hooks/useStorageStorage';
+import { useStorage, useOption } from '../hooks/useStorage';
 import Kefir, { sequentially } from 'kefir';
 import { __, curry, pipe, andThen, map, filter, reduce, tap, apply, tryCatch} from 'ramda' // Function
 import { prop, propEq, propSatisfies, path, pathEq, hasPath, assoc, assocPath, values, mergeLeft, mergeDeepLeft, keys, lens, lensProp, lensPath, pick, project, set, length } from 'ramda' // Object
@@ -11,54 +11,29 @@ import { equals, ifElse, when, both, either, isNil, is, defaultTo, and, or, not,
 
 import { initGA, csEvent, PageView, UA_CODE } from '../utils/ga'
 
+function useInputStg(type, name) {
+  const [apiQuery, setApiQuery] = useStorage("apiQuery", '');
+  const [value, setValue] = useState('');
 
-export function FilterButton(props: { Icon: any; name: string; useFilter: boolean; setFilter: any; }){
-  const Icon = props.Icon
-  // console.log('FilterButton', {Icon})
-  // useEffect(()=>console.log('FilterButton', {props, Icon}), []);
-  return (
-    <span class={props.name}> 
-        <input id={props.name} name={props.name} class='filter-checkbox' type="checkbox" checked={props.useFilter} onChange={(event)=>handleInputChange(props.setFilter, event)}></input> 
-        <label for={props.name} >< Icon class='filter-icon hoverHighlight' onClick={_ => _} /> </label>
-        {/* <label for={props.name} >< RetweetIcon class='filter-icon' onClick={_ => _} /> </label> */}
-        
-    </span>
-  )
+  const submiApiSearch = e=>{
+    if (e.key === 'Enter'){
+      setApiQuery(value)
+      console.log('[DEBUG] submiApiSearch!', {value, e})
+    }
+  }
+
+  const input = <input value={value} onChange={e=>setValue(e.target.value)} onKeyUp={submiApiSearch} type={type} />;
+  return [value, input];
 }
-// 
-export function Console(){
-  // const [text, setText] = useState('[console text]');
-  const [text, setText] = useState('[console text]');
-  // TODO make these generate themselves
-  const [getRTs, setGetRTs] = useOption('getRTs')
-  const [useBookmarks, setUseBookmarks] = useOption('useBookmarks')
-  const [useReplies, setUseReplies] = useOption('useReplies')
-  const [idleMode, setIdleMode] = useOption('idleMode')
-  
-  const idle2Shuffle = (idleMode: string) => idleMode === 'random' ? true : false // String -> Bool
-  const shuffle2Idle = val => val ? 'random' : 'timeline' // Bool -> String
 
-  
+// 
+export function SearchBar(){
+  const [value, input] = useInputStg('apiQuery', '')  
 
   return (
     <div class="console">
-      <div id='filters'>
-        < FilterButton name={"useShuffle"} useFilter={idle2Shuffle(idleMode)} setFilter={pipe(shuffle2Idle, setIdleMode)} Icon={ShuffleIcon}/>
-        <span></span>
-        < FilterButton name={"getRTs"} useFilter={getRTs} setFilter={setGetRTs} Icon={RetweetIcon}/>
-        < FilterButton name={"useBookmarks"} useFilter={useBookmarks} setFilter={setUseBookmarks} Icon={BookmarkIcon}/>
-        < FilterButton name={"useReplies"} useFilter={useReplies} setFilter={setUseReplies} Icon={ReplyIcon}/>
-      </div>
+      {input}
     </div> 
   );
 }
 
-const getTargetVal = (target: { type: string; checked: any; value: any; })=>(target.type === 'checkbox' ? target.checked : target.value)
-const handleInputChange = curry((_set: (x: any) => unknown, event) => {
-  csEvent('User', `Toggled filter ${event.target.id} to ${getTargetVal(event.target)}`, event.target.id, getTargetVal(event.target) ? 1 : 0,);
-  pipe(
-    prop('target'),
-    getTargetVal,
-    _set
-  )(event)
-})

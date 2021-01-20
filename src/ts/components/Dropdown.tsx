@@ -29,7 +29,7 @@ export function DropdownMenu(_props: { name: any; itemClickClose: any; closeMenu
   }
   
   function DebugItem(props) {
-    return (debug ? DropdownItem(props) : null)
+    return (process.env.NODE_ENV == 'development' ? DropdownItem(props) : null)
   }
 
   function FilterItem(props){
