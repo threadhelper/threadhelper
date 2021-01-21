@@ -19,7 +19,7 @@ console.log('hi css', css);
 import Kefir, { Observable, Observer, Property, Subscription } from 'kefir';
 import { h, render } from 'preact';
 import * as R from 'ramda';
-import { curProp, StorageChange, UrlModes } from './types/types';
+import { curProp } from './types/types';
 import { UrlMsg } from './types/msgTypes';
 import * as window from './global';
 import ThreadHelper from './components/ThreadHelper';
