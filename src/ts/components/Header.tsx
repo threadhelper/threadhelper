@@ -13,7 +13,7 @@ export function Header() {
       <div class="header">
         {/* <SyncIcon/> */}
         <div class="title-container">
-          <span class="th-title">ThreadHelper</span>
+          <span class="th-title">Thread Helper</span>
           <span class="version text-gray-500">{` v${process.env.VERSION}`}</span>
         </div>
         <AccountsButton />

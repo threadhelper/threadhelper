@@ -12,10 +12,8 @@
 import 'preact/debug';
 import 'preact/devtools';
 import '@babel/polyfill';
-// import "core-js/stable";
-// import "regenerator-runtime/runtime";
-// import * as pcss from '../styles.css';
-// console.log('hi pcss', pcss);
+import * as pcss from '../styles.css';
+console.log('hi pcss', pcss);
 import * as css from '../style/cs.css';
 console.log('hi css', css);
 import Kefir, { Observable, Observer, Property, Subscription } from 'kefir';
