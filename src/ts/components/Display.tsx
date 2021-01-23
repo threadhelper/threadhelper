@@ -1,5 +1,5 @@
 import { h } from 'preact';
-import { useEffect, useReducer, useRef, useState } from 'preact/hooks';
+import { useContext, useEffect, useRef, useState } from 'preact/hooks';
 // flattenModule(global,R)
 import {
   defaultTo,
@@ -12,80 +12,64 @@ import {
   prop,
 } from 'ramda'; // Function
 import { useOption, useStorage } from '../hooks/useStorage';
+import { DisplayMode } from '../types/interfaceTypes';
 import { SearchResult, TweetResult } from '../types/msgTypes';
+import { FeedDisplayMode } from './ThreadHelper';
 import { Tweet as TweetCard } from './Tweet';
 
 const prepTweets = (list: TweetResult[] | null): SearchResult[] =>
   filter(pipe(prop('tweet'), isNil, not), defaultTo([], list));
 
 export function Display(props: any) {
-  const [tweets, setTweets] = useState([]);
-  // const query = useStream(props.composeQuery, '')
+  const { feedDisplayMode, dispatchFeedDisplayMode } = useContext(
+    FeedDisplayMode
+  );
   const myRef = useRef(null);
 
   const [searchResults, setSearchResults] = useStorage('search_results', []);
   const [latestTweets, setLatestTweets] = useStorage('latest_tweets', []);
   const [apiResults, setApiResults] = useStorage('api_results', []);
 
-  type UpdateFeedDisplayAction = { action: string; tweets: TweetResult[] };
-  const updateFeedDisplay = (
-    state,
-    { action, tweets }: UpdateFeedDisplayAction
-  ) => {
-    console.log({ action, tweets });
-    const _tweets = prepTweets(tweets);
-    const _latest = prepTweets(latestTweets);
-    switch (action) {
-      case 'gotSearchResults':
-        return isEmpty(_tweets) ? (
-          <IdleDisplay tweets={_latest} />
-        ) : (
-          <SearchResults tweets={_tweets} />
-        );
-      case 'gotApiResults':
-        return isEmpty(_tweets) ? (
-          <IdleDisplay tweets={_latest} />
-        ) : (
-          <ApiSearchResults tweets={_tweets} />
-        );
-      case 'gotLatestTweets':
-        return <IdleDisplay tweets={_latest} />;
-      default:
-        throw new Error('Unexpected action');
+  const makeFeedDisplay = (displayMode: DisplayMode) => {
+    switch (displayMode) {
+      case 'Idle':
+        return <IdleDisplay tweets={prepTweets(latestTweets)} />;
+      case 'Api':
+        return <ApiSearchResults tweets={prepTweets(apiResults)} />;
+      case 'ApiWaiting':
+        return <ApiWaitingDisplay />;
+      case 'Search':
+        return <SearchResults tweets={prepTweets(searchResults)} />;
     }
   };
-  const [feedDisplay, dispatchFeedDisplay] = useReducer(
-    updateFeedDisplay,
-    <IdleDisplay tweets={tweets} />
-  );
 
   useEffect(() => {
-    dispatchFeedDisplay({
+    dispatchFeedDisplayMode({
       action: 'gotLatestTweets',
-      tweets: latestTweets,
+      tweets: prepTweets(latestTweets),
     });
     return () => {};
   }, [latestTweets]);
 
   useEffect(() => {
-    dispatchFeedDisplay({
+    dispatchFeedDisplayMode({
       action: 'gotApiResults',
-      tweets: apiResults,
+      tweets: prepTweets(apiResults),
     });
     return () => {};
   }, [apiResults]);
 
   useEffect(() => {
-    dispatchFeedDisplay({
+    dispatchFeedDisplayMode({
       action: 'gotSearchResults',
-      tweets: searchResults,
+      tweets: prepTweets(searchResults),
     });
     return () => {};
   }, [searchResults]);
 
   return (
     <div class="searchWidget" ref={myRef}>
-      {feedDisplay}
+      {makeFeedDisplay(feedDisplayMode)}
     </div>
   );
 }
@@ -156,4 +140,8 @@ function ApiSearchResults({ tweets }: { tweets: TweetResult[] }) {
       emptyMsg={'No search results. Yet!'}
     />
   );
+}
+
+function ApiWaitingDisplay() {
+  return <div class="searchTweets">Searching...</div>;
 }
