@@ -18,10 +18,12 @@ export function SearchBar() {
   const submitApiSearch = (value) => {
     console.log('[DEBUG] submitApiSearch!', { value });
     // setApiQuery(value);
-    dispatchFeedDisplayMode({
-      action: 'submitApiSearch',
-      tweets: [],
-    });
+    isEmpty(value)
+      ? null
+      : dispatchFeedDisplayMode({
+          action: 'submitApiSearch',
+          tweets: [],
+        });
     msgBG({ type: 'apiQuery', query: value });
   };
 
