@@ -21,6 +21,7 @@ export const defaultStorage = (): StorageInterface => {
     activeAccounts: [], //{screen_name: String, id_str: String, showTweets: Bool, ...}
     latest_tweets: [],
     search_results: [],
+    api_results: [],
     temp_archive: [],
     syncDisplay: `Hi, I don't have any tweets yet.`,
     sync: false,
@@ -38,6 +39,7 @@ export const devStorage = (): StorageInterface => {
     activeAccounts: accounts, //{screen_name: String, id_str: String, showTweets: Bool, ...}
     latest_tweets: results,
     search_results: results,
+    api_results: results,
     temp_archive: [],
     syncDisplay: `Hi, I don't have any tweets yet.`,
     sync: true,

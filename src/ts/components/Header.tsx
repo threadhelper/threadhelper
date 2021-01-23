@@ -20,7 +20,7 @@ export function Header() {
         {/* {!hasArchive ? <ArchiveUploader /> : null} */}
         <SettingsButton />
       </div>
-      {/* {process.env.NODE_ENV == 'development' ? <SearchBar /> : null} */}
+      {process.env.NODE_ENV == 'development' ? <SearchBar /> : null}
     </div>
   );
 }

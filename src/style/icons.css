@@ -27,11 +27,11 @@
 }
 
 .robo-sync.unsynced::before {
-  content: "...";
+  content: '...';
 }
 
 .robo-sync.synced::before {
-  content: "";
+  content: '';
 }
 
 .robo-sync .tooltiptext {
@@ -64,23 +64,6 @@
   color: var(--main-bg-color);
 }
 
-.sync .tooltiptext::after {
-  content: " ";
-  position: absolute;
-  bottom: 100%;
-  /* At the top of the tooltip */
-  left: 10px;
-  margin-left: 0px;
-  border-width: 5px;
-  border-style: solid;
-  border-color: transparent transparent var(--main-txt-color);
-}
-
-/* Show the tooltip text when you mouse over the tooltip container */
-.sync:hover .tooltiptext {
-  visibility: visible;
-}
-
 .account-icon {
   height: calc(17px);
   width: calc(17px);
@@ -96,7 +79,7 @@
 
 #accounts-menu .tooltiptext {
   width: 200px;
-  left: 100%;
+  left: -10rem;
 }
 
 #accounts-menu .dropdown {
@@ -104,11 +87,11 @@
 }
 
 #accounts-menu .tooltiptext::after {
-  content: " ";
+  content: ' ';
   position: absolute;
   bottom: 100%;
   /* At the top of the tooltip */
-  left: 10px;
+  right: 1rem;
   margin-left: 0px;
   border-width: 5px;
   border-style: solid;
@@ -135,7 +118,7 @@
   display: none;
 }
 
-input[type="checkbox"]:checked + label {
+input[type='checkbox']:checked + label {
   display: inline-block;
   fill: var(--main-txt-color);
   stroke: var(--main-txt-color);
@@ -143,15 +126,15 @@ input[type="checkbox"]:checked + label {
   stroke-linejoin: round;
 }
 
-input[type="checkbox"] + label img {
+input[type='checkbox'] + label img {
   opacity: 0.2;
 }
 
-input[type="checkbox"]:checked + label img {
+input[type='checkbox']:checked + label img {
   opacity: 1;
 }
 
-input[type="checkbox"] + label {
+input[type='checkbox'] + label {
   display: inline-block;
   fill: var(--neutral-color);
 }

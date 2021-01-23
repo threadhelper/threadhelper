@@ -1,95 +1,14 @@
-import { h, render, Component } from 'preact';
-import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
-import { initGA, csEvent, PageView, UA_CODE } from '../utils/ga';
-import AccountIcon from '../../images/account.svg';
-import { DropdownMenu } from './Dropdown';
-import { FilterButton } from './Console';
-import {
-  __,
-  curry,
-  pipe,
-  andThen,
-  map,
-  filter,
-  reduce,
-  tap,
-  apply,
-  tryCatch,
-} from 'ramda'; // Function
-import {
-  prop,
-  propEq,
-  propSatisfies,
-  path,
-  pathEq,
-  hasPath,
-  assoc,
-  assocPath,
-  values,
-  mergeLeft,
-  mergeDeepLeft,
-  keys,
-  lens,
-  lensProp,
-  lensPath,
-  pick,
-  project,
-  set,
-  length,
-} from 'ramda'; // Object
-import {
-  head,
-  tail,
-  take,
-  isEmpty,
-  any,
-  all,
-  includes,
-  last,
-  dropWhile,
-  dropLastWhile,
-  difference,
-  append,
-  fromPairs,
-  forEach,
-  nth,
-  pluck,
-  reverse,
-  uniq,
-  slice,
-} from 'ramda'; // List
-import {
-  equals,
-  ifElse,
-  when,
-  both,
-  either,
-  isNil,
-  is,
-  defaultTo,
-  and,
-  or,
-  not,
-  T,
-  F,
-  gt,
-  lt,
-  gte,
-  lte,
-  max,
-  min,
-  sort,
-  sortBy,
-  split,
-  trim,
-  multiply,
-} from 'ramda'; // Logic, Type, Relation, String, Math
-import { inspect } from '../utils/putils';
-import { useStorage } from '../hooks/useStorage';
+import { h } from 'preact';
+import { useCallback, useState } from 'preact/hooks';
+import { defaultTo, map, pipe, values } from 'ramda'; // Function
 import { FullUser } from 'twitter-d';
+import AccountIcon from '../../images/account.svg';
+import { useStorage } from '../hooks/useStorage';
+import { csEvent } from '../utils/ga';
+import { DropdownMenu } from './Dropdown';
 
 const accountFilterAvi = (url: string) => {
-  const FilterAvi = props => {
+  const FilterAvi = (props) => {
     return <img class="icon-img" src={url} />;
   };
   return FilterAvi;
@@ -135,7 +54,9 @@ export function AccountsButton(props) {
     <div id="accounts-menu" className="nav-item">
       <div class={`options icon-button`}>
         <AccountIcon
-          class={`account-icon hoverHighlight  ${sync ? 'synced' : 'unsynced'}`}
+          class={`box-content account-icon hoverHighlight  ${
+            sync ? 'synced' : 'unsynced'
+          }`}
           onClick={onClickButton}
           onBlur={closeMenu}
         ></AccountIcon>
