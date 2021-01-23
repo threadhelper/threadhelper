@@ -33,7 +33,7 @@
   -webkit-box-pack: justify;
       -ms-flex-pack: justify;
           justify-content: space-between;
-  height: 15px;
+  height: 30px;
   display: flex;
   -webkit-box-align: center;
       -ms-flex-align: center;
@@ -93,7 +93,7 @@
 }
 
 #accounts-menu .dropdown {
-  -webkit-transform: translate(0px);
-          transform: translate(0px);
+  -webkit-transform: translate(-75%);
+          transform: translate(-75%);
 }
 /*# sourceMappingURL=dropdown.css.map */

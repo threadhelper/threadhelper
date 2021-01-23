@@ -47,7 +47,7 @@ export function DropdownMenu(_props: {
     };
 
     return (
-      <a href="#" className="menu-item" onClick={onClickItem}>
+      <a href="#" className="box-content menu-item" onClick={onClickItem}>
         {/* <span className="icon-button">{props.leftIcon}</span> */}
         <FilterButton
           name={props.screen_name}

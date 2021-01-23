@@ -1,18 +1,14 @@
-import {fetchInit, Credentials} from '../types/types'
-import { validateTweet, archToTweet, bookmarkToTweet, apiToTweet} from '../bg/tweetImporter'
-import { removeData, resetStorage, getData, getOption, makeOptionObs, makeStgItemObs } from './dutils'
-import { update_size, n_tweets_results } from './params'
-import { curVal, inspect } from './putils'
-import { __, curry, pipe, andThen, map, filter, reduce, tap, apply, tryCatch} from 'ramda' // Function
-import { prop, propEq, propSatisfies, path, pathEq, hasPath, assoc, assocPath, values, mergeLeft, mergeDeepLeft, keys, lens, lensProp, lensPath, pick, project, set, length } from 'ramda' // Object
-import { head, tail, take, isEmpty, any, all,  includes, last, dropWhile, dropLastWhile, difference, append, fromPairs, forEach, nth, pluck, reverse, uniq, slice} from 'ramda' // List
-import { equals, ifElse, when, both, either, isNil, is, defaultTo, and, or, not, T, F, gt, lt, gte, lte, max, min, sort, sortBy, split, trim, multiply } from 'ramda' // Logic, Type, Relation, String, Math
-import PromiseWorker from 'promise-worker'
-import { User } from 'twitter-d'
 import { Observable } from 'kefir'
-import { IdleMode, Option, SearchFilters, SearchMode, StorageChange } from '../types/stgTypes'
-import { thTweet } from '../types/tweetTypes'
+import PromiseWorker from 'promise-worker'
+import { assoc, curry, defaultTo, filter, isNil, map, not, path, pipe, prop, reduce } from 'ramda' // Function
+import { User } from 'twitter-d'
+import { apiToTweet, validateTweet } from '../bg/tweetImporter'
 import { ReqDefaultTweetsMsg, ReqSearchMsg } from '../types/msgTypes'
+import { IdleMode, Option, SearchFilters, SearchMode, StorageChange } from '../types/stgTypes'
+import { Credentials } from '../types/types'
+import { getData, getOption, makeOptionObs, makeStgItemObs, removeData, resetStorage } from './dutils'
+import { n_tweets_results } from './params'
+import { curVal } from './putils'
 
 
 

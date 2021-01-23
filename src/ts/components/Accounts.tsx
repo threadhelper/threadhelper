@@ -9,7 +9,7 @@ import { DropdownMenu } from './Dropdown';
 
 const accountFilterAvi = (url: string) => {
   const FilterAvi = (props) => {
-    return <img class="icon-img" src={url} />;
+    return <img class="box-content icon-img" src={url} />;
   };
   return FilterAvi;
 };

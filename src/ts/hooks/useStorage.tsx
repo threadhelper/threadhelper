@@ -1,24 +1,15 @@
-import { h, render, Component } from 'preact';
-import { useState, useEffect, useContext, useMemo } from 'preact/hooks';
-import { useStream, _useStream } from './useStream';
+import { useEffect, useMemo } from 'preact/hooks';
+import { andThen, defaultTo, path, pipe, prop } from 'ramda';
 import {
   getData,
-  setData,
-  setStg,
-  makeStgItemObs,
   getStgPath,
-  updateStgPath,
+  makeStgItemObs,
   makeStgPathObs,
-  updateOptionStg,
-  getOptions,
+  setStg,
+  updateStgPath,
 } from '../utils/dutils';
-import { inspect, nullFn } from '../utils/putils';
-import { pipe, andThen, prop, path, isNil, defaultTo } from 'ramda';
-import {
-  defaultOptions,
-  defaultStorage as _defaultStorage,
-  devStorage,
-} from '../utils/defaultStg';
+import { nullFn } from '../utils/putils';
+import { _useStream } from './useStream';
 
 export function useStorage(name, default_val) {
   const useStgObs = useMemo(() => makeStgItemObs(name), [name]);

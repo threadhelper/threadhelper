@@ -444,8 +444,8 @@ input[type='checkbox'] + label {
 }
 
 #accounts-menu .dropdown {
-  -webkit-transform: translate(0px);
-          transform: translate(0px);
+  -webkit-transform: translate(-75%);
+          transform: translate(-75%);
 }
 
 /* tweets */

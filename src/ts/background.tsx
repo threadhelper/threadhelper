@@ -1,200 +1,109 @@
 import '@babel/polyfill';
-// import "core-js/stable";
-// import "regenerator-runtime/runtime";
-
-import * as browser from 'webextension-polyfill';
-import ReactGA from 'react-ga';
-import { Status as Tweet, User } from 'twitter-d';
-import { curProp, fetchInit } from './types/types';
-import * as window from './global';
-import { initGA, Event, Exception, PageView } from './utils/ga';
+import Kefir, { Observable } from 'kefir';
 import PromiseWorker from 'promise-worker';
 import * as R from 'ramda';
 import {
-  flattenModule,
-  delay,
-  inspect,
-  toggleDebug,
-  currentValue,
-  nullFn,
-  isExist,
-  timeFn,
-  list2Obj,
-  streamAnd,
-  toVal,
-  promiseStream,
-  curVal,
-  waitFor,
-  makeMsgStream,
-  errorFilter,
-} from './utils/putils';
-import {
-  twitter_url,
-  getDateFormatted,
-  apiBookmarkToTweet,
-  saferTweetMap,
-  makeInit,
-  compareAuths,
-  validateAuth,
-  msgSomeWorker,
-  isOptionSame,
-  _makeOptionObs,
-  _makeStgObs,
-  combineOptions,
-  makeReqDefaultTweetsMsg,
-  makeReqSearchMsg,
-} from './utils/bgUtils';
-import {
-  isWorkerReady,
-  howManyTweetsDb,
-  addAccount,
-  removeAccount,
-  addUser,
-  removeUser,
-  updateTimeline,
-  addTweets,
-  removeTweets,
-  removeTweet,
-  dbClear,
-  resetIndex,
-  getDefaultTweets,
-  clearTempArchive,
-  resetData,
-} from './utils/bgUtils';
-import { update_size, n_tweets_results } from './utils/params';
-import {
-  __,
-  curry,
-  pipe,
+  and,
   andThen,
-  map,
+  assoc,
+  curry,
+  defaultTo,
+  either,
+  equals,
+  F,
   filter,
-  reduce,
-  tap,
-  apply,
-  tryCatch,
-  otherwise,
-} from 'ramda'; // Function
-import {
+  head,
+  ifElse,
+  isEmpty,
+  isNil,
+  keys,
+  last,
+  map,
+  not,
+  path,
+  pathSatisfies,
+  pipe,
   prop,
   propEq,
   propSatisfies,
-  path,
-  pathEq,
-  pathSatisfies,
-  hasPath,
-  assoc,
-  assocPath,
-  values,
-  mergeLeft,
-  mergeDeepLeft,
-  keys,
-  lens,
-  lensProp,
-  lensPath,
-  pick,
-  project,
-  set,
-  length,
-} from 'ramda'; // Object
-import {
-  head,
-  tail,
-  take,
-  isEmpty,
-  any,
-  all,
-  includes,
-  last,
-  dropWhile,
-  dropLastWhile,
-  difference,
-  append,
-  fromPairs,
-  forEach,
-  nth,
-  pluck,
-  reverse,
-  uniq,
-  slice,
-} from 'ramda'; // List
-import {
-  equals,
-  ifElse,
-  when,
-  both,
-  either,
-  isNil,
-  is,
-  defaultTo,
-  and,
-  or,
-  not,
-  T,
-  F,
-  gt,
-  lt,
-  gte,
-  lte,
-  max,
-  min,
-  sort,
-  sortBy,
-  split,
+  reduce,
   trim,
-  multiply,
-} from 'ramda'; // Logic, Type, Relation, String, Math
-import Kefir, { Observable } from 'kefir';
-import {
-  msgCS,
-  setStg,
-  getData,
-  removeData,
-  getOptions,
-  getOption,
-  makeStorageChangeObs as makeStorageChangeObs,
-  updateStgPath,
-  makeStgItemObs,
-  makeOptionObs,
-  makeGotMsgObs,
-  resetStorage,
-  makeStgPathObs,
-} from './utils/dutils';
-import { defaultOptions } from './utils/defaultStg';
+  tryCatch,
+  values,
+  when,
+} from 'ramda'; // Function
+import { User } from 'twitter-d';
 import { makeAuthObs } from './bg/auth';
-import { initWorker } from './bg/workerBoss';
+import { apiToTweet, archToTweet, bookmarkToTweet } from './bg/tweetImporter';
 import {
   fetchUserInfo,
-  updateQuery,
-  tweetLookupQuery,
-  timelineQuery,
   getBookmarks,
   searchAPI,
+  timelineQuery,
+  tweetLookupQuery,
+  updateQuery,
 } from './bg/twitterScout';
-import { makeValidateTweet } from './worker/search';
+import { initWorker } from './bg/workerBoss';
+import * as window from './global';
 import {
-  validateTweet,
-  archToTweet,
-  bookmarkToTweet,
-  apiToTweet,
-} from './bg/tweetImporter';
-import {
-  StorageChange,
-  SearchFilters,
-  SearchMode,
-  IdleMode,
-} from './types/stgTypes';
-import { thTweet } from './types/tweetTypes';
-import {
+  GaException,
+  GaMsg,
   Msg,
+  ReqDefaultTweetsMsg,
+  ReqSearchMsg,
   TweetResult,
   TweetResWorkerMsg,
   WorkerMsg,
-  ReqDefaultTweetsMsg,
-  GaMsg,
-  GaException,
-  ReqSearchMsg,
 } from './types/msgTypes';
+import { IdleMode, SearchFilters } from './types/stgTypes';
+import { curProp } from './types/types';
+import {
+  addAccount,
+  addTweets,
+  apiBookmarkToTweet,
+  clearTempArchive,
+  combineOptions,
+  compareAuths,
+  getDateFormatted,
+  howManyTweetsDb,
+  isWorkerReady,
+  makeInit,
+  makeReqDefaultTweetsMsg,
+  makeReqSearchMsg,
+  removeAccount,
+  removeTweet,
+  resetData,
+  saferTweetMap,
+  twitter_url,
+  updateTimeline,
+  _makeOptionObs,
+  _makeStgObs,
+} from './utils/bgUtils';
+import {
+  getData,
+  makeGotMsgObs,
+  makeStgItemObs,
+  makeStorageChangeObs as makeStorageChangeObs,
+  msgCS,
+  setStg,
+  updateStgPath,
+} from './utils/dutils';
+import { Event, Exception, initGA, PageView } from './utils/ga';
+import { update_size } from './utils/params';
+import {
+  currentValue,
+  curVal,
+  errorFilter,
+  list2Obj,
+  makeMsgStream,
+  nullFn,
+  promiseStream,
+  streamAnd,
+  toggleDebug,
+  toVal,
+  waitFor,
+} from './utils/putils';
+import { makeValidateTweet } from './worker/search';
 // Analytics //IMPORTANT: this block must come before setting the currentValue for Kefir. Property and I have no idea why
 (function initAnalytics() {
   initGA();
@@ -621,7 +530,10 @@ export async function main() {
   ); // const filteredDefaultTweets$ = Kefir.merge([gotDefaultTweets$, gotDefaultTweets$.sampledBy(filters$)]).map(filter(x => validateSidebarTweet(getFilters(), getAccsShown())));
 
   //api search
-  const apiQuery$ = makeStgItemObs('apiQuery'); // const storageChange$ = makeStorageChangeObs();
+  const apiQuery$ = msgStream('apiQuery')
+    .map(prop('query'))
+    .toProperty() as curProp<string>;
+  // const apiQuery$ = makeStgItemObs('apiQuery') // const storageChange$ = makeStorageChangeObs();
   const apiRes$ = Kefir.merge([
     apiQuery$.filter(isEmpty).map([]),
     apiQuery$
@@ -742,8 +654,8 @@ export async function main() {
   // fullTextSearchRes$.log('[DEBUG] fullTextSearchRes$')
   // semanticSearchRes$.log('[DEBUG] semanticSearch$')
   apiQuery$.log('DEBUG] apiQuery$');
-  apiRes$.log('DEBUG] apiRes$');
-  thApiRes$.log('DEBUG] thApiRes$');
+  // apiRes$.log('DEBUG] apiRes$');
+  // thApiRes$.log('DEBUG] thApiRes$');
 }
 
 const onUpdated = (previousVersion) => {
