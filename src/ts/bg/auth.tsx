@@ -47,6 +47,7 @@ export function makeAuthObs(): Observable<Credentials, any> {
     const onSendHeaders = async (details: {
       tabId: any;
       requestHeaders: any[];
+      url: string;
     }) => {
       tabId = details.tabId;
       const _authorization = details.requestHeaders.find(
@@ -55,6 +56,10 @@ export function makeAuthObs(): Observable<Credentials, any> {
       const _csrfToken = details.requestHeaders.find(
         (h: { name: string }) => h.name.toLowerCase() === 'x-csrf-token'
       );
+      // Don't get headers from search requests. infinite loops
+      if (details.url.includes('adaptive')) {
+        return;
+      }
       // just return if fields don't exist
       if (!(_authorization != null) || !(_csrfToken != null)) return;
       authorization = _authorization.value;

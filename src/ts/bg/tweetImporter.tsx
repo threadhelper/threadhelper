@@ -195,8 +195,7 @@ const makeQuote = (quoted_status) => {
 const _isOwnTweet = (rt: any[], user_info) =>
   isNil(rt) || rt[1] === prop('screen_name', user_info);
 // archToTweet :: archTweet -> tweet
-export const archToTweet = curry((getUserInfo: () => any, t) => {
-  const user_info = getUserInfo();
+export const archToTweet = curry((user_info, t) => {
   let rt = re.exec(prop('full_text', t));
   const isOwnTweet = _isOwnTweet(rt, user_info);
   // ts-migrate(2345) FIXME: Argument of type 'RegExpExecArray | null' is not a... Remove this comment to see the full error message

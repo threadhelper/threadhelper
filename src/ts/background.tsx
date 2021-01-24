@@ -5,6 +5,7 @@ import * as R from 'ramda';
 import {
   and,
   andThen,
+  any,
   assoc,
   curry,
   defaultTo,
@@ -20,8 +21,6 @@ import {
   last,
   map,
   not,
-  path,
-  pathSatisfies,
   pipe,
   prop,
   propEq,
@@ -58,33 +57,27 @@ import {
 import { IdleMode, SearchFilters } from './types/stgTypes';
 import { curProp } from './types/types';
 import {
-  addAccount,
-  addTweets,
   apiBookmarkToTweet,
   clearTempArchive,
   combineOptions,
   compareAuths,
   getDateFormatted,
-  howManyTweetsDb,
-  isWorkerReady,
   makeInit,
   makeReqDefaultTweetsMsg,
   makeReqSearchMsg,
-  removeAccount,
-  removeTweet,
+  msgSomeWorker,
   resetData,
   saferTweetMap,
   twitter_url,
-  updateTimeline,
   _makeOptionObs,
   _makeStgObs,
 } from './utils/bgUtils';
 import {
   getData,
   makeGotMsgObs,
-  makeStgItemObs,
   makeStorageChangeObs as makeStorageChangeObs,
   msgCS,
+  removeData,
   setStg,
   updateStgPath,
 } from './utils/dutils';
@@ -94,6 +87,7 @@ import {
   currentValue,
   curVal,
   errorFilter,
+  inspect,
   list2Obj,
   makeMsgStream,
   nullFn,
@@ -127,7 +121,9 @@ const subObs = (obsObj: any, effect: any) => {
   obs = obs.setName(name);
   rememberSub(obs.observe({ value: effect }));
 };
+
 // Potential functions to import
+
 // Message builders
 const makeSyncDisplayMsg = async (
   pWorker: PromiseWorker,
@@ -136,27 +132,31 @@ const makeSyncDisplayMsg = async (
 ) => {
   const username = getUsername(1);
   // const n_tweets = await howManyTweetsDb(_db)
-  const n_tweets = await howManyTweetsDb(pWorker);
+  const n_tweets = await msgSomeWorker(pWorker, { type: 'howManyTweetsDb' });
   const dateTime = await curVal(whenUpdated$);
   return `Hi ${username}, I have ${n_tweets} tweets available. \n Last updated on ${dateTime}`;
 };
+
 export async function main() {
   const worker = initWorker();
   const pWorker = new PromiseWorker(worker); //promise worker
-  // Extension business
+
+  /* Extension business */
   chrome.tabs.onActivated.addListener(onTabActivated);
   chrome.runtime.onInstalled.addListener(onInstalled(() => resetData(pWorker)));
   chrome.tabs.onUpdated.addListener(onTabUpdated);
-  // Stream value getters
-  const getAuthInit = (_: any): RequestInit => makeInit(curVal(auth$));
+
+  /* Stream value getters */
+  // const getAuthInit = (_: any): RequestInit => makeInit(curVal(auth$));
   const getUserInfo = (_: any): User => curVal(userInfo$);
   const getUsername = (_: any): string =>
     prop('screen_name', curVal(userInfo$));
   const getAccId = (_: any): string => prop('id_str', curVal(userInfo$));
-  // const getAccsShown = (_: any) : any[] => curV ode$);
-  // Define streams
-  //  Extension observers
-  //      Messages
+
+  /* Define streams */
+
+  /* Extension observers */
+  /* Messages */
   const msg$ = makeGotMsgObs().map(prop('m')); // msg$ :: () -> msg // msg :: {type,...} // Listens to chrome runtime onMessage
   const msgStream = makeMsgStream(msg$);
   const reqReset$ = msgStream('clear');
@@ -169,7 +169,8 @@ export async function main() {
     .map((_) => true)
     .toProperty(() => false);
   const csNotReady$ = csStart$.map(not); // const csNotReady$ = toVal(false, csStart$)
-  //      Analytics
+
+  /* Analytics */
   const csGaEvent$ = (msgStream('gaEvent') as Observable<GaMsg, any>).map(
     prop('event')
   );
@@ -177,18 +178,18 @@ export async function main() {
     GaException,
     any
   >).map(prop('exception'));
-  //      Storage
+
+  /* Storage */
   const optionsChange$ = makeStorageChangeObs().filter(
     propEq('itemName', 'options')
   );
   const makeOptionObs = _makeOptionObs(optionsChange$); // const storageChange$ = makeStorageChangeObs();
 
-  // Display options and Search filters
+  /* Display options and Search filters */
   const idleMode$ = (await makeOptionObs('idleMode')).map(
     prop('value')
   ) as Observable<IdleMode, any>;
   const searchMode$ = (await makeOptionObs('searchMode')).map(prop('value'));
-  // const getRT$ = ;    const useBookmarks$ = await makeOptionObs('useBookmarks');    const useReplies$ = await makeOptionObs('useReplies');
   const searchFilters$ = Kefir.combine(
     [
       await makeOptionObs('getRTs'),
@@ -198,6 +199,7 @@ export async function main() {
     combineOptions
   ).toProperty();
 
+  /* Worker msgs */
   const wMsgEvent$ = Kefir.fromEvents<MessageEvent, any>(worker, 'message');
   const workerMsg$ = wMsgEvent$
     .filter(propSatisfies((x) => R.type(x) == 'String', 'data'))
@@ -207,15 +209,15 @@ export async function main() {
         //trycatch is here bc firefox handles requests faster if they're completely stringified rather than partially but I haven't made sure that all workerMsgs are stringified, especially PromiseWorker ones
         (x: string) => JSON.parse(x) as WorkerMsg,
         (e) => {
-          console.error('[ERROR] pWorkerMsg$ Couldnt parse', { e, x });
+          console.error('[ERROR] workerMsg$ Couldnt parse', { e, x });
           throw e;
         }
       )(x)
     )
     .ignoreErrors(); // msgs sent as stringified json
-  const pWorkerMsg$ = wMsgEvent$
-    .filter(pathSatisfies((x) => R.type(x) == 'Object', ['data', 2]))
-    .map(path(['data', 2])); // msgs from Promise Worker
+  // const pWorkerMsg$ = wMsgEvent$
+  //   .filter(pathSatisfies((x) => R.type(x) == 'Object', ['data', 2]))
+  //   .map(path(['data', 2])); // msgs from Promise Worker
   const workerReady$ = workerMsg$
     .filter(propEq('type', 'ready'))
     .map(R.T)
@@ -233,14 +235,15 @@ export async function main() {
     }
   });
   const workerConsole$ = workerMsg$.filter(propEq('type', 'console'));
-  // Auth
-  const auth$ = makeAuthObs()
-    // .filter(validateAuth)
-    .skipDuplicates(compareAuths)
-    .toProperty();
-  // User Info
+
+  /* Auth */
+  const auth$ = makeAuthObs().skipDuplicates(compareAuths).toProperty();
+  auth$.log('[DEBUG] auth$');
+
+  /* User Info */
   const _userInfo$ = auth$
-    .map(makeInit)
+    // .map(makeInit)
+    .map(inspect('_userInfo$'))
     .thru<Observable<User, any>>(
       promiseStream((auth: RequestInit) => fetchUserInfo(auth))
     )
@@ -251,7 +254,7 @@ export async function main() {
     _userInfo$.skipDuplicates(),
     _userInfo$.sampledBy(dataReset$),
   ]).toProperty();
-  // Ready, Sync
+  /*   Ready, Sync */
   const haveUserInfo$ = userInfo$.map((x: User) => {
     return isNil(prop('id', x)) ? false : true;
   });
@@ -260,21 +263,32 @@ export async function main() {
   ).toProperty(R.F);
   const notReady$ = ready$.map(not);
   notReady$.log('notReady$');
-  // Utils
+
+  /* Utils */
   const msgStreamSafe = (name: string): Observable<Msg, any> =>
     msgStream(name).thru(waitFor(notReady$)); // msgStreamSafe :: String -> Stream msg
-  // Accounts
-  //      write
+
+  /*  Accounts */
+
+  /* write */
   const removeAccount$ = msgStream('remove-account')
     .map(prop('id'))
-    .thru<Observable<any, any>>(promiseStream(removeAccount(pWorker))); // const removeAccount$ = promiseStream(msgStream('remove-account').map(prop('id')), removeAccount(pWorker)).toProperty();
+    .thru<Observable<any, any>>(
+      promiseStream((id) =>
+        msgSomeWorker(pWorker, { type: 'removeAccount', id })
+      )
+    );
   const incomingAccounts$ = userInfo$
-    .thru(promiseStream(addAccount(pWorker)))
+    .thru(
+      promiseStream((x) =>
+        msgSomeWorker(pWorker, { type: 'addAccount', res: x })
+      )
+    )
     .map(list2Obj('id_str'))
     .toProperty();
   const accountsUpdate$ = Kefir.merge([removeAccount$, incomingAccounts$]); // both these are returns from worker requests to the db that contain the currently active accounts (accs in the db)
 
-  //      read
+  /* read */
   const accounts$ = (await _makeStgObs('activeAccounts')).map(defaultTo([]));
   const accsShown$ = (accounts$.map(
     pipe(
@@ -298,63 +312,78 @@ export async function main() {
   ])
     .thru(waitFor(notReady$))
     .throttle(1000); // initData$ ::  // second term exists bc if csStart arrives before ready, then event won't fire
-  // Tweet API
+
+  /* Twitter API */
   const hasTimeline$ = (await _makeStgObs('hasTimeline')).map(
     pipe(prop(getAccId(1)), defaultTo(false))
   );
   const missingTimeline$ = hasTimeline$.map(not); // just a flag
-  // Tweet API reqs from CS
+
+  /* Tweet API reqs from CS */
   const debugGetBookmarks$ = msgStreamSafe('get-bookmarks');
   const updateRecentTimeline$ = msgStreamSafe('update-tweets');
-  const updateTimeline$ = msgStream('update-timeline');
+  const updateTimeline$ = msgStreamSafe('update-timeline');
   const reqAddBookmark$ = msgStreamSafe('add-bookmark');
-  // Tweet API  reqs to be made
+
+  /*  Tweet API  reqs to be made */
   const reqUpdatedTweets$ = Kefir.merge([
     updateRecentTimeline$,
     initData$.filterBy(hasTimeline$),
-  ])
-    .thru(waitFor(notReady$))
-    .thru(errorFilter('reqUpdatedTweets$')); // asks for update on explicit req and on initData
+  ]); // asks for update on explicit req and on initData
+  const fetchedUpdate$ = userInfo$
+    .map(prop('screen_name'))
+    .combine(auth$, (screen_name, auth) => [screen_name, auth])
+    .sampledBy(reqUpdatedTweets$)
+    .map(inspect('fetchedUpdate$'))
+    .thru(
+      promiseStream(([screen_name, auth]) =>
+        updateQuery(auth, screen_name, update_size)
+      )
+    )
+    .thru(errorFilter('fetchedUpdate$')); // const fetchedUpdate$ = promiseStream(reqUpdatedTweets$, _ => updateQuery(getAuthInit, getUsername(), update_size)).thru(errorFilter('fetchedUpdate$'));
+
   const reqTimeline$ = Kefir.merge([
     updateTimeline$,
     initData$.filterBy(missingTimeline$),
-  ])
-    .thru(waitFor(notReady$))
-    .thru(errorFilter('reqTimeline$')); // asks for update on explicit req and on initData
-  const reqBookmarks$ = Kefir.merge([debugGetBookmarks$, initData$])
-    .thru(waitFor(notReady$))
-    .thru(errorFilter('reqBookmarks$')); // asks for update on explicit req and on initData
-  const reqBookmarkId$ = reqAddBookmark$
-    .map(pipe(prop('id'), (id) => [id]))
-    .thru(errorFilter('reqBookmarkId$'));
+  ]); // asks for update on explicit req and on initData
+  const fetchedTimeline$ = Kefir.combine(
+    [auth$, userInfo$],
+    (auth, userInfo) => [auth, userInfo]
+  )
+    .sampledBy(reqTimeline$)
+    .map(inspect('fetchedTimeline$'))
+    .thru(promiseStream(([auth, userInfo]) => timelineQuery(auth, userInfo)))
+    .thru(errorFilter('fetchedTimeline$'));
+
+  const reqBookmarks$ = Kefir.merge([debugGetBookmarks$, initData$]); // asks for update on explicit req and on initData
+  const fetchedBookmarks$ = auth$
+    .sampledBy(reqBookmarks$)
+    .thru(promiseStream((auth) => getBookmarks(auth)))
+    .thru(errorFilter('fetchedBookmarks$'));
+
+  const reqBookmarkId$ = reqAddBookmark$.map(pipe(prop('id'), (id) => [id]));
+  const fetchedBookmark$ = reqBookmarkId$
+    .combine(auth$, (ids, auth) => [ids, auth])
+    .map(inspect('fetchedBookmark$'))
+    .thru(promiseStream(([ids, auth]) => tweetLookupQuery(auth, ids)))
+    .thru(errorFilter('fetchedBookmark$'));
+
   const anyAPIReq$ = Kefir.merge([
     reqUpdatedTweets$,
     reqBookmarks$,
     reqTimeline$,
     reqAddBookmark$,
-  ]); // flag
-  // Tweet API promise returns
-  const fetchedUpdate$ = reqUpdatedTweets$
-    .thru(
-      promiseStream((_) => updateQuery(getAuthInit, getUsername(), update_size))
-    )
-    .thru(errorFilter('fetchedUpdate$')); // const fetchedUpdate$ = promiseStream(reqUpdatedTweets$, _ => updateQuery(getAuthInit, getUsername(), update_size)).thru(errorFilter('fetchedUpdate$'));
-  const fetchedTimeline$ = reqTimeline$
-    .thru(promiseStream((_) => timelineQuery(getAuthInit, getUserInfo())))
-    .thru(errorFilter('fetchedTimeline$'));
-  const fetchedBookmarks$ = reqBookmarks$
-    .thru(promiseStream((_) => getBookmarks(getAuthInit)))
-    .thru(errorFilter('fetchedBookmarks$'));
-  const fetchedBookmark$ = reqBookmarkId$
-    .thru(promiseStream(tweetLookupQuery(getAuthInit)))
-    .thru(errorFilter('fetchedBookmark$'));
+  ]).map((_) => true); // flag
+
+  /* Tweet API promise returns */
   const fetchedAnyAPIReq$ = Kefir.merge([
     fetchedUpdate$,
     fetchedTimeline$,
     fetchedBookmarks$,
     fetchedBookmark$,
   ]).thru(errorFilter('fetchedAnyAPIReq$'));
-  // User submitted tweets
+
+  /* User submitted tweets */
   const reqArchiveLoad$ = msgStreamSafe('temp-archive-stored'); // reqArchiveLoad$ :: msg
   const extractTweetPropIfNeeded = ifElse(
     prop('tweet'),
@@ -380,25 +409,42 @@ export async function main() {
     fetchedTimeline$.map(saferTweetMap(apiToTweet)),
     fetchedBookmarks$.map(saferTweetMap(bookmarkToTweet)),
     fetchedBookmark$.map(saferTweetMap(apiBookmarkToTweet)),
-    archiveLoadedTweets$.map(saferTweetMap(archToTweet(() => getUserInfo(1)))),
+    archiveLoadedTweets$
+      .combine(userInfo$, (tweets, userInfo) => [tweets, userInfo])
+      .map(inspect('archiveLoadedTweets$'))
+      .map(([tweets, userInfo]) =>
+        saferTweetMap(archToTweet(userInfo, tweets))
+      ),
   ])
     .filter(pipe(isEmpty, not))
     .map(map(assocAccount));
-  // Local Tweet Processing
+
+  /*  Local Tweet Processing */
   const reqDeleteTweet$ = msgStreamSafe('delete-tweet'); // reqDeleteTweet$ :: msg
   const reqRemoveBookmark$ = msgStreamSafe('remove-bookmark'); // reqRemoveBookmark$ :: msg
   const idsToRemove$ = Kefir.merge([reqDeleteTweet$, reqRemoveBookmark$]).map(
     prop('id')
   ); // idsToRemove$ :: id
-  // Worker returns
+
+  /* Worker returns */
   const addedTweets$ = thTweets$
-    .thru(promiseStream(addTweets(pWorker)))
+    .thru(
+      promiseStream((res) => msgSomeWorker(pWorker, { type: 'addTweets', res }))
+    )
     .thru(errorFilter('addedTweets$'));
   const removedTweet$ = idsToRemove$
-    .thru(promiseStream(removeTweet(pWorker)))
+    .thru(
+      promiseStream((id) =>
+        msgSomeWorker(pWorker, { type: 'removeTweets', res: [id] })
+      )
+    )
     .thru(errorFilter('removedTweet$'));
   const updatedTimeline$ = thUpdate$
-    .thru(promiseStream(updateTimeline(pWorker)))
+    .thru(
+      promiseStream((res) =>
+        msgSomeWorker(pWorker, { type: 'updateTimeline', res })
+      )
+    )
     .thru(errorFilter('updatedTimeline$'));
   // thUpdate$ gets added once more separately because update is the way we find deleted recent tweets
   const anyTweetUpdate$ = Kefir.merge([
@@ -406,14 +452,15 @@ export async function main() {
     addedTweets$,
     removedTweet$,
     dataReset$,
-  ]).toProperty(); // anyTweetUpdate$ :: msg
+  ]).toProperty();
   const whenUpdated$ = anyTweetUpdate$
     .map((_) => getDateFormatted())
     .toProperty(getDateFormatted); // keeps track of when the last update to the tweet db was
   const updateSyncDisplay$ = Kefir.merge([ready$, anyTweetUpdate$]).map(
     (_) => true
-  ); // triggers sync display update// ready$ :: user_info -> Bool
-  // Sync
+  ); // triggers sync display update
+
+  /*  Sync */
   const anyWorkerReq$ = Kefir.merge([
     fetchedUpdate$,
     fetchedBookmarks$,
@@ -450,7 +497,7 @@ export async function main() {
       results
     );
 
-  // Search query
+  /* Search query */
   const isWordEnd = pipe(last, R.match(/[^a-zA-Z0-9]/g), isEmpty, not); // true if it's not in the middle of a word
   const searchQuery$ = msgStream('search')
     .map(prop('query'))
@@ -460,7 +507,8 @@ export async function main() {
     .filter(isWordEnd)
     .map(R.trim)
     .skipDuplicates();
-  // Search and default reqs
+
+  /*  Search and default reqs */
   const searchWorkerMsg$ = Kefir.combine(
     [searchMode$, searchFilters$, accsShown$, searchQuery$],
     makeReqSearchMsg
@@ -502,7 +550,7 @@ export async function main() {
     filterResults
   );
 
-  //Defaults
+  /* Defaults */
   const defaultsWorkerMsg$ = Kefir.combine<ReqDefaultTweetsMsg>(
     [searchFilters$, idleMode$, accsShown$],
     makeReqDefaultTweetsMsg
@@ -529,32 +577,38 @@ export async function main() {
     filterResults
   ); // const filteredDefaultTweets$ = Kefir.merge([gotDefaultTweets$, gotDefaultTweets$.sampledBy(filters$)]).map(filter(x => validateSidebarTweet(getFilters(), getAccsShown())));
 
-  //api search
+  /* api search */
   const apiQuery$ = msgStream('apiQuery')
     .map(prop('query'))
     .toProperty() as curProp<string>;
   // const apiQuery$ = makeStgItemObs('apiQuery') // const storageChange$ = makeStorageChangeObs();
+
+  const apiReqRes$ = apiQuery$
+    .filter((q) => !isEmpty(q))
+    .map(inspect('apiReqRes$ 0'))
+    .combine(auth$, (q, auth) => [q, auth])
+    .map(inspect('apiReqRes$ 1'))
+    .thru(promiseStream(([q, auth]) => searchAPI(auth, q)))
+    .thru(errorFilter('fetchedUpdate$'));
   const apiRes$ = Kefir.merge([
-    apiQuery$.filter(isEmpty).map([]),
-    apiQuery$
-      .filter((q) => !isEmpty(q))
-      .thru(promiseStream(searchAPI(getAuthInit)))
-      .thru(errorFilter('fetchedUpdate$')),
+    apiQuery$.filter(isEmpty).map((_) => []),
+    apiReqRes$,
   ]);
   const thApiRes$ = apiRes$.map(saferTweetMap(apiToTweet)).map(
     map((tweet) => {
       return { tweet };
     })
   );
-  //
   const logAuth$ = msgStream('log-auth');
   const getUserInfo$ = msgStream('get-user-info');
 
   const checkGotTimeline = (timeline: string | any[]) =>
     timeline.length > 3000 ||
     timeline.length >= getUserInfo(1).statuses_count - 1;
-  // Effects from streams
-  // Ready / sync
+
+  /*  Effects from streams */
+
+  /* Ready / sync */
   subObs({ accountsUpdate$ }, setStg('activeAccounts'));
   subObs(
     { csGaEvent$ },
@@ -564,7 +618,9 @@ export async function main() {
     { csGaException$ },
     pipe(values, (x) => Exception(...x))
   );
-  subObs({ askWorkerReady$ }, (_) => isWorkerReady(pWorker));
+  subObs({ askWorkerReady$ }, (_) =>
+    msgSomeWorker(pWorker, { type: 'isWorkerReady' })
+  );
   subObs(
     { updateSyncDisplay$ },
     pipe(
@@ -573,10 +629,11 @@ export async function main() {
     )
   ); // update sync display
   subObs({ syncLight$ }, setStg('sync'));
-  // Worker actions
-  // Import tweets
+
+  /* Worker actions */
+
+  /* Import tweets */
   subObs({ fetchedBookmarks$ }, nullFn); // happens on requests to fetch all bookmarks
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(x0: string | any[]) => any' is ... Remove this comment to see the full error message
   subObs(
     { fetchedTimeline$ },
     pipe(
@@ -587,27 +644,26 @@ export async function main() {
   );
   subObs({ idsToRemove$ }, nullFn); // happens on a request to remove a tweet from DB
   subObs({ reqAddBookmark$ }, nullFn); // happens on requests to add a bookmark
-  subObs({ archiveLoadedTweets$ }, clearTempArchive); // happens after tweets are updated by worker, should only happen after loading archive
-  // Search
+  subObs({ archiveLoadedTweets$ }, (_) => removeData(['temp_archive'])); // happens after tweets are updated by worker, should only happen after loading archive
+  /* Search */
   subObs({ searchFilters$ }, nullFn);
   subObs({ reqDefaultTweets$ }, nullFn);
   subObs({ filteredSearchResults$ }, pipe(setStg('search_results')));
   subObs({ filteredDefaultTweets$ }, pipe(setStg('latest_tweets')));
   subObs({ thApiRes$ }, pipe(setStg('api_results')));
-  // bg search
-  // DB
+  /* bg search */
+  /* DB */
   subObs({ reqReset$ }, nullFn);
-  // searchQuery
-  // Debug
-  subObs({ logAuth$ }, () => console.log(getAuthInit()));
+  /* searchQuery */
+  /* Debug */
+  subObs({ logAuth$ }, () => console.log(curVal(auth$)));
   subObs({ getUserInfo$ }, () => console.log(curVal(userInfo$)));
 
   ready$.log('[INFO] READY');
   csStart$.log('[INFO] csStart');
   msg$.log('[DEBUG] msg$');
-  // workerMsg$.log('[DEBUG] workerMsg$')
+  workerMsg$.log('[DEBUG] workerMsg$');
   workerConsole$.log('[INFO] workerConsole$');
-  auth$.log('[DEBUG] auth$');
   userInfo$.log('[DEBUG] userInfo$');
   userInfo$.log('[DEBUG] uniqueUserInfo$');
   notReady$.log('[DEBUG] notReady$');
@@ -639,7 +695,6 @@ export async function main() {
   // searchResults$.log('[DEBUG] searchResults$')
   // wMsgEvent$.log('wMsgEvent$')
   // workerMsg$.log('workerMsg$')
-  pWorkerMsg$.log('pWorkerMsg$');
   workerReady$.log('[DEBUG] workerReady$');
   askWorkerReady$.log('askWorkerReady$');
   // searchQuery$.log('[DEBUG] searchQuery$')

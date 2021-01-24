@@ -1,4 +1,4 @@
-import { h } from 'preact';
+import { Fragment, h } from 'preact';
 import { useContext, useEffect, useRef, useState } from 'preact/hooks';
 // flattenModule(global,R)
 import {
@@ -91,10 +91,14 @@ type TweetDisplayProps = {
 };
 function TweetDisplay({ title, tweets, emptyMsg }: TweetDisplayProps) {
   return (
-    <div class="searchTweets">
+    <>
       <div class="text-right	">{title}</div>
-      {isEmpty(tweets) ? 'No search results.' : tweets.map(buildTweetComponent)}
-    </div>
+      <div class="searchTweets">
+        {isEmpty(tweets)
+          ? 'No search results.'
+          : tweets.map(buildTweetComponent)}
+      </div>
+    </>
   );
 }
 
@@ -143,5 +147,5 @@ function ApiSearchResults({ tweets }: { tweets: TweetResult[] }) {
 }
 
 function ApiWaitingDisplay() {
-  return <div class="searchTweets">Searching...</div>;
+  return <div class="searchTweets">Searching Twitter...</div>;
 }

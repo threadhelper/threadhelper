@@ -9,6 +9,7 @@ import { Credentials } from '../types/types'
 import { getData, getOption, makeOptionObs, makeStgItemObs, removeData, resetStorage } from './dutils'
 import { n_tweets_results } from './params'
 import { curVal } from './putils'
+import Kefir from 'kefir';
 
 
 
@@ -37,7 +38,7 @@ export const compareAuths = (a: Credentials, b: Credentials)=>{return a.authoriz
 export const validateAuth = (x: Credentials)=>(prop('authorization', x) != null && prop("x-csrf-token", x) != null)
 
   // worker
-export const msgSomeWorker = curry( async (worker, msg): Promise<any> => {console.log('[DEBUG] messaging worker', {msg}); return worker.postMessage(msg)}) // msgWorker :: worker -> msg -> Promise
+export const msgSomeWorker = curry( async (worker, msg): Promise<any> => worker.postMessage(msg)) // msgWorker :: worker -> msg -> Promise
 
   //chrome storage
 export const isOptionSame = curry ((name: string | number, x: { oldVal: any; newVal: any })=> (isNil(x.oldVal) && isNil(x.newVal)) || (!isNil(x.oldVal) && !isNil(x.newVal) && (path(['oldVal', name, 'value'],x) === path(['newVal', name, 'value'],x))) )
@@ -72,21 +73,7 @@ export const makeReqSearchMsg = (searchMode: SearchMode, filters: SearchFilters,
 
 
   // Worker requests
-// const msgWorker = msgSomeWorker(worker)  // msgWorker :: msg -> Promise
-export const isWorkerReady = async (pWorker: PromiseWorker) => msgSomeWorker(pWorker, {type:'isWorkerReady'}) // isWorkerReady :: () -> Promise int
-export const howManyTweetsDb = async (pWorker: PromiseWorker) => msgSomeWorker(pWorker, {type:'howManyTweetsDb'}) // howManyTweetsDb :: () -> Promise int
-export const addAccount = curry(async (pWorker: PromiseWorker, userInfo: User)  => msgSomeWorker(pWorker, {type:'addAccount', res: userInfo})) // addAccount :: IMPURE [id] -> Promise ()
-export const removeAccount = curry(async (pWorker: PromiseWorker, id: string) => msgSomeWorker(pWorker, {type:'removeAccount', id:id})) // removeAccount :: IMPURE [id] -> Promise ()
-export const addUser = curry(async (pWorker: PromiseWorker, userInfo: User) => msgSomeWorker(pWorker, {type:'addUser', res:userInfo})) // addUser :: IMPURE [id] -> Promise ()
-export const removeUser = curry(async (pWorker: PromiseWorker, userInfo: User) => msgSomeWorker(pWorker, {type:'removeUser', res:userInfo.id_str})) // removeUser :: IMPURE [id] -> Promise ()
-export const updateTimeline = curry(async (pWorker: PromiseWorker, res: any[]) => msgSomeWorker(pWorker, {type:'updateTimeline', res:res})) // updateTimeline :: IMPURE [id] -> Promise ()
-export const addTweets = curry(async (pWorker: PromiseWorker, res: any[] ) => msgSomeWorker(pWorker, {type:'addTweets', res:res})) // addTweets :: IMPURE [id] -> Promise ()
-export const removeTweets = curry(async (pWorker: PromiseWorker, ids:string[]) => msgSomeWorker(pWorker, {type:'removeTweets', res:ids})) // removeTweets :: IMPURE [id] -> Promise()
-export const removeTweet = curry(async (pWorker: PromiseWorker, id:string) => removeTweets(pWorker, [id]))
 export const dbClear =  async (pWorker: PromiseWorker) => msgSomeWorker(pWorker, {type:'dbClear'}) // dbClear :: IMPURE () -> Promise ()
 export const resetIndex =  async (pWorker: PromiseWorker) => msgSomeWorker(pWorker, {type:'resetIndex'}) // resetIndex :: IMPURE () -> Promise ()
-// export const doSearch = curry(async (pWorker: PromiseWorker, getSearchMode: () => any,  getFilters: () => any, accsShown$, query: string) => msgSomeWorker(pWorker, makeReqSearchMsg(getSearchMode, getFilters, ()=>curVal(accsShown$), query))); // doSearch :: IMPURE String -> Promise [tweet]
-export const getDefaultTweets = curry(async (pWorker: PromiseWorker, getFilters: () => any, idleMode$, accsShown$, ) => msgSomeWorker(pWorker, makeReqDefaultTweetsMsg(getFilters, ()=>curVal(idleMode$), ()=>curVal(accsShown$))))// getDefaultTweets :: IMPURE () -> Promise [tweet]
 
-export const clearTempArchive = _=>removeData(["temp_archive"])
 export const resetData = (pWorker: PromiseWorker): Promise<any> => {console.log('[INFO] Resetting storage'); return Promise.all([resetStorage(), dbClear(pWorker)]) }

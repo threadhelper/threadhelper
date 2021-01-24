@@ -19,58 +19,57 @@ import {
 } from 'ramda'; // Function
 import { Status as Tweet, User } from 'twitter-d';
 import { inspect } from '../utils/putils';
-// helper functions
-const getMaxId = (res: string | any[]) =>
-  res.length > 1 ? res[res.length - 1].id : null;
-const retryLimit = 20;
+import { Credentials } from '../types/types';
+import { TweetId } from '../types/tweetTypes';
 
-var sendLikeRequest = function (getAuthInit: () => RequestInit, tweetId) {
-  return thFetch(
-    'https://twitter.com/i/api/1.1/favorites/create.json',
-    getAuthInit()
-  );
-};
-var sendUnlikeRequest = function (getAuthInit: () => RequestInit, tweetId) {
-  return thFetch(
-    'https://twitter.com/i/api/1.1/favorites/destroy.json',
-    getAuthInit()
-  );
-};
-var sendRetweetRequest = function (getAuthInit: () => RequestInit, tweetId) {
-  return thFetch(
-    'https://twitter.com/i/api/1.1/statuses/retweet.json',
-    getAuthInit()
-  );
-};
-var sendUnretweetRequest = function (getAuthInit: () => RequestInit, tweetId) {
-  return thFetch(
-    'https://twitter.com/i/api/1.1/statuses/unretweet.json',
-    getAuthInit()
-  );
-};
+const getMaxId = (res) => (res.length > 1 ? res[res.length - 1].id : null);
+const retryLimit = 3;
 
-var startQuoteTweet = function (getAuthInit: () => RequestInit, tweetId) {
-  return thFetch(
-    `https://twitter.com/intent/tweet?url=https://twitter.com/x/status/tweetId`,
-    getAuthInit()
-  );
-};
+/*  URLS */
+const URLGetBookmarks =
+  'https://api.twitter.com/2/timeline/bookmark.json?include_profile_interstitial_type=1&include_blocking=1&include_blocked_by=1&include_followed_by=1&include_want_retweets=1&include_mute_edge=1&include_can_dm=1&include_can_media_tag=1&skip_status=1&cards_platform=Web-12&include_cards=1&include_composer_source=true&include_ext_alt_text=true&include_reply_count=1&tweet_mode=extended&include_entities=true&include_user_entities=true&include_ext_media_color=true&include_ext_media_availability=true&send_error_codes=true&simple_quoted_tweets=true&count=10000&ext=mediaStats%2CcameraMoment';
+const URLCreateFav = 'https://twitter.com/i/api/1.1/favorites/create.json';
+const URLDestroyFav = 'https://twitter.com/i/api/1.1/favorites/destroy.json';
+const URLRetweet = 'https://twitter.com/i/api/1.1/statuses/retweet.json';
+const URLUnretweet = 'https://twitter.com/i/api/1.1/statuses/unretweet.json';
+const makeURLStartQT = (id) =>
+  `https://twitter.com/intent/tweet?url=https://twitter.com/x/status/${id}`;
+const makeTimelineQueryUrl = curry(
+  (max_id: number, screen_name: string, count: number) => {
+    const max_param = max_id > 0 ? `&max_id=${max_id}` : '';
+    return `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${screen_name}&count=${count}${max_param}&include_rts=1&tweet_mode=extended`;
+  }
+);
+const makeUpdateQueryUrl = makeTimelineQueryUrl(-1);
+const makeApiSearchUrl = (q) =>
+  `https://api.twitter.com/2/search/adaptive.json?q=${encodeURIComponent(
+    q
+  )}&include_profile_interstitial_type=1&include_blocking=1&include_blocked_by=1&include_followed_by=1&include_want_retweets=1&include_mute_edge=1&include_can_dm=1&include_can_media_tag=1&skip_status=1&cards_platform=Web-12&include_cards=1&include_ext_alt_text=true&include_reply_count=1&tweet_mode=extended&include_entities=true&include_user_entities=true&include_ext_media_color=true&include_ext_media_availability=true&send_error_codes=true&simple_quoted_tweet=true&count=20&query_source=typed_query&pc=1&spelling_corrections=0&ext=mediaStats%2ChighlightedLabel%2CcameraMoment&include_quote_count=true`;
+const makeUserSearchUrl = (q) =>
+  `https://twitter.com/i/api/1.1/search/typeahead.json?q=${encodeURIComponent(
+    q
+  )}&src=search_box&result_type=users`;
+const makeFetchStatusUrl = (tid) =>
+  `https://api.twitter.com/1.1/statuses/show.json?id=${tid}&tweet_mode=extended`;
+const shouldRetryError = (error) => ![403, 429].includes(error.status);
 
-const loopRetry = async <T,>(fn: (arg0: any) => any): Promise<T> => {
+const loopRetry = async <T,>(fn: () => Promise<T>): Promise<T> => {
   let retryCount = 0;
   let success = false;
   let output = [];
-  while (!success && retryCount < retryLimit) {
+  let stop = false;
+  while (!success && !stop && retryCount < retryLimit) {
     try {
       output = await fn();
       success = true;
       console.log(`[DEBUG] [${fn.name}] Loop succeeded`);
     } catch (e) {
       retryCount += 1;
-      if (retryCount < retryLimit) {
+      if (shouldRetryError(e) && retryCount < retryLimit) {
         console.log(`[ERROR] [${fn.name}] failed. Retrying...`, e);
         await delay(500);
       } else {
+        stop = true;
         console.error(`[ERROR] failed. Stopped retrying...`, e);
         throw e;
       }
@@ -79,85 +78,138 @@ const loopRetry = async <T,>(fn: (arg0: any) => any): Promise<T> => {
   return output;
 };
 
-export const handleErrors = (_response) => {
-  if (!_response.ok) {
-    const response = _response.clone();
-    // console.error('[ERROR] handleErrors fetch ', {response:_response})
-    // let err = mergeDeepLeft(Error(), {ok:false, status:response.status, statusText:response.statusText, url:response.url})
+const errorRefusal = (response) => {
+  if (!response.ok) {
     throw response;
   }
-  return _response;
+  return response;
 };
 
-export const thFetch = async (url: string, auth: RequestInit): Promise<any> =>
-  fetch(url, auth)
-    .then(handleErrors)
+const handleFetchError = (error) => {
+  switch (error.status) {
+    case 401:
+      console.error(`[ERROR] thFetch ${error.status}, ${error.statusText}`, {
+        error,
+      });
+      break; // Unauthorized client, lacks valid auth for target resource. Re-auth might make a difference
+    case 403:
+      console.error(`[ERROR] thFetch ${error.status}, ${error.statusText}`, {
+        error,
+      });
+      break; // Forbidden, server understood but refuses to authorize. re-auth will make no difference.
+    case 429:
+      console.error(`[ERROR] thFetch ${error.status}, Too Many Requests`, {
+        error,
+      });
+      throw error; // Too many requests.
+    default:
+      console.error(`[ERROR] thFetch ${error.status}, ${error.statusText}`, {
+        error,
+      });
+      throw error;
+  }
+  throw error;
+};
+
+export const thFetch = async (url: string, options): Promise<any> =>
+  fetch(url, options)
+    .then(errorRefusal)
     .then((response) => response.json())
-    .catch((error) => {
-      switch (error.status) {
-        case 88:
-          console.error(
-            `[ERROR] thFetch ${error.status}, ${error.statusText}`,
-            { error, auth, url }
-          );
-          break;
-        case 401:
-          console.error(
-            `[ERROR] thFetch ${error.status}, ${error.statusText}`,
-            { error, auth, url }
-          );
-          break; // Unauthorized client, lacks valid auth for target resource. Re-auth might make a difference
-        case 403:
-          console.error(
-            `[ERROR] thFetch ${error.status}, ${error.statusText}`,
-            { error, auth, url }
-          );
-          break; // Forbidden, server understood but refuses to authorize. re-auth will make no difference.
-        case 429:
-          console.error(`[ERROR] thFetch ${error.status}, Too Many Requests`, {
-            error,
-            auth,
-            url,
-          });
-          throw error; // Too many requests.
-        default:
-          console.error(
-            `[ERROR] thFetch ${error.status}, ${error.statusText}`,
-            { error, auth, url }
-          );
-          throw error;
-      }
-    });
+    .catch(handleFetchError);
 
-const fetchTweets = async (url: string, auth: RequestInit): Promise<Tweet[]> =>
-  thFetch(url, auth);
-const fetchUser = async (url: string, auth: RequestInit): Promise<User> =>
-  thFetch(url, auth);
+function twitterFetch(url: string, options) {
+  if (!options.authHeaders['x-csrf-token']) {
+    return Promise.reject('not requesting, no auth');
+  }
+  var fullOptions = {
+    headers: {
+      authorization: options.authHeaders.authorization,
+      'x-csrf-token': options.authHeaders['x-csrf-token'],
+      'x-twitter-active-user': 'yes',
+      'x-twitter-auth-type': 'OAuth2Session',
+      'x-twitter-client-language': 'en',
+    },
+    referrerPolicy:
+      options.method === 'GET'
+        ? 'no-referrer-when-downgrade'
+        : 'strict-origin-when-cross-origin',
+    mode: 'cors',
+    credentials: 'include',
+    body: options.body ?? null,
+    method: options.method ?? 'GET',
+    referrer: options.referrer ?? 'https://twitter.com/home',
+  };
+  // if (options.signal) {
+  //     fullOptions.signal = options.signal;
+  // }
+  // we send post requests with url encoding always
+  if (options.method === 'POST') {
+    fullOptions.headers['content-type'] = 'application/x-www-form-urlencoded';
+  }
+  return thFetch(url, fullOptions);
+}
 
-// export const fetchUserInfo = async (getAuthInit: () => RequestInit):Promise<User> => await fetchUser(`https://api.twitter.com/1.1/account/verify_credentials.json`, getAuthInit());
-// export const fetchUserInfo = async (getAuthInit: () => RequestInit):Promise<User> => await loopRetry(()=>fetchUser(`https://api.twitter.com/1.1/account/verify_credentials.json`, getAuthInit()));
-export const fetchUserInfo = async (init: RequestInit): Promise<User> =>
+export const searchTwitter = (authHeaders, query) =>
+  twitterFetch(makeApiSearchUrl(query), {
+    authHeaders,
+    method: 'GET',
+    body: null,
+    referrer: 'https://twitter.com/search?q=' + encodeURIComponent(query),
+  });
+
+const fetchStatus = async (auth: Credentials, id: TweetId) => {
+  return await twitterFetch(makeFetchStatusUrl(id), auth);
+};
+
+export const searchUsers = (authHeaders, query) =>
+  twitterFetch(makeUserSearchUrl(query), {
+    authHeaders,
+    method: 'GET',
+    body: null,
+    referrer: 'https://twitter.com/explore',
+  });
+
+const sendTweetAction = curry((url, authHeaders, tweetId) =>
+  twitterFetch(URLCreateFav, {
+    ...authHeaders,
+    method: 'POST',
+    body: `tweet_mode=extended&id=${tweetId}`,
+    referrer: 'https://twitter.com/home',
+  })
+);
+
+export const sendLikeRequest = sendTweetAction(URLCreateFav);
+export const sendUnlikeRequest = sendTweetAction(URLDestroyFav);
+export const sendRetweetRequest = sendTweetAction(URLRetweet);
+export const sendUnretweetRequest = sendTweetAction(URLUnretweet);
+
+const fetchTweets = async (
+  url: string,
+  authHeaders: Credentials
+): Promise<Tweet[]> => twitterFetch(url, { authHeaders });
+
+export const fetchUserInfo = async (authHeaders: Credentials): Promise<User> =>
   await loopRetry(() =>
-    fetchUser(
+    twitterFetch(
       `https://api.twitter.com/1.1/account/verify_credentials.json`,
-      init
+      { authHeaders }
     )
   );
 export const updateQuery = async (
-  getAuthInit: () => RequestInit,
+  auth: Credentials,
   username: string,
   count: number
-) => await fetchTweets(makeUpdateQueryUrl(username, count), getAuthInit());
+) => await fetchTweets(makeUpdateQueryUrl(username, count), auth);
 
 export const tweetLookupQuery = curry(
-  async (getAuthInit: () => RequestInit, ids: string[]): Promise<Tweet[]> => {
+  async (auth: Credentials, ids: string[]): Promise<Tweet[]> => {
     const fetch100Ids = (ids: string[]): Promise<Tweet[]> =>
       fetchTweets(
         `https://api.twitter.com/1.1/statuses/lookup.json?id=${R.join(
           ',',
           ids
         )}`,
-        getAuthInit()
+        auth
       );
 
     return pipe<
@@ -175,12 +227,9 @@ export const tweetLookupQuery = curry(
   }
 );
 // fetch as many tweets as possible from the timeline
-export const timelineQuery = async (
-  getAuthInit: () => RequestInit,
-  user_info: User
-) =>
+export const timelineQuery = async (auth: Credentials, user_info: User) =>
   await query(
-    getAuthInit,
+    auth,
     prop('screen_name', user_info),
     prop('statuses_count', user_info),
     -1,
@@ -191,7 +240,7 @@ const stop_condition = (res: Tweet[], count: number, max_id: number) =>
 // res is the accumulator, should be called as [], max_id initialized as -1
 const query = curry(
   async (
-    getAuthInit: () => any,
+    auth: Credentials,
     username: string,
     count: number,
     max_id: number,
@@ -199,11 +248,11 @@ const query = curry(
   ): Promise<Tweet[]> => {
     if (stop_condition(res, count, max_id)) return res;
     const req_res = await fetchTweets(
-      makeTweetQueryUrl(max_id, username, count),
-      getAuthInit()
+      makeTimelineQueryUrl(max_id, username, count),
+      auth
     );
     return await query(
-      getAuthInit,
+      auth,
       username,
       count,
       getMaxId(req_res),
@@ -212,42 +261,17 @@ const query = curry(
   }
 );
 
-const makeTweetQueryUrl = curry(
-  (max_id: number, username: string, count: number) => {
-    const max_param = max_id > 0 ? `&max_id=${max_id}` : '';
-    return `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${username}&count=${count}${max_param}&include_rts=1&tweet_mode=extended`;
-  }
-);
-const makeUpdateQueryUrl = makeTweetQueryUrl(-1);
-
-const makeApiSearchUrl = (q) =>
-  // `https://twitter.com/i/api/2/search/adaptive.json?q=${encodeURIComponent(q)}`;
-  `https://api.twitter.com/2/search/adaptive.json?q=${encodeURIComponent(
-    q
-  )}&include_profile_interstitial_type=1&include_blocking=1&include_blocked_by=1&include_followed_by=1&include_want_retweets=1&include_mute_edge=1&include_can_dm=1&include_can_media_tag=1&skip_status=1&cards_platform=Web-12&include_cards=1&include_ext_alt_text=true&include_reply_count=1&tweet_mode=extended&include_entities=true&include_user_entities=true&include_ext_media_color=true&include_ext_media_availability=true&send_error_codes=true&simple_quoted_tweet=true&count=20&query_source=typed_query&pc=1&spelling_corrections=0&ext=mediaStats%2ChighlightedLabel%2CcameraMoment&include_quote_count=true`;
-
-const makeUserSearchUrl = (q) =>
-  `https://twitter.com/i/api/1.1/search/typeahead.json?q=${encodeURIComponent(
-    q
-  )}&src=search_box&result_type=users`;
-// (IMPURE) fetchTweet :: tid -> tweet
-const fetchTweet = async (getAuthInit: () => Object, tid) => {
-  const url = (tid) =>
-    `https://api.twitter.com/1.1/statuses/show.json?id=${tid}&tweet_mode=extended`;
-  const tweet = await fetch(url(tid), getAuthInit()).then((x) => x.json()); //.then(x=>x.in_reply_to_status_id_str)
-  return tweet;
-};
 // (IMPURE) getThreadAbove :: tid -> [tweet]
 // init : thread [], counter 0
 const maxThreadSize = 20;
 export const getThreadAbove = curry(
-  async (getAuthInit: () => Object, counter: number, tid) => {
+  async (auth: Credentials, counter: number, tid) => {
     // console.log('getting thread above', tid)
     if (isNil(tid) || isEmpty(tid) || counter > maxThreadSize) return [];
-    const cur = await fetchTweet(getAuthInit, tid);
+    const cur = await fetchStatus(auth, tid);
     // console.log('current tweet', cur)
     const thread_above = await getThreadAbove(
-      getAuthInit,
+      auth,
       counter + 1,
       cur.in_reply_to_status_id_str
     );
@@ -255,9 +279,6 @@ export const getThreadAbove = curry(
     return [...thread_above, cur];
   }
 );
-const bookmark_url =
-  'https://api.twitter.com/2/timeline/bookmark.json?include_profile_interstitial_type=1&include_blocking=1&include_blocked_by=1&include_followed_by=1&include_want_retweets=1&include_mute_edge=1&include_can_dm=1&include_can_media_tag=1&skip_status=1&cards_platform=Web-12&include_cards=1&include_composer_source=true&include_ext_alt_text=true&include_reply_count=1&tweet_mode=extended&include_entities=true&include_user_entities=true&include_ext_media_color=true&include_ext_media_availability=true&send_error_codes=true&simple_quoted_tweets=true&count=10000&ext=mediaStats%2CcameraMoment';
-// ts-migrate(2769) FIXME: No overload matches this call.
 const getApiTweets = pipe(path(['globalObjects', 'tweets']), (x) =>
   Object.values(x)
 );
@@ -284,17 +305,13 @@ const assocQTs = curry((qts: { [x: string]: Tweet }, tweet) =>
     )
   )(tweet)
 );
-// const fetchBookmarks = (getAuthInit: () => RequestInit) => pipe(
-//     () => fetchTweets(bookmark_url, getAuthInit()),
-//     // andThen(x => x.json()),
-//     otherwise(x=>console.error('ERROR [fetchBookmarks] x to json', x)))();
-const getQTs = curry((getAuthInit: () => Object, tweets: Tweet[]) =>
+const getQTs = curry((auth: Credentials, tweets: Tweet[]) =>
   pipe(
     () => tweets,
     getApiTweets,
     map(getQtId),
     filter(pipe(isNil, not)),
-    tweetLookupQuery(getAuthInit),
+    tweetLookupQuery(auth),
     andThen(indexBy(prop('id_str'))),
     andThen(inspect('afterlookupquery'))
   )()
@@ -302,14 +319,12 @@ const getQTs = curry((getAuthInit: () => Object, tweets: Tweet[]) =>
 
 // const assocUserToTweet = (users, tweet) => ({ ...tweet, user: users[tweet.user_id_str] })
 
-export async function getBookmarks(
-  getAuthInit: () => RequestInit
-): Promise<Tweet[]> {
-  const authFetchBookmarks = () => fetchTweets(bookmark_url, getAuthInit());
+export async function getBookmarks(auth: Credentials): Promise<Tweet[]> {
+  const authFetchBookmarks = () => fetchTweets(URLGetBookmarks, auth);
   let bookmarks: Tweet[] = await loopRetry(authFetchBookmarks);
   const tweets = getApiTweets(bookmarks);
   const users = getApiUsers(bookmarks);
-  const authGetQTs = () => getQTs(getAuthInit, bookmarks);
+  const authGetQTs = () => getQTs(auth, bookmarks);
   const qts = await loopRetry(authGetQTs);
   const makeRes = (bookmarks: any[]): {} =>
     pipe(
@@ -323,12 +338,12 @@ export async function getBookmarks(
 }
 
 export const searchAPI = curry(
-  async (getAuthInit: () => RequestInit, query: string): Promise<Tweet[]> => {
-    const fetchQ = () => fetchTweets(makeApiSearchUrl(query), getAuthInit());
+  async (auth: Credentials, query: string): Promise<Tweet[]> => {
+    const fetchQ = () => fetchTweets(makeApiSearchUrl(query), auth);
     const _res = await loopRetry(fetchQ);
     const tweets = getApiTweets(_res);
     const users = getApiUsers(_res);
-    const authGetQTs = () => getQTs(getAuthInit, _res);
+    const authGetQTs = () => getQTs(auth, _res);
     const qts = await loopRetry(authGetQTs);
     const makeRes = (_res: any[]): {} =>
       pipe(getApiTweets, map(assocUser(users)), map(assocQTs(qts)))(_res);
