@@ -30,11 +30,13 @@ export function AccountsButton(props) {
   const [activeAccounts, setActiveAccounts] = useStorage('activeAccounts', []);
   //
   const [sync, setSync] = useStorage('sync', false);
-  const [syncDisplay, setSyncDisplay] = useStorage(
-    'syncDisplay',
-    'default sync display msg'
+  const [nTweets, setNTweets] = useStorage('nTweets', 0);
+  const [lastUpdated, setLastUpdated] = useStorage('lastUpdated', 'never');
+  const [currentScreenName, setCurrentScreenName] = useStorage(
+    'currentScreenName',
+    'user'
   );
-  //
+
   const closeMenu = pipe(defaultTo(null), (e: MouseEvent) => {
     return !(e.currentTarget as Node).contains(document.activeElement)
       ? () => {
@@ -61,7 +63,9 @@ export function AccountsButton(props) {
           onBlur={closeMenu}
         ></AccountIcon>
       </div>
-      <span class="tooltiptext"> {syncDisplay} </span>
+      <span class="tooltiptext">
+        {`Hi ${currentScreenName}, I have ${nTweets} tweets available. \n Last updated on ${lastUpdated}`}
+      </span>
       {open && (
         <DropdownMenu
           name={'Accounts'}

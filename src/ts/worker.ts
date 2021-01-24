@@ -193,6 +193,9 @@ const getIndex = () => curVal(index$);
 const getAllIds = async (storeName: string) =>
   await getDb(1).getAllKeys(storeName); // getAllIds :: () -> [ids]
 const howManyTweetsDb = async (_) => (await getAllIds('tweets')).length;
+const onHowManyTweetsDb = async (_) => {
+  return { type: 'nTweets', nTweets: await howManyTweetsDb() };
+};
 const getAllAccounts = async (_: Promise<any>) => getDb(1).getAll('accounts');
 const addAccount = async (user_info: User): Promise<any> =>
   getDb(1).put('accounts', user_info);
@@ -205,13 +208,17 @@ const removeAccount = async (id_str: string): Promise<any> =>
   getDb(1).delete('accounts', id_str);
 const onRemoveAccount = async (id: string) =>
   pipe(
+    () => id,
     tap(removeAccount),
-    db.filterDb(getDb(1), 'tweets', propEq('account', __)),
+    inspect('OnRemoveAccount 0'),
+    (id) => db.filterDb(getDb(1), 'tweets', propEq('account', id)),
+    andThen(inspect('OnRemoveAccount 1')),
     andThen(map(prop('id'))),
+    andThen(inspect('OnRemoveAccount 2')),
     andThen((ids) => updateDB([], ids)),
-    // andThen(id => updateDB([], [id])),
+    andThen(inspect('OnRemoveAccount 3')),
     andThen((_) => getAllAccounts(_))
-  )(id);
+  )();
 const onAddUser = async (user_info) => getDb(1).put('users', user_info);
 const onRemoveUser = async (id_str) => getDb(1).delete('users', id_str);
 const _updateIndex = async (
@@ -303,9 +310,9 @@ const indexUpdate = (opName: string, updateFn) => {
   return pipe(
     prop('res'),
     updateFn,
-    // args=>updateFn(...args),
-    andThen((_) => {
-      return { type: opName };
+    andThen((_) => howManyTweetsDb()),
+    andThen((nTweets) => {
+      return { type: opName, nTweets };
     })
   );
 };
@@ -474,4 +481,4 @@ subReq(removeTweets$, onRemoveTweets);
 subReq(getDefaultTweets$, getDefaultTweets);
 subReq(ftSearchReq$, fulltextSearch);
 subReq(semSearchReq$, semanticSearch);
-subReq(howManyTweetsDb$, howManyTweetsDb);
+subReq(howManyTweetsDb$, onHowManyTweetsDb);

@@ -5,9 +5,11 @@ import { msgBG } from '../utils/dutils';
 
 export function SyncIcon() {
   const [sync, setSync] = useStorage('sync', false);
-  const [syncDisplay, setSyncDisplay] = useStorage(
-    'syncDisplay',
-    'default sync display msg'
+  const [nTweets, setNTweets] = useStorage('nTweets', 0);
+  const [lastUpdated, setLastUpdated] = useStorage('lastUpdated', 'never');
+  const [currentScreenName, setCurrentScreenName] = useStorage(
+    'currentScreenName',
+    'user'
   );
 
   function onSyncClick() {
@@ -20,7 +22,10 @@ export function SyncIcon() {
 
   return (
     <div class={`sync ${sync ? 'synced' : 'unsynced'}`} onClick={onSyncClick}>
-      <span class="tooltiptext"> {syncDisplay} </span>
+      <span class="tooltiptext">
+        {' '}
+        {`Hi ${currentScreenName}, I have ${nTweets} tweets available. \n Last updated on ${lastUpdated}`}{' '}
+      </span>
     </div>
   );
 }

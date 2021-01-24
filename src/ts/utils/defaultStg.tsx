@@ -19,12 +19,15 @@ export const defaultStorage = (): StorageInterface => {
     hasArchive: false,
     hasTimeline: {}, // {id_str: Bool}
     activeAccounts: [], //{screen_name: String, id_str: String, showTweets: Bool, ...}
+    currentScreenName: '',
     latest_tweets: [],
     search_results: [],
     api_results: [],
     temp_archive: [],
     syncDisplay: `Hi, I don't have any tweets yet.`,
     sync: false,
+    nTweets: 0,
+    lastUpdated: '',
     query: '',
   };
 };
@@ -37,12 +40,15 @@ export const devStorage = (): StorageInterface => {
     hasArchive: false,
     hasTimeline: {}, // {id_str: Bool}
     activeAccounts: accounts, //{screen_name: String, id_str: String, showTweets: Bool, ...}
+    currentScreenName: 'TestUser',
     latest_tweets: results,
     search_results: results,
     api_results: results,
     temp_archive: [],
     syncDisplay: `Hi, I don't have any tweets yet.`,
     sync: true,
+    nTweets: results.length,
+    lastUpdated: 'never',
     query: '',
   };
 };

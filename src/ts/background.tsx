@@ -122,21 +122,6 @@ const subObs = (obsObj: any, effect: any) => {
   rememberSub(obs.observe({ value: effect }));
 };
 
-// Potential functions to import
-
-// Message builders
-const makeSyncDisplayMsg = async (
-  pWorker: PromiseWorker,
-  getUsername: (arg0: any) => string,
-  whenUpdated$
-) => {
-  const username = getUsername(1);
-  // const n_tweets = await howManyTweetsDb(_db)
-  const n_tweets = await msgSomeWorker(pWorker, { type: 'howManyTweetsDb' });
-  const dateTime = await curVal(whenUpdated$);
-  return `Hi ${username}, I have ${n_tweets} tweets available. \n Last updated on ${dateTime}`;
-};
-
 export async function main() {
   const worker = initWorker();
   const pWorker = new PromiseWorker(worker); //promise worker
@@ -149,8 +134,6 @@ export async function main() {
   /* Stream value getters */
   // const getAuthInit = (_: any): RequestInit => makeInit(curVal(auth$));
   const getUserInfo = (_: any): User => curVal(userInfo$);
-  const getUsername = (_: any): string =>
-    prop('screen_name', curVal(userInfo$));
   const getAccId = (_: any): string => prop('id_str', curVal(userInfo$));
 
   /* Define streams */
@@ -273,6 +256,7 @@ export async function main() {
   /* write */
   const removeAccount$ = msgStream('remove-account')
     .map(prop('id'))
+    .filter((id) => id != getAccId(1))
     .thru<Observable<any, any>>(
       promiseStream((id) =>
         msgSomeWorker(pWorker, { type: 'removeAccount', id })
@@ -286,8 +270,10 @@ export async function main() {
     )
     .map(list2Obj('id_str'))
     .toProperty();
-  const accountsUpdate$ = Kefir.merge([removeAccount$, incomingAccounts$]); // both these are returns from worker requests to the db that contain the currently active accounts (accs in the db)
-
+  const accountsUpdate$ = Kefir.merge([removeAccount$, incomingAccounts$]).thru(
+    errorFilter('accountsUpdate$')
+  ); // both these are returns from worker requests to the db that contain the currently active accounts (accs in the db)
+  accountsUpdate$.log('[DEBUG] accountsUpdate$');
   /* read */
   const accounts$ = (await _makeStgObs('activeAccounts')).map(defaultTo([]));
   const accsShown$ = (accounts$.map(
@@ -452,14 +438,15 @@ export async function main() {
     addedTweets$,
     removedTweet$,
     dataReset$,
+    accountsUpdate$.thru(
+      promiseStream((_) => msgSomeWorker(pWorker, { type: 'howManyTweetsDb' }))
+    ),
   ]).toProperty();
-  const whenUpdated$ = anyTweetUpdate$
+  const lastUpdated$ = anyTweetUpdate$
     .map((_) => getDateFormatted())
     .toProperty(getDateFormatted); // keeps track of when the last update to the tweet db was
-  const updateSyncDisplay$ = Kefir.merge([ready$, anyTweetUpdate$]).map(
-    (_) => true
-  ); // triggers sync display update
-
+  const nTweets$ = anyTweetUpdate$.map(prop('nTweets'));
+  //
   /*  Sync */
   const anyWorkerReq$ = Kefir.merge([
     fetchedUpdate$,
@@ -621,14 +608,13 @@ export async function main() {
   subObs({ askWorkerReady$ }, (_) =>
     msgSomeWorker(pWorker, { type: 'isWorkerReady' })
   );
-  subObs(
-    { updateSyncDisplay$ },
-    pipe(
-      (_) => makeSyncDisplayMsg(pWorker, getUsername, whenUpdated$),
-      andThen(setStg('syncDisplay'))
-    )
-  ); // update sync display
+  subObs({ lastUpdated$ }, setStg('lastUpdated'));
+  subObs({ nTweets$ }, setStg('nTweets'));
   subObs({ syncLight$ }, setStg('sync'));
+  subObs(
+    { screenName$: userInfo$.map(prop('screen_name')) },
+    setStg('currentScreenName')
+  );
 
   /* Worker actions */
 
@@ -658,7 +644,7 @@ export async function main() {
   /* Debug */
   subObs({ logAuth$ }, () => console.log(curVal(auth$)));
   subObs({ getUserInfo$ }, () => console.log(curVal(userInfo$)));
-
+  //
   ready$.log('[INFO] READY');
   csStart$.log('[INFO] csStart');
   msg$.log('[DEBUG] msg$');
@@ -668,7 +654,7 @@ export async function main() {
   userInfo$.log('[DEBUG] uniqueUserInfo$');
   notReady$.log('[DEBUG] notReady$');
   initData$.log('[DEBUG] initData$');
-  idleMode$.log('[DEBUG] idleMode$');
+  // idleMode$.log('[DEBUG] idleMode$');
   // reqUpdatedTweets$.log('[DEBUG] reqUpdatedTweets$');
   // reqTimeline$.log('[DEBUG] reqTimeline$');
   // reqBookmarks$.log('[DEBUG] reqBookmarks$');
@@ -681,7 +667,7 @@ export async function main() {
   // addedTweets$.log('[DEBUG] addedTweets$');
   // removedTweet$.log('[DEBUG] removedTweet$');
   // updatedTimeline$.log('[DEBUG] updatedTimeline$');
-  // anyTweetUpdate$.log('[DEBUG] anyTweetUpdate$');
+  anyTweetUpdate$.log('[DEBUG] anyTweetUpdate$');
   // updateSyncDisplay$.log('[DEBUG] updateSyncDisplay$');
   // notArchLoading$.log('[DEBUG] notArchLoading$');
   // notFetchingAPI$.log('[DEBUG] notFetchingAPI$');

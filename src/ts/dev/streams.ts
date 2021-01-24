@@ -73,19 +73,6 @@ export const retryReq = (n_retries, delay, fn, stream) =>
     }
   }).take(1);
 
-var ajaxResult = Kefir.repeat(function (i) {
-  if (i < 2) {
-    // on first two tries ignore errors
-    return ajaxCall().skipErrors();
-  } else if (i === 2) {
-    // on the third try let the error (if there will be a error) show up in `ajaxResult`
-    return ajaxCall();
-  } else {
-    // on the fourth iteration just return `false` to stop the cycle
-    return false;
-  }
-}).take(1);
-
 fetch('https://github.com/')
   .then((res) => res.text())
   .then((body) => console.log(body));

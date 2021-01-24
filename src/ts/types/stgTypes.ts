@@ -6,6 +6,7 @@ export interface StorageInterface {
   hasArchive: boolean;
   hasTimeline: object; // {id_str: Bool}
   activeAccounts: object; //{screen_name: String, id_str: String, showTweets: Bool, ...}
+  currentScreenName: string;
   latest_tweets: SearchResult[];
   search_results: SearchResult[];
   api_results: SearchResult[];
@@ -13,6 +14,8 @@ export interface StorageInterface {
   syncDisplay: string;
   sync: boolean;
   query: string;
+  nTweets: number;
+  lastUpdated: string;
 }
 
 export interface SearchResult {
