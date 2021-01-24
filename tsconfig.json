@@ -1,4 +1,5 @@
 {
+  "exclude": ["node_modules", "build"],
   "compilerOptions": {
     "target": "es5",
     "sourceMap": true,

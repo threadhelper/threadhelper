@@ -1,32 +1,59 @@
-import { h, render, Component, createContext } from 'preact';
-import { useState, useEffect, useContext, useRef } from 'preact/hooks';
-import { memo } from 'preact/compat';
-import ReactGA from 'react-ga';
-import { initGA, csEvent, PageView, UA_CODE } from '../utils/ga'
-import { getMode } from '../utils/wutils';
+import { createContext, h } from 'preact';
+import { StateUpdater, useReducer, useRef, useState } from 'preact/hooks';
 import { Header } from './Header';
-import { Search } from './Search';
-import { useStream } from '../hooks/useStream';
-import { useOption } from '../hooks/useStorage';
+import { Display } from './Display';
+import { DisplayMode } from '../types/interfaceTypes';
+import { isEmpty } from 'ramda';
 
+type FeedDisplayReduce = { feedDisplayMode; dispatchFeedDisplayMode };
+export const FeedDisplayMode = createContext<FeedDisplayReduce>();
 
-export default function ThreadHelper(props: any){
+type UpdateFeedDisplayAction = { action: string; tweets: TweetResult[] };
+const updateFeedDisplay = (
+  state,
+  { action, tweets }: UpdateFeedDisplayAction
+) => {
+  console.log({ action, tweets });
+  switch (action) {
+    case 'gotSearchResults':
+      return isEmpty(tweets) ? DisplayMode.Idle : DisplayMode.Search;
+    case 'gotApiResults':
+      return isEmpty(tweets) ? DisplayMode.Idle : DisplayMode.Api;
+    case 'submitApiSearch':
+      return DisplayMode.ApiWaiting;
+    case 'gotLatestTweets':
+      return DisplayMode.Idle;
+    default:
+      throw new Error('Unexpected action');
+  }
+};
+
+export default function ThreadHelper(props: any) {
   const [active, setActive] = useState(true);
   const myRef = useRef(null);
-  
+
   return (
     <div class="ThreadHelper" ref={myRef}>
-      <Sidebar active={active}/>
+      <Sidebar active={active} />
     </div>
   );
 }
 
-function Sidebar(props: { active: any;}){
-  return(
-    <div class="sidebar">
-      <Header />
-      {/* {roboActive ? <Robo active={props.active} streams={props.streams}/> : null} */}
-      <Search />
-    </div>
+function Sidebar(props: { active: any }) {
+  // const [feedDisplayMode, setFeedDisplayMode] = useState('idle');
+  const [feedDisplayMode, dispatchFeedDisplayMode] = useReducer(
+    updateFeedDisplay,
+    DisplayMode.Idle
+  );
+  return (
+    <FeedDisplayMode.Provider
+      value={{ feedDisplayMode, dispatchFeedDisplayMode }}
+    >
+      <div class="sidebar">
+        <Header />
+        {/* {roboActive ? <Robo active={props.active} streams={props.streams}/> : null} */}
+        <Display />
+      </div>
+    </FeedDisplayMode.Provider>
   );
 }

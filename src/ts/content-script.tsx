@@ -9,19 +9,26 @@
 . define destruction and dispatch its event on start up
 */
 //
+import '@babel/polyfill';
+import Kefir, { Observable, Property, Subscription } from 'kefir';
+import { h, render } from 'preact';
 import 'preact/debug';
 import 'preact/devtools';
-import '@babel/polyfill';
-import * as pcss from '../styles.css';
-console.log('hi pcss', pcss);
-import * as css from '../style/cs.css';
-console.log('hi css', css);
-import Kefir, { Observable, Observer, Property, Subscription } from 'kefir';
-import { h, render } from 'preact';
 import * as R from 'ramda';
-import { curProp } from './types/types';
-import { UrlMsg } from './types/msgTypes';
-import * as window from './global';
+import {
+  and,
+  curry,
+  defaultTo,
+  equals,
+  isEmpty,
+  isNil,
+  not,
+  pipe,
+  prop,
+  propEq,
+} from 'ramda'; // Function
+import * as css from '../style/cs.css';
+import * as pcss from '../styles.css';
 import ThreadHelper from './components/ThreadHelper';
 import { makeComposeObs } from './domInterface/composeHandler';
 import {
@@ -44,99 +51,19 @@ import {
   makeSidebarHome,
 } from './domInterface/sidebarHandler';
 import { makeBgColorObs, makeLastStatusObs } from './domInterface/tabsHandler';
+import * as window from './global';
+import { UrlMsg } from './types/msgTypes';
+import { curProp } from './types/types';
 import {
   makeGotMsgObs,
   makeStorageChangeObs,
   msgBG,
-  setStg,
+  resetStorageField,
 } from './utils/dutils';
-import {
-  currentValue,
-  flattenModule,
-  inspect,
-  nullFn,
-  toggleDebug,
-} from './utils/putils';
+import { currentValue, inspect, toggleDebug } from './utils/putils';
 import { getMode, updateTheme } from './utils/wutils';
-import {
-  __,
-  curry,
-  pipe,
-  andThen,
-  map,
-  filter,
-  reduce,
-  tap,
-  apply,
-  tryCatch,
-} from 'ramda'; // Function
-import {
-  prop,
-  propEq,
-  propSatisfies,
-  path,
-  pathEq,
-  hasPath,
-  assoc,
-  assocPath,
-  values,
-  mergeLeft,
-  mergeDeepLeft,
-  keys,
-  lens,
-  lensProp,
-  lensPath,
-  pick,
-  project,
-  set,
-  length,
-} from 'ramda'; // Object
-import {
-  head,
-  tail,
-  take,
-  isEmpty,
-  any,
-  all,
-  includes,
-  last,
-  dropWhile,
-  dropLastWhile,
-  difference,
-  append,
-  fromPairs,
-  forEach,
-  nth,
-  pluck,
-  reverse,
-  uniq,
-  slice,
-} from 'ramda'; // List
-import {
-  equals,
-  ifElse,
-  when,
-  both,
-  either,
-  isNil,
-  is,
-  defaultTo,
-  and,
-  or,
-  not,
-  F,
-  gt,
-  lt,
-  gte,
-  lte,
-  max,
-  min,
-  sort,
-  sortBy,
-  split,
-  trim,
-  multiply,
-} from 'ramda'; // Logic, Type, Relation, String, Math
+console.log('hi pcss', pcss);
+console.log('hi css', css);
 
 // Project business
 var DEBUG = process.env.NODE_ENV != 'production';
@@ -183,12 +110,17 @@ const subObs = <T,>(
   effect: (val: T) => void
 ): Subscription => rememberSub(obs.observe({ value: effect }));
 
+const initCsStg = () => {
+  ['search_results', 'api_results', 'temp_archive'].map(resetStorageField);
+};
+
 function main() {
   onLoad(thBarHome, thBarComp);
 }
 
 async function onLoad(thBarHome: Element, thBarComp: Element) {
   console.log('[DEBUG] onLoad', { thBarHome, thBarComp });
+  initCsStg();
   msgBG({ type: 'cs-created' });
   // Define streams
   //      messages

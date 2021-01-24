@@ -1,97 +1,38 @@
 import Kefir, { Emitter, Observable, Stream } from 'kefir';
-import { StorageChange, StorageInterface } from '../types/stgTypes';
-import { MsgWrapper, Msg } from '../types/msgTypes';
-import { currentValue, inspect } from './putils';
+import {
+  curry,
+  defaultTo,
+  head,
+  is,
+  isNil,
+  lensPath,
+  mergeDeepLeft,
+  path,
+  pipe,
+  prop,
+  propEq,
+  set,
+  slice,
+  tail,
+  tap,
+  when,
+  __,
+} from 'ramda'; // Function
+import chromeMock from 'sinon-chrome/extensions';
+import { Msg, MsgWrapper } from '../types/msgTypes';
+import {
+  Option,
+  Options,
+  StorageChange,
+  StorageInterface,
+} from '../types/stgTypes';
 import {
   defaultOptions,
   defaultStorage as _defaultStorage,
   devStorage,
 } from './defaultStg';
-import * as R from 'ramda';
-import {
-  __,
-  curry,
-  pipe,
-  andThen,
-  map,
-  filter,
-  reduce,
-  tap,
-  apply,
-  tryCatch,
-} from 'ramda'; // Function
-import {
-  prop,
-  propEq,
-  propSatisfies,
-  path,
-  pathEq,
-  hasPath,
-  assoc,
-  assocPath,
-  values,
-  mergeLeft,
-  mergeDeepLeft,
-  keys,
-  lens,
-  lensProp,
-  lensPath,
-  pick,
-  project,
-  set,
-  length,
-} from 'ramda'; // Object
-import {
-  head,
-  tail,
-  take,
-  isEmpty,
-  any,
-  all,
-  includes,
-  last,
-  dropWhile,
-  dropLastWhile,
-  difference,
-  append,
-  fromPairs,
-  forEach,
-  nth,
-  pluck,
-  reverse,
-  uniq,
-  slice,
-} from 'ramda'; // List
-import {
-  equals,
-  ifElse,
-  when,
-  both,
-  either,
-  isNil,
-  is,
-  defaultTo,
-  and,
-  or,
-  not,
-  T,
-  F,
-  gt,
-  lt,
-  gte,
-  lte,
-  max,
-  min,
-  sort,
-  sortBy,
-  split,
-  trim,
-  multiply,
-} from 'ramda'; // Logic, Type, Relation, String, Math
-import { Option, Options } from '../types/stgTypes';
+import { currentValue, inspect } from './putils';
 (Kefir.Property.prototype as any).currentValue = currentValue;
-
-import chromeMock from 'sinon-chrome/extensions';
 
 let defaultStorage: () => StorageInterface = _defaultStorage;
 
@@ -159,6 +100,8 @@ export async function removeData(keys: string[]) {
   });
 }
 export const resetStorage = () => setData(defaultStorage());
+export const resetStorageField = (key) =>
+  setData({ [key]: defaultStorage()[key] });
 export const setStg = curry((key, val) => setData({ [key]: val }));
 export const getStg = (key: string) =>
   getData(key).then(pipe(defaultTo(defaultStorage()[key]), addNewDefault(key)));

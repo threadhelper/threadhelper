@@ -1,7 +1,5 @@
-// @ts-expect-error ts-migrate(1192) FIXME: Module '"/mnt/c/Users/frsc/Documents/Projects/th/r... Remove this comment to see the full error message
 import ReactGA from 'react-ga';
-// @ts-expect-error ts-migrate(2691) FIXME: An import path cannot end with a '.tsx' extension.... Remove this comment to see the full error message
-import { msgBG } from './dutils.tsx';
+import { msgBG } from './dutils';
 
 export const UA_CODE = 'UA-170230545-2';
 

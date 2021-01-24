@@ -1,13 +1,11 @@
 import '@babel/polyfill';
-// import "core-js/stable";
-// import "regenerator-runtime/runtime";
-import css from '../style/popup.css';
-console.log('hi css', { css });
 import { h, render } from 'preact';
-import { useEffect, useCallback } from 'preact/hooks';
-import { toggleDebug } from './utils/putils';
+import { useEffect } from 'preact/hooks';
+import css from '../style/popup.css';
 import Tutorial from './components/Tutorial';
-import { initGA, Event, PageView, UA_CODE } from './utils/ga';
+import { initGA, PageView } from './utils/ga';
+import { toggleDebug } from './utils/putils';
+console.log('hi css', { css });
 
 // Project business
 var DEBUG = process.env.NODE_ENV != 'production';

@@ -1,116 +1,51 @@
 import '@babel/polyfill';
-// import "core-js/stable";
-// import "regenerator-runtime/runtime";
-import { onWorkerPromise } from './worker/promise-stream-worker';
-import {
-  IndexSearchResult,
-  Msg,
-  SearchResult,
-  WorkerLog,
-  ReqDefaultTweetsMsg,
-  WorkerMsg,
-  TweetResWorkerMsg,
-  Msg2Worker,
-  WriteAccMsg,
-} from './types/msgTypes';
-import * as db from './worker/db';
 import * as elasticlunr from 'elasticlunr';
-import { makeIndex, updateIndex, search, loadIndex } from './worker/nlp';
-import { getRandomSampleTweets, getLatestTweets } from './worker/search';
-import { doSemanticSearch, reqSemIndexTweets } from './worker/semantic';
-import { findInnerDiff } from './bg/tweetImporter';
-import {
-  flattenModule,
-  wInspect,
-  toggleDebug,
-  currentValue,
-  isExist,
-  wTimeFn,
-} from './utils/putils';
+import Kefir, { Subscription } from 'kefir';
 import * as R from 'ramda';
 import {
-  __,
-  curry,
-  pipe,
   andThen,
-  map,
-  filter,
-  reduce,
-  tap,
   apply,
-  tryCatch,
-} from 'ramda'; // Function
-import {
+  assoc,
+  both,
+  curry,
+  filter,
+  ifElse,
+  includes,
+  isEmpty,
+  isNil,
+  last,
+  map,
+  not,
+  path,
+  pathEq,
+  pipe,
   prop,
   propEq,
   propSatisfies,
-  path,
-  pathEq,
-  hasPath,
-  assoc,
-  assocPath,
-  values,
-  mergeLeft,
-  mergeDeepLeft,
-  keys,
-  lens,
-  lensProp,
-  lensPath,
-  pick,
-  project,
-  set,
-  length,
-} from 'ramda'; // Object
-import {
-  head,
-  tail,
-  take,
-  isEmpty,
-  any,
-  all,
-  includes,
-  last,
-  dropWhile,
-  dropLastWhile,
-  difference,
-  append,
-  fromPairs,
-  forEach,
-  nth,
-  pluck,
-  reverse,
-  uniq,
-  slice,
-} from 'ramda'; // List
-import {
-  equals,
-  ifElse,
-  when,
-  both,
-  either,
-  isNil,
-  is,
-  defaultTo,
-  and,
-  or,
-  not,
-  F,
-  gt,
-  lt,
-  gte,
-  lte,
-  max,
-  min,
-  sort,
-  sortBy,
-  split,
-  trim,
-  multiply,
-} from 'ramda'; // Logic, Type, Relation, String, Math
-import Kefir, { Subscription } from 'kefir';
-import { IndexTweet, thTweet, TweetId } from './types/tweetTypes';
+  tap,
+  tryCatch,
+  __,
+} from 'ramda'; // Function
 import { User } from 'twitter-d';
-import { IdleMode, SearchFilters } from './types/stgTypes';
+import { findInnerDiff } from './bg/tweetImporter';
+import {
+  IndexSearchResult,
+  ReqDefaultTweetsMsg,
+  SearchResult,
+  TweetResWorkerMsg,
+  WorkerMsg,
+  WriteAccMsg,
+} from './types/msgTypes';
+import { SearchFilters } from './types/stgTypes';
+import { IndexTweet, thTweet, TweetId } from './types/tweetTypes';
+import { currentValue, isExist, wInspect, wTimeFn } from './utils/putils';
+import * as db from './worker/db';
+import { loadIndex, makeIndex, search, updateIndex } from './worker/nlp';
+// import "core-js/stable";
+// import "regenerator-runtime/runtime";
+import { onWorkerPromise } from './worker/promise-stream-worker';
+import { getLatestTweets, getRandomSampleTweets } from './worker/search';
+import { doSemanticSearch, reqSemIndexTweets } from './worker/semantic';
 
 const wSelf: Worker = self as any;
 // Project business
