@@ -29,6 +29,7 @@ export const defaultStorage = (): StorageInterface => {
     nTweets: 0,
     lastUpdated: '',
     query: '',
+    auth: { authorization: null, 'x-csrf-token': null, name: 'empty_auth' },
   };
 };
 
@@ -50,5 +51,6 @@ export const devStorage = (): StorageInterface => {
     nTweets: results.length,
     lastUpdated: 'never',
     query: '',
+    auth: { authorization: null, 'x-csrf-token': null, name: 'devEmptyAuth' },
   };
 };

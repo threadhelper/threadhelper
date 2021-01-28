@@ -1,6 +1,7 @@
 import { h } from 'preact';
 import { useCallback, useState } from 'preact/hooks';
 import { defaultTo, pipe } from 'ramda'; // Function
+import ReactTooltip from 'react-tooltip';
 import GearIcon from '../../images/gear.svg';
 import { msgBG } from '../utils/dutils';
 import { csEvent } from '../utils/ga';
@@ -79,8 +80,6 @@ const debugItems = [
 export function SettingsButton(props) {
   const [open, setOpen] = useState(false);
 
-  // const closeMenu = (e) => ((!e.currentTarget.parentNode.parentNode.contains(e.relatedTarget)) ? setOpen(false) : null)
-  // (e: { currentTarget: { parentNode: { parentNode: { contains: (arg0: any) => any; }; }; }; relatedTarget: any; }) => {return (!e.currentTarget.parentNode.parentNode.contains(e.relatedTarget)) ? setOpen(false) : null}
   const closeMenu = pipe(defaultTo(null), (e: MouseEvent) => {
     return !(e.currentTarget as Node).contains(document.activeElement)
       ? () => {
@@ -100,13 +99,24 @@ export function SettingsButton(props) {
 
   return (
     <div id="settings-menu" className="nav-item">
-      <div class="options icon-button box-content">
-        <GearIcon
-          class="dropdown-icon"
-          onClick={onClickSettings}
-          onBlur={closeMenu}
-        />
-      </div>
+      <a data-tip="React-tooltip" data-for="settingsButton">
+        <div class="options icon-button box-content">
+          <GearIcon
+            class="dropdown-icon"
+            onClick={onClickSettings}
+            onBlur={closeMenu}
+          />
+        </div>
+      </a>
+      <ReactTooltip
+        id="settingsButton"
+        delayShow={300}
+        place="bottom"
+        type="dark"
+        effect="solid"
+      >
+        <span style="color: var(--main-txt-color);">Options and Settings</span>
+      </ReactTooltip>
       {open && (
         <DropdownMenu
           name={'Settings'}

@@ -1,7 +1,6 @@
 import '@babel/polyfill';
 import * as elasticlunr from 'elasticlunr';
 import Kefir, { Subscription } from 'kefir';
-import * as R from 'ramda';
 import {
   andThen,
   apply,
@@ -13,17 +12,21 @@ import {
   includes,
   isEmpty,
   isNil,
+  keys,
   last,
   map,
   not,
   path,
   pathEq,
   pipe,
+  Pred,
   prop,
   propEq,
   propSatisfies,
+  reduce,
   tap,
   tryCatch,
+  type,
   __,
 } from 'ramda'; // Function
 import { User } from 'twitter-d';
@@ -31,6 +34,7 @@ import { findInnerDiff } from './bg/tweetImporter';
 import {
   IndexSearchResult,
   ReqDefaultTweetsMsg,
+  ReqSearchMsg,
   SearchResult,
   TweetResWorkerMsg,
   WorkerMsg,
@@ -38,11 +42,16 @@ import {
 } from './types/msgTypes';
 import { SearchFilters } from './types/stgTypes';
 import { IndexTweet, thTweet, TweetId } from './types/tweetTypes';
-import { currentValue, isExist, wInspect, wTimeFn } from './utils/putils';
-import * as db from './worker/db';
+import {
+  currentValue,
+  isExist,
+  nullFn,
+  wInspect,
+  inspect,
+  wTimeFn,
+} from './utils/putils';
+import * as db from './worker/idb_wrapper';
 import { loadIndex, makeIndex, search, updateIndex } from './worker/nlp';
-// import "core-js/stable";
-// import "regenerator-runtime/runtime";
 import { onWorkerPromise } from './worker/promise-stream-worker';
 import { getLatestTweets, getRandomSampleTweets } from './worker/search';
 import { doSemanticSearch, reqSemIndexTweets } from './worker/semantic';
@@ -66,11 +75,15 @@ const subReq = (obs, effect) => subObs(obs, onWorkerPromise(effect)); // subscri
 const msgBG = function (msg: WorkerMsg) {
   return wSelf.postMessage(JSON.stringify(msg));
 }; // different from cs's msgBG
-const consoleLog = curry((log: string, baggage: Object): void =>
-  msgBG({ type: 'console', log, baggage: JSON.stringify(baggage) })
+const consoleLog = curry((log: string, baggage: any): void =>
+  msgBG({
+    type: 'console',
+    log,
+    baggage: JSON.stringify(type(baggage) == 'Object' ? baggage : { baggage }),
+  })
 );
 const timeFn = wTimeFn(consoleLog);
-const inspect = wInspect(consoleLog);
+// const inspect = wInspect(consoleLog);
 const makeMidSearchEvent = (_busy: boolean) => {
   return new CustomEvent('midSearch', { detail: { busy: _busy } });
 };
@@ -79,12 +92,6 @@ const emitMidSearch = (busy: boolean) => {
   return busy;
 };
 // // Sync
-// let count = 0
-// const pendingReqs = []
-// const makeReqToken = ()=>count+1;
-// const sendSync = val=>msgBG({type:'sync', value:val})
-// const addReq = req => {pendingReqs.push(makeReqToken()); return pendingReqs}
-// const removeReq = req => {pendingReqs.push(req); return pendingReqs}
 const dbDel = (
   _getDb: (arg0: number) => any,
   storeName: string,
@@ -95,7 +102,6 @@ const dbDel = (
 // Functions, potential imports
 const updateSomeDB = curry(
   async (_getDb: (arg0: number) => any, new_tweets, deleted_ids) => {
-    // console.log('updating store', { new_tweets, deleted_ids });
     const storeName = 'tweets';
     isExist(deleted_ids) ? dbDel(_getDb, storeName, deleted_ids) : null;
     isExist(new_tweets) ? db.putMany(_getDb(1))(storeName, new_tweets) : null;
@@ -113,10 +119,11 @@ consoleLog('worker hi! 0', '');
 // throw Error('[DEBUG] [ERROR] worker debug error')
 // Streams
 // Db init
-const db$ = Kefir.fromPromise(db.open()).ignoreEnd().toProperty();
+const db$ = Kefir.fromPromise(db.openDb()).ignoreEnd().toProperty();
 const noDb$ = db$.map(isNil);
 // Messages
 const msg$ = Kefir.fromEvents(wSelf, 'message');
+msg$.map(prop('data')).log('msg$');
 const makeMsgStream = (typeName: string) =>
   msg$
     .filter(pathEq(['data', 1, 'type'], typeName))
@@ -156,35 +163,39 @@ const removeTweets$ = makeMsgStream('removeTweets');
 const makeSearchStream = (mode: string) =>
   msg$
     .filter(pathEq(['data', 1, 'searchMode'], mode))
-    .bufferWhileBy(noDb$)
-    .flatten(); //.map(prop('data')) // Function
+    .bufferWhileBy(noDb$, { flushOnChange: true })
+    .flatten() //.map(prop('data')) // Function
+    .filter((x) => !isNil(x));
 const isMidSearch$ = Kefir.fromEvents(wSelf, 'midSearch')
   .map(
     path<boolean>(['detail', 'busy'])
   )
   .toProperty(() => false);
+isMidSearch$.log('isMidSearch$');
 const _searchReq$ = makeMsgStream('searchIndex')
   .bufferWhileBy(isMidSearch$)
   .flatten();
 const searchReq$ = _searchReq$.bufferWhileBy(noIndex$).map(last);
 const ftSearchReq$ = makeSearchStream('fulltext')
-  .bufferWhileBy(isMidSearch$)
+  .bufferWhileBy(isMidSearch$, { flushOnChange: true })
   .flatten()
-  .bufferWhileBy(noIndex$)
-  .map(last);
+  .bufferWhileBy(noIndex$, { flushOnChange: true })
+  .map(last)
+  .filter((x) => !isNil(x));
+ftSearchReq$.log('ftSearchReq$');
 // const semSearchReq$ = searchReq$.filter(pathEq(['data', 1, 'searchMode'], 'semantic'))
 const semSearchReq$ = makeSearchStream('semantic')
-  .bufferWhileBy(isMidSearch$)
+  .bufferWhileBy(isMidSearch$, { flushOnChange: true })
   .flatten()
-  .bufferWhileBy(noIndex$)
-  .map(last);
+  .bufferWhileBy(noIndex$, { flushOnChange: true })
+  .map(last)
+  .filter((x) => !isNil(x));
 const getDefaultTweets$ = makeMsgStream('getDefaultTweets');
 // Sync
 const ready$ = Kefir.merge([
   index$.filter(pipe(isNil, not)),
   makeMsgStream('isWorkerReady'),
 ]).map((_) => true);
-ready$.onValue(consoleLog('ready$'));
 // Functions, potential imports
 const curVal = (stream) => stream.currentValue();
 const getDb = (_: any) => curVal(db$);
@@ -221,13 +232,10 @@ const onRemoveAccount = async (id: string) =>
   )();
 const onAddUser = async (user_info) => getDb(1).put('users', user_info);
 const onRemoveUser = async (id_str) => getDb(1).delete('users', id_str);
-const _updateIndex = async (
-  index: elasticlunr.Index<IndexTweet>,
-  new_tweets: thTweet[],
-  deleted_ids: string[]
-) => {
-  const olds = await getAllIds('tweets');
+
+const updateSemanticIndex = async (olds, new_tweets) =>
   pipe<thTweet[], Promise<thTweet[]>, Promise<any>, Promise<any>>(
+    () => new_tweets,
     findNewTweets(olds),
     andThen(
       ifElse(
@@ -239,13 +247,25 @@ const _updateIndex = async (
       )
     ),
     andThen(inspect('[INFO] reqSemIndexTweets'))
-  )(new_tweets);
-  return pipe(
+  )();
+
+const updateIndexAndStore = async (index, new_tweets, deleted_ids) =>
+  pipe(
     (index, tweets_to_add, ids_to_remove) =>
       updateIndex(index, tweets_to_add, ids_to_remove),
     andThen((index) => index.toJSON()),
     andThen((index_json) => getDb(1).put('misc', index_json, 'index'))
   )(index, new_tweets, deleted_ids);
+
+const _updateIndex = async (
+  index: elasticlunr.Index<IndexTweet>,
+  new_tweets: thTweet[],
+  deleted_ids: string[]
+) => {
+  const olds = await getAllIds('tweets');
+  updateSemanticIndex(olds, new_tweets);
+  const newIndex = await updateIndexAndStore(index, new_tweets, deleted_ids);
+  return newIndex;
 };
 const isBookmark = (res) => path([0, 'is_bookmark'], res); // checks whether the first is a bookmark to judge whether they're all bookmarks
 const curAccount = (res) => path([0, 'account'], res); // checks whether the first is a bookmark to judge whether they're all bookmarks
@@ -273,27 +293,32 @@ const findNewTweets = curry(
     )(res)
 );
 
-const getRelevantOldIds = (filterFn: R.Pred) =>
-  pipe(db.filterDb(getDb(1), 'tweets', filterFn), andThen(map(prop('id'))));
+const getRelevantOldIds = async (filterFn: Pred): Promise<string[]> =>
+  pipe(
+    () => db.filterDb(getDb(1), 'tweets', filterFn),
+    andThen(map(prop('id')))
+  )();
+
 const updateTimeline = async (res: thTweet[]) => {
-  // console.log('[DEBUG] updateTimeline');
-  const oldIds = getRelevantOldIds(filterCondition(res));
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '<T>() => Promise<T[]>' is not as.. Remove this comment to see the full error message
+  consoleLog('updateTimeline 0', { res });
+  const oldIds = await getRelevantOldIds(filterCondition(res));
+  consoleLog('updateTimeline 0', { oldIds });
   const newTweets = await findNewTweets(oldIds, res);
+  consoleLog('updateTimeline 2', { newTweets });
   const deletedIds = await findDeletedIds(oldIds, res);
+  consoleLog('updateTimeline 3', { deletedIds });
   updateDB(newTweets, deletedIds);
-  return _updateIndex(getIndex(), newTweets, deletedIds);
+  return await _updateIndex(getIndex(), newTweets, deletedIds);
 };
 
 const addTweets = async (res) => {
   const newTweets = await findNewTweets(await getAllIds('tweets'), res);
   updateDB(newTweets, []);
-  return _updateIndex(getIndex(), newTweets, []);
+  return await _updateIndex(getIndex(), newTweets, []);
 };
 const removeTweets = async (ids: string[]) => {
-  // console.log('[DEBUG] removeTweets', { ids });
   updateDB([], ids);
-  return _updateIndex(getIndex(), [], ids);
+  return await _updateIndex(getIndex(), [], ids);
 };
 // need to leave open db and empty index
 const dbClear = pipe(
@@ -308,8 +333,11 @@ const setIndex = pipe((x) => getDb(1).put('misc', x, 'index'));
 // indexUpdate :: String ->
 const indexUpdate = (opName: string, updateFn) => {
   return pipe(
+    inspect('indexUpdate 0 ' + opName),
     prop('res'),
+    inspect('indexUpdate 1 ' + opName),
     updateFn,
+    andThen(inspect('indexUpdate 2 ' + opName)),
     andThen((_) => howManyTweetsDb()),
     andThen((nTweets) => {
       return { type: opName, nTweets };
@@ -340,12 +368,8 @@ const ftSearchFromMsg = curry(
   }
 );
 
-const renameKeys = R.curry((keysMap, obj) =>
-  R.reduce(
-    (acc, key) => R.assoc(keysMap[key] || key, obj[key], acc),
-    {},
-    R.keys(obj)
-  )
+const renameKeys = curry((keysMap, obj) =>
+  reduce((acc, key) => assoc(keysMap[key] || key, obj[key], acc), {}, keys(obj))
 );
 
 const makeTweetResponse = async (
@@ -364,26 +388,22 @@ const makeSearchResponse = async (
   return response;
 };
 
-const fulltextSearch = async (
-  m: ReqDefaultTweetsMsg
-): Promise<TweetResWorkerMsg> => {
+const fulltextSearch = async (m: ReqSearchMsg): Promise<TweetResWorkerMsg> => {
   return pipe<
     any,
     any,
     Promise<IndexSearchResult[]>,
     Promise<SearchResult[]>,
+    Promise<SearchResult[]>,
+    Promise<any>,
     Promise<TweetResWorkerMsg>
   >(
     () => m,
     tap((_) => emitMidSearch(true)),
     ftSearchFromMsg(getIndex),
     andThen(makeSearchResponse),
-    andThen(
-      pipe<any, any, any>(
-        tap((_) => emitMidSearch(false)),
-        assoc('res', __, { type: 'searchIndex', msg: m })
-      )
-    )
+    andThen(tap((_) => emitMidSearch(false))),
+    andThen(assoc('res', __, { type: 'searchIndex', msg: m }))
   )();
 };
 
@@ -404,9 +424,7 @@ const semSearchFromMsg = curry((m: { query: string }) =>
 //         ))
 //     );
 
-const semanticSearch = async (
-  m: ReqDefaultTweetsMsg
-): Promise<TweetResWorkerMsg> => {
+const semanticSearch = async (m: ReqSearchMsg): Promise<TweetResWorkerMsg> => {
   return pipe<
     any,
     any,
@@ -451,9 +469,11 @@ const callGetIdleTweets = (m: ReqDefaultTweetsMsg): Promise<thTweet[]> =>
 const getDefaultTweets = async (
   m: ReqDefaultTweetsMsg
 ): Promise<TweetResWorkerMsg> => {
-  return pipe<any, any, any, any>(
+  return pipe(
     () => m,
+    inspect('getDefaultTweets 0'),
     callGetIdleTweets,
+    andThen(inspect('getDefaultTweets 1')),
     andThen(
       map((tweet) => {
         return { tweet };
@@ -463,14 +483,10 @@ const getDefaultTweets = async (
   )();
 };
 
-// subObs(searchResult$, pipe(getTweetsFromDbById, andThen(pipe(setStg('search_results'), andThen(x=>{emitMidSearch(false); return x;})))))
 // Effects
-// receivedMsg$.log('worker got message:')
-// subObs(db$, ()=>msgBG({type:'ready'}))
+isMidSearch$.onValue(nullFn);
 subObs(ready$, () => msgBG({ type: 'ready' }));
-// subReq(ready$, async () => msgBG({ type: 'ready' }));
 subReq(dbClear$, dbClear);
-// subReq(addAccount$, timeFn('addAccount', onAddAccount));
 subReq(addAccount$, onAddAccount);
 subReq(removeAccount$, pipe(prop('id'), onRemoveAccount));
 subReq(addUser$, onAddUser);
@@ -479,6 +495,13 @@ subReq(updateTimeline$, onUpdateTimeline);
 subReq(addTweets$, onAddTweets);
 subReq(removeTweets$, onRemoveTweets);
 subReq(getDefaultTweets$, getDefaultTweets);
-subReq(ftSearchReq$, fulltextSearch);
+subReq(
+  ftSearchReq$,
+  pipe(
+    inspect('fulltextSearch 0'),
+    fulltextSearch,
+    andThen(inspect('fulltextSearch 1'))
+  )
+);
 subReq(semSearchReq$, semanticSearch);
 subReq(howManyTweetsDb$, onHowManyTweetsDb);

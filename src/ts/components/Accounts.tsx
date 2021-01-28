@@ -1,11 +1,13 @@
 import { h } from 'preact';
 import { useCallback, useState } from 'preact/hooks';
 import { defaultTo, map, pipe, values } from 'ramda'; // Function
+import ReactTooltip from 'react-tooltip';
 import { FullUser } from 'twitter-d';
 import AccountIcon from '../../images/account.svg';
 import { useStorage } from '../hooks/useStorage';
 import { csEvent } from '../utils/ga';
 import { DropdownMenu } from './Dropdown';
+import { getTimeDiff } from './Tweet';
 
 const accountFilterAvi = (url: string) => {
   const FilterAvi = (props) => {
@@ -54,18 +56,31 @@ export function AccountsButton(props) {
   const onClickButton = useCallback(clickButton, [open]);
   return (
     <div id="accounts-menu" className="nav-item">
-      <div class={`options icon-button`}>
-        <AccountIcon
-          class={`box-content account-icon hoverHighlight  ${
-            sync ? 'synced' : 'unsynced'
-          }`}
+      <a data-tip="React-tooltip" data-for="accountsMenu">
+        <div
+          class={`options icon-button`}
           onClick={onClickButton}
           onBlur={closeMenu}
-        ></AccountIcon>
-      </div>
-      <span class="tooltiptext">
-        {`Hi ${currentScreenName}, I have ${nTweets} tweets available. \n Last updated on ${lastUpdated}`}
-      </span>
+        >
+          <AccountIcon
+            class={`box-content account-icon hoverHighlight  ${
+              sync ? 'synced' : 'unsynced'
+            }`}
+          ></AccountIcon>
+        </div>
+      </a>
+      <ReactTooltip
+        id="accountsMenu"
+        delayShow={300}
+        place="bottom"
+        type="dark"
+        effect="solid"
+      >
+        <span style="color: var(--main-txt-color);">
+          {`Hi ${currentScreenName}, I have ${nTweets} tweets available. \n` +
+            (sync ? `Last synced: ${getTimeDiff(lastUpdated)}.` : `Syncing...`)}
+        </span>
+      </ReactTooltip>
       {open && (
         <DropdownMenu
           name={'Accounts'}

@@ -249,28 +249,36 @@
 
 .th-reply-container:hover {
   background-color: rgba(38, 158, 228, 0.1);
-  svg {
+  svg,
+  p,
+  span {
     color: rgb(38, 158, 228);
   }
 }
 
 .th-share-container:hover {
   background-color: rgba(38, 158, 228, 0.1);
-  svg {
+  svg,
+  p,
+  span {
     color: rgb(38, 158, 228);
   }
 }
 
 .th-rt-container:hover {
   background-color: rgba(33, 182, 103, 0.1);
-  svg {
+  svg,
+  p,
+  span {
     color: rgb(33, 182, 103);
   }
 }
 
 .th-like-container:hover {
   background-color: rgba(200, 52, 103, 0.1);
-  svg {
+  svg,
+  p,
+  span {
     color: rgb(200, 52, 103);
   }
 }

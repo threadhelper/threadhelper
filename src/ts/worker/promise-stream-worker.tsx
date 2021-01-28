@@ -24,7 +24,6 @@ export const onWorkerPromise = curry(
           (e as any).ports[0].postMessage(msg);
         } else {
           // web worker
-          // @ts-expect-error ts-migrate(2554) FIXME: Expected 2-3 arguments, but got 1.
           self.postMessage(msg);
         }
       }

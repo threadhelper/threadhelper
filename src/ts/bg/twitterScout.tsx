@@ -17,15 +17,18 @@ import {
   values,
   when,
 } from 'ramda'; // Function
-import { Status as Tweet, User } from 'twitter-d';
+import { Status, Status as Tweet, User } from 'twitter-d';
 import { inspect } from '../utils/putils';
 import { Credentials } from '../types/types';
-import { TweetId } from '../types/tweetTypes';
+import { thTweet, TweetId } from '../types/tweetTypes';
+import { apiSearchToTweet } from './tweetImporter';
+import { TweetResult } from '../types/msgTypes';
 
 const getMaxId = (res) => (res.length > 1 ? res[res.length - 1].id : null);
 const retryLimit = 3;
 
 /*  URLS */
+const URLVerifyCredentials = `https://api.twitter.com/1.1/account/verify_credentials.json`;
 const URLGetBookmarks =
   'https://api.twitter.com/2/timeline/bookmark.json?include_profile_interstitial_type=1&include_blocking=1&include_blocked_by=1&include_followed_by=1&include_want_retweets=1&include_mute_edge=1&include_can_dm=1&include_can_media_tag=1&skip_status=1&cards_platform=Web-12&include_cards=1&include_composer_source=true&include_ext_alt_text=true&include_reply_count=1&tweet_mode=extended&include_entities=true&include_user_entities=true&include_ext_media_color=true&include_ext_media_availability=true&send_error_codes=true&simple_quoted_tweets=true&count=10000&ext=mediaStats%2CcameraMoment';
 const URLCreateFav = 'https://twitter.com/i/api/1.1/favorites/create.json';
@@ -34,6 +37,11 @@ const URLRetweet = 'https://twitter.com/i/api/1.1/statuses/retweet.json';
 const URLUnretweet = 'https://twitter.com/i/api/1.1/statuses/unretweet.json';
 const makeURLStartQT = (id) =>
   `https://twitter.com/intent/tweet?url=https://twitter.com/x/status/${id}`;
+const makeTweetLookupUrl = (ids) =>
+  `https://api.twitter.com/1.1/statuses/lookup.json?id=${R.join(
+    ',',
+    ids
+  )}&tweet_mode=extended`;
 const makeTimelineQueryUrl = curry(
   (max_id: number, screen_name: string, count: number) => {
     const max_param = max_id > 0 ? `&max_id=${max_id}` : '';
@@ -157,8 +165,11 @@ export const searchTwitter = (authHeaders, query) =>
     referrer: 'https://twitter.com/search?q=' + encodeURIComponent(query),
   });
 
-const fetchStatus = async (auth: Credentials, id: TweetId) => {
-  return await twitterFetch(makeFetchStatusUrl(id), auth);
+export const fetchStatus = async (
+  authHeaders: Credentials,
+  id: TweetId
+): Promise<Status> => {
+  return await twitterFetch(makeFetchStatusUrl(id), { authHeaders });
 };
 
 export const searchUsers = (authHeaders, query) =>
@@ -169,14 +180,14 @@ export const searchUsers = (authHeaders, query) =>
     referrer: 'https://twitter.com/explore',
   });
 
-const sendTweetAction = curry((url, authHeaders, tweetId) =>
-  twitterFetch(URLCreateFav, {
-    ...authHeaders,
+const sendTweetAction = curry((url, authHeaders, tweetId) => {
+  return twitterFetch(url, {
+    authHeaders,
     method: 'POST',
     body: `tweet_mode=extended&id=${tweetId}`,
     referrer: 'https://twitter.com/home',
-  })
-);
+  });
+});
 
 export const sendLikeRequest = sendTweetAction(URLCreateFav);
 export const sendUnlikeRequest = sendTweetAction(URLDestroyFav);
@@ -186,31 +197,27 @@ export const sendUnretweetRequest = sendTweetAction(URLUnretweet);
 const fetchTweets = async (
   url: string,
   authHeaders: Credentials
-): Promise<Tweet[]> => twitterFetch(url, { authHeaders });
+): Promise<Tweet[]> =>
+  twitterFetch(url, {
+    authHeaders,
+    method: 'GET',
+    body: null,
+  });
 
 export const fetchUserInfo = async (authHeaders: Credentials): Promise<User> =>
-  await loopRetry(() =>
-    twitterFetch(
-      `https://api.twitter.com/1.1/account/verify_credentials.json`,
-      { authHeaders }
-    )
-  );
+  await loopRetry(() => twitterFetch(URLVerifyCredentials, { authHeaders }));
 export const updateQuery = async (
   auth: Credentials,
   username: string,
   count: number
 ) => await fetchTweets(makeUpdateQueryUrl(username, count), auth);
 
+//https//twitter.com/i/api/1.1/users/lookup.json?include_profile_interstitial_type=1&include_blocking=1&include_blocked_by=1&include_followed_by=1&include_want_retweets=1&include_mute_edge=1&include_can_dm=1&include_can_media_tag=1&skip_status=1&user_id=115074076%2C1325778441392717824%2C22525974
+
 export const tweetLookupQuery = curry(
   async (auth: Credentials, ids: string[]): Promise<Tweet[]> => {
     const fetch100Ids = (ids: string[]): Promise<Tweet[]> =>
-      fetchTweets(
-        `https://api.twitter.com/1.1/statuses/lookup.json?id=${R.join(
-          ',',
-          ids
-        )}`,
-        auth
-      );
+      fetchTweets(makeTweetLookupUrl(ids), auth);
 
     return pipe<
       string[],
@@ -351,3 +358,30 @@ export const searchAPI = curry(
     return res;
   }
 );
+
+export async function apiMetricsFetch(
+  auth: Credentials,
+  results: TweetResult[]
+) {
+  if (!isNil(auth)) {
+    const tweets = await pipe(
+      () => results,
+      map(path(['tweet', 'id'])),
+      tweetLookupQuery(auth),
+      andThen(map(apiSearchToTweet)),
+      andThen((apiRes) =>
+        map(
+          (r) =>
+            R.set(
+              R.lensProp('tweet'),
+              R.find(R.propEq('id', path(['tweet', 'id'], r)))(apiRes),
+              r
+            ),
+          results
+        )
+      ),
+      andThen(filter(pipe(prop('tweet'), isNil, not)))
+    )();
+    return tweets;
+  }
+}

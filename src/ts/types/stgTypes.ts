@@ -1,5 +1,6 @@
 import { User } from 'twitter-d';
 import { thTweet } from './tweetTypes';
+import { Credentials } from './types';
 
 export interface StorageInterface {
   options: Options;
@@ -16,6 +17,7 @@ export interface StorageInterface {
   query: string;
   nTweets: number;
   lastUpdated: string;
+  auth: Credentials;
 }
 
 export interface SearchResult {

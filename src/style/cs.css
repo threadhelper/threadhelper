@@ -95,7 +95,7 @@
   border-radius: 6px;
   /* Position the tooltip text - see examples below! */
   position: absolute;
-  z-index: 1;
+  z-index: 2;
   top: 110%;
   margin-left: -20px;
   /*  Use half of the width (120/2 = 60), to center the tooltip */
@@ -384,7 +384,7 @@ input[type='checkbox'] + label {
   -webkit-box-pack: justify;
       -ms-flex-pack: justify;
           justify-content: space-between;
-  height: 15px;
+  height: 30px;
   display: flex;
   -webkit-box-align: center;
       -ms-flex-align: center;
@@ -793,7 +793,9 @@ input[type='checkbox'] + label {
   background-color: rgba(38, 158, 228, 0.1);
 }
 
-.th-reply-container:hover svg {
+.th-reply-container:hover svg,
+.th-reply-container:hover p,
+.th-reply-container:hover span {
   color: #269ee4;
 }
 
@@ -801,7 +803,9 @@ input[type='checkbox'] + label {
   background-color: rgba(38, 158, 228, 0.1);
 }
 
-.th-share-container:hover svg {
+.th-share-container:hover svg,
+.th-share-container:hover p,
+.th-share-container:hover span {
   color: #269ee4;
 }
 
@@ -809,7 +813,9 @@ input[type='checkbox'] + label {
   background-color: rgba(33, 182, 103, 0.1);
 }
 
-.th-rt-container:hover svg {
+.th-rt-container:hover svg,
+.th-rt-container:hover p,
+.th-rt-container:hover span {
   color: #21b667;
 }
 
@@ -817,7 +823,9 @@ input[type='checkbox'] + label {
   background-color: rgba(200, 52, 103, 0.1);
 }
 
-.th-like-container:hover svg {
+.th-like-container:hover svg,
+.th-like-container:hover p,
+.th-like-container:hover span {
   color: #c83467;
 }
 

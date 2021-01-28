@@ -1,6 +1,5 @@
 import unescape from 'lodash/unescape';
 import * as R from 'ramda';
-// flattenModule(global,R)
 import {
   curry,
   defaultTo,
@@ -16,15 +15,30 @@ import {
   prop,
   __,
 } from 'ramda'; // Function
+import { thTweet } from '../types/tweetTypes';
 const re = /RT @([a-zA-Z0-9_]+).*/;
 const rt_tag = /RT @([a-zA-Z0-9_]+:)/;
 const default_pic_url =
   'https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png';
 // // bookmarkToTweet :: apiBookmark -> tweet
 // export const bookmarkToTweet = pipe(apiToTweet, assoc('is_bookmark', true))
+export const apiSearchToTweet = (entry) => {
+  let tweet: {} = apiToTweet(entry);
+  tweet = {
+    ...tweet,
+    favorite_count: entry.favorite_count,
+    retweet_count: entry.retweet_count,
+    reply_count: entry.reply_count,
+    quote_count: entry.quote_count,
+    favorited: entry.favorited,
+    conversation_id: entry.conversation_id_str,
+  };
+  return tweet;
+};
+
 export const bookmarkToTweet = (entry) => {
-  let tweet = apiToTweet(entry);
-  (tweet as any).is_bookmark = true;
+  let tweet: {} = apiToTweet(entry);
+  tweet = { ...tweet, is_bookmark: true };
   return tweet;
 };
 // FUNCTIONAL ATTEMPT
@@ -74,7 +88,6 @@ export const apiToTweet = (entry) => {
       profile_image: path(['user', 'profile_image_url_https'], quoted_status),
       // Replies/mentions.
       reply_to: prop('in_reply_to_screen_name', quoted_status),
-      // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
       mentions: defaultTo(
         [],
         path(['entities', 'user_mentions'], quoted_status).map(
@@ -85,7 +98,6 @@ export const apiToTweet = (entry) => {
         )
       ),
       // URLs.
-      // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
       urls: path(['entities', 'urls'], quoted_status).map(
         (x: { url: any; display_url: any; expanded_url: any }) => ({
           current_text: x.url,
@@ -98,7 +110,6 @@ export const apiToTweet = (entry) => {
       media: null,
     };
     if ((tweet as any).quote.has_media) {
-      // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
       (tweet as any).quote.media = path(
         ['entities', 'media'],
         quoted_status
@@ -110,7 +121,6 @@ export const apiToTweet = (entry) => {
   }
   return tweet;
 };
-// @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
 const findAuthor = (rt: string[], t) =>
   path(['entities', 'user_mentions'], t).find((t) => {
     return prop('screen_name', t).toLowerCase() === rt[1].toLowerCase();
@@ -163,7 +173,6 @@ const makeQuote = (quoted_status) => {
     profile_image: path(['user', 'profile_image_url_https'], quoted_status),
     // Replies/mentions.
     reply_to: prop('in_reply_to_screen_name', quoted_status),
-    // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
     mentions: defaultTo(
       [],
       path(['entities', 'user_mentions'], quoted_status).map(
@@ -174,7 +183,6 @@ const makeQuote = (quoted_status) => {
       )
     ),
     // URLs.
-    // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
     urls: path(['entities', 'urls'], quoted_status).map(
       (x: { url: any; display_url: any; expanded_url: any }) => ({
         current_text: x.url,
@@ -211,13 +219,11 @@ export const archToTweet = curry((user_info, t) => {
   // }
   let tweet = toTweetCommon(init_tweet, t);
   // Add full quote info.
-  // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
   if (
     prop('has_quote', tweet) &&
     prop('is_quote_up', tweet) &&
     prop('quoted_status', tweet)
   ) {
-    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
     const quoted_status = prop('quoted_status', tweet);
     tweet.quote = makeQuote(quoted_status);
     // if (prop('quote', tweet).has_media) {
@@ -230,7 +236,6 @@ export const archToTweet = curry((user_info, t) => {
 const propDefNull = (name: string, t) => R.defaultTo(null, prop(name, t)); // propDefNull :: x | null
 const getMentionsFromTweet = ifElse(
   // getMentionsFromTweet :: preTweet -> [mention] // preTweet :: apiTweet | archTweet
-  // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
   path(['entities', 'user_mentions']),
   pipe(
     path(['entities', 'user_mentions']),
@@ -244,7 +249,6 @@ const getMentionsFromTweet = ifElse(
 // !isNil(path(['entities','user_mentions'], t)) ? path(['entities', 'user_mentions'], t).map(x => ({username: x.screen_name, indices: x.indices})) : []
 const getUrlsFromTweet = ifElse(
   // getUrlsFromTweet :: preTweet -> [url]
-  // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
   path(['entities', 'urls']),
   pipe(
     path(['entities', 'urls']),
@@ -257,7 +261,6 @@ const getUrlsFromTweet = ifElse(
   (_) => []
 );
 // !isNil(path(['entities','urls'], t)) ? path(['entities', 'urls'], t).map(x => ({current_text: x.url, display: x.display_url, expanded: x.expanded_url})) : []
-// @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
 const getMediaTweet = pipe(
   path(['entities', 'media']),
   map((x) => ({ current_text: x.url, url: x.media_url_https }))
@@ -312,32 +315,7 @@ export const validateTweet = (t: object): boolean => {
   if (!valid) console.log('ERROR invalid tweet', valid);
   return !isNil(valid);
 };
-// const toTweetCommon = (tweet_, t) => {
-//   // Basic info, same for everyone
-//   tweet_.id = prop('id_str', t)
-//   // tweet_.id = t.id,
-//   tweet_.time = new Date(prop('created_at', t)).getTime()
-//   // tweet_.human_time = new Date(prop('created_at', t)).toLocaleString()
-//   // Replies/mentions.
-//   tweet_.reply_to = !isNil(prop('in_reply_to_screen_name', t)) ? prop('in_reply_to_screen_name', t) : null // null if not present
-//   tweet_.mentions = !isNil(path(['entities','user_mentions'], t)) ? path(['entities', 'user_mentions'], t).map(x => ({username: x.screen_name, indices: x.indices})) : []
-//   // URLs.
-//   tweet_.urls = !isNil(path(['entities','urls'], t)) ? prop('entities', t).urls.map(x => ({current_text: x.url, display: x.display_url, expanded: x.expanded_url})) : []
-//   // Media.
-//   tweet_.has_media = !isNil(path(['entities','media'], t))
-//   tweet_.media = null
-//   // Quote info.
-//   tweet_.has_quote = isNil(prop('is_quote_status', t)) ? false : prop('is_quote_status', t)
-//   tweet_.is_quote_up = !isNil(prop('quoted_status', t))
-//   tweet_.quote = null
-//   tweet_.is_bookmark = false
-//   // Add media info.
-//   if (tweet_.has_media) {
-//     tweet_.media = path(['entities', 'media'], t).map(x => ({current_text: x.url, url: x.media_url_https}))
-//   }
-//   return tweet_
-// }
-// export const idComp = curry((a,b)=>a.localeCompare(b,undefined,{numeric: true})) // WRONG
+
 export const idComp = curry((a, b) =>
   BigInt(a) == BigInt(b) ? 0 : BigInt(a) < BigInt(b) ? -1 : 1
 );

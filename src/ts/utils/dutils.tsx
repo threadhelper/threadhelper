@@ -78,6 +78,7 @@ export async function setData(key_vals: Object): Promise<any> {
         console.error(chrome.runtime.lastError.message);
         reject(chrome.runtime.lastError.message);
       } else {
+        console.log('setData', { ...key_vals, time: Date.now() });
         resolve(key_vals);
       }
     });
@@ -146,7 +147,7 @@ export const applyToOptionStg = curry(
 );
 export function msgBG(msg: Msg) {
   chrome.runtime.sendMessage(msg);
-  console.log('messaging BG', msg);
+  console.log('messaging BG', { ...msg, time: Date.now() });
 }
 export function msgCS(tabId: number, msg: Msg) {
   chrome.tabs.sendMessage(tabId, msg);

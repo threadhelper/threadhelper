@@ -5,7 +5,6 @@ import * as R from 'ramda';
 import {
   and,
   andThen,
-  any,
   assoc,
   curry,
   defaultTo,
@@ -33,7 +32,12 @@ import {
 } from 'ramda'; // Function
 import { User } from 'twitter-d';
 import { makeAuthObs } from './bg/auth';
-import { apiToTweet, archToTweet, bookmarkToTweet } from './bg/tweetImporter';
+import {
+  apiSearchToTweet,
+  apiToTweet,
+  archToTweet,
+  bookmarkToTweet,
+} from './bg/tweetImporter';
 import {
   fetchUserInfo,
   getBookmarks,
@@ -43,7 +47,7 @@ import {
   updateQuery,
 } from './bg/twitterScout';
 import { initWorker } from './bg/workerBoss';
-import * as window from './global';
+import window from './global';
 import {
   GaException,
   GaMsg,
@@ -58,11 +62,9 @@ import { IdleMode, SearchFilters } from './types/stgTypes';
 import { curProp } from './types/types';
 import {
   apiBookmarkToTweet,
-  clearTempArchive,
   combineOptions,
   compareAuths,
   getDateFormatted,
-  makeInit,
   makeReqDefaultTweetsMsg,
   makeReqSearchMsg,
   msgSomeWorker,
@@ -140,7 +142,8 @@ export async function main() {
 
   /* Extension observers */
   /* Messages */
-  const msg$ = makeGotMsgObs().map(prop('m')); // msg$ :: () -> msg // msg :: {type,...} // Listens to chrome runtime onMessage
+  const msg$ = makeGotMsgObs().map(prop('m'));
+  msg$.log('[DEBUG] msg$');
   const msgStream = makeMsgStream(msg$);
   const reqReset$ = msgStream('clear');
   const dataReset$ = reqReset$.thru<Observable<any, any>>(
@@ -222,7 +225,7 @@ export async function main() {
   /* Auth */
   const auth$ = makeAuthObs().skipDuplicates(compareAuths).toProperty();
   auth$.log('[DEBUG] auth$');
-
+  //
   /* User Info */
   const _userInfo$ = auth$
     // .map(makeInit)
@@ -309,7 +312,6 @@ export async function main() {
   const debugGetBookmarks$ = msgStreamSafe('get-bookmarks');
   const updateRecentTimeline$ = msgStreamSafe('update-tweets');
   const updateTimeline$ = msgStreamSafe('update-timeline');
-  const reqAddBookmark$ = msgStreamSafe('add-bookmark');
 
   /*  Tweet API  reqs to be made */
   const reqUpdatedTweets$ = Kefir.merge([
@@ -337,8 +339,8 @@ export async function main() {
     (auth, userInfo) => [auth, userInfo]
   )
     .sampledBy(reqTimeline$)
-    .map(inspect('fetchedTimeline$'))
     .thru(promiseStream(([auth, userInfo]) => timelineQuery(auth, userInfo)))
+    .map(inspect('fetchedTimeline$'))
     .thru(errorFilter('fetchedTimeline$'));
 
   const reqBookmarks$ = Kefir.merge([debugGetBookmarks$, initData$]); // asks for update on explicit req and on initData
@@ -347,10 +349,10 @@ export async function main() {
     .thru(promiseStream((auth) => getBookmarks(auth)))
     .thru(errorFilter('fetchedBookmarks$'));
 
-  const reqBookmarkId$ = reqAddBookmark$.map(pipe(prop('id'), (id) => [id]));
-  const fetchedBookmark$ = reqBookmarkId$
+  const reqAddBookmark$ = msgStreamSafe('add-bookmark');
+  const fetchedBookmark$ = reqAddBookmark$
+    .map(pipe(prop('id'), (id) => [id]))
     .combine(auth$, (ids, auth) => [ids, auth])
-    .map(inspect('fetchedBookmark$'))
     .thru(promiseStream(([ids, auth]) => tweetLookupQuery(auth, ids)))
     .thru(errorFilter('fetchedBookmark$'));
 
@@ -386,10 +388,17 @@ export async function main() {
       )
     )
     .thru(errorFilter('archiveLoadedTweets$'));
-  const thUpdate$ = fetchedUpdate$.map(saferTweetMap(apiToTweet));
   //
   // const curAccount = pipe(_ => userInfo$, curVal, prop('id_str'));
-  const assocAccount = (x) => pipe(assoc('account', getAccId(1)))(x);
+  const assocAccount = (x) => {
+    const _x = assoc('account', getAccId(1), x);
+    return _x;
+  };
+  const thUpdate$ = fetchedUpdate$
+    .map(saferTweetMap(apiToTweet))
+    .filter(pipe(isEmpty, not))
+    .map(map(assocAccount));
+
   const thTweets$ = Kefir.merge([
     thUpdate$, //fetchedUpdate$.map(saferTweetMap(apiToTweet)),
     fetchedTimeline$.map(saferTweetMap(apiToTweet)),
@@ -404,6 +413,7 @@ export async function main() {
   ])
     .filter(pipe(isEmpty, not))
     .map(map(assocAccount));
+  // thTweets$.log('[DEBUG] thTweets$');
 
   /*  Local Tweet Processing */
   const reqDeleteTweet$ = msgStreamSafe('delete-tweet'); // reqDeleteTweet$ :: msg
@@ -442,6 +452,7 @@ export async function main() {
       promiseStream((_) => msgSomeWorker(pWorker, { type: 'howManyTweetsDb' }))
     ),
   ]).toProperty();
+
   const lastUpdated$ = anyTweetUpdate$
     .map((_) => getDateFormatted())
     .toProperty(getDateFormatted); // keeps track of when the last update to the tweet db was
@@ -488,18 +499,19 @@ export async function main() {
   const isWordEnd = pipe(last, R.match(/[^a-zA-Z0-9]/g), isEmpty, not); // true if it's not in the middle of a word
   const searchQuery$ = msgStream('search')
     .map(prop('query'))
-    .toProperty() as curProp<string>; // const searchQuery$ = msgStream("search").map(prop('query')).toProperty(() => '');
+    .toProperty(() => '') as curProp<string>;
   const emptyQuery$ = searchQuery$.map(trim).filter(isEmpty); //TODO: can't trim in cs bc I need the final space
   const wordSearchQuery$ = searchQuery$
     .filter(isWordEnd)
     .map(R.trim)
     .skipDuplicates();
-
+  //
   /*  Search and default reqs */
   const searchWorkerMsg$ = Kefir.combine(
     [searchMode$, searchFilters$, accsShown$, searchQuery$],
     makeReqSearchMsg
   ) as Observable<ReqSearchMsg, Error>;
+  searchWorkerMsg$.log('searchWorkerMsg$');
   const reqFullTextSearch$ = Kefir.merge([
     searchWorkerMsg$.filter(pipe(prop('query'), isEmpty, not)),
     searchWorkerMsg$
@@ -509,33 +521,40 @@ export async function main() {
     .thru(waitFor(notReady$))
     .bufferWhileBy(searchMode$.map((mode) => !equals('fulltext', mode)))
     .map(last) as Observable<string, Error>;
+  reqFullTextSearch$.log('reqFullTextSearch$');
+  const fullTextSearchRes$ = reqFullTextSearch$ //searchWorkerMsg$
+    // .sampledBy(reqFullTextSearch$)
+    .map(inspect('fullTextSearchRes 0 '))
+    .thru<Observable<TweetResWorkerMsg, any>>(
+      promiseStream((msg) => pWorker.postMessage(msg))
+    )
+    .map(inspect('fullTextSearchRes 1 '))
+    .map(prop('res')); // searchResults$ :: [tweets]
+  // fullTextSearchRes$.log(`fullTextSearchRes$ 2`);
+
   const reqSemanticSearch$ = wordSearchQuery$
     .thru(waitFor(notReady$))
     .bufferWhileBy(searchMode$.map((mode) => !equals('semantic', mode)))
     .map(last) as Observable<string, Error>;
-  const fullTextSearchRes$ = searchWorkerMsg$
-    .sampledBy(reqFullTextSearch$)
-    .thru<Observable<TweetResWorkerMsg, any>>(
-      promiseStream((msg) => pWorker.postMessage(msg))
-    )
-    .map(prop('res')); // searchResults$ :: [tweets]
   const semanticSearchRes$ = searchWorkerMsg$
     .sampledBy(reqSemanticSearch$)
     .thru<Observable<TweetResWorkerMsg, any>>(
       promiseStream((msg) => pWorker.postMessage(msg))
     )
     .map(prop('res')); // searchResults$ :: [tweets]
-  // const searchResults$ = searchWorkerMsg$.sampledBy(reqSearch$).thru(promiseStream(msg => pWorker.postMessage(msg))).map(prop('res')); // searchResults$ :: [tweets]
   const emptyResults$ = emptyQuery$.map((_): TweetResult[] => []);
   const searchResults$ = Kefir.merge([
     fullTextSearchRes$,
     semanticSearchRes$,
     emptyResults$,
   ]);
+  // searchResults$.log('searchResults$');
   const filteredSearchResults$ = Kefir.combine(
     [searchFilters$, accsShown$, searchResults$],
     filterResults
   );
+  // filteredSearchResults$.log('filteredSearchResults$');
+  subObs({ filteredSearchResults$ }, setStg('search_results'));
 
   /* Defaults */
   const defaultsWorkerMsg$ = Kefir.combine<ReqDefaultTweetsMsg>(
@@ -548,7 +567,7 @@ export async function main() {
   ])
     .thru(waitFor(notReady$))
     .bufferWhileBy(notReady$)
-    .map(last); //.delay(100); //.last()
+    .map(last);
   const gotDefaultTweets$ = reqDefaultTweets$ // Search worker returns
     .thru<Observable<TweetResWorkerMsg, any>>(
       promiseStream((msg) => pWorker.postMessage(msg))
@@ -562,14 +581,14 @@ export async function main() {
   const filteredDefaultTweets$ = Kefir.combine<TweetResult[]>(
     [searchFilters$, accsShown$, defaultTweets$],
     filterResults
-  ); // const filteredDefaultTweets$ = Kefir.merge([gotDefaultTweets$, gotDefaultTweets$.sampledBy(filters$)]).map(filter(x => validateSidebarTweet(getFilters(), getAccsShown())));
-
+  );
+  // filteredDefaultTweets$.log('filteredDefaultTweets$');
   /* api search */
   const apiQuery$ = msgStream('apiQuery')
     .map(prop('query'))
     .toProperty() as curProp<string>;
   // const apiQuery$ = makeStgItemObs('apiQuery') // const storageChange$ = makeStorageChangeObs();
-
+  //
   const apiReqRes$ = apiQuery$
     .filter((q) => !isEmpty(q))
     .map(inspect('apiReqRes$ 0'))
@@ -581,7 +600,7 @@ export async function main() {
     apiQuery$.filter(isEmpty).map((_) => []),
     apiReqRes$,
   ]);
-  const thApiRes$ = apiRes$.map(saferTweetMap(apiToTweet)).map(
+  const thApiRes$ = apiRes$.map(saferTweetMap(apiSearchToTweet)).map(
     map((tweet) => {
       return { tweet };
     })
@@ -608,6 +627,7 @@ export async function main() {
   subObs({ askWorkerReady$ }, (_) =>
     msgSomeWorker(pWorker, { type: 'isWorkerReady' })
   );
+  subObs({ auth$ }, setStg('auth'));
   subObs({ lastUpdated$ }, setStg('lastUpdated'));
   subObs({ nTweets$ }, setStg('nTweets'));
   subObs({ syncLight$ }, setStg('sync'));
@@ -617,7 +637,7 @@ export async function main() {
   );
 
   /* Worker actions */
-
+  //
   /* Import tweets */
   subObs({ fetchedBookmarks$ }, nullFn); // happens on requests to fetch all bookmarks
   subObs(
@@ -634,9 +654,8 @@ export async function main() {
   /* Search */
   subObs({ searchFilters$ }, nullFn);
   subObs({ reqDefaultTweets$ }, nullFn);
-  subObs({ filteredSearchResults$ }, pipe(setStg('search_results')));
-  subObs({ filteredDefaultTweets$ }, pipe(setStg('latest_tweets')));
-  subObs({ thApiRes$ }, pipe(setStg('api_results')));
+  subObs({ filteredDefaultTweets$ }, setStg('latest_tweets'));
+  subObs({ thApiRes$ }, setStg('api_results'));
   /* bg search */
   /* DB */
   subObs({ reqReset$ }, nullFn);
@@ -644,59 +663,52 @@ export async function main() {
   /* Debug */
   subObs({ logAuth$ }, () => console.log(curVal(auth$)));
   subObs({ getUserInfo$ }, () => console.log(curVal(userInfo$)));
-  //
+
   ready$.log('[INFO] READY');
   csStart$.log('[INFO] csStart');
-  msg$.log('[DEBUG] msg$');
-  workerMsg$.log('[DEBUG] workerMsg$');
-  workerConsole$.log('[INFO] workerConsole$');
+  workerConsole$.onValue(({ type, log, baggage }) =>
+    console.log('[INFO] workerConsole$: ' + log, JSON.parse(baggage))
+  );
   userInfo$.log('[DEBUG] userInfo$');
-  userInfo$.log('[DEBUG] uniqueUserInfo$');
   notReady$.log('[DEBUG] notReady$');
   initData$.log('[DEBUG] initData$');
-  // idleMode$.log('[DEBUG] idleMode$');
-  // reqUpdatedTweets$.log('[DEBUG] reqUpdatedTweets$');
-  // reqTimeline$.log('[DEBUG] reqTimeline$');
-  // reqBookmarks$.log('[DEBUG] reqBookmarks$');
-  // anyAPIReq$.log('[DEBUG] anyAPIReq$');
-  // fetchedAnyAPIReq$.log('[DEBUG] fetchedAnyAPIReq$');
-  // reqArchiveLoad$.log('[DEBUG] reqArchiveLoad$');
-  // archiveLoadedTweets$.log('[DEBUG] archiveLoadedTweets$');
-  // thTweets$.log('[DEBUG] thTweets$');
-  // idsToRemove$.log('[DEBUG] idsToRemove$');
-  // addedTweets$.log('[DEBUG] addedTweets$');
-  // removedTweet$.log('[DEBUG] removedTweet$');
-  // updatedTimeline$.log('[DEBUG] updatedTimeline$');
-  anyTweetUpdate$.log('[DEBUG] anyTweetUpdate$');
-  // updateSyncDisplay$.log('[DEBUG] updateSyncDisplay$');
-  // notArchLoading$.log('[DEBUG] notArchLoading$');
-  // notFetchingAPI$.log('[DEBUG] notFetchingAPI$');
-  // notMidWorkerReq$.log('[DEBUG] notMidWorkerReq$');
-  syncLight$.log('[DEBUG] syncLight$');
   reqDefaultTweets$.log('[DEBUG] reqDefaultTweets$');
+
+  // idleMode$.log('[DEBUG] idleMode$');
+  reqUpdatedTweets$.log('[DEBUG] reqUpdatedTweets$');
+  reqTimeline$.log('[DEBUG] reqTimeline$');
+  reqBookmarks$.log('[DEBUG] reqBookmarks$');
+  anyAPIReq$.log('[DEBUG] anyAPIReq$');
+  fetchedAnyAPIReq$.log('[DEBUG] fetchedAnyAPIReq$');
+  reqArchiveLoad$.log('[DEBUG] reqArchiveLoad$');
+  archiveLoadedTweets$.log('[DEBUG] archiveLoadedTweets$');
+  thTweets$.log('[DEBUG] thTweets$');
+  idsToRemove$.log('[DEBUG] idsToRemove$');
+  addedTweets$.log('[DEBUG] addedTweets$');
+  removedTweet$.log('[DEBUG] removedTweet$');
+  updatedTimeline$.log('[DEBUG] updatedTimeline$');
+  anyTweetUpdate$.log('[DEBUG] anyTweetUpdate$');
+  notArchLoading$.log('[DEBUG] notArchLoading$');
+  notFetchingAPI$.log('[DEBUG] notFetchingAPI$');
+  notMidWorkerReq$.log('[DEBUG] notMidWorkerReq$');
+  syncLight$.log('[DEBUG] syncLight$');
   // csGaEvent$.log('[DEBUG] csGaEvent$');
-  incomingAccounts$.log('[DEBUG] incomingAccounts$');
-  // accounts$.log('[DEBUG] accounts$');
-  // accsShown$.log('[DEBUG] accsShown$');
-  // searchResults$.log('[DEBUG] searchResults$')
-  // wMsgEvent$.log('wMsgEvent$')
-  // workerMsg$.log('workerMsg$')
-  workerReady$.log('[DEBUG] workerReady$');
-  askWorkerReady$.log('askWorkerReady$');
-  // searchQuery$.log('[DEBUG] searchQuery$')
-  // emptyQuery$.log('emptyQuery$')
-  // wordSearchQuery$.log('[DEBUG] wordSearchQuery$')
-  // reqFullTextSearch$.log('reqFullTextSearch$')
-  // reqSemanticSearch$.log('reqSemanticSearch$')
-  // defaultsWorkerMsg$.log('[DEBUG] defaultsWorkerMsg$')
-  // gotDefaultTweets$.log('[DEBUG] gotDefaultTweets$')
-  // filteredDefaultTweets$.log('[DEBUG] filteredDefaultTweets$');
-  // searchWorkerMsg$.log('[DEBUG] searchWorkerMsg$')
-  // fullTextSearchRes$.log('[DEBUG] fullTextSearchRes$')
-  // semanticSearchRes$.log('[DEBUG] semanticSearch$')
-  apiQuery$.log('DEBUG] apiQuery$');
-  // apiRes$.log('DEBUG] apiRes$');
-  // thApiRes$.log('DEBUG] thApiRes$');
+  //   incomingAccounts$.log('[DEBUG] incomingAccounts$');
+  //   accounts$.log('[DEBUG] accounts$');
+  //   accsShown$.log('[DEBUG] accsShown$');
+  //   searchResults$.log('[DEBUG] searchResults$');
+  //   workerReady$.log('[DEBUG] workerReady$');
+  //   searchQuery$.log('[DEBUG] searchQuery$');
+  //   emptyQuery$.log('emptyQuery$');
+  //   reqFullTextSearch$.log('reqFullTextSearch$');
+  //   fullTextSearchRes$.log('[DEBUG] fullTextSearchRes$');
+  //   reqSemanticSearch$.log('reqSemanticSearch$');
+  //   semanticSearchRes$.log('[DEBUG] semanticSearch$');
+  //   defaultsWorkerMsg$.log('[DEBUG] defaultsWorkerMsg$');
+  //   gotDefaultTweets$.log('[DEBUG] gotDefaultTweets$');
+  //   filteredDefaultTweets$.log('[DEBUG] filteredDefaultTweets$');
+  //   searchWorkerMsg$.log('[DEBUG] searchWorkerMsg$');
+  //   apiRes$.log('DEBUG] apiRes$');
 }
 
 const onUpdated = (previousVersion) => {

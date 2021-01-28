@@ -59,6 +59,7 @@ import {
   makeStorageChangeObs,
   msgBG,
   resetStorageField,
+  setStg,
 } from './utils/dutils';
 import { currentValue, inspect, toggleDebug } from './utils/putils';
 import { getMode, updateTheme } from './utils/wutils';
@@ -92,13 +93,12 @@ const getBgColor = (x: HTMLElement) => x.style.backgroundColor;
 const minIdleTime = 3000;
 // Effects
 const handlePosting = () => msgBG({ type: 'update-tweets' }); // handle twitter posting actions like tweets, rts and deletes
-const reqSearch = R.pipe<any, string, void>(defaultTo(''), (q) =>
-  msgBG({ type: 'search', query: q })
-);
-// const reqSearch = R.pipe<any, string, void>(
-//     defaultTo(''),
-//     query => {
-//         setStg('query', query)});
+// const reqSearch = R.pipe<any, string, void>(defaultTo(''), (q) =>
+//   msgBG({ type: 'search', query: q })
+// );
+const reqSearch = R.pipe<any, string, void>(defaultTo(''), (query) => {
+  setStg('query', query);
+});
 // Stream clean up
 const subscriptions: Subscription[] = [];
 const rememberSub = (sub: Subscription) => {
@@ -184,26 +184,12 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
   const composeContent$ = composeFocus$.flatMapLatest((e: Event) =>
     makeComposeObs(e.target as HTMLElement)
   );
-  composeContent$.log('composeContent$');
+  // composeContent$.log('composeContent$');
   const composeQuery$ = Kefir.merge([
     urlChange$.map((_) => ''),
     composeContent$,
   ]).toProperty(() => '');
-  const stoppedWriting$ = composeQuery$
-    .skipDuplicates()
-    .filter((x) => !isEmpty(x))
-    .debounce(minIdleTime); // to detect when writing has stopped for a bit
-  const robo$ = Kefir.merge([
-    makeRoboStream(),
-    stoppedWriting$,
-  ]).throttle(minIdleTime, { trailing: false });
-  // const thStreams = {
-  //     actions: actions$,
-  //     robo: robo$,
-  //     composeQuery: composeQuery$,
-  //     replyTo: replyTo$,
-  //     syncDisplay: syncDisplay$,
-  // };
+
   // Sidebar control
   const updateFloat = (value: any) =>
     value ? activateFloatSidebar() : deactivateSidebar(thBarComp); //function
@@ -221,14 +207,15 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
     [homeActive$, floatActive$.map(not)],
     and
   );
+
   // Effects from streams
   //  Actions
   targetedTweetActions$.log('targetedTweetActions');
   subObs(lastClickedId$, (_) => {});
-  subObs(composeQuery$, reqSearch),
-    subObs(actions$.delay(1000), (_) => {
-      handlePosting();
-    });
+  subObs(composeQuery$, reqSearch);
+  subObs(actions$.delay(800), (_) => {
+    handlePosting();
+  });
   subObs(targetedTweetActions$, pipe(makeIdMsg, msgBG));
   subObs(theme$, updateTheme);
   subObs(floatActive$, updateFloat);

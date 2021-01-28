@@ -1,6 +1,7 @@
 import { h } from 'preact';
 import { useState } from 'preact/hooks';
 import { curry, pipe, prop } from 'ramda'; // Function
+import ReactTooltip from 'react-tooltip';
 import BookmarkIcon from '../../images/bookmark.svg';
 import LightningIcon from '../../images/lightning.svg';
 import ReplyIcon from '../../images/reply.svg';
@@ -29,12 +30,22 @@ export function FilterButton(props: {
         onChange={(event) => handleInputChange(props.setFilter, event)}
       ></input>
       <label for={props.name}>
-        <Icon
-          class="box-content filter-icon hoverHighlight"
-          onClick={(_) => _}
-        />{' '}
+        <a data-tip="React-tooltip" data-for={props.name}>
+          <Icon
+            class="box-content filter-icon hoverHighlight"
+            onClick={(_) => _}
+          />{' '}
+        </a>
       </label>
-      {/* <label for={props.name} >< RetweetIcon class='filter-icon' onClick={_ => _} /> </label> */}
+      <ReactTooltip
+        id={props.name}
+        delayShow={300}
+        place="bottom"
+        type="dark"
+        effect="solid"
+      >
+        <span style="color: var(--main-txt-color);">{`Filter ${props.name}`}</span>
+      </ReactTooltip>
     </span>
   );
 }

@@ -25,7 +25,7 @@ module.exports = function (configDirs) {
     ...devConfig.plugins,
     // new CleanWebpackPlugin(),
     new ExtensionReloader({
-      manifest: configDirs.PROJ_DIR + '/manifest.json',
+      // manifest: configDirs.PROJ_DIR + '/manifest.json',
       entries: {
         // The entries used for the content/background scripts or extension pages
         'content-script': 'content-script',
@@ -33,8 +33,13 @@ module.exports = function (configDirs) {
         worker: 'worker',
         popup: 'popup',
       },
-      port: 3000,
+      port: 9080,
     }),
+  ];
+
+  devConfig.module.rules[0].use[0].options.plugins = [
+    ...devConfig.module.rules[0].use[0].options.plugins,
+    require.resolve('@babel/plugin-transform-react-jsx-source'),
   ];
   console.log('\x1b[36m%s\x1b[0m', 'Building for development...');
   // return smp.wrap(devConfig);
