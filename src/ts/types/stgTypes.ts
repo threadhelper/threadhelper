@@ -12,7 +12,6 @@ export interface StorageInterface {
   search_results: SearchResult[];
   api_results: SearchResult[];
   temp_archive: object;
-  syncDisplay: string;
   sync: boolean;
   query: string;
   nTweets: number;

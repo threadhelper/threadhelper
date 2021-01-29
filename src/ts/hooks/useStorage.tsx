@@ -6,7 +6,7 @@ import {
   makeStgItemObs,
   makeStgPathObs,
   setStg,
-  updateStgPath,
+  setStgPath,
 } from '../utils/dutils';
 import { nullFn } from '../utils/putils';
 import { _useStream } from './useStream';
@@ -41,7 +41,7 @@ export function useStgPath(_path, default_val) {
   const [storageItem, setStorageItem] = _useStream(useStgObs);
 
   const setStgItem = pipe(
-    updateStgPath(_path),
+    setStgPath(_path),
     andThen(pipe(path(_path), setStorageItem))
   );
 

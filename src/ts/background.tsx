@@ -81,7 +81,7 @@ import {
   msgCS,
   removeData,
   setStg,
-  updateStgPath,
+  setStgPath,
 } from './utils/dutils';
 import { Event, Exception, initGA, PageView } from './utils/ga';
 import { update_size } from './utils/params';
@@ -644,7 +644,7 @@ export async function main() {
     { fetchedTimeline$ },
     pipe(
       when(checkGotTimeline, (_) =>
-        updateStgPath(['hasTimeline', getAccId()], true)
+        setStgPath(['hasTimeline', getAccId()], true)
       )
     )
   );
@@ -713,6 +713,10 @@ export async function main() {
 
 const onUpdated = (previousVersion) => {
   console.log(`[INFO] updated from version ${previousVersion}`);
+  // add new stg fields from defaults
+
+  // delete old stg fields that are not in default
+  // remake index
 };
 
 const onFirstInstalled = (resetData, previousVersion, id) => {
