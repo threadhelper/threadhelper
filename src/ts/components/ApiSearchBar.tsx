@@ -52,10 +52,10 @@ export function ApiSearchBar() {
   return (
     <div class="searchBar">
       <span>
-        <SearchIcon />
+        <SearchIcon class="stroke-0 stroke-current fill-current inline w-4 h-4" />
         <input
           ref={inputObj}
-          class="w-20"
+          class="w-20 "
           value={value}
           onInput={(e) => setValue(defaultTo('', path(['target', 'value'], e)))}
           onKeyUp={(e) => (e.key === 'Enter' ? submitApiSearch(value) : null)}

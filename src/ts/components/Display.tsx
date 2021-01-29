@@ -1,5 +1,11 @@
 import { Fragment, h } from 'preact';
-import { useContext, useEffect, useRef, useState } from 'preact/hooks';
+import {
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'preact/hooks';
 // flattenModule(global,R)
 import {
   andThen,
@@ -140,7 +146,7 @@ export function Display(props: any) {
   // useApiMetrics(auth, stgSearchResults, setSearchResults);
   //
   /* hooks for apiResults */
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (notFirstApi.current > 1) {
       if (isNil(stgApiResults)) {
       } else {
@@ -159,6 +165,7 @@ export function Display(props: any) {
   return (
     <div class="searchWidget" ref={myRef}>
       {makeFeedDisplay(feedDisplayMode)}
+      {/* <SearchResults results={prepTweets(stgSearchResults)} /> */}
     </div>
   );
 }
@@ -212,7 +219,7 @@ function IdleDisplay({ results }: { results: TweetResult[] }) {
           : ''
       }
       results={res}
-      emptyMsg={'No search results. Yet!'}
+      emptyMsg={'No tweets yet!'}
     />
   );
 }
@@ -220,6 +227,7 @@ function IdleDisplay({ results }: { results: TweetResult[] }) {
 function SearchResults({ results }: { results: TweetResult[] }) {
   const auth = useContext(AuthContext);
   const [res, setRes] = useState(results);
+  const [query, setQuery] = useStorage('query', '');
   const [searchMode, setSearchMode] = useOption('searchMode');
   useApiMetrics(auth, res, setRes);
 
@@ -238,7 +246,7 @@ function SearchResults({ results }: { results: TweetResult[] }) {
           : ''
       }
       results={res}
-      emptyMsg={'No search results. Yet!'}
+      emptyMsg={`No search results for ${query}. Yet!`}
     />
   );
 }

@@ -5,7 +5,7 @@ import { useStorage } from '../hooks/useStorage';
 import SearchIcon from '../../images/search.svg';
 import Kefir from 'kefir';
 import { msgBG } from '../utils/dutils';
-import { FeedDisplayMode } from './ThreadHelper';
+import { FeedDisplayMode } from '../components/ThreadHelper';
 import { DisplayMode } from '../types/interfaceTypes';
 
 const trimNewlines = (str) =>
@@ -25,18 +25,17 @@ export function SearchBar({ show }) {
     const q = defaultTo('', value);
     console.log('query change', { q });
 
-    if (isEmpty(trimNewlines(q))) {
-      dispatchFeedDisplayMode({
-        action: 'emptySearch',
-        tweets: [],
-      });
-    } else {
-      dispatchFeedDisplayMode({
-        action: 'submitSearch',
-        tweets: [],
-      });
-      reqSearch(q);
-    }
+    // if (isEmpty(trimNewlines(q))) {
+    //   dispatchFeedDisplayMode({
+    //     action: 'emptySearch',
+    //     tweets: [],
+    //   });
+    // } else {
+    //   dispatchFeedDisplayMode({
+    //     action: 'submitSearch',
+    //     tweets: [],
+    //   });
+    reqSearch(q);
   };
 
   useEffect(() => {
@@ -49,7 +48,7 @@ export function SearchBar({ show }) {
       {show ? (
         <div class="searchBar">
           <span>
-            <SearchIcon class="stroke-0 stroke-current fill-current  inline w-4 h-4" />
+            <SearchIcon class="inline h-4 w-4" />
             <input
               ref={inputObj}
               class="inline w-20"

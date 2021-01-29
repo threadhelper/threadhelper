@@ -36,14 +36,18 @@ import { currentValue, inspect } from './putils';
 
 let defaultStorage: () => StorageInterface = _defaultStorage;
 
+/* Development experience */
+
 const DEVING = process.env.DEV_MODE == 'serve';
 if (!DEVING) {
+  console.log('not DEVING');
   // defaultStorage = _defaultStorage
 } else {
   global.chrome = chromeMock;
   defaultStorage = devStorage;
   const makeStub = (x) => {
     chrome.storage.local.get.withArgs([x[0]]).yields(x[1]);
+    chrome.storage.local.get.withArgs(x[0]).yields(x[1]);
   };
   Object.entries(devStorage()).forEach(makeStub);
 
@@ -55,11 +59,13 @@ if (!DEVING) {
   setData(defaultStorage());
 }
 
+/* Storage API */
+
 //returns a promise that gets a value from chrome local storage
-export async function getData(key: string): Promise<any> {
+export async function getData(key: string | null): Promise<any> {
   return new Promise(function (resolve, reject) {
     // chrome.storage.local.get([key], function (items: {[x: string]: unknown;}) {
-    chrome.storage.local.get([key], function (result) {
+    chrome.storage.local.get(key, function (result) {
       if (chrome.runtime.lastError) {
         console.error(chrome.runtime.lastError.message);
         reject(chrome.runtime.lastError.message);
@@ -70,7 +76,6 @@ export async function getData(key: string): Promise<any> {
     });
   });
 }
-//returns a promise that sets an object with key value pairs into chrome local storage
 export async function setData(key_vals: Object): Promise<any> {
   return new Promise(function (resolve, reject) {
     chrome.storage.local.set(key_vals, () => {
@@ -84,45 +89,35 @@ export async function setData(key_vals: Object): Promise<any> {
     });
   });
 }
-// Delete data from storage
-// takes an array of keys
-export async function removeData(keys: string[]) {
+export async function removeData(keys: string[]): Promise<any> {
   return new Promise(function (resolve, reject) {
     chrome.storage.local.remove(keys, function () {
-      //console.log("removed", keys)
       if (chrome.runtime.lastError) {
         console.error(chrome.runtime.lastError.message);
         reject(chrome.runtime.lastError.message);
       } else {
-        // @ts-expect-error ts-migrate(2794) FIXME: Expected 1 arguments, but got 0. Did you forget to... Remove this comment to see the full error message
-        resolve();
+        resolve(true);
       }
     });
   });
 }
+
+export const updateStorage = () => {
+  setData(defaultStorage());
+};
+
 export const resetStorage = () => setData(defaultStorage());
 export const resetStorageField = (key) =>
   setData({ [key]: defaultStorage()[key] });
-export const setStg = curry((key, val) => setData({ [key]: val }));
+
 export const getStg = (key: string) =>
   getData(key).then(pipe(defaultTo(defaultStorage()[key]), addNewDefault(key)));
-export const updateStg = curry((key, val) => setData({ [key]: val }));
-// TODO: need to reliably return the default if path doesn't exist, see addNewDefaultOptions
+export const setStg = curry((key, val) => setData({ [key]: val }));
+
 export const getStgPath = curry((_path: string) =>
   getStg(head(_path)).then(path(tail(_path)))
 );
-const addNewDefault = curry((key: string | number, oldItem) =>
-  pipe(when(is(Object), mergeDeepLeft(__, defaultStorage()[key])))(oldItem)
-);
-const addNewDefaultOptions = (oldOptions) =>
-  mergeDeepLeft(oldOptions, defaultOptions());
-export const getOptions = async (): Promise<Options> =>
-  getData('options').then(
-    pipe(defaultTo(defaultOptions()), addNewDefaultOptions)
-  );
-export const getOption = async (name: string): Promise<Option> =>
-  getOptions().then(prop(name));
-export const updateStgPath = curry(async (_path: string, val) =>
+export const setStgPath = curry(async (_path: string, val) =>
   getStg(head(_path)).then(
     pipe(
       set(lensPath(tail(_path)), val),
@@ -131,20 +126,27 @@ export const updateStgPath = curry(async (_path: string, val) =>
     )
   )
 );
-// TODO: this after the abovo TODO
-export const updateOptionStg = (name: string) =>
-  updateStgPath(['options', name, 'value']);
-// export const updateOptionStg = curry(async (name, val)=> getOptions().then(pipe(
-//       set(lensPath([name,'value']),val),
-//       tap(setStg('options')),
-//     )))
+
+/* Options API */
+
+export const getOptions = async (): Promise<Options> =>
+  getData('options').then(
+    pipe(defaultTo(defaultOptions()), addNewDefaultOptions)
+  );
+
+export const getOption = async (name: string): Promise<Option> =>
+  getOptions().then(prop(name));
+
+export const setOption = (name: string) =>
+  setStgPath(['options', name, 'value']);
 export const applyToOptionStg = curry(
   async (name: string | number, fn: (x: unknown) => any) => {
-    return getOptions().then(
-      pipe(path([name, 'value']), fn, updateOptionStg(name))
-    );
+    return getOptions().then(pipe(path([name, 'value']), fn, setOption(name)));
   }
 );
+
+/* msg API */
+
 export function msgBG(msg: Msg) {
   chrome.runtime.sendMessage(msg);
   console.log('messaging BG', { ...msg, time: Date.now() });
@@ -152,6 +154,16 @@ export function msgBG(msg: Msg) {
 export function msgCS(tabId: number, msg: Msg) {
   chrome.tabs.sendMessage(tabId, msg);
 }
+
+/* Helper functions */
+
+const addNewDefault = curry((key: string | number, oldItem) =>
+  pipe(when(is(Object), mergeDeepLeft(__, defaultStorage()[key])))(oldItem)
+);
+
+const addNewDefaultOptions = (oldOptions) =>
+  mergeDeepLeft(oldOptions, defaultOptions());
+
 // makes an onStorageChange function given an act function that's usually a switch over item keys that have changed
 export function makeOnStorageChanged(act: (stgCh: StorageChange) => any) {
   return (changes: { [x: string]: { newValue: {} } }, area: string) => {
@@ -167,7 +179,20 @@ export function makeOnStorageChanged(act: (stgCh: StorageChange) => any) {
     }
   };
 }
-// const makeEventObs = curry((event: {addListener: (arg0: any) => void; removeListener: (arg0: any) => void;}, makeEmit, initVal) => {
+
+const isStgItemSame = (x: StorageChange) =>
+  (isNil(x.oldVal) && isNil(x.newVal)) || x.oldVal === x.newVal;
+
+const isOptionSame = curry(
+  (name: string, x: StorageChange): boolean =>
+    isStgItemSame(x) ||
+    (!isNil(x.oldVal) &&
+      !isNil(x.newVal) &&
+      path(['oldVal', name, 'value'], x) === path(['newVal', name, 'value'], x))
+);
+
+/* Observers */
+
 const makeEventObs = curry(
   (
     event: chrome.events.Event<any>,
@@ -194,22 +219,12 @@ export const makeStorageChangeObs = (): Observable<StorageChange, Error> => {
     newVal: null,
   });
 };
-// shallow
-const isStgItemSame = (x: StorageChange) =>
-  (isNil(x.oldVal) && isNil(x.newVal)) || x.oldVal === x.newVal;
 export const makeStgPathObs = (_path: string[]): Observable<any, Error> =>
   makeStorageChangeObs()
     .filter(propEq('itemName', _path[0]))
     .map(path(['newVal', ...slice(1, Infinity, _path)]))
     .toProperty();
-// export const makeStgItemObs = itemName => {console.log('making stg item obs for ', itemName); return makeStorageObs().filter(propEq('itemName',itemName)).filter(pipe(isStgItemSame, not)).map(prop('newVal')).skipDuplicates()}
 export const makeStgItemObs = (itemName) => makeStgPathObs([itemName]);
-// export const makeStgItemObs = itemName => {
-//   console.log('making stg item obs for ', itemName);
-//   return makeStorageObs()
-//   .filter(propEq('itemName',itemName))
-//   .map(prop('newVal')).toProperty()}
-// export const makeStorageStream = (type) => makeStoragegObs().filter(propEq('type',type))
 export const makeGotMsgObs = (): Observable<MsgWrapper, Error> => {
   const makeEmitMsg = (emitter: Emitter<MsgWrapper, Error>) => (
     message,
@@ -222,20 +237,7 @@ export const makeGotMsgObs = (): Observable<MsgWrapper, Error> => {
 };
 export const makeMsgStream = (msgType): Observable<Msg, Error> =>
   makeGotMsgObs().map(prop('m')).filter(propEq('type', msgType));
-// // optionsChange$ :: change -> change
-// export const makeOptionsChangeObs = async (storageChange$) => {
-//   const cachedOptions = {oldVal:null, newVal:await getOptions()}
-//   return storageChange$.filter(x=>x.itemName=='options').toProperty(()=>cachedOptions)
-// }
-const isOptionSame = curry(
-  (name: string, x: StorageChange): boolean =>
-    isStgItemSame(x) ||
-    (!isNil(x.oldVal) &&
-      !isNil(x.newVal) &&
-      path(['oldVal', name, 'value'], x) === path(['newVal', name, 'value'], x))
-);
-// const isOptionSame = curry ((name, x)=> (isNil(x.oldVal) && isNil(x.newVal)) || (!isNil(x.oldVal) && !isNil(x.newVal) && (path(['oldVal', name, 'value'],x) === path(['newVal', name, 'value'],x))) )
-// makeOptionsObs :: String -> a
+
 export const makeOptionObs = curry(
   (
     optionsChange$: Observable<StorageChange, any>,
@@ -248,6 +250,3 @@ export const makeOptionObs = curry(
       )
       .map(defaultTo(prop(itemName, defaultOptions())))
 );
-// const listSearchFilters = pipe(prop('newVal'), values, filter(propEq('type', 'searchFilter')), map(prop('name')), R.map(makeOptionObs), inspect('listsearchfilters'));
-// const combineOptions = (...args) => pipe(inspect('combineopt'), reduce((a, b) => assoc(b.name, b.value, a), {}))(args);
-// export const makeSearchFiltersObs = () => Kefir.combine([getRT$, useBookmarks$, useReplies$], combineOptions).toProperty();

@@ -1,0 +1,95 @@
+import { createContext, h } from 'preact';
+import {
+  StateUpdater,
+  useEffect,
+  useReducer,
+  useRef,
+  useState,
+} from 'preact/hooks';
+import { Header } from './Header';
+import { Display } from './Display';
+import { DisplayMode } from '../types/interfaceTypes';
+import { isEmpty } from 'ramda';
+import { useStorage } from '../hooks/useStorage';
+
+export const AuthContext = createContext<Credentials>({
+  authorization: null,
+  'x-csrf-token': null,
+  name: 'empty_auth',
+});
+type FeedDisplayReduce = {
+  feedDisplayMode: DisplayMode;
+  dispatchFeedDisplayMode;
+};
+export const FeedDisplayMode = createContext<FeedDisplayReduce>(
+  DisplayMode.Idle
+);
+
+type UpdateFeedDisplayAction = { action: string; tweets: TweetResult[] };
+const updateFeedDisplay = (
+  state,
+  { action, tweets }: UpdateFeedDisplayAction
+) => {
+  console.log({ state, action, tweets });
+  switch (action) {
+    case 'emptySearch':
+      return DisplayMode.Idle;
+    case 'submitSearch':
+      return DisplayMode.SearchWaiting;
+    case 'gotSearchResults':
+      return [DisplayMode.Search, DisplayMode.SearchWaiting].includes(state)
+        ? DisplayMode.Search
+        : DisplayMode.Idle;
+    // return DisplayMode.Search;
+    case 'emptyApiSearch':
+      return DisplayMode.Idle;
+    case 'submitApiSearch':
+      return DisplayMode.ApiWaiting;
+    case 'gotApiResults':
+      // return isEmpty(tweets) ? DisplayMode.Idle : DisplayMode.Api;
+      return DisplayMode.Api;
+    case 'gotLatestTweets':
+      return state;
+    default:
+      throw new Error('Unexpected action');
+  }
+};
+//
+export default function ThreadHelper(props: any) {
+  const [active, setActive] = useState(true);
+  const myRef = useRef(null);
+
+  return (
+    <div class="ThreadHelper" ref={myRef}>
+      <Sidebar active={active} />
+    </div>
+  );
+}
+
+function Sidebar(props: { active: any }) {
+  // const [feedDisplayMode, setFeedDisplayMode] = useState('idle');
+  const [auth, setAuth] = useStorage('auth', {});
+  const [feedDisplayMode, dispatchFeedDisplayMode] = useReducer(
+    updateFeedDisplay,
+    DisplayMode.Idle
+  );
+
+  useEffect(() => {
+    console.log({ auth });
+    return () => {};
+  }, [auth]);
+
+  return (
+    <FeedDisplayMode.Provider
+      value={{ feedDisplayMode, dispatchFeedDisplayMode }}
+    >
+      <AuthContext.Provider value={auth}>
+        <div class="sidebar">
+          <Header />
+          {/* {roboActive ? <Robo active={props.active} streams={props.streams}/> : null} */}
+          <Display />
+        </div>
+      </AuthContext.Provider>
+    </FeedDisplayMode.Provider>
+  );
+}

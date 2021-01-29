@@ -61,7 +61,7 @@ module.exports = function (configDirs) {
     new HtmlPlugin({
       filename: 'index.html',
       template: configDirs.HTML_DIR + '/sidebar.html',
-      chunks: ['popup'],
+      chunks: ['sidebar'],
     }),
     new PreactRefreshPlugin(),
   ];
