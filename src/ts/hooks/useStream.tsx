@@ -40,8 +40,6 @@ export const _useStream = (stream, initialState) => {
     return () => sub.unsubscribe();
   }, []);
 
-  useEffect(() => {}, []);
-
   // Just return our current value, since that's the thing we're interested in
   // (to render) when using this hook:
   return [current, setCurrent];

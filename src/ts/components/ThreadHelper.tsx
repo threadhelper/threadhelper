@@ -34,7 +34,7 @@ const updateFeedDisplay = (
   state,
   { action, tweets }: UpdateFeedDisplayAction
 ) => {
-  console.log({ state, action, tweets });
+  // console.log({ state, action, tweets });
   switch (action) {
     case 'emptySearch':
       return DisplayMode.Idle;

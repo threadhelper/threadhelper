@@ -160,8 +160,8 @@ export function Display(props: any) {
 
   return (
     <div class="searchWidget" ref={myRef}>
-      {/* {makeFeedDispfulay(feedDisplayMode)} */}
-      <SearchResults results={prepTweets(stgSearchResults)} />
+      {makeFeedDispfulay(feedDisplayMode)}
+      {/* <SearchResults results={prepTweets(stgSearchResults)} /> */}
     </div>
   );
 }

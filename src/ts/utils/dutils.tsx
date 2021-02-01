@@ -124,7 +124,7 @@ const makeStorageChange = ([key, val]) => {
   };
 };
 const makeStgEvent = (key_vals: object) => {
-  console.log('makeStgEvent', key_vals);
+  // console.log('makeStgEvent', key_vals);
   return new CustomEvent('localStorage', {
     detail: {
       changes: zipObj(
@@ -284,9 +284,9 @@ const addNewDefaultOptions = (oldOptions) =>
 
 // makes an onStorageChange function given an act function that's usually a switch over item keys that have changed
 export function makeOnStorageChanged(act: (stgCh: StorageChange) => void): any {
-  console.log('makeOnStorageChanged', { act });
+  // console.log('makeOnStorageChanged', { act });
   const prodFn = (changes: StorageChange, area: string): void => {
-    console.log('stg change', { changes, area });
+    // console.log('stg change', { changes, area });
     if (!['local', 'sync', 'localStorage'].includes(area)) return null;
     let oldVal = {};
     let newVal = {};
@@ -325,20 +325,24 @@ const makeCustomEventObs = (
   };
   // document.addEventListener('localStorage', console.log);
   const obs = Kefir.stream<any, Error>((emitter) => {
-    console.log('CustomEventObs ' + eventName, { makeEmit });
+    // console.log('CustomEventObs ' + eventName, { makeEmit });
     const emit = makeEmit(emitter);
     document.addEventListener(
       eventName,
-      pipe(inspect(eventName + ' event'), path(payloadPath[eventName]), (x) => {
-        emit(x);
-      })
+      pipe(
+        // inspect(eventName + ' event'),
+        path(payloadPath[eventName]),
+        (x) => {
+          emit(x);
+        }
+      )
     );
     return () => {
       document.removeEventListener(eventName, emit);
       emitter.end();
     };
   });
-  console.log('makeCustomEventObs ' + eventName, { obs, makeEmit });
+  // console.log('makeCustomEventObs ' + eventName, { obs, makeEmit });
   return obs;
 };
 
@@ -360,18 +364,19 @@ var stgChObsCnt = 0;
 export const makeStorageChangeObs = (): Observable<StorageChange, Error> => {
   stgChObsCnt += 1;
   const makeEmitStgCH = (emitter: Emitter<StorageChange, Error>) => {
-    console.log('makeEmitStgCH');
+    // console.log('makeEmitStgCH');
     return makeOnStorageChanged((x: StorageChange): void => {
-      console.log('emitting');
+      // console.log('emitting');
       emitter.emit(x);
     });
   };
   if (SERVE) {
     const obs = makeCustomEventObs('localStorage', makeEmitStgCH);
-    console.log('makeStorageChangeObs', { obs, makeEmitStgCH });
+    // console.log('makeStorageChangeObs', { obs, makeEmitStgCH });
     return obs;
   } else {
     const obs = makeEventObs(chrome.storage.onChanged, makeEmitStgCH);
+    // console.log('makeStorageChangeObs', { obs, makeEmitStgCH });
     return obs;
     // return makeEventObs(chrome.storage.onChanged, makeEmitStgCH);
   }

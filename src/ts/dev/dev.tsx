@@ -21,19 +21,30 @@ import { StorageChangeObs } from '../hooks/StorageChangeObs';
 import Kefir, { Observable } from 'kefir';
 import { useEffect } from 'react';
 import { useState } from 'preact/hooks';
+import { nullFn } from '../utils/putils';
 
 const db = dbOpen();
-export default function Space(props: any) {
-  const [stgObs, setStgObs] = useState<Observable<any, any>>(Kefir.never());
+const stgObs$ = makeStorageChangeObs();
 
-  useEffect(() => {
-    setStgObs(makeStorageChangeObs());
-    return () => {};
-  }, []);
+export const Query = createContext('');
+
+export default function Space(props: any) {
+  // const [stgObs, setStgObs] = useState<Observable<any, any>>(Kefir.never());
+  const [query, setQuery] = useState('');
+
+  // useEffect(() => {
+  //   const obs = makeStorageChangeObs();
+  //   obs.onValue(nullFn);
+  //   setStgObs(obs);
+  //   console.log('dev makeStorageChangeObs', { obs, stgObs });
+  //   return () => {
+  //     obs.offValue(nullFn);
+  //   };
+  // }, []);
 
   return (
     <div class="container flex m-4">
-      <StorageChangeObs.Provider value={stgObs}>
+      <StorageChangeObs.Provider value={stgObs$}>
         <div class="flex-1">
           <TtReader />
           <Scraper />

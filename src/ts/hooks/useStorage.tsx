@@ -30,7 +30,7 @@ export function useStorage(name, default_val) {
   );
   // ATTENTION: this is commented out bc it might be needed in chrome. The observer use below needs to be the path one, not the whole stg
   useEffect(() => {
-    // console.log('useStorage ' + name, { storageItem });
+    console.log('useStorage init', { storageChangeObs });
     // storageChangeObs.onValue(nullFn);
     //init
     getStg(name).then(pipe(defaultTo(default_val), setStorageItem));
@@ -43,10 +43,10 @@ export function useStorage(name, default_val) {
     };
   }, []);
 
-  // useEffect(() => {
-  //   console.log(name, { storageItem });
-  //   return () => {};
-  // }, [storageItem]);
+  useEffect(() => {
+    console.log('useStorage', { storageChangeObs });
+    return () => {};
+  }, [storageChangeObs]);
 
   return [storageItem, setStgItem];
 }
