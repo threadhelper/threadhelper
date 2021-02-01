@@ -59,7 +59,7 @@ function makeDummyCompose(thBar: Element): Element | null {
 }
 //for wutils
 function insertAfter(newNode: Element, referenceNode: Element) {
-  console.log('[DEBUG] insertBefore', { referenceNode, newNode });
+  // console.log('[DEBUG] insertBefore', { referenceNode, newNode });
   referenceNode.parentNode.insertBefore(newNode, referenceNode.nextSibling); // if referenceNode.nextSibling is null, it inserts at the end
 }
 
@@ -71,7 +71,7 @@ export function injectDummy(thBar: Element): Element {
   if (isNil(floating_compose)) {
     console.log('[ERROR] no floating composer element');
   }
-  console.log('[DEBUG] injecting dummy', { dummyUI, floating_compose });
+  // console.log('[DEBUG] injecting dummy', { dummyUI, floating_compose });
   insertAfter(dummyUI, floating_compose);
   return dummyUI;
 }
@@ -84,7 +84,7 @@ export function makeSidebarCompose(): Element {
 export function makeHomeSidebarObserver(
   thBar: EventTarget | NodeJS.EventEmitter | { on: Function; off: Function }
 ) {
-  console.log('[DEBUG] makeHomeSidebarObserver 0', { thBar });
+  // console.log('[DEBUG] makeHomeSidebarObserver 0', { thBar });
   const trendAdd$ = obsAdded(document, trendText, true); // trendAdd$ :: Element // Trends element is added
   const trendRemove$ = obsRemoved(document, trendText, true); // trendAdd$ :: Element // Trends element is remove
   const sidebarOutDoc$ = fromEvents(thBar, 'DOMNodeRemovedFromDocument'); // thBar node is removed from the document (by changing page or something)
@@ -96,19 +96,18 @@ export function makeHomeSidebarObserver(
     .filter((_) => !isSidebar('home'))
     .map((_) => 'unrender');
   const homeSidebarObserver$ = Kefir.merge([render$, unrender$]);
-  console.log('[DEBUG] makeHomeSidebarObserver 1', {
-    thBar,
-    trendAdd$,
-    sidebarOutDoc$,
-    render$,
-    unrender$,
-    homeSidebarObserver$,
-  });
+  // console.log('[DEBUG] makeHomeSidebarObserver 1', {
+  //   thBar,
+  //   trendAdd$,
+  //   sidebarOutDoc$,
+  //   render$,
+  //   unrender$,
+  //   homeSidebarObserver$,
+  // });
   return homeSidebarObserver$;
 }
 export const removeHomeSidebar = () => {
-  console.log('removing sidebar');
-  // @ts-expect-error ts-migrate(2461) FIXME: Type 'HTMLCollectionOf<Element>' is not an array t... Remove this comment to see the full error message
+  // console.log('removing sidebar');
   const sugHomes = [...document.getElementsByClassName('sug_home')];
   sugHomes.forEach((x: { remove: () => void }) => x.remove());
 };
@@ -116,7 +115,7 @@ export function makeFloatSidebarObserver(
   thBar: EventTarget | NodeJS.EventEmitter | { on: Function; off: Function }
 ) {
   // const floatAdd$ = stream(null)
-  console.log('[DEBUG] makeFloatSidebarObserver 0', { thBar });
+  // console.log('[DEBUG] makeFloatSidebarObserver 0', { thBar });
   const floatAdd$ = obsAdded(document, floatingComposeSelector, true); //.filter(f=>f.target.getElementsByClassName(editorClass).length > 0)
   // floatAdd$.log('float add')
   // const floatRemove$ = stream(null)

@@ -97,14 +97,14 @@ const dbDel = (
   storeName: string,
   deleted_ids: any[]
 ) => {
-  db.delMany(_getDb(1))(storeName, deleted_ids);
+  db.dbDelMany(_getDb(1))(storeName, deleted_ids);
 };
 // Functions, potential imports
 const updateSomeDB = curry(
   async (_getDb: (arg0: number) => any, new_tweets, deleted_ids) => {
     const storeName = 'tweets';
     isExist(deleted_ids) ? dbDel(_getDb, storeName, deleted_ids) : null;
-    isExist(new_tweets) ? db.putMany(_getDb(1))(storeName, new_tweets) : null;
+    isExist(new_tweets) ? db.dbPutMany(_getDb(1))(storeName, new_tweets) : null;
     return new_tweets;
   }
 );
@@ -119,7 +119,7 @@ consoleLog('worker hi! 0', '');
 // throw Error('[DEBUG] [ERROR] worker debug error')
 // Streams
 // Db init
-const db$ = Kefir.fromPromise(db.openDb()).ignoreEnd().toProperty();
+const db$ = Kefir.fromPromise(db.dbOpen()).ignoreEnd().toProperty();
 const noDb$ = db$.map(isNil);
 // Messages
 const msg$ = Kefir.fromEvents(wSelf, 'message');
@@ -222,7 +222,7 @@ const onRemoveAccount = async (id: string) =>
     () => id,
     tap(removeAccount),
     inspect('OnRemoveAccount 0'),
-    (id) => db.filterDb(getDb(1), 'tweets', propEq('account', id)),
+    (id) => db.dbFilter(getDb(1), 'tweets', propEq('account', id)),
     andThen(inspect('OnRemoveAccount 1')),
     andThen(map(prop('id'))),
     andThen(inspect('OnRemoveAccount 2')),
@@ -295,7 +295,7 @@ const findNewTweets = curry(
 
 const getRelevantOldIds = async (filterFn: Pred): Promise<string[]> =>
   pipe(
-    () => db.filterDb(getDb(1), 'tweets', filterFn),
+    () => db.dbFilter(getDb(1), 'tweets', filterFn),
     andThen(map(prop('id')))
   )();
 
@@ -348,7 +348,7 @@ const onUpdateTimeline = indexUpdate('updateTimeline', updateTimeline);
 const onAddTweets = indexUpdate('addTweets', addTweets);
 const onRemoveTweets = indexUpdate('removeTweets', removeTweets);
 const getTweetByID = (id: string): Promise<thTweet> =>
-  db.get(getDb(1), 'tweets', id);
+  db.dbGet(getDb(1), 'tweets', id);
 const getTweetsFromDbById = async (ids: string[]): Promise<thTweet[]> =>
   await pipe<string[], Promise<thTweet>[], Promise<thTweet[]>>(
     () => ids,
@@ -460,7 +460,7 @@ const msg2SampleArgs = (
 ] => [
   m.n_tweets,
   m.filters,
-  db.get(getDb(1)),
+  db.dbGet(getDb(1)),
   m.accsShown,
   () => getDb(1).getAllKeys('tweets'),
 ];

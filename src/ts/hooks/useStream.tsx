@@ -27,25 +27,20 @@ export const useStream = (stream, initialState) => {
 };
 
 export const _useStream = (stream, initialState) => {
-  // const init = stream.currentValue != null ? stream.currentValue() : initialState
-  // const init2 = init != null ? init : initialState
-  // console.log(`init stream`, init)
-  // const [current, setCurrent] = useState(init);
   const [current, setCurrent] = useState(initialState);
-
   useEffect(() => {
     const sub = stream.observe({
-      value: setCurrent,
-      error(error) {
-        //   console.log('error:', error);
+      value: (x) => {
+        setCurrent(x);
       },
-      end() {
-        //   console.log('end');
-      },
+      error(error) {},
+      end() {},
     });
 
     return () => sub.unsubscribe();
-  });
+  }, []);
+
+  useEffect(() => {}, []);
 
   // Just return our current value, since that's the thing we're interested in
   // (to render) when using this hook:

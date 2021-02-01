@@ -6,7 +6,7 @@ import { apiToTweet, validateTweet } from '../bg/tweetImporter'
 import { ReqDefaultTweetsMsg, ReqSearchMsg } from '../types/msgTypes'
 import { IdleMode, Option, SearchFilters, SearchMode, StorageChange } from '../types/stgTypes'
 import { Credentials } from '../types/types'
-import { getData, getOption, makeOptionObs, makeStgItemObs, removeData, resetStorage } from './dutils'
+import { getStg, getOption, makeOptionObs, makeStgItemObs, removeData, resetStorage, makeStgPathObs } from './dutils'
 import { n_tweets_results } from './params'
 import { curVal } from './putils'
 import Kefir from 'kefir';
@@ -49,8 +49,9 @@ export const _makeOptionObs = curry (async (optionsChange$: Observable<StorageCh
 })
 // makeStgObs :: String -> a
 export const _makeStgObs = curry (async (itemName) => {
-  const initVal = await getData(itemName)
-  return makeStgItemObs(itemName).toProperty(()=>initVal)
+  const initVal = await getStg(itemName)
+  return makeStgPathObs([itemName]).toProperty(()=>initVal)
+  // return makeStgItemObs(itemName).toProperty(()=>initVal)
 })
 export const combineOptions = (...args: Option[]): SearchFilters => pipe(reduce((a,b)=>assoc(b.name, b.value, a),{}))(args)
 

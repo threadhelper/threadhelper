@@ -75,13 +75,15 @@ import {
   _makeStgObs,
 } from './utils/bgUtils';
 import {
-  getData,
+  cleanOldStorage,
+  getStg,
   makeGotMsgObs,
   makeStorageChangeObs as makeStorageChangeObs,
   msgCS,
   removeData,
   setStg,
   setStgPath,
+  updateStorage,
 } from './utils/dutils';
 import { Event, Exception, initGA, PageView } from './utils/ga';
 import { update_size } from './utils/params';
@@ -382,7 +384,7 @@ export async function main() {
     .thru(
       promiseStream(
         pipe(
-          (_) => getData('temp_archive'),
+          (_) => getStg('temp_archive'),
           andThen(map(extractTweetPropIfNeeded))
         )
       )
@@ -500,6 +502,7 @@ export async function main() {
   const searchQuery$ = msgStream('search')
     .map(prop('query'))
     .toProperty(() => '') as curProp<string>;
+  // searchQuery$.log('searchQuery$');
   const emptyQuery$ = searchQuery$.map(trim).filter(isEmpty); //TODO: can't trim in cs bc I need the final space
   const wordSearchQuery$ = searchQuery$
     .filter(isWordEnd)
@@ -511,7 +514,7 @@ export async function main() {
     [searchMode$, searchFilters$, accsShown$, searchQuery$],
     makeReqSearchMsg
   ) as Observable<ReqSearchMsg, Error>;
-  searchWorkerMsg$.log('searchWorkerMsg$');
+  // searchWorkerMsg$.log('searchWorkerMsg$');
   const reqFullTextSearch$ = Kefir.merge([
     searchWorkerMsg$.filter(pipe(prop('query'), isEmpty, not)),
     searchWorkerMsg$
@@ -521,7 +524,7 @@ export async function main() {
     .thru(waitFor(notReady$))
     .bufferWhileBy(searchMode$.map((mode) => !equals('fulltext', mode)))
     .map(last) as Observable<string, Error>;
-  reqFullTextSearch$.log('reqFullTextSearch$');
+  // reqFullTextSearch$.log('reqFullTextSearch$');
   const fullTextSearchRes$ = reqFullTextSearch$ //searchWorkerMsg$
     // .sampledBy(reqFullTextSearch$)
     .map(inspect('fullTextSearchRes 0 '))
@@ -714,8 +717,10 @@ export async function main() {
 const onUpdated = (previousVersion) => {
   console.log(`[INFO] updated from version ${previousVersion}`);
   // add new stg fields from defaults
-
+  // msgSomeWorker(pWorker, { type: 'resetIndex' });
+  updateStorage();
   // delete old stg fields that are not in default
+  cleanOldStorage();
   // remake index
 };
 

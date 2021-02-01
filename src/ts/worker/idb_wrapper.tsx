@@ -1,6 +1,8 @@
 // import * as idb from 'idb'
-import { IDBPDatabase, openDB } from 'idb/with-async-ittr.js';
+import { DBSchema, IDBPDatabase, openDB } from 'idb/with-async-ittr.js';
 import { curry } from 'ramda'; // Function
+import { User } from 'twitter-d';
+import { thTweet } from '../types/tweetTypes';
 /*
 DB:
 test tweets
@@ -10,9 +12,24 @@ timeline tweets
 bookmarks
 
 */
-export const openDb = async () => {
+interface thTwitterDB extends DBSchema {
+  tweets: {
+    key: string;
+    value: thTweet;
+  };
+  accounts: {
+    key: string;
+    value: User;
+  };
+  users: {
+    key: string;
+    value: User;
+  };
+}
+
+export const dbOpen = async () => {
   console.log('OPENING DB');
-  const db = await openDB('ThreadHelper', 1, {
+  const db = await openDB<thTwitterDB>('ThreadHelper', 1, {
     upgrade(db) {
       console.log('version ', (db as any).oldVersion);
       let oldV = (db as any).oldVersion != null ? (db as any).oldVersion : 0;
@@ -43,12 +60,12 @@ export const openDb = async () => {
   });
   return db;
 };
-export const get = curry(
+export const dbGet = curry(
   async (db: IDBPDatabase, storeName: string, key: any) => {
     return db.get(storeName, key);
   }
 );
-export const getMany = curry(async (db: IDBPDatabase, storeName, keys) => {
+export const dbGetMany = curry(async (db: IDBPDatabase, storeName, keys) => {
   const tx = db.transaction(storeName, 'readwrite');
   const store = tx.objectStore(storeName);
   let promises: any[] = [];
@@ -62,40 +79,43 @@ export const getMany = curry(async (db: IDBPDatabase, storeName, keys) => {
     throw e;
   }
 });
-export const delMany = curry(async (db: IDBPDatabase, storeName, key_list) => {
-  const tx = db.transaction(storeName, 'readwrite');
-  const store = tx.objectStore(storeName);
-  let promises: any[] = [];
-  try {
-    for (let k of key_list) {
-      promises.push(store.delete(k));
+export const dbDelMany = curry(
+  async (db: IDBPDatabase, storeName, key_list) => {
+    const tx = db.transaction(storeName, 'readwrite');
+    const store = tx.objectStore(storeName);
+    let promises: any[] = [];
+    try {
+      for (let k of key_list) {
+        promises.push(store.delete(k));
+      }
+      promises.push(tx.done);
+      return await Promise.all(promises);
+    } catch (e) {
+      console.log({ promises, key_list });
     }
-    promises.push(tx.done);
-    return await Promise.all(promises);
-  } catch (e) {
-    console.log({ promises, key_list });
-    // throw(e)
   }
-});
+);
 // list as input
 // used only to add tweets to the store
-export const putMany = curry(async (db: IDBPDatabase, storeName, item_list) => {
-  console.log('putting in db', { db, storeName, item_list });
-  const tx = db.transaction(storeName, 'readwrite');
-  const store = tx.objectStore(storeName);
-  let promises: any[] = [];
-  try {
-    for (let item of item_list) {
-      promises.push(store.put(item));
+export const dbPutMany = curry(
+  async (db: IDBPDatabase, storeName, item_list) => {
+    console.log('putting in db', { db, storeName, item_list });
+    const tx = db.transaction(storeName, 'readwrite');
+    const store = tx.objectStore(storeName);
+    let promises: any[] = [];
+    try {
+      for (let item of item_list) {
+        promises.push(store.put(item));
+      }
+      promises.push(tx.done);
+      return await Promise.all(promises);
+    } catch (e) {
+      console.trace('[ERROR] putMany', { e, storeName, item_list });
+      throw e;
     }
-    promises.push(tx.done);
-    return await Promise.all(promises);
-  } catch (e) {
-    console.trace('[ERROR] putMany', { e, storeName, item_list });
-    throw e;
   }
-});
-export const clear = curry(async (db: IDBPDatabase) => {
+);
+export const dbClear = curry(async (db: IDBPDatabase) => {
   let storeNames = ['tweets', 'misc'];
   for (let storeName of storeNames) {
     const tx = db.transaction(storeName, 'readwrite');
@@ -104,20 +124,17 @@ export const clear = curry(async (db: IDBPDatabase) => {
     await tx.done;
   }
 });
-export const iterate = curry(async (db: IDBPDatabase, storeName) => {
+export const dbIterate = curry(async (db: IDBPDatabase, storeName) => {
   console.log('iterating db');
-  // const index = db.transaction('books').store.index('author');
   const tx = db.transaction(storeName);
-  // for await (const cursor of index.iterate('Douglas Adams')) {
   for await (const cursor of tx.store) {
     console.log(cursor.value);
   }
 });
-export const filterDb = curry(
+export const dbFilter = curry(
   async (db: IDBPDatabase, storeName, condFn: (arg0: any) => any) => {
     const tx = db.transaction(storeName);
     let accum: any[] = [];
-    // for await (const cursor of index.iterate('Douglas Adams')) {
     for await (const cursor of tx.store) {
       if (condFn(cursor.value)) accum.push(cursor.value);
     }

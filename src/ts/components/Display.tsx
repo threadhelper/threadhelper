@@ -103,13 +103,11 @@ export function Display(props: any) {
   useEffect(() => {
     if (isNil(stgLatestTweets)) {
     } else {
-      console.log({ stgLatestTweets });
       setLatestTweets(prepTweets(stgLatestTweets));
     }
     return () => {};
   }, [stgLatestTweets]);
   useEffect(() => {
-    console.log({ latestTweets });
     if (notFirstLatest.current > 1) {
       dispatchFeedDisplayMode({
         action: 'gotLatestTweets',
@@ -126,7 +124,6 @@ export function Display(props: any) {
   useLayoutEffect(() => {
     if (isNil(stgSearchResults)) {
     } else {
-      console.log({ stgSearchResults, time: Date.now() });
       setSearchResults(prepTweets(stgSearchResults));
     }
     return () => {};
@@ -137,7 +134,6 @@ export function Display(props: any) {
         action: 'gotSearchResults',
         tweets: searchResults,
       });
-      console.log({ searchResults, time: Date.now() });
     } else {
       notFirstSearch.current += 1;
     }
@@ -164,8 +160,8 @@ export function Display(props: any) {
 
   return (
     <div class="searchWidget" ref={myRef}>
-      {makeFeedDisplay(feedDisplayMode)}
-      {/* <SearchResults results={prepTweets(stgSearchResults)} /> */}
+      {/* {makeFeedDispfulay(feedDisplayMode)} */}
+      <SearchResults results={prepTweets(stgSearchResults)} />
     </div>
   );
 }

@@ -32,8 +32,8 @@ export const defaultStorage = (): StorageInterface => {
   };
 };
 
-import accounts from '../dev/accounts.js';
-import results from '../dev/results.js';
+import accounts from '../dev/data/accounts.js';
+import results from '../dev/data/results.js';
 export const devStorage = (): StorageInterface => {
   return {
     options: defaultOptions(),

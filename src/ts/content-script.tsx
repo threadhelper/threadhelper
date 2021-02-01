@@ -14,6 +14,7 @@ import Kefir, { Observable, Property, Subscription } from 'kefir';
 import { h, render } from 'preact';
 import 'preact/debug';
 import 'preact/devtools';
+import { StorageChangeObs } from './hooks/StorageChangeObs';
 import * as R from 'ramda';
 import {
   and,
@@ -66,6 +67,21 @@ import { getMode, updateTheme } from './utils/wutils';
 console.log('hi pcss', pcss);
 console.log('hi css', css);
 
+console.log('chrome.storage', { chrome });
+// chrome.storage.onChanged.addListener(function (changes, namespace) {
+//   for (var key in changes) {
+//     var storageChange = changes[key];
+//     console.log(
+//       'Storage key "%s" in namespace "%s" changed. ' +
+//         'Old value was "%s", new value is "%s".',
+//       key,
+//       namespace,
+//       storageChange.oldValue,
+//       storageChange.newValue
+//     );
+//   }
+// });
+
 // Project business
 var DEBUG = process.env.NODE_ENV != 'production';
 toggleDebug(window, DEBUG);
@@ -74,14 +90,19 @@ toggleDebug(window, DEBUG);
 let thBarHome = makeSidebarHome();
 let thBarComp = makeSidebarCompose();
 const activateSidebar = curry(
-  (inject: (arg0: Element) => any, bar: Element) => {
-    console.log('[DEBUG] activating sidebar');
+  (inject: (arg0: Element) => any, bar: Element, storageChange$) => {
+    console.log('[DEBUG] activating sidebar', { storageChange$ });
     inject(bar);
-    render(<ThreadHelper />, bar);
+    render(
+      <StorageChangeObs.Provider value={storageChange$}>
+        <ThreadHelper />
+      </StorageChangeObs.Provider>,
+      bar
+    );
   }
 );
-const activateFloatSidebar = () => activateSidebar(injectDummy, thBarComp);
-const activateHomeSidebar = () => activateSidebar(injectSidebarHome, thBarHome);
+const activateFloatSidebar = activateSidebar(injectDummy, thBarComp);
+const activateHomeSidebar = activateSidebar(injectSidebarHome, thBarHome);
 const deactivateSidebar = (bar: Element) => {
   render(null, bar);
 };
@@ -93,11 +114,11 @@ const getBgColor = (x: HTMLElement) => x.style.backgroundColor;
 const minIdleTime = 3000;
 // Effects
 const handlePosting = () => msgBG({ type: 'update-tweets' }); // handle twitter posting actions like tweets, rts and deletes
-// const reqSearch = R.pipe<any, string, void>(defaultTo(''), (q) =>
-//   msgBG({ type: 'search', query: q })
-// );
+
 const reqSearch = R.pipe<any, string, void>(defaultTo(''), (query) => {
-  setStg('query', query);
+  // console.log('reqSearch', { query });
+  msgBG({ type: 'search', query });
+  // setStg('query', query);
 });
 // Stream clean up
 const subscriptions: Subscription[] = [];
@@ -131,6 +152,7 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
   const mode$ = urlChange$.map(getMode);
   //      storage
   const storageChange$ = makeStorageChangeObs();
+  console.log('storageChange$', { storageChange$ });
   const latest$ = storageChange$
     .filter((x: { itemName: string }) => x.itemName == 'latest_tweets')
     .map(prop('newVal'));
@@ -176,7 +198,7 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
     delete$,
   ]);
   const [composeFocus$, composeFocusOut$] = makeComposeFocusObs(); // stream for focus on compose box
-  composeFocus$.log('composeFocus$');
+  // composeFocus$.log('composeFocus$');
   const composeUnfocused$ = Kefir.merge([
     composeFocusOut$.map((_) => ''),
     urlChange$.map((_) => ''),
@@ -184,7 +206,6 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
   const composeContent$ = composeFocus$.flatMapLatest((e: Event) =>
     makeComposeObs(e.target as HTMLElement)
   );
-  // composeContent$.log('composeContent$');
   const composeQuery$ = Kefir.merge([
     urlChange$.map((_) => ''),
     composeContent$,
@@ -192,9 +213,9 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
 
   // Sidebar control
   const updateFloat = (value: any) =>
-    value ? activateFloatSidebar() : deactivateSidebar(thBarComp); //function
+    value ? activateFloatSidebar(storageChange$) : deactivateSidebar(thBarComp); //function
   const updateHome = (value: any) =>
-    value ? activateHomeSidebar() : deactivateSidebar(thBarHome); //function
+    value ? activateHomeSidebar(storageChange$) : deactivateSidebar(thBarHome); //function
   const floatSidebar$ = makeFloatSidebarObserver(thBarComp); // floatSidebar$ :: String || Element  // for floating sidebar in compose mode
   const floatActive$ = floatSidebar$
     .map(equals('render'))

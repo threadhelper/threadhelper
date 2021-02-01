@@ -75,13 +75,12 @@ export const ArchiveUploader = (props) => {
     console.log('setting archive', importedTweetArchive);
     setStg('temp_archive', importedTweetArchive).then(() => {
       setHasArchive(true);
-      msgBG({ type: 'temp-archive-stored' });
+      // msgBG({ type: 'temp-archive-stored' });
       hiddenFileInput.current.value = null;
     });
   }
   return (
     <div onClick={handleClick}>
-      {/* @ts-expect-error ts-migrate(2559) FIXME: Type '{ children: never[]; }' has no properties in... Remove this comment to see the full error message */}
       <LoadArchiveIcon></LoadArchiveIcon>
       <input
         type="file"

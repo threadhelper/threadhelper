@@ -11,6 +11,10 @@ import { Display } from './Display';
 import { DisplayMode } from '../types/interfaceTypes';
 import { isEmpty } from 'ramda';
 import { useStorage } from '../hooks/useStorage';
+import Kefir, { Observable } from 'kefir';
+import { TweetResult } from '../types/msgTypes';
+import { makeStorageChangeObs } from '../utils/dutils';
+import { StorageChangeObs } from '../hooks/StorageChangeObs';
 
 export const AuthContext = createContext<Credentials>({
   authorization: null,
@@ -58,11 +62,35 @@ const updateFeedDisplay = (
 export default function ThreadHelper(props: any) {
   const [active, setActive] = useState(true);
   const myRef = useRef(null);
+  // const [stgObs, setStgObs] = useState<Observable<any, any>>(Kefir.never());
+
+  // useEffect(() => {
+  //   const _stgObs = makeStorageChangeObs();
+  //   console.log('ThreadHelper makeStorageChangeObs 0 ', {
+  //     stgObs,
+  //     _stgObs,
+  //   });
+  //   setStgObs(_stgObs);
+  //   console.log('ThreadHelper makeStorageChangeObs 1 ', {
+  //     stgObs,
+  //     _stgObs,
+  //   });
+  //   return () => {};
+  // }, []);
+
+  // useEffect(() => {
+  //   console.log('ThreadHelper stgObs 0 ', {
+  //     stgObs,
+  //   });
+  //   return () => {};
+  // }, [stgObs]);
 
   return (
+    // <StorageChangeObs.Provider value={stgObs}>
     <div class="ThreadHelper" ref={myRef}>
       <Sidebar active={active} />
     </div>
+    // </StorageChangeObs.Provider>
   );
 }
 
