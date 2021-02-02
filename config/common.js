@@ -44,6 +44,7 @@ module.exports = function (configDirs) {
                   '@babel/preset-typescript',
                 ],
                 plugins: [
+                  '@babel/plugin-syntax-top-level-await',
                   [
                     '@babel/plugin-transform-react-jsx',
                     {

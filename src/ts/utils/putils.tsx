@@ -44,6 +44,16 @@ export const timeFn = curry((text, fn: (...arg0: any) => any) => {
     return res;
   };
 });
+
+export const asyncTimeFn = curry((text, fn: (...arg0: any) => any): any => {
+  return async (...args) => {
+    console.time(`[TIME] ${text}`);
+    const res = await fn(...args);
+    console.timeEnd(`[TIME] ${text}`);
+    return res;
+  };
+});
+
 export const wTimeFn = curry((log, text, fn: (...args: any) => any) => {
   return (...args) => {
     const t0 = performance.now();

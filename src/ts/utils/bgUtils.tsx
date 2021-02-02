@@ -1,12 +1,12 @@
 import { Observable } from 'kefir'
 import PromiseWorker from 'promise-worker'
-import { assoc, curry, defaultTo, filter, isNil, map, not, path, pipe, prop, reduce } from 'ramda' // Function
+import { assoc, curry, defaultTo, filter, ifElse, isNil, map, not, path, pipe, prop, reduce } from 'ramda' // Function
 import { User } from 'twitter-d'
 import { apiToTweet, validateTweet } from '../bg/tweetImporter'
 import { ReqDefaultTweetsMsg, ReqSearchMsg } from '../types/msgTypes'
 import { IdleMode, Option, SearchFilters, SearchMode, StorageChange } from '../types/stgTypes'
 import { Credentials } from '../types/types'
-import { getData, getOption, makeOptionObs, makeStgItemObs, removeData, resetStorage } from './dutils'
+import { getStg, getOption, makeOptionObs, makeStgItemObs, removeData, resetStorage, makeStgPathObs } from './dutils'
 import { n_tweets_results } from './params'
 import { curVal } from './putils'
 import Kefir from 'kefir';
@@ -16,6 +16,12 @@ import Kefir from 'kefir';
 export const getDateFormatted = () => (new Date()).toLocaleString()
 export const twitter_url = /https?:\/\/(www\.)?twitter.com\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/
 export const apiBookmarkToTweet = pipe(apiToTweet, assoc('is_bookmark', true))
+
+export const extractTweetPropIfNeeded = ifElse(
+  prop('tweet'),
+  prop('tweet'),
+  (x) => x
+);
 
 export const saferTweetMap = (fn: (x:any) => any) => pipe( // saferMap :: [x] -> [x]
   defaultTo([]), 
@@ -49,8 +55,9 @@ export const _makeOptionObs = curry (async (optionsChange$: Observable<StorageCh
 })
 // makeStgObs :: String -> a
 export const _makeStgObs = curry (async (itemName) => {
-  const initVal = await getData(itemName)
-  return makeStgItemObs(itemName).toProperty(()=>initVal)
+  const initVal = await getStg(itemName)
+  return makeStgPathObs([itemName]).toProperty(()=>initVal)
+  // return makeStgItemObs(itemName).toProperty(()=>initVal)
 })
 export const combineOptions = (...args: Option[]): SearchFilters => pipe(reduce((a,b)=>assoc(b.name, b.value, a),{}))(args)
 

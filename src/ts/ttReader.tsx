@@ -181,7 +181,7 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
     delete$,
   ]);
   const [composeFocus$, composeFocusOut$] = makeComposeFocusObs(); // stream for focus on compose box
-  composeFocus$.log('composeFocus$');
+  // composeFocus$.log('composeFocus$');
   const composeUnfocused$ = Kefir.merge([
     composeFocusOut$.map((_) => ''),
     urlChange$.map((_) => ''),

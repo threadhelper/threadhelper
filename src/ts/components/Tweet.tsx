@@ -56,7 +56,7 @@ const RetweetAction = ({ tweet }) => {
   const [active, setActive] = useState(tweet.retweeted ?? false);
   const [count, setCount] = useState(countRts(tweet));
   const [id, setId] = useState(tweet.id);
-  const auth = useContext(AuthContext);
+  // const auth = useContext(AuthContext);
 
   useEffect(() => {
     setActive(tweet.retweeted ?? false);
@@ -99,7 +99,7 @@ const LikeAction = ({ tweet }) => {
   const [active, setActive] = useState(tweet.favorited ?? false);
   const [count, setCount] = useState(countFavs(tweet));
   const [id, setId] = useState(tweet.id);
-  const auth = useContext(AuthContext);
+  // const auth = useContext(AuthContext);
 
   // const [_count, setCount] = useState(count);
 

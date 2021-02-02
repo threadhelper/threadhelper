@@ -29,7 +29,7 @@ module.exports = function (configDirs) {
   };
   devConfig.entry = {
     ...devConfig.entry,
-    sidebar: configDirs.APP_DIR + '/dev/sidebar.tsx',
+    dev: configDirs.APP_DIR + '/dev/dev.tsx',
   };
   devConfig.module.rules[0].use[0].options.plugins = [
     ...devConfig.module.rules[0].use[0].options.plugins,
@@ -49,9 +49,9 @@ module.exports = function (configDirs) {
       chunks: ['content-script'],
     }),
     new HtmlPlugin({
-      filename: 'sidebar.html',
-      template: configDirs.HTML_DIR + '/sidebar.html',
-      chunks: ['sidebar'],
+      filename: 'dev.html',
+      template: configDirs.HTML_DIR + '/dev.html',
+      chunks: ['dev'],
     }),
     new HtmlPlugin({
       filename: 'worker.html',
@@ -60,8 +60,8 @@ module.exports = function (configDirs) {
     }),
     new HtmlPlugin({
       filename: 'index.html',
-      template: configDirs.HTML_DIR + '/sidebar.html',
-      chunks: ['sidebar'],
+      template: configDirs.HTML_DIR + '/dev.html',
+      chunks: ['dev'],
     }),
     new PreactRefreshPlugin(),
   ];

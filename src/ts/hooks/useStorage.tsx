@@ -1,44 +1,67 @@
-import { useEffect, useMemo } from 'preact/hooks';
+import { useContext, useEffect } from 'preact/hooks';
 import { andThen, defaultTo, path, pipe, prop } from 'ramda';
+import { StorageChangeObs } from './StorageChangeObs';
 import {
-  getData,
+  getStg,
   getStgPath,
-  makeStgItemObs,
-  makeStgPathObs,
   setStg,
   setStgPath,
+  stgPathObs,
 } from '../utils/dutils';
 import { nullFn } from '../utils/putils';
 import { _useStream } from './useStream';
 
+const SERVE = process.env.DEV_MODE == 'serve';
+var count = 0;
+var renderCount = 0;
+
 export function useStorage(name, default_val) {
-  const useStgObs = useMemo(() => makeStgItemObs(name), [name]);
-  const [storageItem, setStorageItem] = _useStream(useStgObs);
+  const storageChangeObs = useContext(StorageChangeObs);
+  // const useStgObs = useMemo(() => {
+  //   console.log('recomputing stg item observer ' + name);
+  //   return makeStgItemObs(name);
+  // }, [name]);
+  const [storageItem, setStorageItem] = _useStream(
+    stgPathObs(storageChangeObs, [name]),
+    default_val
+  );
+  renderCount += 1;
+  console.log(`useStorage render ${renderCount}`);
 
   const setStgItem = pipe(
     setStg(name),
     andThen(pipe(prop(name), setStorageItem))
   );
-
+  // ATTENTION: this is commented out bc it might be needed in chrome. The observer use below needs to be the path one, not the whole stg
   useEffect(() => {
-    useStgObs.onValue(nullFn);
+    count += 1;
+    console.log(`useStorage init ${count}`, { storageChangeObs });
+    // storageChangeObs.onValue(nullFn);
     //init
-    getData(name).then(pipe(defaultTo(default_val), setStorageItem));
+    getStg(name).then(pipe(defaultTo(default_val), setStorageItem));
     return () => {
-      useStgObs.offValue(nullFn);
+      console.log('closing useStorage ' + name, {
+        storageChangeObs,
+        storageItem,
+      });
+      // storageChangeObs.offValue(nullFn);
     };
   }, []);
 
   useEffect(() => {
+    console.log('useStorage', { storageChangeObs });
     return () => {};
-  }, [storageItem]);
+  }, [storageChangeObs]);
 
   return [storageItem, setStgItem];
 }
 
 export function useStgPath(_path, default_val) {
-  const useStgObs = useMemo(() => makeStgPathObs(_path), [_path]);
-  const [storageItem, setStorageItem] = _useStream(useStgObs);
+  const storageChangeObs = useContext(StorageChangeObs);
+  const [storageItem, setStorageItem] = _useStream(
+    stgPathObs(storageChangeObs, _path),
+    default_val
+  );
 
   const setStgItem = pipe(
     setStgPath(_path),
@@ -46,11 +69,11 @@ export function useStgPath(_path, default_val) {
   );
 
   useEffect(() => {
-    useStgObs.onValue(nullFn);
+    // storageChangeObs.onValue(nullFn);
     //init
     getStgPath(_path).then(pipe(defaultTo(default_val), setStorageItem));
     return () => {
-      useStgObs.offValue(nullFn);
+      // storageChangeObs.offValue(nullFn);
     };
   }, []);
 

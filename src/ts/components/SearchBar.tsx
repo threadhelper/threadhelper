@@ -11,20 +11,19 @@ import { DisplayMode } from '../types/interfaceTypes';
 const trimNewlines = (str) =>
   trim(str).replace(/(^\s*(?!.+)\n+)|(\n+\s+(?!.+)$)/g, '');
 const reqSearch = (query) => {
-  msgBG({ type: 'search', query });
+  // msgBG({ type: 'search', query });
 };
 
 export function SearchBar({ show }) {
   const inputObj = useRef(null);
-  const [value, setValue] = useStorage('query', '');
+  const [query, setQuery] = useStorage('query', '');
   const { feedDisplayMode, dispatchFeedDisplayMode } = useContext(
     FeedDisplayMode
   );
 
-  const submitSearch = (value: string) => {
-    const q = defaultTo('', value);
-    console.log('query change', { q });
-
+  const submitSearch = (query: string) => {
+    const q = defaultTo('', query);
+    // console.log('submit search', { query });
     if (isEmpty(trimNewlines(q))) {
       dispatchFeedDisplayMode({
         action: 'emptySearch',
@@ -40,9 +39,10 @@ export function SearchBar({ show }) {
   };
 
   useEffect(() => {
-    submitSearch(value);
+    // console.log('submitting search', { query });
+    // submitSearch(query);
     return () => {};
-  }, [value]);
+  }, [query]);
 
   return (
     <>
@@ -55,7 +55,7 @@ export function SearchBar({ show }) {
               class="inline w-20"
               value={value}
               onInput={(e) =>
-                setValue(defaultTo('', path(['target', 'value'], e)))
+                setQuery(defaultTo('', path(['target', 'value'], e)))
               }
               onKeyUp={(e) => (e.key === 'Enter' ? submitSearch(value) : null)}
               onFocus={(e) => e.target?.select()}

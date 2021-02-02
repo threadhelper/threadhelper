@@ -15,6 +15,7 @@ import {
   prop,
   __,
 } from 'ramda'; // Function
+import { Status, User } from 'twitter-d';
 import { thTweet } from '../types/tweetTypes';
 const re = /RT @([a-zA-Z0-9_]+).*/;
 const rt_tag = /RT @([a-zA-Z0-9_]+:)/;
@@ -203,35 +204,37 @@ const makeQuote = (quoted_status) => {
 const _isOwnTweet = (rt: any[], user_info) =>
   isNil(rt) || rt[1] === prop('screen_name', user_info);
 // archToTweet :: archTweet -> tweet
-export const archToTweet = curry((user_info, t) => {
-  let rt = re.exec(prop('full_text', t));
-  const isOwnTweet = _isOwnTweet(rt, user_info);
-  // ts-migrate(2345) FIXME: Argument of type 'RegExpExecArray | null' is not a... Remove this comment to see the full error message
-  const init_tweet = isOwnTweet
-    ? initArchTweet(user_info, t)
-    : initArchRT(user_info, rt, t);
-  // const init_tweet = {
-  //   username : !isNil(rt) ? rt[1] : prop('screen_name', user_info),
-  //   text: unescape(!isNil(rt) ? prop('full_text', t).replace(rt_tag,'') : prop('full_text', t)),
-  //   name: isOwnTweet ? prop('name', user_info) : prop('name', findAuthor(rt, t)),  // If I'm tweeting/retweeting myself
-  //   profile_image: isOwnTweet ? prop('profile_image_url_https', user_info) : default_pic_url,
-  //   retweeted: isOwnTweet ? false : true
-  // }
-  let tweet = toTweetCommon(init_tweet, t);
-  // Add full quote info.
-  if (
-    prop('has_quote', tweet) &&
-    prop('is_quote_up', tweet) &&
-    prop('quoted_status', tweet)
-  ) {
-    const quoted_status = prop('quoted_status', tweet);
-    tweet.quote = makeQuote(quoted_status);
-    // if (prop('quote', tweet).has_media) {
-    //   tweet.quote.media = defaultTo([], path(['entities', 'media'], quoted_status)).map(x => ({current_text: x.url, url: x.media_url_https}))
+export const archToTweet = curry(
+  (user_info: User, t: Status): thTweet => {
+    let rt = re.exec(prop('full_text', t));
+    const isOwnTweet = _isOwnTweet(rt, user_info);
+    // ts-migrate(2345) FIXME: Argument of type 'RegExpExecArray | null' is not a... Remove this comment to see the full error message
+    const init_tweet = isOwnTweet
+      ? initArchTweet(user_info, t)
+      : initArchRT(user_info, rt, t);
+    // const init_tweet = {
+    //   username : !isNil(rt) ? rt[1] : prop('screen_name', user_info),
+    //   text: unescape(!isNil(rt) ? prop('full_text', t).replace(rt_tag,'') : prop('full_text', t)),
+    //   name: isOwnTweet ? prop('name', user_info) : prop('name', findAuthor(rt, t)),  // If I'm tweeting/retweeting myself
+    //   profile_image: isOwnTweet ? prop('profile_image_url_https', user_info) : default_pic_url,
+    //   retweeted: isOwnTweet ? false : true
     // }
+    let tweet = toTweetCommon(init_tweet, t);
+    // Add full quote info.
+    if (
+      prop('has_quote', tweet) &&
+      prop('is_quote_up', tweet) &&
+      prop('quoted_status', tweet)
+    ) {
+      const quoted_status = prop('quoted_status', tweet);
+      tweet.quote = makeQuote(quoted_status);
+      // if (prop('quote', tweet).has_media) {
+      //   tweet.quote.media = defaultTo([], path(['entities', 'media'], quoted_status)).map(x => ({current_text: x.url, url: x.media_url_https}))
+      // }
+    }
+    return tweet;
   }
-  return tweet;
-});
+);
 // prop that defaults to null if undefined
 const propDefNull = (name: string, t) => R.defaultTo(null, prop(name, t)); // propDefNull :: x | null
 const getMentionsFromTweet = ifElse(

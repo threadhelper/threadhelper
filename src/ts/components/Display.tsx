@@ -61,6 +61,7 @@ function useApiMetrics(auth, _results, setResults) {
 }
 
 export function Display(props: any) {
+  console.log('rerender Display');
   const auth = useContext(AuthContext);
   const { feedDisplayMode, dispatchFeedDisplayMode } = useContext(
     FeedDisplayMode
@@ -99,17 +100,15 @@ export function Display(props: any) {
         return <IdleDisplay results={latestTweets} />;
     }
   };
-  /* hooks for latestTweets */
+  // /* hooks for latestTweets */
   useEffect(() => {
     if (isNil(stgLatestTweets)) {
     } else {
-      console.log({ stgLatestTweets });
       setLatestTweets(prepTweets(stgLatestTweets));
     }
     return () => {};
   }, [stgLatestTweets]);
   useEffect(() => {
-    console.log({ latestTweets });
     if (notFirstLatest.current > 1) {
       dispatchFeedDisplayMode({
         action: 'gotLatestTweets',
@@ -122,31 +121,40 @@ export function Display(props: any) {
   }, [latestTweets]);
   // useApiMetrics(auth, stgLatestTweets, setLatestTweets);
 
-  /* hooks for searchResults */
-  useLayoutEffect(() => {
+  // /* hooks for searchResults */
+  useEffect(() => {
+    console.log('stgSearchResults', { stgSearchResults });
     if (isNil(stgSearchResults)) {
     } else {
-      console.log({ stgSearchResults, time: Date.now() });
       setSearchResults(prepTweets(stgSearchResults));
     }
+
+    // if (notFirstSearch.current > 1) {
+    //   dispatchFeedDisplayMode({
+    //     action: 'gotSearchResults',
+    //     tweets: searchResults,
+    //   });
+    // } else {
+    //   notFirstSearch.current += 1;
+    // }
+
     return () => {};
   }, [stgSearchResults]);
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (notFirstSearch.current > 1) {
       dispatchFeedDisplayMode({
         action: 'gotSearchResults',
         tweets: searchResults,
       });
-      console.log({ searchResults, time: Date.now() });
     } else {
       notFirstSearch.current += 1;
     }
     return () => {};
   }, [searchResults]);
-  // useApiMetrics(auth, stgSearchResults, setSearchResults);
+  useApiMetrics(auth, stgSearchResults, setSearchResults);
   //
   /* hooks for apiResults */
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (notFirstApi.current > 1) {
       if (isNil(stgApiResults)) {
       } else {
@@ -183,7 +191,7 @@ const buildTweetComponent = (res: TweetResult) => (
 type TweetDisplayProps = {
   title: string;
   results: TweetResult[];
-  emptyMsg: string;
+  emptyMsg: string | JSX.Element;
 };
 function TweetDisplay({ title, results, emptyMsg }: TweetDisplayProps) {
   return (
@@ -224,17 +232,26 @@ function IdleDisplay({ results }: { results: TweetResult[] }) {
   );
 }
 
+const SearchResMsg = () => {
+  const [query, setQuery] = useStorage('query', '');
+  return <span>{`No search results for ${defaultTo(query, '')}. Yet!`} </span>;
+};
+
 function SearchResults({ results }: { results: TweetResult[] }) {
   const auth = useContext(AuthContext);
-  const [res, setRes] = useState(results);
-  const [query, setQuery] = useStorage('query', '');
+  // const [res, setRes] = useState(results);
   const [searchMode, setSearchMode] = useOption('searchMode');
-  useApiMetrics(auth, res, setRes);
+  // useApiMetrics(auth, res, setRes);
+  console.log('rerender SearchResults');
+  // useEffect(() => {
+  //   setRes(results);
+  //   return () => {};
+  // }, [results]);
 
   useEffect(() => {
-    setRes(results);
+    console.log('SearchResults', { results, searchMode });
     return () => {};
-  }, [results]);
+  }, [results, searchMode]);
 
   return (
     <TweetDisplay
@@ -245,8 +262,10 @@ function SearchResults({ results }: { results: TweetResult[] }) {
           ? 'Semantic search results:'
           : ''
       }
-      results={res}
-      emptyMsg={`No search results for ${query}. Yet!`}
+      results={results}
+      // results={res}
+      // emptyMsg={`No search results. Yet!`}
+      emptyMsg={<SearchResMsg />}
     />
   );
 }

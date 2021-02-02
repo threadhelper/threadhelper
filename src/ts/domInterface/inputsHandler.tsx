@@ -187,10 +187,6 @@ export function makeComposeFocusObs(): Observable<FocusEvent, any>[] {
   const focusIn = Kefir.fromEvents<FocusEvent, any>(document.body, 'focusin')
     .filter((_) => getMode() != UrlModes.other)
     .filter((e: FocusEvent) => {
-      console.log('[DEBUG] makeComposeFocusObs', {
-        activeElement: document.activeElement,
-        event: e.target,
-      });
       return elContained(editorSelector, e.target as Element);
     }); //.map(_=>'focused')
   const focusOut = Kefir.fromEvents<FocusEvent, any>(document.body, 'focusout')
