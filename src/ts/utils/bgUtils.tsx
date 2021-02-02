@@ -1,6 +1,6 @@
 import { Observable } from 'kefir'
 import PromiseWorker from 'promise-worker'
-import { assoc, curry, defaultTo, filter, isNil, map, not, path, pipe, prop, reduce } from 'ramda' // Function
+import { assoc, curry, defaultTo, filter, ifElse, isNil, map, not, path, pipe, prop, reduce } from 'ramda' // Function
 import { User } from 'twitter-d'
 import { apiToTweet, validateTweet } from '../bg/tweetImporter'
 import { ReqDefaultTweetsMsg, ReqSearchMsg } from '../types/msgTypes'
@@ -16,6 +16,12 @@ import Kefir from 'kefir';
 export const getDateFormatted = () => (new Date()).toLocaleString()
 export const twitter_url = /https?:\/\/(www\.)?twitter.com\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/
 export const apiBookmarkToTweet = pipe(apiToTweet, assoc('is_bookmark', true))
+
+export const extractTweetPropIfNeeded = ifElse(
+  prop('tweet'),
+  prop('tweet'),
+  (x) => x
+);
 
 export const saferTweetMap = (fn: (x:any) => any) => pipe( // saferMap :: [x] -> [x]
   defaultTo([]), 

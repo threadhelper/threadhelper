@@ -3,6 +3,7 @@ import { DBSchema, IDBPDatabase, openDB } from 'idb/with-async-ittr.js';
 import { curry } from 'ramda'; // Function
 import { User } from 'twitter-d';
 import { thTweet } from '../types/tweetTypes';
+import { thTwitterDB, StoreName } from '../types/dbTypes';
 /*
 DB:
 test tweets
@@ -12,20 +13,6 @@ timeline tweets
 bookmarks
 
 */
-interface thTwitterDB extends DBSchema {
-  tweets: {
-    key: string;
-    value: thTweet;
-  };
-  accounts: {
-    key: string;
-    value: User;
-  };
-  users: {
-    key: string;
-    value: User;
-  };
-}
 
 export const dbOpen = async () => {
   console.log('OPENING DB');
@@ -80,7 +67,11 @@ export const dbGetMany = curry(async (db: IDBPDatabase, storeName, keys) => {
   }
 });
 export const dbDelMany = curry(
-  async (db: IDBPDatabase, storeName, key_list) => {
+  async (
+    db: IDBPDatabase,
+    storeName: StoreName,
+    key_list: string[]
+  ): Promise<any[]> => {
     const tx = db.transaction(storeName, 'readwrite');
     const store = tx.objectStore(storeName);
     let promises: any[] = [];
@@ -98,7 +89,11 @@ export const dbDelMany = curry(
 // list as input
 // used only to add tweets to the store
 export const dbPutMany = curry(
-  async (db: IDBPDatabase, storeName, item_list) => {
+  async (
+    db: IDBPDatabase<thTwitterDB>,
+    storeName: StoreName,
+    item_list: object[]
+  ): Promise<any[]> => {
     console.log('putting in db', { db, storeName, item_list });
     const tx = db.transaction(storeName, 'readwrite');
     const store = tx.objectStore(storeName);
@@ -124,17 +119,23 @@ export const dbClear = curry(async (db: IDBPDatabase) => {
     await tx.done;
   }
 });
-export const dbIterate = curry(async (db: IDBPDatabase, storeName) => {
-  console.log('iterating db');
-  const tx = db.transaction(storeName);
-  for await (const cursor of tx.store) {
-    console.log(cursor.value);
-  }
-});
-export const dbFilter = curry(
-  async (db: IDBPDatabase, storeName, condFn: (arg0: any) => any) => {
+export const dbIterate = curry(
+  async (db: IDBPDatabase, storeName: StoreName) => {
+    console.log('iterating db');
     const tx = db.transaction(storeName);
-    let accum: any[] = [];
+    for await (const cursor of tx.store) {
+      console.log(cursor.value);
+    }
+  }
+);
+export const dbFilter = curry(
+  async <T,>(
+    db: IDBPDatabase<thTwitterDB>,
+    storeName: StoreName,
+    condFn: (arg0: T) => boolean
+  ): Promise<T[]> => {
+    const tx = db.transaction(storeName);
+    let accum: T[] = [];
     for await (const cursor of tx.store) {
       if (condFn(cursor.value)) accum.push(cursor.value);
     }

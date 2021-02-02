@@ -12,17 +12,21 @@ import { nullFn } from '../utils/putils';
 import { _useStream } from './useStream';
 
 const SERVE = process.env.DEV_MODE == 'serve';
+var count = 0;
+var renderCount = 0;
 
 export function useStorage(name, default_val) {
+  const storageChangeObs = useContext(StorageChangeObs);
   // const useStgObs = useMemo(() => {
   //   console.log('recomputing stg item observer ' + name);
   //   return makeStgItemObs(name);
   // }, [name]);
-  const storageChangeObs = useContext(StorageChangeObs);
   const [storageItem, setStorageItem] = _useStream(
     stgPathObs(storageChangeObs, [name]),
     default_val
   );
+  renderCount += 1;
+  console.log(`useStorage render ${renderCount}`);
 
   const setStgItem = pipe(
     setStg(name),
@@ -30,7 +34,8 @@ export function useStorage(name, default_val) {
   );
   // ATTENTION: this is commented out bc it might be needed in chrome. The observer use below needs to be the path one, not the whole stg
   useEffect(() => {
-    console.log('useStorage init', { storageChangeObs });
+    count += 1;
+    console.log(`useStorage init ${count}`, { storageChangeObs });
     // storageChangeObs.onValue(nullFn);
     //init
     getStg(name).then(pipe(defaultTo(default_val), setStorageItem));

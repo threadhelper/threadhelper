@@ -26,7 +26,7 @@ import { nullFn } from '../utils/putils';
 const db = dbOpen();
 const stgObs$ = makeStorageChangeObs();
 
-export const Query = createContext('');
+export const Query = createContext({});
 
 export default function Space(props: any) {
   // const [stgObs, setStgObs] = useState<Observable<any, any>>(Kefir.never());

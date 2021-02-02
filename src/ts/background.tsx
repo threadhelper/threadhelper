@@ -73,6 +73,7 @@ import {
   twitter_url,
   _makeOptionObs,
   _makeStgObs,
+  extractTweetPropIfNeeded,
 } from './utils/bgUtils';
 import {
   cleanOldStorage,
@@ -375,11 +376,7 @@ export async function main() {
 
   /* User submitted tweets */
   const reqArchiveLoad$ = msgStreamSafe('temp-archive-stored'); // reqArchiveLoad$ :: msg
-  const extractTweetPropIfNeeded = ifElse(
-    prop('tweet'),
-    prop('tweet'),
-    (x) => x
-  );
+
   const archiveLoadedTweets$ = reqArchiveLoad$
     .thru(
       promiseStream(

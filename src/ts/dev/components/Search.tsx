@@ -1,4 +1,11 @@
 import { h, render, Fragment } from 'preact';
+import { dbOpen } from '../../worker/idb_wrapper';
+import { makeIndex, updateIndex } from '../../worker/nlp';
+
+const db_promise = dbOpen();
+
+const index = makeIndex();
+// updateIndex(index, tweets2add, ids2remove)
 
 const Search = () => {
   return (

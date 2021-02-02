@@ -40,7 +40,7 @@ export function SearchBar({ show }) {
 
   useEffect(() => {
     // console.log('submitting search', { query });
-    submitSearch(query);
+    // submitSearch(query);
     return () => {};
   }, [query]);
 

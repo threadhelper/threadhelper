@@ -34,16 +34,17 @@ const updateFeedDisplay = (
   state,
   { action, tweets }: UpdateFeedDisplayAction
 ) => {
-  // console.log({ state, action, tweets });
+  console.log({ state, action, tweets });
   switch (action) {
     case 'emptySearch':
       return DisplayMode.Idle;
     case 'submitSearch':
       return DisplayMode.SearchWaiting;
     case 'gotSearchResults':
-      return [DisplayMode.Search, DisplayMode.SearchWaiting].includes(state)
-        ? DisplayMode.Search
-        : DisplayMode.Idle;
+      return DisplayMode.Search;
+    // return [DisplayMode.Search, DisplayMode.SearchWaiting].includes(state)
+    //     ? DisplayMode.Search
+    //     : DisplayMode.Idle;
     // return DisplayMode.Search;
     case 'emptyApiSearch':
       return DisplayMode.Idle;
@@ -94,6 +95,8 @@ export default function ThreadHelper(props: any) {
   );
 }
 
+var renderCount = 0;
+
 function Sidebar(props: { active: any }) {
   // const [feedDisplayMode, setFeedDisplayMode] = useState('idle');
   const [auth, setAuth] = useStorage('auth', {});
@@ -101,6 +104,8 @@ function Sidebar(props: { active: any }) {
     updateFeedDisplay,
     DisplayMode.Idle
   );
+  renderCount += 1;
+  console.log(`Sidebar render ${renderCount}`);
 
   useEffect(() => {
     console.log({ auth });

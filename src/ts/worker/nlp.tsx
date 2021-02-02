@@ -15,7 +15,7 @@ import {
 import { User } from 'twitter-d';
 import { IndexSearchResult } from '../types/msgTypes';
 import { SearchFilters } from '../types/stgTypes';
-import { IndexTweet } from '../types/tweetTypes';
+import { IndexTweet, thTweet, TweetId } from '../types/tweetTypes';
 import { makeValidateTweet } from './search';
 
 const tweet_fields = [
@@ -45,7 +45,7 @@ const initIndex = function (this: any) {
 };
 
 function _makeIndex(config) {
-  var idx = new elasticlunr.Index();
+  var idx = new elasticlunr.Index<IndexTweet>();
 
   idx.pipeline.add(
     elasticlunr.trimmer,
@@ -62,7 +62,7 @@ export const makeIndex = () => _makeIndex(initIndex);
 
 // IMPURE
 export const addToIndex = curry(
-  async (index: elasticlunr.Index<IndexTweet>, tweets: IndexTweet[]) => {
+  async (index: elasticlunr.Index<IndexTweet>, tweets: thTweet[]) => {
     const toDoc = pipe(values, project(tweet_fields));
     toDoc(tweets).forEach((x: IndexTweet) => index.addDoc(x));
     return index;
@@ -77,7 +77,11 @@ export const removeFromIndex = curry(
 );
 
 export const updateIndex = curry(
-  async (index, tweets_to_add, ids_to_remove) => {
+  async (
+    index: elasticlunr.Index<IndexTweet>,
+    tweets_to_add: thTweet[],
+    ids_to_remove: TweetId[]
+  ) => {
     index = await addToIndex(index, tweets_to_add);
     index = await removeFromIndex(index, ids_to_remove);
     return index;

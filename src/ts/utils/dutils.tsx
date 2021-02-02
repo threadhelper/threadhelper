@@ -38,7 +38,7 @@ import {
   defaultStorage as _defaultStorage,
   devStorage,
 } from './defaultStg';
-import { currentValue, inspect } from './putils';
+import { asyncTimeFn, currentValue, inspect, timeFn } from './putils';
 
 (Kefir.Property.prototype as any).currentValue = currentValue;
 
@@ -76,7 +76,7 @@ export const getData = async (keys) => {
 export const setData = async (key_vals) => {
   // console.log('setData', key_vals);
   if (SERVE) {
-    return await setDataLocal(key_vals);
+    return setDataLocalSync(key_vals);
   } else {
     return setDataChrome(key_vals);
   }
@@ -137,12 +137,18 @@ const makeStgEvent = (key_vals: object) => {
     cancelable: !0,
   });
 };
-
+const setDataLocalSync = (key_vals: object) => {
+  document.dispatchEvent(makeStgEvent(key_vals));
+  const prepData = pipe(
+    toPairs,
+    map(([k, v]) => [k, JSON.stringify(v)])
+  );
+  const setString = ([k, v]) => localStorage.setItem(k, v);
+  forEach(setString, prepData(key_vals));
+};
 const setDataLocal = async (key_vals: object) => {
   return new Promise(function (resolve, reject) {
-    document.dispatchEvent(makeStgEvent(key_vals));
-    const setString = ([k, v]) => localStorage.setItem(k, JSON.stringify(v));
-    forEach(setString, toPairs(key_vals));
+    setDataLocalSync(key_vals);
     resolve(key_vals);
   });
 };
