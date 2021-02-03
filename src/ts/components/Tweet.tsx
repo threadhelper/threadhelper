@@ -38,7 +38,7 @@ export const ReplyAction = ({ tweet }) => {
   useEffect(() => {
     setCount(countReplies(tweet));
     return () => {};
-  }, [tweet]);
+  }, []);
 
   return (
     <div class="th-icon-field">
@@ -56,14 +56,14 @@ const RetweetAction = ({ tweet }) => {
   const [active, setActive] = useState(tweet.retweeted ?? false);
   const [count, setCount] = useState(countRts(tweet));
   const [id, setId] = useState(tweet.id);
-  // const auth = useContext(AuthContext);
+  const auth = useContext(AuthContext);
 
   useEffect(() => {
     setActive(tweet.retweeted ?? false);
     setCount(countRts(tweet));
     setId(tweet.id);
     return () => {};
-  }, [tweet]);
+  }, []);
 
   const onFunc = () => {
     setActive(true);
@@ -98,17 +98,15 @@ const countFavs = (t) => t.favorite_count ?? (t.favorited ? 1 : 0);
 const LikeAction = ({ tweet }) => {
   const [active, setActive] = useState(tweet.favorited ?? false);
   const [count, setCount] = useState(countFavs(tweet));
-  const [id, setId] = useState(tweet.id);
-  // const auth = useContext(AuthContext);
-
-  // const [_count, setCount] = useState(count);
+  const [id, setId] = useState(count);
+  const auth = useContext(AuthContext);
 
   useEffect(() => {
     setActive(tweet.favorited ?? false);
     setCount(countFavs(tweet));
     setId(tweet.id);
     return () => {};
-  }, [tweet]);
+  }, []);
 
   const onFunc = (e) => {
     setActive(true);
@@ -228,6 +226,9 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
           {maybeMedia(tweet)}
           {maybeQuote(tweet)}
           <div class="th-icons">
+            {/* <ReplyAction />
+            <RetweetAction />
+            <LikeAction /> */}
             <ReplyAction tweet={_tweet} />
             <RetweetAction tweet={_tweet} />
             <LikeAction tweet={_tweet} />

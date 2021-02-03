@@ -26,9 +26,10 @@ export const useStream = (stream, initialState) => {
   return current;
 };
 
-export const _useStream = (stream, initialState) => {
+export const _useStream = (stream, initialState = null) => {
   const [current, setCurrent] = useState(initialState);
   useEffect(() => {
+    console.log('useStream Init', { stream });
     const sub = stream.observe({
       value: (x) => {
         setCurrent(x);

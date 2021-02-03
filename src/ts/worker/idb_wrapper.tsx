@@ -35,7 +35,7 @@ export const dbOpen = async () => {
           });
           const misc = db.createObjectStore('misc', {});
           // Create an index on the 'date' property of the objects.
-          store.createIndex('time', 'time');
+          // store.createIndex('time', 'time');
           // a placeholder case so that the switch block will
           // execute when the database is first created
           // (oldVersion is 0)
@@ -111,7 +111,7 @@ export const dbPutMany = curry(
   }
 );
 export const dbClear = curry(async (db: IDBPDatabase) => {
-  let storeNames = ['tweets', 'misc'];
+  let storeNames = ['tweets', 'accounts', 'users', 'misc'];
   for (let storeName of storeNames) {
     const tx = db.transaction(storeName, 'readwrite');
     const store = tx.objectStore(storeName);

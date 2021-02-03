@@ -6,6 +6,7 @@ export enum StoreName {
   tweets = 'tweets',
   accounts = 'accounts',
   users = 'users',
+  misc = 'misc',
 }
 export interface thTwitterDB extends DBSchema {
   tweets: {
@@ -19,5 +20,9 @@ export interface thTwitterDB extends DBSchema {
   users: {
     key: string;
     value: User;
+  };
+  misc: {
+    key: string;
+    value: any;
   };
 }

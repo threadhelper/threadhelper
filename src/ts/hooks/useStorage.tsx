@@ -1,6 +1,6 @@
 import { useContext, useEffect } from 'preact/hooks';
 import { andThen, defaultTo, path, pipe, prop } from 'ramda';
-import { StorageChangeObs } from './StorageChangeObs';
+import { StorageChangeObs } from './BrowserEventObs';
 import {
   getStg,
   getStgPath,
@@ -25,8 +25,6 @@ export function useStorage(name, default_val) {
     stgPathObs(storageChangeObs, [name]),
     default_val
   );
-  renderCount += 1;
-  console.log(`useStorage render ${renderCount}`);
 
   const setStgItem = pipe(
     setStg(name),
@@ -47,11 +45,6 @@ export function useStorage(name, default_val) {
       // storageChangeObs.offValue(nullFn);
     };
   }, []);
-
-  useEffect(() => {
-    console.log('useStorage', { storageChangeObs });
-    return () => {};
-  }, [storageChangeObs]);
 
   return [storageItem, setStgItem];
 }

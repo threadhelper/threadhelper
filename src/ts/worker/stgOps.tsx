@@ -51,7 +51,7 @@ import {
   inspect,
   wTimeFn,
 } from '../utils/putils';
-import { dbFilter } from './idb_wrapper';
+import { dbFilter, dbGet } from './idb_wrapper';
 import { loadIndex, makeIndex, search, updateIndex } from './nlp';
 import { onWorkerPromise } from './promise-stream-worker';
 import { getLatestTweets, getRandomSampleTweets } from './search';
@@ -92,14 +92,19 @@ export const updateSemanticIndex = async (olds, new_tweets) =>
     andThen(inspect('[INFO] reqSemIndexTweets'))
   )();
 export const updateIndexAndStoreToDb = curry(
-  async (db, index, new_tweets, deleted_ids) =>
-    pipe(
-      (index, tweets_to_add, ids_to_remove) =>
-        updateIndex(index, tweets_to_add, ids_to_remove),
-      andThen((index) => index.toJSON()),
-      andThen((index_json) => db.put('misc', index_json, 'index'))
-    )(index, new_tweets, deleted_ids)
+  async (db, index, tweets_to_add, ids_to_remove) => {
+    const newIndex = await updateIndex(index, tweets_to_add, ids_to_remove);
+    console.log('updateIndexAndStoreToDb', { newIndex });
+    await db.put('misc', newIndex.toJSON(), 'index');
+    return newIndex;
+  }
 );
+// pipe(
+//   (index, tweets_to_add, ids_to_remove) =>
+//     updateIndex(index, tweets_to_add, ids_to_remove),
+//   andThen((index) => index.toJSON()),
+//   andThen((index_json) => db.put('misc', index_json, 'index'))
+// )(index, tweets_to_add, ids_to_remove)
 
 export const _updateIndex = async (
   db,
@@ -117,3 +122,22 @@ export const _updateIndex = async (
   );
   return newIndex;
 };
+
+export const makeTweetResponse = curry(
+  async (db_promise, res: IndexSearchResult): Promise<SearchResult> => {
+    const db = await db_promise;
+    const tweet = await dbGet(db, 'tweets', res.ref);
+    return { tweet, score: res.score };
+  }
+);
+
+export const makeSearchResponse = curry(
+  async (db_promise, results: IndexSearchResult[]): Promise<SearchResult[]> => {
+    const _response = await Promise.all(
+      map(makeTweetResponse(db_promise), results)
+    );
+    const missing = filter(pipe(prop('tweet'), isNil), _response);
+    const response = filter(pipe(prop('tweet'), isNil, not), _response);
+    return response;
+  }
+);

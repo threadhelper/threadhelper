@@ -1,4 +1,5 @@
 import { Fragment, h } from 'preact';
+import { useThrottle, useThrottleCallback } from '@react-hook/throttle';
 import {
   useContext,
   useEffect,
@@ -28,6 +29,7 @@ import {
 } from 'ramda'; // Function
 import { apiSearchToTweet } from '../bg/tweetImporter';
 import { apiMetricsFetch, tweetLookupQuery } from '../bg/twitterScout';
+import { useMsg } from '../hooks/useMsg';
 // import { useAsync } from '../hooks/useAsync';
 import { useOption, useStorage } from '../hooks/useStorage';
 import { DisplayMode } from '../types/interfaceTypes';
@@ -72,11 +74,14 @@ export function Display(props: any) {
   const [latestTweets, setLatestTweets] = useState([]);
   const notFirstLatest = useRef(0);
 
+  // const msgSearchResults = useMsg('searchResults');
+  // const [stgSearchResults, setStgSearchResults] = useState([]);
   const [stgSearchResults, setStgSearchResults] = useStorage(
     'search_results',
     []
   );
-  const [searchResults, setSearchResults] = useState([]);
+  // const [searchResults, setSearchResults] = useState([]);
+  const [searchResults, setSearchResults] = useThrottle([], 20, true);
   const notFirstSearch = useRef(0);
 
   const [stgApiResults, setStgApiResults] = useStorage('api_results', []);
@@ -119,9 +124,19 @@ export function Display(props: any) {
     }
     return () => {};
   }, [latestTweets]);
-  // useApiMetrics(auth, stgLatestTweets, setLatestTweets);
+  useApiMetrics(auth, stgLatestTweets, setLatestTweets);
 
   // /* hooks for searchResults */
+  // useEffect(() => {
+  //   console.log('msgSearchResults', { msgSearchResults });
+
+  //   if (isNil(prop('data', msgSearchResults))) {
+  //   } else {
+  //     setStgSearchResults(prepTweets(prop('data', msgSearchResults)));
+  //   }
+
+  //   return () => {};
+  // }, [msgSearchResults]);
   useEffect(() => {
     console.log('stgSearchResults', { stgSearchResults });
     if (isNil(stgSearchResults)) {
@@ -141,7 +156,7 @@ export function Display(props: any) {
     return () => {};
   }, [stgSearchResults]);
   useEffect(() => {
-    if (notFirstSearch.current > 1) {
+    if (notFirstSearch.current > 2) {
       dispatchFeedDisplayMode({
         action: 'gotSearchResults',
         tweets: searchResults,

@@ -16,6 +16,7 @@ import { User } from 'twitter-d';
 import { IndexSearchResult } from '../types/msgTypes';
 import { SearchFilters } from '../types/stgTypes';
 import { IndexTweet, thTweet, TweetId } from '../types/tweetTypes';
+import { inspect } from '../utils/putils';
 import { makeValidateTweet } from './search';
 
 const tweet_fields = [
@@ -84,7 +85,7 @@ export const updateIndex = curry(
   ) => {
     index = await addToIndex(index, tweets_to_add);
     index = await removeFromIndex(index, ids_to_remove);
-    return index;
+    return await index;
   }
 );
 //
@@ -144,10 +145,11 @@ export const getTopNResults = curry(
   ): Promise<IndexSearchResult[]> => {
     const isValidTweet = makeValidateTweet(filters, accsShown);
     const sample = pipe(
+      () => results,
       map(pick(['ref', 'score'])),
       filter(pipe(prop('ref'), getDoc(index), isValidTweet)),
       take(n_tweets)
-    )(results);
+    )();
     return sample;
   }
 );
@@ -160,13 +162,10 @@ export const search = curry(
     index,
     query
   ): Promise<IndexSearchResult[]> => {
-    return await pipe<
-      string,
-      Promise<elasticlunr.SearchResults[]>,
-      Promise<IndexSearchResult[]>
-    >(
+    return await pipe(
+      () => query,
       getRelated(index),
       andThen(getTopNResults(n_tweets, index, filters, accsShown))
-    )(query);
+    )();
   }
 );

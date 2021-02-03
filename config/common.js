@@ -6,6 +6,7 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 const WebpackExtensionManifestPlugin = require('webpack-extension-manifest-plugin');
 const baseManifest = require('../baseManifest.js');
 const pkg = require('../package.json');
+const { WebWorkerPlugin } = require('@shopify/web-worker/webpack');
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
@@ -20,9 +21,10 @@ module.exports = function (configDirs) {
     output: {
       filename: '[name].bundle.js',
       path: configDirs.BUILD_DIR,
+      globalObject: 'self',
     },
     resolve: {
-      extensions: ['.ts', '.tsx', '.js', '.jsx'],
+      extensions: ['.ts', '.tsx', '.js', '.jsx', '.mjs'],
       alias: {
         react: 'preact/compat',
         'react-dom/test-utils': 'preact/test-utils',
@@ -32,7 +34,7 @@ module.exports = function (configDirs) {
     module: {
       rules: [
         {
-          test: /\.(js|jsx|ts|tsx)$/,
+          test: /\.(js|jsx|ts|tsx|mjs)$/,
           exclude: /node_modules/,
           use: [
             {
@@ -44,7 +46,8 @@ module.exports = function (configDirs) {
                   '@babel/preset-typescript',
                 ],
                 plugins: [
-                  '@babel/plugin-syntax-top-level-await',
+                  require.resolve('@shopify/web-worker/babel'),
+                  // '@shopify/web-worker/babel',
                   [
                     '@babel/plugin-transform-react-jsx',
                     {
@@ -93,10 +96,16 @@ module.exports = function (configDirs) {
             'postcss-loader',
           ],
         },
+        {
+          test: /\.mjs$/,
+          include: /node_modules/,
+          type: 'javascript/auto',
+        },
       ],
     },
 
     plugins: [
+      new WebWorkerPlugin({ globalObject: 'self' }),
       isDevelopment && new MiniCssExtractPlugin(),
       new webpack.DefinePlugin({
         'process.env': {

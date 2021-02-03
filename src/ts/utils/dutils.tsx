@@ -8,6 +8,7 @@ import {
   head,
   isNil,
   keys,
+  length,
   lensPath,
   map,
   mergeDeepLeft,
@@ -264,6 +265,19 @@ export const applyToOptionStg = curry(
 
 /* msg API */
 
+const typeOnlyMsg = (msg) => {
+  return keys(msg).includes('type') && length(keys(msg)) <= 1;
+};
+export function postMsg(_msg: Msg) {
+  const msg = typeOnlyMsg(_msg) ? { ..._msg, hash: Math.random() } : _msg;
+  if (SERVE) {
+    console.log('postMsg', { msg });
+    window.postMessage(msg, '*');
+  } else {
+    chrome.runtime.sendMessage(msg);
+  }
+}
+
 export function msgBG(msg: Msg) {
   if (SERVE) {
     window.postMessage(msg, '*');
@@ -333,7 +347,8 @@ const makeCustomEventObs = (
   const obs = Kefir.stream<any, Error>((emitter) => {
     // console.log('CustomEventObs ' + eventName, { makeEmit });
     const emit = makeEmit(emitter);
-    document.addEventListener(
+    const target = eventName == 'message' ? window : document;
+    target.addEventListener(
       eventName,
       pipe(
         // inspect(eventName + ' event'),
@@ -409,13 +424,22 @@ export const makeGotMsgObs = (): Observable<MsgWrapper, Error> => {
   const makeEmitMsg = (emitter: Emitter<MsgWrapper, Error>) => (
     message,
     sender
-  ) => emitter.emit({ m: message, s: sender });
+  ) => {
+    // console.log('emitting msg', { message });
+    return emitter.emit({ m: message, s: sender });
+  };
   return SERVE
     ? makeCustomEventObs('message', makeEmitMsg)
     : makeEventObs(chrome.runtime.onMessage, makeEmitMsg);
 };
-export const makeMsgStream = (msgType): Observable<Msg, Error> =>
-  makeGotMsgObs().map(prop('m')).filter(propEq('type', msgType));
+export const msgStream = curry(
+  (
+    msgObs: Observable<MsgWrapper, Error>,
+    msgType: string
+  ): Observable<Msg, Error> =>
+    msgObs.map(prop('m')).filter(propEq('type', msgType))
+);
+export const makeMsgStream = msgStream(makeGotMsgObs());
 
 export const makeOptionObs = curry(
   (

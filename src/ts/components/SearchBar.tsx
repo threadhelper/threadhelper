@@ -11,7 +11,7 @@ import { DisplayMode } from '../types/interfaceTypes';
 const trimNewlines = (str) =>
   trim(str).replace(/(^\s*(?!.+)\n+)|(\n+\s+(?!.+)$)/g, '');
 const reqSearch = (query) => {
-  // msgBG({ type: 'search', query });
+  msgBG({ type: 'search', query });
 };
 
 export function SearchBar({ show }) {
@@ -39,8 +39,14 @@ export function SearchBar({ show }) {
   };
 
   useEffect(() => {
+    return () => {
+      setQuery('');
+    };
+  }, []);
+
+  useEffect(() => {
     // console.log('submitting search', { query });
-    // submitSearch(query);
+    submitSearch(query);
     return () => {};
   }, [query]);
 
@@ -53,11 +59,11 @@ export function SearchBar({ show }) {
             <input
               ref={inputObj}
               class="inline w-20"
-              value={value}
+              value={query}
               onInput={(e) =>
                 setQuery(defaultTo('', path(['target', 'value'], e)))
               }
-              onKeyUp={(e) => (e.key === 'Enter' ? submitSearch(value) : null)}
+              onKeyUp={(e) => (e.key === 'Enter' ? submitSearch(query) : null)}
               onFocus={(e) => e.target?.select()}
               type="text"
               style="background-color:rgba(125,125,125,0.1)"

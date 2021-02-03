@@ -1,8 +1,8 @@
 {
   "exclude": ["node_modules", "build"],
   "compilerOptions": {
-    // "target": "es5",
-    "target": "es2017",
+    "target": "es5",
+    // "target": "es2017",
     "sourceMap": true,
     "lib": [
       "dom",
@@ -19,8 +19,8 @@
     "allowSyntheticDefaultImports": true,
     "strict": false,
     "forceConsistentCasingInFileNames": false,
-    "module": "esnext",
-    // "module": "commonjs",
+    // "module": "esnext",
+    "module": "commonjs",
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "jsx": "react",
