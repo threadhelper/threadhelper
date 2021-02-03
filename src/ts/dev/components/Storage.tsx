@@ -178,7 +178,7 @@ const IndexStg = () => {
       };
       postUpdate(newIndex);
     };
-    // console.log('idbUpdateMsg IndexStg');
+    console.log('idbUpdateMsg IndexStg');
     // if (!isNil(index)) {
     //   updateIdxFromIdb(index, db_promise)
     //     .then(tap((_) => postMsg({ type: 'idbUpdate' })))

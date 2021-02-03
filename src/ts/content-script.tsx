@@ -14,7 +14,7 @@ import Kefir, { Observable, Property, Subscription } from 'kefir';
 import { h, render } from 'preact';
 import 'preact/debug';
 import 'preact/devtools';
-import { StorageChangeObs } from './hooks/BrowserEventObs';
+import { MsgObs, StorageChangeObs } from './hooks/BrowserEventObs';
 import * as R from 'ramda';
 import {
   and,
@@ -90,12 +90,14 @@ toggleDebug(window, DEBUG);
 let thBarHome = makeSidebarHome();
 let thBarComp = makeSidebarCompose();
 const activateSidebar = curry(
-  (inject: (arg0: Element) => any, bar: Element, storageChange$) => {
+  (inject: (arg0: Element) => any, bar: Element, storageChange$, msgObs$) => {
     console.log('[DEBUG] activating sidebar', { storageChange$ });
     inject(bar);
     render(
       <StorageChangeObs.Provider value={storageChange$}>
-        <ThreadHelper />
+        <MsgObs.Provider value={msgObs$}>
+          <ThreadHelper />
+        </MsgObs.Provider>
       </StorageChangeObs.Provider>,
       bar
     );
@@ -117,8 +119,8 @@ const handlePosting = () => msgBG({ type: 'update-tweets' }); // handle twitter 
 
 const reqSearch = R.pipe<any, string, void>(defaultTo(''), (query) => {
   // console.log('reqSearch', { query });
-  msgBG({ type: 'search', query });
-  // setStg('query', query);
+  // msgBG({ type: 'search', query });
+  setStg('query', query);
 });
 // Stream clean up
 const subscriptions: Subscription[] = [];
@@ -132,7 +134,9 @@ const subObs = <T,>(
 ): Subscription => rememberSub(obs.observe({ value: effect }));
 
 const initCsStg = () => {
-  ['search_results', 'api_results', 'temp_archive'].map(resetStorageField);
+  ['search_results', 'api_results', 'temp_archive', 'query'].map(
+    resetStorageField
+  );
 };
 
 function main() {
@@ -145,7 +149,8 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
   msgBG({ type: 'cs-created' });
   // Define streams
   //      messages
-  const gotMsg$ = makeGotMsgObs().map(prop('m'));
+  const msgObs$ = makeGotMsgObs();
+  const gotMsg$ = msgObs$.map(prop('m'));
   const urlChange$ = ((gotMsg$.filter(
     propEq('type', 'tab-change-url')
   ) as unknown) as Observable<UrlMsg, Error>).map(prop('url'));
@@ -213,9 +218,13 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
 
   // Sidebar control
   const updateFloat = (value: any) =>
-    value ? activateFloatSidebar(storageChange$) : deactivateSidebar(thBarComp); //function
+    value
+      ? activateFloatSidebar(storageChange$, msgObs$)
+      : deactivateSidebar(thBarComp); //function
   const updateHome = (value: any) =>
-    value ? activateHomeSidebar(storageChange$) : deactivateSidebar(thBarHome); //function
+    value
+      ? activateHomeSidebar(storageChange$, msgObs$)
+      : deactivateSidebar(thBarHome); //function
   const floatSidebar$ = makeFloatSidebarObserver(thBarComp); // floatSidebar$ :: String || Element  // for floating sidebar in compose mode
   const floatActive$ = floatSidebar$
     .map(equals('render'))
