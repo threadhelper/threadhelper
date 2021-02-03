@@ -11,13 +11,13 @@ import * as css from '../../style/cs.css';
 console.log('hi css', css);
 import { updateTheme } from '../utils/wutils';
 import { devStorage } from '../utils/defaultStg';
-import { initStg, makeStorageChangeObs } from '../utils/dutils';
+import { initStg, makeStorageChangeObs, makeGotMsgObs } from '../utils/dutils';
 import { dbOpen } from '../worker/idb_wrapper';
 import Scraper from './components/Scraper';
 import Search from './components/Search';
 import TtReader from './components/TtReader';
 import Storage from './components/Storage';
-import { StorageChangeObs } from '../hooks/StorageChangeObs';
+import { StorageChangeObs, MsgObs } from '../hooks/BrowserEventObs';
 import Kefir, { Observable } from 'kefir';
 import { useEffect } from 'react';
 import { useState } from 'preact/hooks';
@@ -25,6 +25,7 @@ import { nullFn } from '../utils/putils';
 
 const db = dbOpen();
 const stgObs$ = makeStorageChangeObs();
+const msgObs$ = makeGotMsgObs();
 
 export const Query = createContext({});
 
@@ -45,15 +46,17 @@ export default function Space(props: any) {
   return (
     <div class="container flex m-4">
       <StorageChangeObs.Provider value={stgObs$}>
-        <div class="flex-1">
-          <TtReader />
-          <Scraper />
-          <Search />
-          <Storage />
-        </div>
-        <div class="flex-none w-96 w-max-lg">
-          <ThreadHelper />
-        </div>
+        <MsgObs.Provider value={msgObs$}>
+          <div class="flex-1">
+            <TtReader />
+            <Scraper />
+            <Search />
+            <Storage />
+          </div>
+          <div class="flex-none w-96 w-max-lg">
+            <ThreadHelper />
+          </div>
+        </MsgObs.Provider>
       </StorageChangeObs.Provider>
     </div>
   );

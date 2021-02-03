@@ -14,7 +14,7 @@ import Kefir, { Observable, Property, Subscription } from 'kefir';
 import { h, render } from 'preact';
 import 'preact/debug';
 import 'preact/devtools';
-import { StorageChangeObs } from './hooks/StorageChangeObs';
+import { StorageChangeObs } from './hooks/BrowserEventObs';
 import * as R from 'ramda';
 import {
   and,

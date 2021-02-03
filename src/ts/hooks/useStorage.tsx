@@ -1,6 +1,6 @@
 import { useContext, useEffect } from 'preact/hooks';
 import { andThen, defaultTo, path, pipe, prop } from 'ramda';
-import { StorageChangeObs } from './StorageChangeObs';
+import { StorageChangeObs } from './BrowserEventObs';
 import {
   getStg,
   getStgPath,

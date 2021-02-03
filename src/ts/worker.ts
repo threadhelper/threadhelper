@@ -59,6 +59,8 @@ import { doSemanticSearch, reqSemIndexTweets } from './worker/semantic';
 import {
   findNewTweets,
   getRelevantOldIds,
+  makeSearchResponse,
+  makeTweetResponse,
   updateIndexAndStoreToDb,
   _updateIndex,
 } from './worker/stgOps';
@@ -126,7 +128,8 @@ consoleLog('worker hi! 0', '');
 // throw Error('[DEBUG] [ERROR] worker debug error')
 // Streams
 // Db init
-const db$ = Kefir.fromPromise(db.dbOpen()).ignoreEnd().toProperty();
+const db_promise = db.dbOpen();
+const db$ = Kefir.fromPromise(db_promise).ignoreEnd().toProperty();
 const noDb$ = db$.map(isNil);
 // Messages
 const msg$ = Kefir.fromEvents(wSelf, 'message');
@@ -306,13 +309,6 @@ const onAddTweets = indexUpdate('addTweets', addTweets);
 const onRemoveTweets = indexUpdate('removeTweets', removeTweets);
 const getTweetByID = (id: string): Promise<thTweet> =>
   db.dbGet(getDb(1), 'tweets', id);
-const getTweetsFromDbById = async (ids: string[]): Promise<thTweet[]> =>
-  await pipe<string[], Promise<thTweet>[], Promise<thTweet[]>>(
-    () => ids,
-    // ids => db.getMany(getDb(1), 'tweets', ids), andThen(filter(x => not(isNil(x)))))(ids);
-    map(getTweetByID),
-    andThen(filter((x) => not(isNil(x))))
-  )();
 
 // searchFromMsg :: msg search -> Promise [tweet]
 const ftSearchFromMsg = curry(
@@ -329,36 +325,12 @@ const renameKeys = curry((keysMap, obj) =>
   reduce((acc, key) => assoc(keysMap[key] || key, obj[key], acc), {}, keys(obj))
 );
 
-const makeTweetResponse = async (
-  res: IndexSearchResult
-): Promise<SearchResult> => {
-  const tweet = await getTweetByID(res.ref);
-  return { tweet, score: res.score };
-};
-
-const makeSearchResponse = async (
-  results: IndexSearchResult[]
-): Promise<SearchResult[]> => {
-  const _response = await Promise.all(map(makeTweetResponse, results));
-  const missing = filter(pipe(prop('tweet'), isNil), _response);
-  const response = filter(pipe(prop('tweet'), isNil, not), _response);
-  return response;
-};
-
 const fulltextSearch = async (m: ReqSearchMsg): Promise<TweetResWorkerMsg> => {
-  return pipe<
-    any,
-    any,
-    Promise<IndexSearchResult[]>,
-    Promise<SearchResult[]>,
-    Promise<SearchResult[]>,
-    Promise<any>,
-    Promise<TweetResWorkerMsg>
-  >(
+  return pipe(
     () => m,
     tap((_) => emitMidSearch(true)),
     ftSearchFromMsg(getIndex),
-    andThen(makeSearchResponse),
+    andThen(makeSearchResponse(db_promise)),
     andThen(tap((_) => emitMidSearch(false))),
     andThen(assoc('res', __, { type: 'searchIndex', msg: m }))
   )();

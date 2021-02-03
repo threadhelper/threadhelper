@@ -14,7 +14,7 @@ import { useStorage } from '../hooks/useStorage';
 import Kefir, { Observable } from 'kefir';
 import { TweetResult } from '../types/msgTypes';
 import { makeStorageChangeObs } from '../utils/dutils';
-import { StorageChangeObs } from '../hooks/StorageChangeObs';
+import { StorageChangeObs } from '../hooks/BrowserEventObs';
 
 export const AuthContext = createContext<Credentials>({
   authorization: null,
