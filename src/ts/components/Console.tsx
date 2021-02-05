@@ -9,6 +9,7 @@ import RetweetIcon from '../../images/retweet.svg';
 import ShuffleIcon from '../../images/shuffle.svg';
 import { useOption } from '../hooks/useStorage';
 import { csEvent } from '../utils/ga';
+import Tooltip from './Tooltip';
 
 export function FilterButton(props: {
   Icon: any;
@@ -30,22 +31,13 @@ export function FilterButton(props: {
         onChange={(event) => handleInputChange(props.setFilter, event)}
       ></input>
       <label for={props.name}>
-        <a data-tip="React-tooltip" data-for={props.name}>
+        <Tooltip content={`Filter`} direction="bottom">
           <Icon
             class="box-content filter-icon hoverHighlight"
             onClick={(_) => _}
-          />{' '}
-        </a>
+          />
+        </Tooltip>
       </label>
-      <ReactTooltip
-        id={props.name}
-        delayShow={300}
-        place="bottom"
-        type="dark"
-        effect="solid"
-      >
-        <span style="color: var(--main-txt-color);">{`Filter ${props.name}`}</span>
-      </ReactTooltip>
     </span>
   );
 }

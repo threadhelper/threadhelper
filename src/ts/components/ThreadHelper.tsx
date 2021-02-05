@@ -39,7 +39,7 @@ const updateFeedDisplay = (
     case 'emptySearch':
       return DisplayMode.Idle;
     case 'submitSearch':
-      return DisplayMode.SearchWaiting;
+      return state;
     case 'gotSearchResults':
       return DisplayMode.Search;
     // return [DisplayMode.Search, DisplayMode.SearchWaiting].includes(state)

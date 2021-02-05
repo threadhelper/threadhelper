@@ -1,5 +1,5 @@
-import { useContext, useEffect } from 'preact/hooks';
-import { andThen, defaultTo, path, pipe, prop } from 'ramda';
+import { useContext, useEffect, useState } from 'preact/hooks';
+import { andThen, assoc, defaultTo, has, path, pipe, prop } from 'ramda';
 import { StorageChangeObs } from './BrowserEventObs';
 import {
   getStg,
@@ -12,11 +12,12 @@ import { nullFn } from '../utils/putils';
 import { _useStream } from './useStream';
 
 const SERVE = process.env.DEV_MODE == 'serve';
-var count = 0;
+var counter = {};
 var renderCount = 0;
 
 export function useStorage(name, default_val) {
   const storageChangeObs = useContext(StorageChangeObs);
+  const storageChangeObsState = useState(() => storageChangeObs);
   // const useStgObs = useMemo(() => {
   //   console.log('recomputing stg item observer ' + name);
   //   return makeStgItemObs(name);
@@ -30,19 +31,28 @@ export function useStorage(name, default_val) {
     setStg(name),
     andThen(pipe(prop(name), setStorageItem))
   );
+
   // ATTENTION: this is commented out bc it might be needed in chrome. The observer use below needs to be the path one, not the whole stg
   useEffect(() => {
-    count += 1;
-    console.log(`useStorage init ${count}`, { storageChangeObs });
-    // storageChangeObs.onValue(nullFn);
+    if (has(name, counter)) {
+      counter[name] += 1;
+    } else {
+      counter = assoc(name, 1, counter);
+    }
+    console.log(`useStorage ${name} init ${counter[name]}`, {
+      storageChangeObs,
+      StorageChangeObs,
+      storageItem,
+      storageChangeObsState,
+    });
     //init
     getStg(name).then(pipe(defaultTo(default_val), setStorageItem));
     return () => {
       console.log('closing useStorage ' + name, {
         storageChangeObs,
+        StorageChangeObs,
         storageItem,
       });
-      // storageChangeObs.offValue(nullFn);
     };
   }, []);
 

@@ -25,13 +25,15 @@ import { nullFn } from '../utils/putils';
 
 const db = dbOpen();
 const stgObs$ = makeStorageChangeObs();
+// stgObs$.log('stgObs$');
+stgObs$.onValue(nullFn);
+
 const msgObs$ = makeGotMsgObs();
 
 export const Query = createContext({});
 
 export default function Space(props: any) {
   // const [stgObs, setStgObs] = useState<Observable<any, any>>(Kefir.never());
-  const [query, setQuery] = useState('');
 
   // useEffect(() => {
   //   const obs = makeStorageChangeObs();
@@ -47,7 +49,7 @@ export default function Space(props: any) {
     <div class="container flex m-4">
       <StorageChangeObs.Provider value={stgObs$}>
         <MsgObs.Provider value={msgObs$}>
-          <div class="flex-1">
+          <div class="flex-1 max-w-full  overflow-x-auto ">
             <TtReader />
             <Scraper />
             <Search />
@@ -62,10 +64,29 @@ export default function Space(props: any) {
   );
 }
 // document.addEventListener('localStorage', console.log);
-console.log('Console DEVING', { DEV_MODE: process.env.DEV_MODE });
-let bar = document.getElementById('root');
+let root = document.getElementById('root');
+let root2 = document.getElementById('root2');
 updateTheme();
 
 initStg();
 
-render(<Space />, bar);
+console.log('initializing dev environment', {
+  DEV_MODE: process.env.DEV_MODE,
+  stgObs$,
+});
+render(<Space />, root);
+render(
+  <div
+    class="bg-green-300"
+    onClick={() => {
+      stgObs$.offValue(nullFn);
+      console.log('refreshing', { stgObs$ });
+      stgObs$.onValue(nullFn);
+      render(null, root);
+      render(<Space />, root);
+    }}
+  >
+    Refresh
+  </div>,
+  root2
+);

@@ -48,8 +48,10 @@ import {
   injectSidebarHome,
   makeFloatSidebarObserver,
   makeHomeSidebarObserver,
+  makeSearchBarObserver,
   makeSidebarCompose,
   makeSidebarHome,
+  removeSearchBar,
 } from './domInterface/sidebarHandler';
 import { makeBgColorObs, makeLastStatusObs } from './domInterface/tabsHandler';
 import * as window from './global';
@@ -62,7 +64,7 @@ import {
   resetStorageField,
   setStg,
 } from './utils/dutils';
-import { currentValue, inspect, toggleDebug } from './utils/putils';
+import { currentValue, inspect, nullFn, toggleDebug } from './utils/putils';
 import { getMode, updateTheme } from './utils/wutils';
 console.log('hi pcss', pcss);
 console.log('hi css', css);
@@ -225,6 +227,8 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
     value
       ? activateHomeSidebar(storageChange$, msgObs$)
       : deactivateSidebar(thBarHome); //function
+  const searchBar$ = makeSearchBarObserver();
+  searchBar$.log('searchBar$');
   const floatSidebar$ = makeFloatSidebarObserver(thBarComp); // floatSidebar$ :: String || Element  // for floating sidebar in compose mode
   const floatActive$ = floatSidebar$
     .map(equals('render'))
@@ -248,8 +252,12 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
   });
   subObs(targetedTweetActions$, pipe(makeIdMsg, msgBG));
   subObs(theme$, updateTheme);
+
   subObs(floatActive$, updateFloat);
   subObs(homeActiveSafe$, updateHome);
+  subObs(storageChange$, nullFn);
+  subObs(msgObs$, nullFn);
+  subObs(searchBar$, removeSearchBar);
 }
 function destructor(destructionEvent: any) {
   // Destruction is needed only once

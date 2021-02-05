@@ -24,6 +24,7 @@ import {
   prop,
   propEq,
   set,
+  slice,
   zipWith,
   __,
 } from 'ramda'; // Function
@@ -38,6 +39,7 @@ import { thTweet } from '../types/tweetTypes';
 import { inspect } from '../utils/putils';
 import { AuthContext, FeedDisplayMode } from './ThreadHelper';
 import { Tweet as TweetCard } from './Tweet';
+import { User } from 'twitter-d';
 
 const prepTweets = (list: TweetResult[] | null): SearchResult[] =>
   filter(pipe(prop('tweet'), isNil, not), defaultTo([], list));
@@ -69,6 +71,7 @@ export function Display(props: any) {
     FeedDisplayMode
   );
   const myRef = useRef(null);
+  const [apiUsers, setApiUsers] = useStorage('api_users', []);
 
   const [stgLatestTweets, setStgLatestTweets] = useStorage('latest_tweets', []);
   const [latestTweets, setLatestTweets] = useState([]);
@@ -187,9 +190,54 @@ export function Display(props: any) {
 
   return (
     <div class="searchWidget" ref={myRef}>
+      {showUserSearch(apiUsers, feedDisplayMode) ? (
+        <UserDisplay results={apiUsers} />
+      ) : null}
       {makeFeedDisplay(feedDisplayMode)}
       {/* <SearchResults results={prepTweets(stgSearchResults)} /> */}
     </div>
+  );
+}
+const showUserSearch = (apiUsers, displayMode) => {
+  return (
+    !isEmpty(apiUsers) &&
+    !isNil(apiUsers) &&
+    [DisplayMode.Api, DisplayMode.ApiWaiting].includes(displayMode)
+  );
+};
+
+function UserCard({ user }) {
+  return (
+    <div class="th-tweet">
+      <div class="th-gutter">
+        <img class="th-profile" src={user.profile_image_url_https} />
+      </div>
+      <div class="th-body">
+        <div class="th-header">
+          <div class="th-header-name">
+            <a href={`https://twitter.com/${user.screen_name}`}>{user.name}</a>
+          </div>
+          <div class="th-header-username">@{user.screen_name}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function UserDisplay({ results }: { results: User[] }) {
+  return (
+    <>
+      <div class="text-right text-gray-500 ">
+        <span class="hover:text-white hover:underline">
+          User search results
+        </span>
+      </div>
+      <div class="flex-1 searchUsers">
+        {map((u) => {
+          return <UserCard user={u} />;
+        }, slice(0, 3, results))}
+      </div>
+    </>
   );
 }
 
@@ -288,7 +336,7 @@ function SearchResults({ results }: { results: TweetResult[] }) {
 function ApiSearchResults({ results }: { results: TweetResult[] }) {
   return (
     <TweetDisplay
-      title={'Twitter API results:'}
+      title={'Twitter search results:'}
       results={results}
       emptyMsg={'No search results. Yet!'}
     />

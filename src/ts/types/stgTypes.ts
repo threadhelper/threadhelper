@@ -11,6 +11,7 @@ export interface StorageInterface {
   latest_tweets: SearchResult[];
   search_results: SearchResult[];
   api_results: SearchResult[];
+  api_users: User[];
   temp_archive: object;
   sync: boolean;
   query: string;

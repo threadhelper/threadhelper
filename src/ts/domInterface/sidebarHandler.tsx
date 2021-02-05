@@ -1,8 +1,9 @@
-import { fromEvents, Kefir } from 'kefir';
+import { fromEvents, Kefir, Observable } from 'kefir';
 import { isNil } from 'ramda'; // Logic, Type, Relation, String, Math
 import { obsAdded, obsRemoved } from '../utils/kefirMutationObs';
 import { isSidebar } from '../utils/wutils';
 const trendText = '[aria-label="Timeline: Trending now"]';
+const searchBarSelector = '[data-testid="SearchBox_Search_Input"] ';
 const sideBarSelector = '[data-testid="sidebarColumn"]';
 const editorClass = 'DraftEditor-editorContainer';
 const floatingComposeSelector =
@@ -15,13 +16,14 @@ export function makeSidebarHome() {
 }
 // impure
 export function injectSidebarHome(thBar: Element) {
-  let trending_block = document.querySelector(trendText);
-  if (!isNil(trending_block)) {
-    let sideBar =
-      trending_block.parentNode.parentNode.parentNode.parentNode.parentNode;
-    sideBar.insertBefore(thBar, sideBar.children[2]);
-    // isNil(sideBar.children[2]) ? null : sideBar.insertBefore(thBar, sideBar.children[2]);
-    sideBar.insertBefore(thBar, sideBar.children[2]);
+  let trending_header = document.querySelector(trendText);
+  if (!isNil(trending_header)) {
+    let trending_block =
+      trending_header.parentNode.parentNode.parentNode.parentNode;
+    let sideBar = trending_block.parentNode;
+    sideBar.insertBefore(thBar, trending_block);
+    // sideBar.insertBefore(thBar, sideBar.children[2]);
+    // sideBar.insertBefore(thBar, sideBar.children[2]);
   }
 }
 
@@ -80,6 +82,40 @@ export function makeSidebarCompose(): Element {
   thBar.setAttribute('class', 'sug_compose');
   return thBar;
 }
+// Produces events every time a sidebar should be created (trends sidebar shows up or compose screen comes up)
+export function makeSearchBarObserver(): Observable<Element, any> {
+  // console.log('[DEBUG] makeHomeSidebarObserver 0', { thBar });
+  const searchBarAdd$: Observable<Element, any> = obsAdded(
+    document,
+    searchBarSelector,
+    true
+  ); // searchBarAdd$ :: Element // Trends element is added
+  const searchBarRemove$ = obsRemoved(document, searchBarSelector, true); // searchBarAdd$ :: Element // Trends element is remove
+  return searchBarAdd$;
+}
+
+export function removeSearchBar(bars: Element) {
+  const bar = bars[0];
+  try {
+    const sibling =
+      bar.parentElement.parentElement.parentElement.parentElement.parentElement
+        .parentElement.parentElement.parentElement.parentElement.nextSibling;
+    sibling.remove();
+    console.log('Removed search bar sibling!', { bar });
+  } catch (e) {
+    console.error("Couldn't remove search bar sibling", { bar, e });
+  }
+  try {
+    const parent =
+      bar.parentElement.parentElement.parentElement.parentElement.parentElement
+        .parentElement.parentElement.parentElement.parentElement;
+    parent.remove();
+    console.log('Removed search bar!', { bar });
+  } catch (e) {
+    console.error("Couldn't remove search bar", { bar, e });
+  }
+}
+
 // Produces events every time a sidebar should be created (trends sidebar shows up or compose screen comes up)
 export function makeHomeSidebarObserver(
   thBar: EventTarget | NodeJS.EventEmitter | { on: Function; off: Function }

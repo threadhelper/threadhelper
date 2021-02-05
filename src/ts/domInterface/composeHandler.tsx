@@ -22,7 +22,6 @@ export function makeComposeObs(box: HTMLElement) {
     .filter(pipe(isEmpty, not))
     .map(prop(0)) //pick the first change in the array
     .map(prop('textContent'));
-  // textChange$.log('[DEBUG] textChange$')
   const query$ = textChange$
     .map(cleanSearchString)
     .toProperty(() => box.innerText);

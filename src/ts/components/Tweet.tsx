@@ -1,4 +1,4 @@
-import { h, render, Component } from 'preact';
+import { h, Fragment, render, Component } from 'preact';
 import {
   useState,
   useRef,
@@ -14,6 +14,7 @@ import RetweetIcon from '../../images/retweet.svg';
 import LikeIcon from '../../images/like.svg';
 import FullLikeIcon from '../../images/like_full.svg';
 import ShareIcon from '../../images/share.svg';
+import PencilIcon from '../../images/pencil.svg';
 import { andThen, any, defaultTo, isNil, last, pipe } from 'ramda';
 import {
   sendLikeRequest,
@@ -26,6 +27,7 @@ import { useStorage } from '../hooks/useStorage';
 import { AuthContext } from './ThreadHelper';
 import { apiSearchToTweet } from '../bg/tweetImporter';
 import { inspect } from '../utils/putils';
+import { DropdownMenu } from './Dropdown';
 
 const getTweetUrl = (tweet: thTweet) =>
   `https://twitter.com/${tweet.username}/status/${tweet.id}`;
@@ -52,11 +54,12 @@ export const ReplyAction = ({ tweet }) => {
 const countRts = (t) =>
   (t.retweet_count ?? (t.retweeted ? 1 : 0)) + (t.quote_count ?? 0);
 
-const RetweetAction = ({ tweet }) => {
+const RetweetAction = ({ tweet }: { tweet: thTweet }) => {
   const [active, setActive] = useState(tweet.retweeted ?? false);
   const [count, setCount] = useState(countRts(tweet));
   const [id, setId] = useState(tweet.id);
   const auth = useContext(AuthContext);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     setActive(tweet.retweeted ?? false);
@@ -76,19 +79,57 @@ const RetweetAction = ({ tweet }) => {
     sendUnretweetRequest(auth, id);
   };
 
+  var quoteTweet = useCallback(
+    function () {
+      window.open(
+        `https://twitter.com/intent/tweet?url=https://twitter.com/${tweet.username}/status/${tweet.id}`,
+        '_blank'
+      );
+    },
+    [tweet]
+  );
+
+  const makeRtItems = () => {
+    return [
+      // {id: 'Load Archive', leftIcon: <GearIcon />, effect: ()=>{}},
+      {
+        id: active ? 'Undo Retweet' : 'Retweet',
+        leftIcon: <RetweetIcon />,
+        effect: active ? offFunc : onFunc,
+      },
+      { id: 'Quote Tweet', leftIcon: <PencilIcon />, effect: quoteTweet },
+    ];
+  };
+
   return (
-    <div class="th-icon-field">
-      <div
-        class={(active ? `text-green-600` : ``) + ' th-rt-container'}
-        onClick={active ? offFunc : onFunc}
-      >
-        {active ? (
-          <RetweetIcon class={`stroke-1 stroke-current fill-current`} />
-        ) : (
-          <RetweetIcon />
-        )}
-        <span>{count > 0 ? count : ''}</span>
+    <div class="relative flex-grow">
+      <div class="th-icon-field">
+        <div
+          class={(active ? `text-green-600` : ``) + ' th-rt-container'}
+          // onClick={active ? offFunc : onFunc}
+          onClick={() => {
+            setOpen(!open);
+          }}
+        >
+          {active ? (
+            <RetweetIcon class={`stroke-1 stroke-current fill-current`} />
+          ) : (
+            <RetweetIcon />
+          )}
+          <span>{count > 0 ? count : ''}</span>
+        </div>
       </div>
+      {open && (
+        <DropdownMenu
+          name={'rt-button'}
+          componentItems={[]}
+          filterItems={[]}
+          items={makeRtItems()}
+          debugItems={[]}
+          closeMenu={() => setOpen(false)}
+          itemClickClose={true}
+        />
+      )}
     </div>
   );
 };

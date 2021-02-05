@@ -66,8 +66,8 @@
   -webkit-hyphens: auto;
   hyphens: auto;
 
-  overflow-x: hidden;
-  overflow-y: hidden;
+  /*overflow-x: hidden;
+  overflow-y: hidden;*/
 
   height: 90vh;
 
@@ -167,7 +167,7 @@
   flex-direction: column;
   white-space: pre-wrap;
   height: auto;
-  overflow: hidden;
+  overflow-y: hidden;
   flex-grow: 1;
   padding-top: 5px;
 }
@@ -181,11 +181,11 @@
   white-space: pre-wrap;
 }
 
-/* Dropdown Menu */
-@import './dropdown.scss';
-
 /* tweets */
 @import './tweet.scss';
+
+/* Dropdown Menu */
+@import './dropdown.scss';
 
 /* width */
 .searchTweets::-webkit-scrollbar {

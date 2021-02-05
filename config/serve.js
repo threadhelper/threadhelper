@@ -27,6 +27,7 @@ module.exports = function (configDirs) {
       },
     },
   };
+  devConfig.output.path = configDirs.DIST_DIR;
   devConfig.entry = {
     ...devConfig.entry,
     dev: configDirs.APP_DIR + '/dev/dev.tsx',
