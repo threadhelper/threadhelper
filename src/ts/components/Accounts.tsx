@@ -7,6 +7,7 @@ import AccountIcon from '../../images/account.svg';
 import { useStorage } from '../hooks/useStorage';
 import { csEvent } from '../utils/ga';
 import { DropdownMenu } from './Dropdown';
+import Tooltip from './Tooltip';
 import { getTimeDiff } from './Tweet';
 
 const accountFilterAvi = (url: string) => {
@@ -57,30 +58,33 @@ export function AccountsButton(props) {
   return (
     <div id="accounts-menu" className="nav-item">
       <a data-tip="React-tooltip" data-for="accountsMenu">
-        <div
-          class={`options icon-button`}
-          onClick={onClickButton}
-          onBlur={closeMenu}
+        <Tooltip
+          content={
+            `Hi ${currentScreenName}, I have ${nTweets} tweets available. \n` +
+            (sync ? `Last synced: ${getTimeDiff(lastUpdated)}.` : `Syncing...`)
+          }
+          direction="bottom"
         >
-          <AccountIcon
-            class={`box-content account-icon hoverHighlight  ${
-              sync ? 'synced' : 'unsynced'
-            }`}
-          ></AccountIcon>
-        </div>
+          <div
+            class={`options icon-button`}
+            onClick={onClickButton}
+            onBlur={closeMenu}
+          >
+            <AccountIcon
+              class={`box-content account-icon hoverHighlight  ${
+                sync ? 'synced' : 'unsynced'
+              }`}
+            ></AccountIcon>
+          </div>
+        </Tooltip>
       </a>
-      <ReactTooltip
-        id="accountsMenu"
-        delayShow={300}
-        place="bottom"
-        type="dark"
-        effect="solid"
-      >
-        <span style="color: var(--main-txt-color);">
-          {`Hi ${currentScreenName}, I have ${nTweets} tweets available. \n` +
-            (sync ? `Last synced: ${getTimeDiff(lastUpdated)}.` : `Syncing...`)}
-        </span>
-      </ReactTooltip>
+      <Tooltip
+        name={'accounts-tooltip'}
+        text={
+          `Hi ${currentScreenName}, I have ${nTweets} tweets available. \n` +
+          (sync ? `Last synced: ${getTimeDiff(lastUpdated)}.` : `Syncing...`)
+        }
+      />
       {open && (
         <DropdownMenu
           name={'Accounts'}
