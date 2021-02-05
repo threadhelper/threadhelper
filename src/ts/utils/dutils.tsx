@@ -61,7 +61,7 @@ export function initStg() {
       chrome: global.chrome,
       defaultStorage: defaultStorage(),
     });
-    setData(defaultStorage());
+    // setData(defaultStorage());
   }
 }
 
@@ -393,11 +393,11 @@ export const makeStorageChangeObs = (): Observable<StorageChange, Error> => {
   };
   if (SERVE) {
     const obs = makeCustomEventObs('localStorage', makeEmitStgCH);
-    // console.log('makeStorageChangeObs', { obs, makeEmitStgCH });
+    console.log('makeStorageChangeObs', { obs, makeEmitStgCH, stgChObsCnt });
     return obs;
   } else {
     const obs = makeEventObs(chrome.storage.onChanged, makeEmitStgCH);
-    // console.log('makeStorageChangeObs', { obs, makeEmitStgCH });
+    console.log('makeStorageChangeObs', { obs, makeEmitStgCH, stgChObsCnt });
     return obs;
     // return makeEventObs(chrome.storage.onChanged, makeEmitStgCH);
   }

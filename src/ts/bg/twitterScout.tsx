@@ -17,7 +17,7 @@ import {
   values,
   when,
 } from 'ramda'; // Function
-import { Status, Status as Tweet, User } from 'twitter-d';
+import { FullUser, Status, Status as Tweet, User } from 'twitter-d';
 import { inspect } from '../utils/putils';
 import { Credentials } from '../types/types';
 import { thTweet, TweetId } from '../types/tweetTypes';
@@ -64,7 +64,7 @@ const shouldRetryError = (error) => ![403, 429].includes(error.status);
 const loopRetry = async <T,>(fn: () => Promise<T>): Promise<T> => {
   let retryCount = 0;
   let success = false;
-  let output = [];
+  let output = null;
   let stop = false;
   while (!success && !stop && retryCount < retryLimit) {
     try {
@@ -172,13 +172,19 @@ export const fetchStatus = async (
   return await twitterFetch(makeFetchStatusUrl(id), { authHeaders });
 };
 
+function getUsersFromSearchResponse(data) {
+  return {
+    users: data.users.slice(0, 4),
+    error: null,
+  };
+}
 export const searchUsers = (authHeaders, query) =>
   twitterFetch(makeUserSearchUrl(query), {
     authHeaders,
     method: 'GET',
     body: null,
     referrer: 'https://twitter.com/explore',
-  });
+  }).then(getUsersFromSearchResponse);
 
 const sendTweetAction = curry((url, authHeaders, tweetId) => {
   return twitterFetch(url, {
@@ -234,7 +240,7 @@ export const tweetLookupQuery = curry(
   }
 );
 // fetch as many tweets as possible from the timeline
-export const timelineQuery = async (auth: Credentials, user_info: User) =>
+export const timelineQuery = async (auth: Credentials, user_info: FullUser) =>
   await query(
     auth,
     prop('screen_name', user_info),

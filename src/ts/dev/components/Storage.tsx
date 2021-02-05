@@ -50,7 +50,7 @@ import {
 import RefreshIcon from '../../../images/refresh.svg';
 import XIcon from '../../../images/x-circle.svg';
 import DownIcon from '../../../images/arrow-circle-down.svg';
-import { postMsg } from '../../utils/dutils';
+import { postMsg, resetStorage } from '../../utils/dutils';
 import { JsonToTable } from 'react-json-to-table';
 
 const db_promise = dbOpen();
@@ -63,29 +63,38 @@ const initIdb = async (db_promise) => {
 };
 const Storage = () => {
   const [query, setQuery] = useStorage('query', '');
+  const [auth, setAuth] = useStorage('auth', {});
 
   useEffect(() => {
     initIdb(db_promise);
     return () => {};
   }, []);
 
+  const doResetStorage = async (_) => {
+    const db = await db_promise;
+    dbClear(db);
+    resetStorage();
+    postMsg({ type: 'idbUpdateTweet' });
+  };
+
   return (
     <div id="Storage" class="m-4 bg-gray-100">
       <div class="flex flex-row refresh h-4">
-        <XIcon
-          onClick={(_) =>
-            db_promise.then((db) => {
-              dbClear(db);
-              postMsg({ type: 'idbUpdateTweet' });
-            })
-          }
-        />
+        <XIcon onClick={doResetStorage} />
         <div class="pl-4 title">{`Storage  `}</div>
       </div>
       <TweetStg />
       <IndexStg />
       {/* <div>{'Archive: ' + JSON.stringify(archive)}</div> */}
       <div>{'Query: ' + query}</div>
+      <div class="m-4 flex max-w-max overflow-x-auto">
+        <JsonToTable
+          json={{
+            query,
+            auth,
+          }}
+        />
+      </div>
     </div>
   );
 };
@@ -201,7 +210,7 @@ const IndexStg = () => {
         />
         <div class="pl-4">{`Index Stg:`}</div>
       </div>
-      <div class="m-4 flex">
+      <div class="m-4 flex max-w-max overflow-x-auto ">
         <JsonToTable
           json={{
             'Size:': defaultTo('no index', indexN),

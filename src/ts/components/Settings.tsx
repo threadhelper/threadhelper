@@ -8,6 +8,7 @@ import { csEvent } from '../utils/ga';
 import { Console } from './Console';
 import { DropdownMenu } from './Dropdown';
 import { ArchiveUploader } from './LoadArchive';
+import Tooltip from './Tooltip';
 
 function onClearStorage() {
   console.log('clear storage');
@@ -99,7 +100,8 @@ export function SettingsButton(props) {
 
   return (
     <div id="settings-menu" className="nav-item">
-      <a data-tip="React-tooltip" data-for="settingsButton">
+      {/* <a data-tip="React-tooltip" data-for="settingsButton"> */}
+      <Tooltip content={'Options and Settings'} direction="bottom">
         <div class="options icon-button box-content">
           <GearIcon
             class="dropdown-icon"
@@ -107,16 +109,8 @@ export function SettingsButton(props) {
             onBlur={closeMenu}
           />
         </div>
-      </a>
-      <ReactTooltip
-        id="settingsButton"
-        delayShow={300}
-        place="bottom"
-        type="dark"
-        effect="solid"
-      >
-        <span style="color: var(--main-txt-color);">Options and Settings</span>
-      </ReactTooltip>
+      </Tooltip>
+      {/* </a> */}
       {open && (
         <DropdownMenu
           name={'Settings'}

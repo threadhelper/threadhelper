@@ -110,8 +110,13 @@ export const dbPutMany = curry(
     }
   }
 );
-export const dbClear = curry(async (db: IDBPDatabase) => {
-  let storeNames = ['tweets', 'accounts', 'users', 'misc'];
+export const dbClear = curry(async (db: IDBPDatabase<thTwitterDB>) => {
+  let storeNames: StoreName[] = [
+    StoreName.tweets,
+    StoreName.accounts,
+    StoreName.users,
+    StoreName.misc,
+  ];
   for (let storeName of storeNames) {
     const tx = db.transaction(storeName, 'readwrite');
     const store = tx.objectStore(storeName);

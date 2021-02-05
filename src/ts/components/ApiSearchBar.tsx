@@ -18,7 +18,6 @@ export function ApiSearchBar() {
   const submitApiSearch = (value) => {
     console.log('[DEBUG] submitApiSearch!', { value });
     // setApiQuery(value);
-
     msgBG({ type: 'apiQuery', query: value });
   };
 

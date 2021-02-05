@@ -30,7 +30,7 @@ import {
   values,
   when,
 } from 'ramda'; // Function
-import { User } from 'twitter-d';
+import { FullUser, User } from 'twitter-d';
 import { makeAuthObs } from './bg/auth';
 import {
   apiSearchToTweet,
@@ -42,6 +42,7 @@ import {
   fetchUserInfo,
   getBookmarks,
   searchAPI,
+  searchUsers,
   timelineQuery,
   tweetLookupQuery,
   updateQuery,
@@ -108,7 +109,6 @@ import { makeValidateTweet } from './worker/search';
   initGA();
 })();
 PageView('/background.html');
-
 // Project business
 var DEBUG = process.env.NODE_ENV != 'production';
 toggleDebug(window, DEBUG);
@@ -138,7 +138,7 @@ export async function main() {
 
   /* Stream value getters */
   // const getAuthInit = (_: any): RequestInit => makeInit(curVal(auth$));
-  const getUserInfo = (_: any): User => curVal(userInfo$);
+  const getUserInfo = (_: any): FullUser => curVal(userInfo$);
   const getAccId = (_: any): string => prop('id_str', curVal(userInfo$));
 
   /* Define streams */
@@ -587,15 +587,42 @@ export async function main() {
   const apiQuery$ = msgStream('apiQuery')
     .map(prop('query'))
     .toProperty() as curProp<string>;
-  // const apiQuery$ = makeStgItemObs('apiQuery') // const storageChange$ = makeStorageChangeObs();
-  //
+
+  var usernameFilterRegex = /(from|to):([a-zA-Z0-9_]*\s?[a-zA-Z0-9_]*)$/;
+  const makeUserQuery = (userQuery) => {
+    var usernameMatch = userQuery.match(usernameFilterRegex);
+    return usernameMatch ? usernameMatch[2] : userQuery;
+  };
+
+  // (debouncedQuery.match(/^\/(?!from|to)/) && !debouncedQuery.match(/(from|to)/))
+  const apiReqUsers$ = apiQuery$
+    .filter(
+      (q) =>
+        !(isEmpty(q) || (q.match(/^\/(?!from|to)/) && !q.match(/(from|to)/)))
+    )
+    .map(makeUserQuery)
+    .combine(auth$, (q, auth) => [q, auth])
+    .thru(promiseStream(([q, auth]) => searchUsers(auth, q)))
+    .map(prop('users'))
+    .thru(errorFilter('apiReqUsers$'));
+
+  const apiUserRes$ = Kefir.merge([
+    apiQuery$
+      .filter(
+        (q) =>
+          isEmpty(q) || (q.match(/^\/(?!from|to)/) && !q.match(/(from|to)/))
+      )
+      .map((_) => []),
+    apiReqUsers$,
+  ]);
+  apiUserRes$.log('apiUserRes$');
+
   const apiReqRes$ = apiQuery$
     .filter((q) => !isEmpty(q))
-    .map(inspect('apiReqRes$ 0'))
     .combine(auth$, (q, auth) => [q, auth])
-    .map(inspect('apiReqRes$ 1'))
     .thru(promiseStream(([q, auth]) => searchAPI(auth, q)))
-    .thru(errorFilter('fetchedUpdate$'));
+    .thru(errorFilter('apiReqRes$'));
+
   const apiRes$ = Kefir.merge([
     apiQuery$.filter(isEmpty).map((_) => []),
     apiReqRes$,
@@ -656,6 +683,7 @@ export async function main() {
   subObs({ reqDefaultTweets$ }, nullFn);
   subObs({ filteredDefaultTweets$ }, setStg('latest_tweets'));
   subObs({ thApiRes$ }, setStg('api_results'));
+  subObs({ apiUserRes$ }, setStg('api_users'));
   /* bg search */
   /* DB */
   subObs({ reqReset$ }, nullFn);
