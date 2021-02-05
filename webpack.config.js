@@ -4,6 +4,8 @@ const BundleAnalyzerPlugin = require('webpack-bundle-analyzer')
   .BundleAnalyzerPlugin;
 
 var BUILD_DIR = path.resolve(__dirname, './build');
+var DIST_DIR = path.resolve(__dirname, './dist');
+var SERVE_DIR = path.resolve(__dirname, './buildServe');
 var PROJ_DIR = __dirname;
 var HTML_DIR = path.resolve(__dirname, './src');
 var APP_DIR = path.resolve(__dirname, './src/ts');

@@ -21,21 +21,22 @@ module.exports = function (configDirs) {
       ignored: /node_modules/,
     },
   };
-  devConfig.plugins = [
-    ...devConfig.plugins,
-    // new CleanWebpackPlugin(),
-    new ExtensionReloader({
-      // manifest: configDirs.PROJ_DIR + '/manifest.json',
-      entries: {
-        // The entries used for the content/background scripts or extension pages
-        'content-script': 'content-script',
-        background: 'background',
-        worker: 'worker',
-        popup: 'popup',
-      },
-      port: 9080,
-    }),
-  ];
+  (devConfig.output.path = configDirs.BUILD_DIR),
+    (devConfig.plugins = [
+      ...devConfig.plugins,
+      // new CleanWebpackPlugin(),
+      new ExtensionReloader({
+        // manifest: configDirs.PROJ_DIR + '/manifest.json',
+        entries: {
+          // The entries used for the content/background scripts or extension pages
+          'content-script': 'content-script',
+          background: 'background',
+          worker: 'worker',
+          popup: 'popup',
+        },
+        port: 9080,
+      }),
+    ]);
 
   devConfig.module.rules[0].use[0].options.plugins = [
     ...devConfig.module.rules[0].use[0].options.plugins,
