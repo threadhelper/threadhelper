@@ -739,9 +739,14 @@ export async function main() {
   //   apiRes$.log('DEBUG] apiRes$');
 }
 
-const onUpdated = (previousVersion) => {
+const onUpdated = async (previousVersion) => {
   console.log(`[INFO] updated from version ${previousVersion}`);
   // add new stg fields from defaults
+  const updateUrl =
+    'https://www.notion.so/Welcome-e7c1b2b8d8064a80bdf5600c329b370d';
+  chrome.tabs.create({
+    url: 'https://www.notion.so/Patch-Notes-afab29148a0c49358df0e55131978d48',
+  });
   // msgSomeWorker(pWorker, { type: 'resetIndex' });
   updateStorage();
   // delete old stg fields that are not in default
@@ -749,21 +754,35 @@ const onUpdated = (previousVersion) => {
   // remake index
 };
 
-const onFirstInstalled = (resetData, previousVersion, id) => {
+const onFirstInstalled = async (resetData, previousVersion, id) => {
   console.log(`[INFO] first install. Welcome to TH! ${previousVersion}`);
+  const welcomeUrl =
+    'https://www.notion.so/Welcome-e7c1b2b8d8064a80bdf5600c329b370d';
+  chrome.tabs.create({ url: welcomeUrl });
   resetData();
 };
 
 const onInstalled = curry(
-  (resetData: () => void, reason: string, previousVersion: string, id) => {
+  (
+    resetData: () => void,
+    {
+      reason,
+      previousVersion,
+      id,
+    }: { reason: string; previousVersion: string; id: string }
+  ) => {
     console.log('[DEBUG] onInstalled', { reason, previousVersion, id });
     switch (
       reason // "install", "update", "chrome_update", or "shared_module_update"
     ) {
       case 'update':
         onUpdated(previousVersion);
+        break;
       case 'install':
         onFirstInstalled(resetData, previousVersion, id);
+        break;
+      default:
+        break;
     }
     // chrome.declarativeContent.onPageChanged.removeRules(undefined, function() {
     //   chrome.declarativeContent.onPageChanged.addRules([
@@ -810,3 +829,6 @@ function onTabUpdated(
 }
 main();
 //
+var settingUrl = chrome.runtime.setUninstallURL(
+  'https://docs.google.com/forms/d/e/1FAIpQLSf2s5y8tIFEQj4dIyk55QXS0DQmHQ_cmspmJmKNTslISOJ6oA/viewform'
+);
