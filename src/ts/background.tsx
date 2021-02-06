@@ -111,7 +111,7 @@ import { makeValidateTweet } from './worker/search';
 PageView('/background.html');
 // Project business
 var DEBUG = process.env.NODE_ENV != 'production';
-toggleDebug(window, DEBUG);
+// toggleDebug(window, DEBUG);
 (Kefir.Property.prototype as any).currentValue = currentValue;
 
 // Stream clean up
@@ -742,11 +742,11 @@ export async function main() {
 const onUpdated = async (previousVersion) => {
   console.log(`[INFO] updated from version ${previousVersion}`);
   // add new stg fields from defaults
-  const updateUrl =
-    'https://www.notion.so/Welcome-e7c1b2b8d8064a80bdf5600c329b370d';
-  chrome.tabs.create({
-    url: 'https://www.notion.so/Patch-Notes-afab29148a0c49358df0e55131978d48',
-  });
+  if (!DEBUG) {
+    chrome.tabs.create({
+      url: 'https://www.notion.so/Patch-Notes-afab29148a0c49358df0e55131978d48',
+    });
+  }
   // msgSomeWorker(pWorker, { type: 'resetIndex' });
   updateStorage();
   // delete old stg fields that are not in default
@@ -756,9 +756,11 @@ const onUpdated = async (previousVersion) => {
 
 const onFirstInstalled = async (resetData, previousVersion, id) => {
   console.log(`[INFO] first install. Welcome to TH! ${previousVersion}`);
-  const welcomeUrl =
-    'https://www.notion.so/Welcome-e7c1b2b8d8064a80bdf5600c329b370d';
-  chrome.tabs.create({ url: welcomeUrl });
+  if (!DEBUG) {
+    const welcomeUrl =
+      'https://www.notion.so/Welcome-e7c1b2b8d8064a80bdf5600c329b370d';
+    chrome.tabs.create({ url: welcomeUrl });
+  }
   resetData();
 };
 

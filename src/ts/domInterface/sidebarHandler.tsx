@@ -16,16 +16,28 @@ export function makeSidebarHome() {
 }
 // impure
 export function injectSidebarHome(thBar: Element) {
-  let trending_header = document.querySelector(trendText);
-  if (!isNil(trending_header)) {
-    let trending_block =
-      trending_header.parentNode.parentNode.parentNode.parentNode;
-    let sideBar = trending_block.parentNode;
-    sideBar.insertBefore(thBar, trending_block);
+  let sidebarElement = document.querySelector(sideBarSelector);
+  if (!isNil(sidebarElement)) {
+    let innerSidebar =
+      sidebarElement.firstElementChild.lastElementChild.firstElementChild
+        .firstElementChild.firstElementChild;
+    innerSidebar.insertBefore(thBar, innerSidebar.firstElementChild);
     // sideBar.insertBefore(thBar, sideBar.children[2]);
     // sideBar.insertBefore(thBar, sideBar.children[2]);
   }
 }
+
+// export function injectSidebarHome(thBar: Element) {
+//   let trending_header = document.querySelector(trendText);
+//   if (!isNil(trending_header)) {
+//     let trending_block =
+//       trending_header.parentNode.parentNode.parentNode.parentNode;
+//     let sideBar = trending_block.parentNode;
+//     sideBar.insertBefore(thBar, trending_block);
+//     // sideBar.insertBefore(thBar, sideBar.children[2]);
+//     // sideBar.insertBefore(thBar, sideBar.children[2]);
+//   }
+// }
 
 function makeNewDummy() {
   const dummyUI: Element = document.createElement('div');
