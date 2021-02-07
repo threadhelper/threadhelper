@@ -3,3 +3,4 @@ build
 buildServe
 dist
 .vscode
+store
