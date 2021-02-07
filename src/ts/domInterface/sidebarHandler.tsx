@@ -107,25 +107,35 @@ export function makeSearchBarObserver(): Observable<Element, any> {
 }
 
 export function removeSearchBar(bars: Element) {
+  const sidebarElement = document.querySelector(sideBarSelector);
   const bar = bars[0];
-  try {
-    const sibling =
-      bar.parentElement.parentElement.parentElement.parentElement.parentElement
-        .parentElement.parentElement.parentElement.parentElement.nextSibling;
-    sibling.remove();
-    console.log('Removed search bar sibling!', { bar });
-  } catch (e) {
-    console.error("Couldn't remove search bar sibling", { bar, e });
-  }
-  try {
-    const parent =
-      bar.parentElement.parentElement.parentElement.parentElement.parentElement
-        .parentElement.parentElement.parentElement.parentElement;
-    parent.remove();
-    console.log('Removed search bar!', { bar });
-  } catch (e) {
-    console.error("Couldn't remove search bar", { bar, e });
-  }
+  const slot =
+    sidebarElement.firstElementChild.lastElementChild.firstElementChild
+      .firstElementChild.firstElementChild;
+  Array.from(slot.children).forEach((el: Element) => {
+    if (el.className.includes('sug_home')) return;
+    try {
+      el.remove();
+    } catch (e) {
+      console.error("Couldn't remove sidebar element", { bar, slot, el });
+    }
+  });
+  // try {
+  //   const sibling = slot.parentElement.nextSibling;
+  //   sibling.remove();
+  //   console.log('Removed search bar sibling!', { bar });
+  // } catch (e) {
+  //   console.error("Couldn't remove search bar sibling", { bar, e });
+  // }
+  // try {
+  //   const parent =
+  //     bar.parentElement.parentElement.parentElement.parentElement.parentElement
+  //       .parentElement.parentElement.parentElement.parentElement;
+  //   parent.remove();
+  //   console.log('Removed search bar!', { bar });
+  // } catch (e) {
+  //   console.error("Couldn't remove search bar", { bar, e });
+  // }
 }
 
 // Produces events every time a sidebar should be created (trends sidebar shows up or compose screen comes up)
@@ -133,8 +143,16 @@ export function makeHomeSidebarObserver(
   thBar: EventTarget | NodeJS.EventEmitter | { on: Function; off: Function }
 ) {
   // console.log('[DEBUG] makeHomeSidebarObserver 0', { thBar });
-  const trendAdd$ = obsAdded(document, trendText, true); // trendAdd$ :: Element // Trends element is added
-  const trendRemove$ = obsRemoved(document, trendText, true); // trendAdd$ :: Element // Trends element is remove
+  const trendAdd$ = obsAdded(
+    document,
+    sideBarSelector + ' div div div div div',
+    true
+  ); // trendAdd$ :: Element // Trends element is added
+  const trendRemove$ = obsRemoved(
+    document,
+    sideBarSelector + ' div div div div div',
+    true
+  ); // trendAdd$ :: Element // Trends element is remove
   const sidebarOutDoc$ = fromEvents(thBar, 'DOMNodeRemovedFromDocument'); // thBar node is removed from the document (by changing page or something)
   sidebarOutDoc$.log('sidebarOutDoc$');
   const render$ = Kefir.merge([trendAdd$])
