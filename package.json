@@ -8,7 +8,9 @@
     "serve": "cross-env NODE_ENV=development DEV_MODE=serve webpack-dev-server --mode=development --env.devMode=serve",
     "webext": "cross-env NODE_ENV=development DEV_MODE=webext webpack --mode=development --env.devMode=webext",
     "build-dev": "rm -rf build/* && cross-env NODE_ENV=development DEV_MODE=extension webpack --mode=development --env.devMode=development",
-    "build-prod": "cross-env NODE_ENV=production DEV_MODE=production webpack --mode=production"
+    "build-prod": "cross-env NODE_ENV=production DEV_MODE=production webpack --mode=production",
+    "submit-testers": "node store/chrome-submit-testers.js",
+    "submit-prod": ""
   },
   "author": "",
   "license": "ISC",
@@ -26,6 +28,8 @@
     "@types/react": "^16.9.49",
     "@types/react-dom": "^16.9.8",
     "babel-loader": "^8.1.0",
+    "chrome-webstore-upload": "^0.4.4",
+    "chrome-webstore-upload-cli": "^1.2.1",
     "clean-webpack-plugin": "^3.0.0",
     "copy-webpack-plugin": "^6.2.1",
     "cross-env": "^7.0.2",
