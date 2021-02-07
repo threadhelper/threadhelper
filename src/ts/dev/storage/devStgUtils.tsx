@@ -13,7 +13,6 @@ export const loadIndexFromIdb = async (
 ) => {
   const db = await db_promise;
   const indexJson = await db.get(StoreName.misc, 'index');
-  console.log('indexJson', { indexJson });
   const index = isNil(indexJson)
     ? makeIndex()
     : elasticlunr.Index.load(indexJson);

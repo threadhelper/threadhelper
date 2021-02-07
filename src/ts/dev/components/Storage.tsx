@@ -107,14 +107,14 @@ const TweetStg = () => {
   const idbUpdateMsg = useMsg('idbUpdateTweet');
   const [time, setTime] = useState(0);
 
-  console.log('TweetStg render');
+  // console.log('TweetStg render');
   useEffect(() => {
     getTweetN();
     return () => {};
   }, []);
 
   useEffect(() => {
-    console.log('Storage', { tempArchive });
+    // console.log('Storage', { tempArchive });
     const importArchive = async (db_promise, tempArchive) => {
       setImporting(true);
       const db = await db_promise;
@@ -170,9 +170,9 @@ const IndexStg = () => {
   const idbUpdateMsg = useMsg('idbUpdateTweet');
   const [time, setTime] = useState(0);
 
-  console.log('IndexStg render');
+  // console.log('IndexStg render');
   useEffect(() => {
-    console.log('IndexStg init');
+    // console.log('IndexStg init');
     loadIndexFromIdb(db_promise).then(refreshIndexN);
     return () => {};
   }, []);
@@ -187,7 +187,7 @@ const IndexStg = () => {
       };
       postUpdate(newIndex);
     };
-    console.log('idbUpdateMsg IndexStg');
+    // console.log('idbUpdateMsg IndexStg');
     // if (!isNil(index)) {
     //   updateIdxFromIdb(index, db_promise)
     //     .then(tap((_) => postMsg({ type: 'idbUpdate' })))

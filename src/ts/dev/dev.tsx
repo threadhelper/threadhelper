@@ -1,3 +1,4 @@
+import 'preact/debug';
 // only for development with `npm run serve`, to take advantage of HMR
 import '@babel/polyfill';
 // import "core-js/stable";

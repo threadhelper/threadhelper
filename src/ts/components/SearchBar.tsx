@@ -23,7 +23,6 @@ export function SearchBar({ show }) {
 
   const submitSearch = (query: string) => {
     const q = defaultTo('', query);
-    console.log('submit search', { query });
     if (isEmpty(trimNewlines(q))) {
       dispatchFeedDisplayMode({
         action: 'emptySearch',
@@ -39,16 +38,12 @@ export function SearchBar({ show }) {
   };
 
   useEffect(() => {
-    console.log('invisible search bar started', { query });
     return () => {
-      console.log('invisible search bar ended', { query });
       setQuery('');
     };
   }, []);
 
-  console.log('invisible SearchBar render');
   useEffect(() => {
-    console.log('invisible submitting search', { query });
     submitSearch(query);
     return () => {};
   }, [query]);

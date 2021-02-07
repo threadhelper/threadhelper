@@ -7,7 +7,7 @@ import {
   useState,
 } from 'preact/hooks';
 import { Header } from './Header';
-import { Display } from './Display';
+import { DisplayController } from './Display';
 import { DisplayMode } from '../types/interfaceTypes';
 import { isEmpty } from 'ramda';
 import { useStorage } from '../hooks/useStorage';
@@ -39,7 +39,7 @@ const updateFeedDisplay = (
     case 'emptySearch':
       return DisplayMode.Idle;
     case 'submitSearch':
-      return state;
+      return DisplayMode.Search;
     case 'gotSearchResults':
       return DisplayMode.Search;
     // return [DisplayMode.Search, DisplayMode.SearchWaiting].includes(state)
@@ -49,7 +49,8 @@ const updateFeedDisplay = (
     case 'emptyApiSearch':
       return DisplayMode.Idle;
     case 'submitApiSearch':
-      return DisplayMode.ApiWaiting;
+      // return DisplayMode.ApiWaiting;
+      return DisplayMode.Api;
     case 'gotApiResults':
       // return isEmpty(tweets) ? DisplayMode.Idle : DisplayMode.Api;
       return DisplayMode.Api;
@@ -94,7 +95,7 @@ export default function ThreadHelper(props: any) {
     // </StorageChangeObs.Provider>
   );
 }
-
+//
 var renderCount = 0;
 
 function Sidebar(props: { active: any }) {
@@ -120,7 +121,7 @@ function Sidebar(props: { active: any }) {
         <div class="sidebar">
           <Header />
           {/* {roboActive ? <Robo active={props.active} streams={props.streams}/> : null} */}
-          <Display />
+          <DisplayController />
         </div>
       </AuthContext.Provider>
     </FeedDisplayMode.Provider>

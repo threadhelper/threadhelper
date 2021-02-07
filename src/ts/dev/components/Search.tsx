@@ -17,7 +17,7 @@ import {
   tap,
 } from 'ramda';
 import { useMsg } from '../../hooks/useMsg';
-import { postMsg } from '../../utils/dutils';
+import { postMsg, setStg } from '../../utils/dutils';
 import { inspect } from '../../utils/putils';
 import { dbGetMany, dbOpen } from '../../worker/idb_wrapper';
 import { makeIndex, updateIndex, search } from '../../worker/nlp';
@@ -29,7 +29,6 @@ import {
 } from '../storage/devStgUtils';
 import DownIcon from '../../../images/arrow-circle-down.svg';
 import { useOption, useStorage } from '../../hooks/useStorage';
-import { setStg } from '../../utils/_dutils';
 import { JsonToTable } from 'react-json-to-table';
 import { createWorkerFactory, useWorker } from '@shopify/react-web-worker';
 
@@ -45,27 +44,6 @@ const Search = () => {
   const [useReplies, setUseReplies] = useOption('useReplies');
   const [idleMode, setIdleMode] = useOption('idleMode');
   const [searchMode, setSearchMode] = useOption('searchMode');
-
-  // useEffect(() => {
-  //   console.log({
-  //     query,
-  //     getRTs,
-  //     useBookmarks,
-  //     useReplies,
-  //     idleMode,
-  //     searchMode,
-  //     activeAccounts,
-  //   });
-  //   return () => {};
-  // }, [
-  //   query,
-  //   getRTs,
-  //   useBookmarks,
-  //   useReplies,
-  //   idleMode,
-  //   searchMode,
-  //   activeAccounts,
-  // ]);
 
   return (
     <div id="Search" class="m-4 bg-gray-100">
@@ -134,7 +112,6 @@ const IndexSearch = ({ query, filters, accsShown }) => {
     // };
     // cbTimeFn(seek.then(setStg('search_results'), setSearchTime);
     if (!isEmpty(query) && !isNil(query)) {
-      console.log('requesting worker search', { midSearch });
       const doSeek = async () => {
         const searchRes = await cbTimeFn(
           () => worker.seek(filters, accsShown, resultN, query),
@@ -145,10 +122,8 @@ const IndexSearch = ({ query, filters, accsShown }) => {
       // .then((data) => postMsg({ type: 'searchResults', data }))
 
       if (!midSearch) {
-        console.log('search start');
         setMidSearch(true);
         doSeek().then((_) => {
-          console.log('search end');
           setMidSearch(false);
         });
       }
@@ -158,7 +133,6 @@ const IndexSearch = ({ query, filters, accsShown }) => {
   }, [query]);
   //
   useEffect(() => {
-    console.log('IndexStg init');
     // loadIdx(db_promise);
     workerLoadIdx();
     return () => {};
@@ -179,23 +153,6 @@ const IndexSearch = ({ query, filters, accsShown }) => {
 
   return (
     <div>
-      {/* <div class="m-4 flex flex-row items-center refresh h-4">
-        <DownIcon
-          class="h-4"
-          onClick={(_) => postMsg({ type: 'idbUpdateIndex' })}
-        />
-        <div class="pl-4">{`Local Index Stg: `}</div>
-      </div>
-      <div class="m-4 flex">
-        <JsonToTable
-          json={{
-            Size: defaultTo('no index', indexN),
-            'Search time': `${(time / 1000).toFixed(2)}s`,
-            message,
-          }}
-        />
-      </div> */}
-
       <div class="m-4 flex flex-row items-center refresh h-4">
         <DownIcon class="h-4" onClick={(_) => workerLoadIdx()} />
         <div class="pl-4">{`Worker Index: `}</div>

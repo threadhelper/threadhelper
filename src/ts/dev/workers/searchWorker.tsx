@@ -18,11 +18,8 @@ export async function seek(
   resultN,
   query
 ): Promise<SearchResult[]> {
-  console.log('seek', { query });
   const index = await idx_promise;
-  console.log('seek', { index });
   const res = await search(filters, accsShown, resultN, index, query);
-  console.log('seek', { res });
   const response = await makeSearchResponse(db_promise, res);
   return response;
 }

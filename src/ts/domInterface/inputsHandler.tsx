@@ -32,17 +32,6 @@ export let isUnRtFocused = () => isFocused(unRtConfirmSelector);
 let isDeleteFocused = () => isFocused(deleteConfirmSelector);
 export let isComposeFocused = () => isFocused(editorSelector);
 let isTweetCardFocused = () => isFocused(tweetCardSelector);
-// true if button is clicked
-// export function buttonClicked(selector){
-//   let divs = document.querySelectorAll(selector)
-//   for (let div of divs){
-//     if(e.target && div.contains(e.target) || e.target.contains(div)){
-//       return true
-//     }
-//   }
-//   return false
-// }
-// true if button is clicked
 
 type ElParent = Element | Document | null;
 type InputCond = (e: MouseEvent | KeyboardEvent) => boolean;
@@ -94,11 +83,10 @@ export function makePostStream() {
   // Cond :: Event -> Bool
   const tweetShortCond = (e: KeyboardEvent): boolean =>
     e.ctrlKey && e.key === 'Enter' && isComposeFocused();
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(e: {    ctrlKey: any;    key: s... Remove this comment to see the full error message
   const tweetStream = inputStream(
     tweetShortCond,
     docClickCondStream(tweetButtonSelectors)
-  ).map((x) => 'tweet');
+  ).map((_) => 'tweet');
   return tweetStream;
 }
 // stream rt events
@@ -106,7 +94,6 @@ export function makeRtStream() {
   // Cond :: Event -> Bool
   const rtShortCond = (e: { key: string }) =>
     e.key === 'Enter' && isRtFocused();
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(e: {    key: string;}) => any' ... Remove this comment to see the full error message
   const rtStream = inputStream(
     rtShortCond,
     docClickCondStream(rtConfirmSelector)
@@ -118,7 +105,6 @@ export function makeUnRtStream() {
   // Cond :: Event -> Bool
   const unRtShortCond = (e: { key: string }) =>
     e.key === 'Enter' && isUnRtFocused();
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(e: {    key: string;}) => any' ... Remove this comment to see the full error message
   const unRtStream = inputStream(
     unRtShortCond,
     docClickCondStream(unRtConfirmSelector)
@@ -130,7 +116,6 @@ export function makeDeleteStream() {
   // Cond :: Event -> Bool
   const deleteShortCond = (e: { key: string }) =>
     e.key === 'Enter' && isDeleteFocused();
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(e: {    key: string;}) => any' ... Remove this comment to see the full error message
   const deleteStream = inputStream(
     deleteShortCond,
     docClickCondStream(deleteConfirmSelector)
@@ -142,7 +127,6 @@ export function makeDeleteEventStream() {
   // Cond :: Event -> Bool
   const deleteShortCond = (e: { key: string }) =>
     e.key === 'Enter' && isDeleteFocused();
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(e: {    key: string;}) => any' ... Remove this comment to see the full error message
   const deleteStream = inputStream(
     deleteShortCond,
     docClickCondStream(deleteConfirmSelector)
@@ -154,7 +138,6 @@ export function makeRoboStream() {
   // Cond :: Event -> Bool
   const roboShortCond = (e: { ctrlKey: any; key: string }) =>
     e.ctrlKey && e.key === ' ' && isComposeFocused();
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(e: {    ctrlKey: any;    key: s... Remove this comment to see the full error message
   const roboStream = fromShortcut(roboShortCond)
     .map((x) => 'robo')
     .throttle(1000);
@@ -165,7 +148,6 @@ export function makeRoboStream() {
 export const makeAddBookmarkStream = () => {
   const bookmarkShortCond = (e: { key: string }) =>
     e.key === 'b' && isTweetCardFocused();
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(e: {    key: string;}) => any' ... Remove this comment to see the full error message
   return inputStream(
     bookmarkShortCond,
     docClickCondStream(shareMenuItemSelector)
@@ -173,7 +155,6 @@ export const makeAddBookmarkStream = () => {
 };
 // () -> event
 export function makeRemoveBookmarkStream() {
-  // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
   return fromClick(docClickCondStream(shareMenuItemSelector)).filter((e) =>
     e.target.textContent.includes('Remove')
   ); //.map(x=>'remove_bookmark')
@@ -203,7 +184,6 @@ export function makeReplyObs(mode$: Observable<UrlModes, Error>) {
   const replyClickCond = docClickCondStream(replySelector);
   const replyShortCond = (e: { key: string }) =>
     e.key === 'r' && isTweetCardFocused();
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(e: {    key: string;}) => any' ... Remove this comment to see the full error message
   const reply$ = inputStream(replyShortCond, replyClickCond);
   const notReplying$ = mode$.filter(equals(UrlModes.compose)).map((_) => null);
   // const replyObs$ = Kefir.merge([reply$, notReplying$]).skipDuplicates()

@@ -117,7 +117,9 @@ const makeIdObsMsg = curry((lastClickedId$: curProp<any>, type) => {
 const getBgColor = (x: HTMLElement) => x.style.backgroundColor;
 const minIdleTime = 3000;
 // Effects
-const handlePosting = () => msgBG({ type: 'update-tweets' }); // handle twitter posting actions like tweets, rts and deletes
+const handlePosting = () => {
+  msgBG({ type: 'update-tweets' });
+}; // handle twitter posting actions like tweets, rts and deletes
 
 const reqSearch = R.pipe<any, string, void>(defaultTo(''), (query) => {
   // console.log('reqSearch', { query });
@@ -187,6 +189,9 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
   const makeIdMsg = makeIdObsMsg(lastClickedId$); // function
   //          actions
   const actions$ = makeActionStream(); // post, rt, unrt
+  actions$.log('actions$');
+  const post$ = actions$.filter((x) => x == 'tweet');
+  post$.log('post$');
   const replyTo$ = makeReplyObs(mode$)
     .map(getTargetId)
     .toProperty(() => null) as curProp<string>;
@@ -210,9 +215,13 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
     composeFocusOut$.map((_) => ''),
     urlChange$.map((_) => ''),
   ]);
-  const composeContent$ = composeFocus$.flatMapLatest((e: Event) =>
-    makeComposeObs(e.target as HTMLElement)
-  );
+  const composeContent$ = Kefir.merge([
+    composeFocus$.flatMapLatest((e: Event) =>
+      makeComposeObs(e.target as HTMLElement)
+    ),
+    post$.map((_) => ''),
+  ]);
+  composeContent$.log('composeContent$');
   const composeQuery$ = Kefir.merge([
     urlChange$.map((_) => ''),
     composeContent$,
