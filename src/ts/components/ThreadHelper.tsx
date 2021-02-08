@@ -64,35 +64,11 @@ const updateFeedDisplay = (
 export default function ThreadHelper(props: any) {
   const [active, setActive] = useState(true);
   const myRef = useRef(null);
-  // const [stgObs, setStgObs] = useState<Observable<any, any>>(Kefir.never());
-
-  // useEffect(() => {
-  //   const _stgObs = makeStorageChangeObs();
-  //   console.log('ThreadHelper makeStorageChangeObs 0 ', {
-  //     stgObs,
-  //     _stgObs,
-  //   });
-  //   setStgObs(_stgObs);
-  //   console.log('ThreadHelper makeStorageChangeObs 1 ', {
-  //     stgObs,
-  //     _stgObs,
-  //   });
-  //   return () => {};
-  // }, []);
-
-  // useEffect(() => {
-  //   console.log('ThreadHelper stgObs 0 ', {
-  //     stgObs,
-  //   });
-  //   return () => {};
-  // }, [stgObs]);
 
   return (
-    // <StorageChangeObs.Provider value={stgObs}>
     <div class="ThreadHelper" ref={myRef}>
       <Sidebar active={active} />
     </div>
-    // </StorageChangeObs.Provider>
   );
 }
 //
@@ -120,7 +96,6 @@ function Sidebar(props: { active: any }) {
       <AuthContext.Provider value={auth}>
         <div class="sidebar">
           <Header />
-          {/* {roboActive ? <Robo active={props.active} streams={props.streams}/> : null} */}
           <DisplayController />
         </div>
       </AuthContext.Provider>

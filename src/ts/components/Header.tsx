@@ -14,10 +14,9 @@ export function Header() {
           <span class="th-title">Thread Helper</span>
           <span class="version text-gray-500">{` v${process.env.VERSION}`}</span>
         </div>
-        {process.env.NODE_ENV == 'development' ? <ApiSearchBar /> : null}
+        <ApiSearchBar />
         <SearchBar show={false} />
         <AccountsButton />
-        {/* {!hasArchive ? <ArchiveUploader /> : null} */}
         <SettingsButton />
       </div>
     </div>
