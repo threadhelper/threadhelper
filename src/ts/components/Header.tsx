@@ -2,6 +2,7 @@ import { h } from 'preact';
 import ReactTooltip from 'react-tooltip';
 import { AccountsButton } from './Accounts';
 import { ApiSearchBar } from './ApiSearchBar';
+import { SearchBar } from './SearchBar';
 import { SettingsButton } from './Settings';
 
 export function Header() {
@@ -14,6 +15,7 @@ export function Header() {
           <span class="version text-gray-500">{` v${process.env.VERSION}`}</span>
         </div>
         <ApiSearchBar />
+        <SearchBar show={false} />
         <AccountsButton />
         <SettingsButton />
       </div>
