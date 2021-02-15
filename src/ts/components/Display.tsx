@@ -88,6 +88,8 @@ export function DisplayController(props: any) {
         return <SearchResults />;
       case 'SearchWaiting':
         return <SearchResults />;
+      case 'QTs':
+        return <QtDisplay />;
       default:
         return <IdleDisplay />;
     }
@@ -194,6 +196,20 @@ function IdleDisplay() {
       }
       results={prepTweets(stgLatestTweets)}
       emptyMsg={'No tweets yet!'}
+    />
+  );
+}
+
+function QtDisplay() {
+  // const auth = useContext(AuthContext);
+  const [stgQts, setStgQts] = useStorage('qts', []);
+  console.log('QtDisplay render', { stgQts });
+
+  return (
+    <TweetDisplay
+      title="Quote Tweets:"
+      results={prepTweets(stgQts)}
+      emptyMsg={'No Quote Tweets.'}
     />
   );
 }

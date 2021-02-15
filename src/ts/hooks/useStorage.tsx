@@ -39,20 +39,20 @@ export function useStorage(name, default_val) {
     } else {
       counter = assoc(name, 1, counter);
     }
-    console.log(`useStorage ${name} init ${counter[name]}`, {
-      storageChangeObs,
-      StorageChangeObs,
-      storageItem,
-      storageChangeObsState,
-    });
+    // console.log(`useStorage ${name} init ${counter[name]}`, {
+    //   storageChangeObs,
+    //   StorageChangeObs,
+    //   storageItem,
+    //   storageChangeObsState,
+    // });
     //init
     getStg(name).then(pipe(defaultTo(default_val), setStorageItem));
     return () => {
-      console.log('closing useStorage ' + name, {
-        storageChangeObs,
-        StorageChangeObs,
-        storageItem,
-      });
+      // console.log('closing useStorage ' + name, {
+      //   storageChangeObs,
+      //   StorageChangeObs,
+      //   storageItem,
+      // });
     };
   }, []);
 

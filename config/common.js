@@ -126,12 +126,6 @@ module.exports = function (configDirs) {
           // { from: 'styles', to: 'styles' },
         ],
       }),
-      new WebpackExtensionManifestPlugin({
-        config: {
-          base: baseManifest,
-          extend: { version: pkg.version },
-        },
-      }),
     ].filter(Boolean),
   };
 };

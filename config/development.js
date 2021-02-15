@@ -1,5 +1,8 @@
 const webpack = require('webpack');
 const path = require('path');
+const baseManifest = require('../baseManifest.js');
+const pkg = require('../package.json');
+const WebpackExtensionManifestPlugin = require('webpack-extension-manifest-plugin');
 const PreactRefreshPlugin = require('@prefresh/webpack');
 const HtmlPlugin = require('html-webpack-plugin');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
@@ -35,6 +38,12 @@ module.exports = function (configDirs) {
           popup: 'popup',
         },
         port: 9080,
+      }),
+      new WebpackExtensionManifestPlugin({
+        config: {
+          base: baseManifest,
+          extend: { version: pkg.version, name: 'ThreadHelper DEV BUILD' },
+        },
       }),
     ]);
 

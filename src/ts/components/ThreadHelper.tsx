@@ -7,6 +7,7 @@ import {
   useState,
 } from 'preact/hooks';
 import { Header } from './Header';
+import { TtReader } from './TtReader';
 import { DisplayController } from './Display';
 import { DisplayMode } from '../types/interfaceTypes';
 import { isEmpty } from 'ramda';
@@ -56,6 +57,8 @@ const updateFeedDisplay = (
       return DisplayMode.Api;
     case 'gotLatestTweets':
       return state;
+    case 'gotQts':
+      return DisplayMode.QTs;
     default:
       throw new Error('Unexpected action');
   }
@@ -84,10 +87,10 @@ function Sidebar(props: { active: any }) {
   renderCount += 1;
   console.log(`Sidebar render ${renderCount}`);
 
-  useEffect(() => {
-    console.log({ auth });
-    return () => {};
-  }, [auth]);
+  // useEffect(() => {
+  //   console.log({ auth });
+  //   return () => {};
+  // }, [auth]);
 
   return (
     <FeedDisplayMode.Provider
@@ -95,6 +98,7 @@ function Sidebar(props: { active: any }) {
     >
       <AuthContext.Provider value={auth}>
         <div class="sidebar">
+          <TtReader />
           <Header />
           <DisplayController />
         </div>

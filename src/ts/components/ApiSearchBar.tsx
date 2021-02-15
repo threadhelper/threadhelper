@@ -16,20 +16,19 @@ export function ApiSearchBar() {
   );
 
   const submitApiSearch = (value) => {
-    console.log('[DEBUG] submitApiSearch!', { value });
-    // setApiQuery(value);
-    msgBG({ type: 'apiQuery', query: value });
-  };
-
-  useEffect(() => {
     dispatchFeedDisplayMode({
       action: isEmpty(value) ? 'emptyApiSearch' : 'submitApiSearch',
       tweets: [],
     });
     const timeOutId = setTimeout(() => {
       // submitApiSearch(value);
-      submitApiSearch(value);
+      msgBG({ type: 'apiQuery', query: value });
     }, 500);
+    return timeOutId;
+  };
+
+  useEffect(() => {
+    const timeOutId = submitApiSearch(value);
     return () => clearTimeout(timeOutId);
   }, [value]);
 

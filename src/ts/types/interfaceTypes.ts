@@ -4,4 +4,5 @@ export enum DisplayMode {
   SearchWaiting = 'SearchWaiting',
   Api = 'Api',
   ApiWaiting = 'ApiWaiting',
+  QTs = 'QTs',
 }

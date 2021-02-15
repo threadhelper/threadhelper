@@ -12,6 +12,7 @@ import {
   isFocused,
 } from '../utils/wutils';
 (Kefir.Property.prototype as any).currentValue = currentValue;
+const tweetHeaderSelector = '[data-testid="tweet"]'
 const dateSelector = 'a time';
 const editorClass = 'DraftEditor-editorContainer';
 const editorSelector = '.DraftEditor-editorContainer';
@@ -35,6 +36,13 @@ let isTweetCardFocused = () => isFocused(tweetCardSelector);
 
 type ElParent = Element | Document | null;
 type InputCond = (e: MouseEvent | KeyboardEvent) => boolean;
+
+export function getShowTweetText(){
+  tweetHeads = document.querySelectorAll(tweetHeaderSelector)
+  tweets
+  .nextSibling.firstChild.textContent
+  for()
+}
 
 export function buttonClicked(
   target: EventTarget | Element,

@@ -9,6 +9,7 @@
     "webext": "cross-env NODE_ENV=development DEV_MODE=webext webpack --mode=development --env.devMode=webext",
     "build-dev": "rm -rf build/* && cross-env NODE_ENV=development DEV_MODE=extension webpack --mode=development --env.devMode=development",
     "build-prod": "cross-env NODE_ENV=production DEV_MODE=production webpack --mode=production",
+    "zip-src": "zip dist/thSrc.zip  * -r -T -x \"store/*\" \"node_modules/**/*\" \"dist/**\" \"build/**\"",
     "submit-testers": "webstore upload --source dist/threadhelper.zip --extension-id $EXTENSION_ID --client-id $CLIENT_ID --client-secret $CLIENT_SECRET --refresh-token $REFRESH_TOKEN",
     "submit-prod": "webstore upload --source dist/threadhelper.zip --extension-id nfadnflafdfmekapgcgddbccooagpndk --client-id $CLIENT_ID --client-secret $CLIENT_SECRET --refresh-token $REFRESH_TOKEN"
   },

@@ -1,5 +1,8 @@
 const webpack = require('webpack');
 const path = require('path');
+const baseManifest = require('../baseManifest.js');
+const pkg = require('../package.json');
+const WebpackExtensionManifestPlugin = require('webpack-extension-manifest-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const ZipPlugin = require('zip-webpack-plugin');
@@ -17,6 +20,12 @@ module.exports = function (configDirs) {
     new BundleAnalyzerPlugin(),
     new CleanWebpackPlugin(),
     new ZipPlugin({ filename: 'threadhelper.zip' }),
+    new WebpackExtensionManifestPlugin({
+      config: {
+        base: baseManifest,
+        extend: { version: pkg.version },
+      },
+    }),
   ];
   console.log('\x1b[36m%s\x1b[0m', 'Building for production ...');
   return prodConfig;

@@ -23,6 +23,7 @@ export const makeModeObs = (gotMsg$: any[]) =>
 export function makeLastStatusObs(
   mode$: Observable<UrlModes, Error>
 ): curProp<UrlModes> {
+  console.log('makeLastStatusObs');
   const getCurrentId = (_) =>
     getMode() == UrlModes.status ? getIdFromUrl(getCurrentUrl()) : null;
   const lastStatus$ = mode$
