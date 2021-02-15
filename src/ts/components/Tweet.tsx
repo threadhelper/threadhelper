@@ -6,14 +6,13 @@ import {
   useContext,
   useCallback,
 } from 'preact/hooks';
-import { initGA, csEvent, csException, PageView, UA_CODE } from '../utils/ga';
+import { csEvent } from '../utils/ga';
 import { getActiveComposer } from '../utils/wutils';
 import { thTweet } from '../types/tweetTypes';
 import ReplyIcon from '../../images/reply.svg';
 import RetweetIcon from '../../images/retweet.svg';
 import LikeIcon from '../../images/like.svg';
 import FullLikeIcon from '../../images/like_full.svg';
-import ShareIcon from '../../images/share.svg';
 import PencilIcon from '../../images/pencil.svg';
 import { andThen, any, defaultTo, isNil, last, pipe } from 'ramda';
 import {
@@ -183,11 +182,11 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
   // const [auth, setAuth] = useStorage('auth', null);
   const [copyText, setCopyText] = useState('copy');
   const [_tweet, setTweet] = useState(tweet);
-  const [favCount, setFavCount] = useState(0);
-  const [replyCount, setReplyCount] = useState(0);
-  const [rtCount, setRtCount] = useState(0);
-  const [rtActive, setRtActive] = useState(false);
-  const [favActive, setFavActive] = useState(false);
+  // const [favCount, setFavCount] = useState(0);
+  // const [replyCount, setReplyCount] = useState(0);
+  // const [rtCount, setRtCount] = useState(0);
+  // const [rtActive, setRtActive] = useState(false);
+  // const [favActive, setFavActive] = useState(false);
   const linkField = useRef(null);
 
   const setCounts = (t) => {
@@ -267,9 +266,6 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
           {maybeMedia(tweet)}
           {maybeQuote(tweet)}
           <div class="th-icons">
-            {/* <ReplyAction />
-            <RetweetAction />
-            <LikeAction /> */}
             <ReplyAction tweet={_tweet} />
             <RetweetAction tweet={_tweet} />
             <LikeAction tweet={_tweet} />

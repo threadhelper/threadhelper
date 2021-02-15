@@ -1,16 +1,17 @@
 import { h } from 'preact';
 import { useContext, useEffect, useRef, useState } from 'preact/hooks';
 import { defaultTo, isEmpty, path } from 'ramda';
-import { useStorage } from '../hooks/useStorage';
-import SearchIcon from '../../images/search.svg';
-import Kefir from 'kefir';
 import { msgBG } from '../utils/dutils';
 import { FeedDisplayMode } from './ThreadHelper';
-import { DisplayMode } from '../types/interfaceTypes';
+import { SettingsButton } from './Settings';
+import { AccountsButton } from './Accounts';
+import SearchIcon from '../../images/search2.svg';
+import cx from 'classnames';
 
 export function ApiSearchBar() {
   const inputObj = useRef(null);
   const [value, setValue] = useState('');
+  const [showSearchBar, setShowSearchBar] = useState(false);
   const { feedDisplayMode, dispatchFeedDisplayMode } = useContext(
     FeedDisplayMode
   );
@@ -48,20 +49,36 @@ export function ApiSearchBar() {
   }, []);
 
   return (
-    <div class="searchBar">
-      <span>
-        <SearchIcon class="stroke-0 stroke-current fill-current inline w-4 h-4" />
-        <input
-          ref={inputObj}
-          class="w-20 "
-          value={value}
-          onInput={(e) => setValue(defaultTo('', path(['target', 'value'], e)))}
-          onKeyUp={(e) => (e.key === 'Enter' ? submitApiSearch(value) : null)}
-          onFocus={(e) => e.target?.select()}
-          type="text"
-          style="background-color:rgba(125,125,125,0.1)"
-        />
-      </span>
+    <div class="flex items-center justify-between p-3 flex-grow">
+      <div class="flex items-center flex-grow">
+        <button onClick={() => setShowSearchBar(!showSearchBar)} class="mr-3">
+          <SearchIcon class="h-4 w-4" />
+        </button>
+
+        {showSearchBar ? (
+          <input
+            ref={inputObj}
+            class="h-8 px-5 rounded-full text-sm focus:outline-none bg-gray-200 shadow border-0 w-full"
+            value={value}
+            onInput={(e) =>
+              setValue(defaultTo('', path(['target', 'value'], e)))
+            }
+            onKeyUp={(e) => (e.key === 'Enter' ? submitApiSearch(value) : null)}
+            onFocus={(e) => e.target?.select()}
+            type="text"
+            placeholder="Search"
+          />
+        ) : (
+          <div class="ml-4 text-2xl font-bold">
+            <span>Thread Helper</span>
+            <span class="text-gray-500">{` v${process.env.VERSION}`}</span>
+          </div>
+        )}
+      </div>
+      <div class="flex items-center relative top-0.5">
+        <AccountsButton />
+        <SettingsButton />
+      </div>
     </div>
   );
 }
