@@ -9,6 +9,7 @@ import { Console } from './Console';
 import { DropdownMenu } from './Dropdown';
 import { ArchiveUploader } from './LoadArchive';
 import Tooltip from './Tooltip';
+import SettingsModal from './SettingsModal';
 
 function onClearStorage() {
   console.log('clear storage');
@@ -105,21 +106,13 @@ export function SettingsButton(props) {
         <div class="options icon-button box-content">
           <GearIcon
             class="dropdown-icon"
-            onClick={onClickSettings}
-            onBlur={closeMenu}
+            onClick={() => {
+              setOpen(!open);
+            }}
           />
         </div>
       </Tooltip>
-      {/* </a> */}
-      {open && (
-        <DropdownMenu
-          name={'Settings'}
-          componentItems={[Console, ArchiveUploader]}
-          items={items}
-          debugItems={debugItems}
-          closeMenu={() => setOpen(false)}
-        />
-      )}
+      {open && <SettingsModal setOpen={setOpen} />}
     </div>
   );
 }

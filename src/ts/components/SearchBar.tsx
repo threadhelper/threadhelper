@@ -53,7 +53,7 @@ export function SearchBar({ show }) {
       {show ? (
         <div class="searchBar">
           <span>
-            <SearchIcon class="stroke-0 stroke-current fill-current  inline w-4 h-4" />
+            <SearchIcon class="stroke-0 stroke-current fill-current inline w-4 h-4" />
             <input
               ref={inputObj}
               class="inline w-20"

@@ -1,20 +1,10 @@
 import { createContext, h } from 'preact';
-import {
-  StateUpdater,
-  useEffect,
-  useReducer,
-  useRef,
-  useState,
-} from 'preact/hooks';
-import { Header } from './Header';
+import { useEffect, useReducer, useRef, useState } from 'preact/hooks';
+import { ApiSearchBar } from './ApiSearchBar';
 import { DisplayController } from './Display';
 import { DisplayMode } from '../types/interfaceTypes';
-import { isEmpty } from 'ramda';
 import { useStorage } from '../hooks/useStorage';
-import Kefir, { Observable } from 'kefir';
 import { TweetResult } from '../types/msgTypes';
-import { makeStorageChangeObs } from '../utils/dutils';
-import { StorageChangeObs } from '../hooks/BrowserEventObs';
 
 export const AuthContext = createContext<Credentials>({
   authorization: null,
@@ -95,7 +85,7 @@ function Sidebar(props: { active: any }) {
     >
       <AuthContext.Provider value={auth}>
         <div class="sidebar">
-          <Header />
+          <ApiSearchBar />
           <DisplayController />
         </div>
       </AuthContext.Provider>
