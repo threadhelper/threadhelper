@@ -189,6 +189,10 @@ input[type='checkbox'] + label {
   fill: var(--main-txt-color);
 }
 
+main > div > div > div > div:first-child {
+  z-index: 0;
+}
+
 .sidebar {
   /*display: grid;
   

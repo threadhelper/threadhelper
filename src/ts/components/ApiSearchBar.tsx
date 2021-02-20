@@ -65,6 +65,7 @@ export function ApiSearchBar() {
             }
             onKeyUp={(e) => (e.key === 'Enter' ? submitApiSearch(value) : null)}
             onFocus={(e) => e.target?.select()}
+            onBlur={() => setShowSearchBar(false)}
             type="text"
             placeholder="Search"
           />
