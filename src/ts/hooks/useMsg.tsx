@@ -24,7 +24,8 @@ export function useMsg(name) {
 
   // ATTENTION: this is commented out bc it might be needed in chrome. The observer use below needs to be the path one, not the whole stg
   useEffect(() => {
-    msg$.log(name);
+    // msg$.log(name);
+    msg$.onValue(nullFn);
     return () => {};
   }, []);
 

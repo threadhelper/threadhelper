@@ -50,17 +50,20 @@ import {
   wInspect,
   inspect,
   wTimeFn,
+  promiseStream,
 } from './utils/putils';
 import * as db from './worker/idb_wrapper';
 import { loadIndex, makeIndex, search, updateIndex } from './worker/nlp';
 import { onWorkerPromise } from './worker/promise-stream-worker';
 import { getLatestTweets, getRandomSampleTweets } from './worker/search';
 import { doSemanticSearch, reqSemIndexTweets } from './worker/semantic';
+import { updateIdxFromIdb } from './dev/storage/devStgUtils';
 import {
   findNewTweets,
   getRelevantOldIds,
   makeSearchResponse,
   makeTweetResponse,
+  storeIndexToDb,
   updateIndexAndStoreToDb,
   _updateIndex,
 } from './worker/stgOps';
@@ -140,9 +143,16 @@ const makeMsgStream = (typeName: string) =>
     .bufferWhileBy(noDb$)
     .flatten(); //.map(prop('data')) // Function
 // index init
-const resetIndex$ = makeMsgStream('resetIndex');
-resetIndex$.onValue(consoleLog('resetIndex$'));
-const index$ = Kefir.merge([db$, resetIndex$])
+const reqResetIndex$ = makeMsgStream('resetIndex');
+
+const resetIndex$ = reqResetIndex$.thru(
+  promiseStream(async (_) => {
+    const db = await db_promise;
+    return storeIndexToDb(db, makeIndex());
+  })
+);
+resetIndex$.log('resetIndex$');
+const dbIndex$ = db$
   .flatMapFirst((_) =>
     Kefir.fromPromise(
       pipe(
@@ -151,13 +161,28 @@ const index$ = Kefir.merge([db$, resetIndex$])
       )()
     )
   )
-  .ignoreEnd()
-  .toProperty();
+  .ignoreEnd();
+const index$ = Kefir.merge([dbIndex$, resetIndex$]).toProperty();
+// const index$ = Kefir.merge([db$, resetIndex$])
+// // const index$ = Kefir.merge([db$, resetIndex$])
+//   .flatMapFirst((_) =>
+//     Kefir.fromPromise(
+//       pipe(
+//         getIndexFromDb,
+//         andThen(ifElse(isNil, (_) => initIndex(), loadIndex))
+//       )()
+//     )
+//   )
+//   .ignoreEnd()
+//   .toProperty();
+index$.log('index$');
 const noIndex$ = index$.map(isNil);
 //
 // DB
 const dbClear$ = makeMsgStream('dbClear');
 const howManyTweetsDb$ = makeMsgStream('howManyTweetsDb');
+const getAllIds$ = makeMsgStream('getAllIds');
+
 // Account updating
 const addAccount$ = makeMsgStream('addAccount'); //.map(prop('res'))
 // addAccount$.log('addAccount$');
@@ -211,7 +236,7 @@ const ready$ = Kefir.merge([
 const curVal = (stream) => stream.currentValue();
 const getDb = (_: any) => curVal(db$);
 const updateDB = updateSomeDB(getDb);
-const getIndex = () => curVal(index$);
+const getIndex = (_) => curVal(index$);
 const getAllIds = async (storeName: StoreName) =>
   await getDb(1).getAllKeys(storeName); // getAllIds :: () -> [ids]
 const howManyTweetsDb = async (_) => (await getAllIds('tweets')).length;
@@ -263,22 +288,24 @@ const findDeletedIds = async (oldIds, res: thTweet[]): Promise<any> => {
   )(res);
 };
 
-const updateTimeline = async (res: thTweet[]) => {
+const updateTimeline = async (res: thTweet[], overwrite = true) => {
   const oldIds = await getRelevantOldIds(getDb(1), filterCondition(res));
   const newTweets = await findNewTweets(oldIds, res);
   const deletedIds = await findDeletedIds(oldIds, res);
-  updateDB(newTweets, deletedIds);
-  return await _updateIndex(getDb(1), getIndex(), newTweets, deletedIds);
+  updateDB(overwrite ? res : newTweets, deletedIds);
+  return await updateIdxFromIdb(getIndex(1), db_promise);
+  // return await _updateIndex(getDb(1), getIndex(1), newTweets, deletedIds);
 };
 
-const addTweets = async (res) => {
-  const newTweets = await findNewTweets(await getAllIds('tweets'), res);
-  updateDB(newTweets, []);
-  return await _updateIndex(getDb(1), getIndex(), newTweets, []);
+const addTweets = async (res, overwrite = true) => {
+  const newTweets = await findNewTweets(await getAllIds(StoreName.tweets), res);
+  updateDB(overwrite ? res : newTweets, []);
+  return await updateIdxFromIdb(getIndex(1), db_promise);
+  // return await _updateIndex(getDb(1), getIndex(1), newTweets, []);
 };
 const removeTweets = async (ids: string[]) => {
   updateDB([], ids);
-  return await _updateIndex(getDb(1), getIndex(), [], ids);
+  return await _updateIndex(getDb(1), getIndex(1), [], ids);
 };
 // need to leave open db and empty index
 const dbClear = pipe(
@@ -313,11 +340,11 @@ const getTweetByID = (id: string): Promise<thTweet> =>
 // searchFromMsg :: msg search -> Promise [tweet]
 const ftSearchFromMsg = curry(
   (
-    _getIndex: () => any,
+    _getIndex,
     m: { filters: any; accsShown: any; n_results: any; query: any }
   ): Promise<IndexSearchResult[]> => {
-    const index = _getIndex();
-    return search(m.filters, m.accsShown, m.n_results, _getIndex(), m.query);
+    const index = _getIndex(1);
+    return search(m.filters, m.accsShown, m.n_results, _getIndex(1), m.query);
   }
 );
 
@@ -337,7 +364,7 @@ const fulltextSearch = async (m: ReqSearchMsg): Promise<TweetResWorkerMsg> => {
 };
 
 const semSearchFromMsg = curry((m: { query: string }) =>
-  // { const index = _getIndex(); return semanticSearch(m.filters, m.accsShown, m.n_results, _getIndex(), m.query); });
+  // { const index = _getIndex(1); return semanticSearch(m.filters, m.accsShown, m.n_results, _getIndex(1), m.query); });
   {
     return doSemanticSearch(m.query);
   }
@@ -424,6 +451,7 @@ subReq(updateTimeline$, onUpdateTimeline);
 subReq(addTweets$, onAddTweets);
 subReq(removeTweets$, onRemoveTweets);
 subReq(getDefaultTweets$, getDefaultTweets);
+subReq(getAllIds$, (_) => getAllIds('tweets'));
 subReq(
   ftSearchReq$,
   pipe(
@@ -434,3 +462,4 @@ subReq(
 );
 subReq(semSearchReq$, semanticSearch);
 subReq(howManyTweetsDb$, onHowManyTweetsDb);
+subReq(reqResetIndex$, () => true);

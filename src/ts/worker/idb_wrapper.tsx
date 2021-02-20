@@ -17,9 +17,9 @@ bookmarks
 export const dbOpen = async () => {
   console.log('OPENING DB');
   const db = await openDB<thTwitterDB>('ThreadHelper', 1, {
-    upgrade(db) {
-      console.log('version ', (db as any).oldVersion);
-      let oldV = (db as any).oldVersion != null ? (db as any).oldVersion : 0;
+    upgrade(db, oldVersion, newVersion, transaction) {
+      let oldV = oldVersion ?? 0;
+      console.log('version ', oldV);
       switch (oldV) {
         case 0:
           // Create a store of objects

@@ -24,6 +24,10 @@ module.exports = function (configDirs) {
       ignored: /node_modules/,
     },
   };
+  devConfig.entry = {
+    ...devConfig.entry,
+    devCs: configDirs.APP_DIR + '/dev/devCs.tsx',
+  };
   (devConfig.output.path = configDirs.BUILD_DIR),
     (devConfig.plugins = [
       ...devConfig.plugins,
@@ -32,6 +36,7 @@ module.exports = function (configDirs) {
         // manifest: configDirs.PROJ_DIR + '/manifest.json',
         entries: {
           // The entries used for the content/background scripts or extension pages
+          devCs: 'devCs',
           'content-script': 'content-script',
           background: 'background',
           worker: 'worker',

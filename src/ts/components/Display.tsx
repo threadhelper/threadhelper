@@ -229,6 +229,10 @@ function SearchResults() {
   const [searchMode, setSearchMode] = useOption('searchMode');
   // useApiMetrics(auth, res, setRes);
 
+  useEffect(() => {
+    console.log('', { stgSearchResults });
+  }, [stgSearchResults]);
+
   return (
     <TweetDisplay
       title={

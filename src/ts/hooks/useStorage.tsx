@@ -27,10 +27,7 @@ export function useStorage(name, default_val) {
     default_val
   );
 
-  const setStgItem = pipe(
-    setStg(name),
-    andThen(pipe(prop(name), setStorageItem))
-  );
+  const setStgItem = setStg(name);
 
   // ATTENTION: this is commented out bc it might be needed in chrome. The observer use below needs to be the path one, not the whole stg
   useEffect(() => {
@@ -66,10 +63,7 @@ export function useStgPath(_path, default_val) {
     default_val
   );
 
-  const setStgItem = pipe(
-    setStgPath(_path),
-    andThen(pipe(path(_path), setStorageItem))
-  );
+  const setStgItem = setStgPath(_path);
 
   useEffect(() => {
     // storageChangeObs.onValue(nullFn);

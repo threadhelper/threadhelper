@@ -1,33 +1,46 @@
-import 'preact/debug';
 // only for development with `npm run serve`, to take advantage of HMR
 import '@babel/polyfill';
 // import "core-js/stable";
 // import "regenerator-runtime/runtime";
-
-import { h, render, Fragment, createContext } from 'preact';
-import ThreadHelper from '../components/ThreadHelper';
-import * as pcss from '../../styles.css';
-console.log('hi pcss', pcss);
+import { createContext, h, options, render } from 'preact';
+import 'preact/debug';
 import * as css from '../../style/cs.css';
-console.log('hi css', css);
+import * as pcss from '../../styles.css';
+import ThreadHelper from '../components/ThreadHelper';
+import { MsgObs, StorageChangeObs } from '../hooks/BrowserEventObs';
+import {
+  initStg,
+  makeGotMsgObs,
+  makeStorageChangeObs,
+  setData,
+} from '../utils/dutils';
+import { nullFn } from '../utils/putils';
 import { updateTheme } from '../utils/wutils';
-import { devStorage } from '../utils/defaultStg';
-import { initStg, makeStorageChangeObs, makeGotMsgObs } from '../utils/dutils';
 import { dbOpen } from '../worker/idb_wrapper';
 import Scraper from './components/Scraper';
 import Search from './components/Search';
-import TtReader from './components/TtReader';
 import Storage from './components/Storage';
-import { StorageChangeObs, MsgObs } from '../hooks/BrowserEventObs';
-import Kefir, { Observable } from 'kefir';
-import { useEffect } from 'react';
-import { useState } from 'preact/hooks';
-import { nullFn } from '../utils/putils';
+import TtReader from './components/TtReader';
+import { WranggleRpc, PostMessageTransport } from '@wranggle/rpc';
+
+console.log('hi pcss', pcss);
+console.log('hi css', css);
 
 const db = dbOpen();
 const stgObs$ = makeStorageChangeObs();
 // stgObs$.log('stgObs$');
 stgObs$.onValue(nullFn);
+
+// const extensionId = 'caagnlhofaohggbecamlnnnflghgeeip'; // th dev build
+
+const opts = { targetWindow: window, shouldReceive: (x) => true };
+const rpc = new WranggleRpc({
+  postMessage: opts,
+  channel: 'bgFetch00',
+  // debug: true,
+});
+const remote = rpc.remoteInterface();
+remote.getAuth().then(setData('auth'));
 
 const msgObs$ = makeGotMsgObs();
 

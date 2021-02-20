@@ -20,9 +20,27 @@ import {
 import { FullUser, Status, Status as Tweet, User } from 'twitter-d';
 import { inspect } from '../utils/putils';
 import { Credentials } from '../types/types';
-import { thTweet, TweetId } from '../types/tweetTypes';
-import { apiSearchToTweet } from './tweetImporter';
+import { ArchTweet, thTweet, TweetId } from '../types/tweetTypes';
+import {
+  apiSearchToTweet,
+  archPatchQtId,
+  patchArchivePrep,
+} from './tweetImporter';
 import { TweetResult } from '../types/msgTypes';
+import { WranggleRpc, PostMessageTransport } from '@wranggle/rpc';
+
+const isServe = process.env.DEV_MODE == 'serve';
+let remote = {};
+if (isServe) {
+  const opts = { targetWindow: window, shouldReceive: (x) => true };
+  const rpc = new WranggleRpc({
+    postMessage: opts,
+    channel: 'bgFetch',
+    // debug: true,
+  });
+  remote = rpc.remoteInterface();
+  // window.fetch = remote.fetchBg;
+}
 
 const getMaxId = (res) => (res.length > 1 ? res[res.length - 1].id : null);
 const retryLimit = 3;
@@ -41,7 +59,10 @@ const makeTweetLookupUrl = (ids) =>
   `https://api.twitter.com/1.1/statuses/lookup.json?id=${R.join(
     ',',
     ids
-  )}&tweet_mode=extended`;
+  )}&tweet_mode=extended&include_entities=true`;
+const makeUserLookupUrl = (ids) =>
+  `https://api.twitter.com/1.1/users/lookup.json?user_id=${R.join(',', ids)}`;
+
 const makeTimelineQueryUrl = curry(
   (max_id: number, screen_name: string, count: number) => {
     const max_param = max_id > 0 ? `&max_id=${max_id}` : '';
@@ -52,7 +73,8 @@ const makeUpdateQueryUrl = makeTimelineQueryUrl(-1);
 const makeApiSearchUrl = (q) =>
   `https://api.twitter.com/2/search/adaptive.json?q=${encodeURIComponent(
     q
-  )}&include_profile_interstitial_type=1&include_blocking=1&include_blocked_by=1&include_followed_by=1&include_want_retweets=1&include_mute_edge=1&include_can_dm=1&include_can_media_tag=1&skip_status=1&cards_platform=Web-12&include_cards=1&include_ext_alt_text=true&include_reply_count=1&tweet_mode=extended&include_entities=true&include_user_entities=true&include_ext_media_color=true&include_ext_media_availability=true&send_error_codes=true&simple_quoted_tweet=true&count=20&query_source=typed_query&pc=1&spelling_corrections=0&ext=mediaStats%2ChighlightedLabel%2CcameraMoment&include_quote_count=true`;
+  )}&include_profile_interstitial_type=1&include_blocking=1&include_blocked_by=1&include_followed_by=1&include_want_retweets=1&include_mute_edge=1&include_can_dm=1&include_can_media_tag=1&skip_status=1&cards_platform=Web-12&include_cards=1&include_ext_alt_text=true&include_reply_count=1&tweet_mode=extended&include_entities=true&include_user_entities=true&include_ext_media_color=true&include_ext_media_availability=true&send_error_codes=true&simple_quoted_tweet=false&count=20&query_source=typed_query&pc=1&spelling_corrections=0&ext=mediaStats%2ChighlightedLabel%2CcameraMoment&include_quote_count=true`;
+// )}&include_profile_interstitial_type=1&include_blocking=1&include_blocked_by=1&include_followed_by=1&include_want_retweets=1&include_mute_edge=1&include_can_dm=1&include_can_media_tag=1&skip_status=1&cards_platform=Web-12&include_cards=1&include_ext_alt_text=true&include_reply_count=1&tweet_mode=extended&include_entities=true&include_user_entities=true&include_ext_media_color=true&include_ext_media_availability=true&send_error_codes=true&simple_quoted_tweet=true&count=20&query_source=typed_query&pc=1&spelling_corrections=0&ext=mediaStats%2ChighlightedLabel%2CcameraMoment&include_quote_count=true`;
 const makeUserSearchUrl = (q) =>
   `https://twitter.com/i/api/1.1/search/typeahead.json?q=${encodeURIComponent(
     q
@@ -119,12 +141,14 @@ const handleFetchError = (error) => {
   throw error;
 };
 
-export const thFetch = async (url: string, options): Promise<any> =>
+const _thFetch = async (url: string, options): Promise<any> =>
   fetch(url, options)
     .then(errorRefusal)
     .then((response) => response.json())
     .catch(handleFetchError);
 
+export const thFetch = isServe ? remote.fetchBg : _thFetch;
+//
 function twitterFetch(url: string, options) {
   if (!options.authHeaders['x-csrf-token']) {
     return Promise.reject('not requesting, no auth');
@@ -239,6 +263,26 @@ export const tweetLookupQuery = curry(
     )(ids);
   }
 );
+export const userLookupQuery = curry(
+  async (auth: Credentials, ids: string[]): Promise<User[]> => {
+    const fetch100Ids = (ids: string[]): Promise<User[]> =>
+      fetchTweets(makeUserLookupUrl(ids), auth);
+
+    return pipe<
+      string[],
+      string[][],
+      Promise<User[]>[],
+      Promise<User[][]>,
+      Promise<User[]>
+    >(
+      R.splitEvery(100),
+      map(fetch100Ids),
+      (ps) => Promise.all(ps),
+      R.andThen(R.reduce<User[], User[]>(R.concat, []))
+    )(ids);
+  }
+);
+
 // fetch as many tweets as possible from the timeline
 export const timelineQuery = async (auth: Credentials, user_info: FullUser) =>
   await query(
@@ -292,60 +336,84 @@ export const getThreadAbove = curry(
     return [...thread_above, cur];
   }
 );
-const getApiTweets = pipe(path(['globalObjects', 'tweets']), (x) =>
+const unpackApiTweets = pipe(path(['globalObjects', 'tweets']), (x) =>
   Object.values(x)
 );
-const getApiUsers = pipe(path(['globalObjects', 'users']));
-const getQtId = pipe(prop('quoted_status_id_str'));
+const unpackApiUsers = pipe(path(['globalObjects', 'users']));
 // const assocUserToTweet = (users, tweet) => ({ ...tweet, user: users[tweet.user_id_str] })
 const assocUser = curry(
-  (
-    users: {
-      [x: string]: any;
-    },
-    tweet: {
-      user_id_str: string | number;
-    }
-  ) => assoc('user', users[tweet.user_id_str], tweet)
+  (users: { [x: string]: User }, tweet: Tweet | ArchTweet) =>
+    assoc('user', users[tweet.user_id_str], tweet)
 );
-// const assocQTs =  curry((qts, tweet) => assoc('quote', qts[tweet.quoted_status_id_str], tweet))
-const assocQTs = curry((qts: { [x: string]: Tweet }, tweet) =>
-  when(
-    pipe(prop('quoted_status_id_str'), isNil, not),
-    pipe(
-      assoc('quoted_status', qts[tweet.quoted_status_id_str]),
-      assoc('is_quote_status', true)
-    )
-  )(tweet)
-);
-const getQTs = curry((auth: Credentials, tweets: Tweet[]) =>
+// const assocQT =  curry((qts, tweet) => assoc('quote', qts[tweet.quoted_status_id_str], tweet))
+const assocQT = curry((qts: { [x: string]: Tweet }, tweet: Tweet | ArchTweet):
+  | Tweet
+  | ArchTweet =>
   pipe(
-    () => tweets,
-    getApiTweets,
-    map(getQtId),
-    filter(pipe(isNil, not)),
-    tweetLookupQuery(auth),
-    andThen(indexBy(prop('id_str'))),
-    andThen(inspect('afterlookupquery'))
+    () => tweet,
+    when(
+      pipe(prop('quoted_status_id_str'), isNil, not),
+      pipe(
+        assoc('quoted_status', prop(prop('quoted_status_id_str', tweet), qts)),
+        assoc('is_quote_status', true)
+      )
+    )
   )()
+);
+const getQTs = curry(
+  (auth: Credentials, tweets: (Tweet | ArchTweet)[]): Promise<Tweet[]> =>
+    pipe(
+      () => tweets,
+      // unpackApiTweets,
+      map(prop('quoted_status_id_str')),
+      filter(pipe(isNil, not)),
+      R.uniq,
+      tweetLookupQuery(auth),
+      andThen(indexBy(prop('id_str')))
+    )()
+);
+
+const getUsers = curry(
+  (auth: Credentials, tweets: (Tweet | ArchTweet)[]): Promise<User[]> =>
+    pipe(
+      () => tweets,
+      // unpackApiTweets,
+      map(prop('user_id')),
+      filter(pipe(isNil, not)),
+      R.uniq,
+      userLookupQuery(auth),
+      andThen(indexBy(prop('id_str'))),
+      andThen(inspect('after user lookupquery'))
+    )()
 );
 
 // const assocUserToTweet = (users, tweet) => ({ ...tweet, user: users[tweet.user_id_str] })
+
+// Most of the tweets are gotten when archive uploaded, this is to get users and QTs
+export async function patchArchive(
+  auth: Credentials,
+  userInfo: User,
+  archive: ArchTweet[]
+): Promise<Tweet[]> {
+  const patchedArch = map((t) => patchArchivePrep(userInfo, t), archive);
+  const authGetQTs = () => getQTs(auth, patchedArch);
+  const authGetUsers = () => getUsers(auth, patchedArch);
+  const qts = await loopRetry(authGetQTs);
+  const users = await loopRetry(authGetUsers);
+  const res = await map(pipe(assocQT(qts), assocUser(users)), patchedArch);
+  console.log('patchArchive', { res });
+  return res;
+}
 
 export async function getBookmarks(auth: Credentials): Promise<Tweet[]> {
   const authFetchBookmarks = () => fetchTweets(URLGetBookmarks, auth);
-  let bookmarks: Tweet[] = await loopRetry(authFetchBookmarks);
-  const tweets = getApiTweets(bookmarks);
-  const users = getApiUsers(bookmarks);
+  const _res = await loopRetry(authFetchBookmarks);
+  let bookmarks: Tweet[] = unpackApiTweets(_res);
+  const users = unpackApiUsers(_res);
   const authGetQTs = () => getQTs(auth, bookmarks);
   const qts = await loopRetry(authGetQTs);
   const makeRes = (bookmarks: any[]): {} =>
-    pipe(
-      getApiTweets,
-      map(assocUser(users)),
-      map(assocQTs(qts)),
-      inspect('bookmarks with qts')
-    )(bookmarks);
+    map(pipe(assocUser(users), assocQT(qts)), bookmarks);
   const res = await makeRes(bookmarks);
   return values(res);
 }
@@ -354,13 +422,13 @@ export const searchAPI = curry(
   async (auth: Credentials, query: string): Promise<Tweet[]> => {
     const fetchQ = () => fetchTweets(makeApiSearchUrl(query), auth);
     const _res = await loopRetry(fetchQ);
-    const tweets = getApiTweets(_res);
-    const users = getApiUsers(_res);
-    const authGetQTs = () => getQTs(auth, _res);
+    const tweets = unpackApiTweets(_res);
+    const users = unpackApiUsers(_res);
+    const authGetQTs = () => getQTs(auth, tweets);
     const qts = await loopRetry(authGetQTs);
-    const makeRes = (_res: any[]): {} =>
-      pipe(getApiTweets, map(assocUser(users)), map(assocQTs(qts)))(_res);
-    const res = await makeRes(_res);
+    const makeRes = (tweets: Tweet[]): Tweet[] =>
+      pipe(() => tweets, map(assocUser(users)), map(assocQT(qts)))();
+    const res = await makeRes(tweets);
     return res;
   }
 );

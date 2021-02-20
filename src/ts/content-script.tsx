@@ -66,6 +66,12 @@ import {
 } from './utils/dutils';
 import { currentValue, inspect, nullFn, toggleDebug } from './utils/putils';
 import { getMode, updateTheme } from './utils/wutils';
+import {
+  WranggleRpc,
+  Relay,
+  PostMessageTransport,
+  BrowserExtensionTransport,
+} from '@wranggle/rpc';
 console.log('hi pcss', pcss);
 console.log('hi css', css);
 

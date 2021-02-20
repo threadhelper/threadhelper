@@ -13,6 +13,8 @@ var IMG_DIR = path.resolve(__dirname, './src/images');
 var STYLE_DIR = path.resolve(__dirname, './src/styles');
 const configDirs = {
   BUILD_DIR,
+  DIST_DIR,
+  SERVE_DIR,
   PROJ_DIR,
   HTML_DIR,
   STYLE_DIR,

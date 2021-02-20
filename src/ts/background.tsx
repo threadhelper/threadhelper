@@ -1,4 +1,5 @@
 import '@babel/polyfill';
+import { WranggleRpc, BrowserExtensionTransport } from '@wranggle/rpc';
 import Kefir, { Observable } from 'kefir';
 import PromiseWorker from 'promise-worker';
 import * as R from 'ramda';
@@ -41,8 +42,10 @@ import {
 import {
   fetchUserInfo,
   getBookmarks,
+  patchArchive,
   searchAPI,
   searchUsers,
+  thFetch,
   timelineQuery,
   tweetLookupQuery,
   updateQuery,
@@ -60,7 +63,7 @@ import {
   WorkerMsg,
 } from './types/msgTypes';
 import { IdleMode, SearchFilters } from './types/stgTypes';
-import { curProp } from './types/types';
+import { Credentials, curProp } from './types/types';
 import {
   apiBookmarkToTweet,
   combineOptions,
@@ -78,8 +81,10 @@ import {
 } from './utils/bgUtils';
 import {
   cleanOldStorage,
+  getData,
   getStg,
   makeGotMsgObs,
+  makeStgItemObs,
   makeStorageChangeObs as makeStorageChangeObs,
   msgCS,
   removeData,
@@ -146,6 +151,7 @@ export async function main() {
   /* Extension observers */
   /* Messages */
   const msg$ = makeGotMsgObs().map(prop('m'));
+  const csTabId$ = makeGotMsgObs().map(prop('s'));
   msg$.log('[DEBUG] msg$');
   const msgStream = makeMsgStream(msg$);
   const reqReset$ = msgStream('clear');
@@ -169,6 +175,22 @@ export async function main() {
   >).map(prop('exception'));
 
   /* Storage */
+  // const refreshIdb = async () => {
+  //   const ids = await msgSomeWorker(pWorker, { type: 'resetIndex' });
+  //   const auth = await getData('auth');
+  //   const lookup = await tweetLookupQuery(auth, ids);
+  //   const thLookup = map(apiToTweet, lookup);
+  //   msgSomeWorker(pWorker, { type: 'doRefreshIdb' });
+  // };
+  const doRefreshIdb$ = await _makeStgObs('doRefreshIdb');
+  doRefreshIdb$.log('doRefreshIdb$');
+  const didRefreshIndex$ = doRefreshIdb$
+    .filter((x) => x == true)
+    .thru(promiseStream((_) => msgSomeWorker(pWorker, { type: 'resetIndex' })));
+  didRefreshIndex$.onValue((_) => setStg('doRefreshIdb', false));
+  didRefreshIndex$.log('didRefreshIndex$');
+  // doRefreshIdb$.filter((x) => x == true).onValue(refreshIdb);
+
   const optionsChange$ = makeStorageChangeObs().filter(
     propEq('itemName', 'options')
   );
@@ -359,11 +381,23 @@ export async function main() {
     .thru(promiseStream(([ids, auth]) => tweetLookupQuery(auth, ids)))
     .thru(errorFilter('fetchedBookmark$'));
 
+  const reqLookup$ = Kefir.merge([
+    didRefreshIndex$.thru(
+      promiseStream((_) => msgSomeWorker(pWorker, { type: 'getAllIds' }))
+    ),
+  ]);
+  const fetchedLookup$ = reqLookup$
+    .combine(auth$, (ids, auth) => [ids, auth])
+    .thru(promiseStream(([ids, auth]) => tweetLookupQuery(auth, ids)))
+    .thru(errorFilter('fetchedLookup$'));
+  fetchedLookup$.log('fetchedLookup$');
+
   const anyAPIReq$ = Kefir.merge([
     reqUpdatedTweets$,
-    reqBookmarks$,
     reqTimeline$,
+    reqBookmarks$,
     reqAddBookmark$,
+    reqLookup$,
   ]).map((_) => true); // flag
 
   /* Tweet API promise returns */
@@ -372,6 +406,7 @@ export async function main() {
     fetchedTimeline$,
     fetchedBookmarks$,
     fetchedBookmark$,
+    fetchedLookup$,
   ]).thru(errorFilter('fetchedAnyAPIReq$'));
 
   /* User submitted tweets */
@@ -379,12 +414,7 @@ export async function main() {
 
   const archiveLoadedTweets$ = reqArchiveLoad$
     .thru(
-      promiseStream(
-        pipe(
-          (_) => getStg('temp_archive'),
-          andThen(map(extractTweetPropIfNeeded))
-        )
-      )
+      promiseStream(pipe((_) => getStg('temp_archive'), andThen(patchArchive)))
     )
     .thru(errorFilter('archiveLoadedTweets$'));
   //
@@ -398,17 +428,32 @@ export async function main() {
     .filter(pipe(isEmpty, not))
     .map(map(assocAccount));
 
+  const archivePatched$ = archiveLoadedTweets$
+    .combine(userInfo$, (tempArchive, userInfo) => [tempArchive, userInfo])
+    .combine(auth$, ([tempArchive, userInfo], auth) => [
+      auth,
+      tempArchive,
+      userInfo,
+    ])
+    .thru(
+      promiseStream(([auth, tempArchive, userInfo]) =>
+        patchArchive(auth, userInfo, tempArchive)
+      )
+    );
+
   const thTweets$ = Kefir.merge([
     thUpdate$, //fetchedUpdate$.map(saferTweetMap(apiToTweet)),
     fetchedTimeline$.map(saferTweetMap(apiToTweet)),
     fetchedBookmarks$.map(saferTweetMap(bookmarkToTweet)),
     fetchedBookmark$.map(saferTweetMap(apiBookmarkToTweet)),
-    archiveLoadedTweets$
-      .combine(userInfo$, (tweets, userInfo) => [tweets, userInfo])
-      .map(inspect('archiveLoadedTweets$'))
-      .map(([tweets, userInfo]) =>
-        saferTweetMap(archToTweet(userInfo, tweets))
-      ),
+    fetchedLookup$.map(saferTweetMap(apiToTweet)),
+    archivePatched$.map(saferTweetMap(archToTweet)),
+    // archiveLoadedTweets$
+    //   .combine(userInfo$, (tweets, userInfo) => [tweets, userInfo])
+    //   .map(inspect('archiveLoadedTweets$'))
+    //   .map(([tweets, userInfo]) =>
+    //     saferTweetMap(archToTweet(userInfo, tweets))
+    //   ),
   ])
     .filter(pipe(isEmpty, not))
     .map(map(assocAccount));
@@ -700,26 +745,26 @@ export async function main() {
   userInfo$.log('[DEBUG] userInfo$');
   notReady$.log('[DEBUG] notReady$');
   initData$.log('[DEBUG] initData$');
-  reqDefaultTweets$.log('[DEBUG] reqDefaultTweets$');
+  // reqDefaultTweets$.log('[DEBUG] reqDefaultTweets$');
 
   // idleMode$.log('[DEBUG] idleMode$');
-  reqUpdatedTweets$.log('[DEBUG] reqUpdatedTweets$');
-  reqTimeline$.log('[DEBUG] reqTimeline$');
-  reqBookmarks$.log('[DEBUG] reqBookmarks$');
-  anyAPIReq$.log('[DEBUG] anyAPIReq$');
-  fetchedAnyAPIReq$.log('[DEBUG] fetchedAnyAPIReq$');
-  reqArchiveLoad$.log('[DEBUG] reqArchiveLoad$');
-  archiveLoadedTweets$.log('[DEBUG] archiveLoadedTweets$');
-  thTweets$.log('[DEBUG] thTweets$');
-  idsToRemove$.log('[DEBUG] idsToRemove$');
-  addedTweets$.log('[DEBUG] addedTweets$');
-  removedTweet$.log('[DEBUG] removedTweet$');
-  updatedTimeline$.log('[DEBUG] updatedTimeline$');
-  anyTweetUpdate$.log('[DEBUG] anyTweetUpdate$');
-  notArchLoading$.log('[DEBUG] notArchLoading$');
-  notFetchingAPI$.log('[DEBUG] notFetchingAPI$');
-  notMidWorkerReq$.log('[DEBUG] notMidWorkerReq$');
-  syncLight$.log('[DEBUG] syncLight$');
+  // reqUpdatedTweets$.log('[DEBUG] reqUpdatedTweets$');
+  // reqTimeline$.log('[DEBUG] reqTimeline$');
+  // reqBookmarks$.log('[DEBUG] reqBookmarks$');
+  // anyAPIReq$.log('[DEBUG] anyAPIReq$');
+  // fetchedAnyAPIReq$.log('[DEBUG] fetchedAnyAPIReq$');
+  // reqArchiveLoad$.log('[DEBUG] reqArchiveLoad$');
+  // archiveLoadedTweets$.log('[DEBUG] archiveLoadedTweets$');
+  // thTweets$.log('[DEBUG] thTweets$');
+  // idsToRemove$.log('[DEBUG] idsToRemove$');
+  // addedTweets$.log('[DEBUG] addedTweets$');
+  // removedTweet$.log('[DEBUG] removedTweet$');
+  // updatedTimeline$.log('[DEBUG] updatedTimeline$');
+  // anyTweetUpdate$.log('[DEBUG] anyTweetUpdate$');
+  // notArchLoading$.log('[DEBUG] notArchLoading$');
+  // notFetchingAPI$.log('[DEBUG] notFetchingAPI$');
+  // notMidWorkerReq$.log('[DEBUG] notMidWorkerReq$');
+  // syncLight$.log('[DEBUG] syncLight$');
   // csGaEvent$.log('[DEBUG] csGaEvent$');
   //   incomingAccounts$.log('[DEBUG] incomingAccounts$');
   //   accounts$.log('[DEBUG] accounts$');
@@ -751,6 +796,8 @@ const onUpdated = async (previousVersion) => {
   updateStorage();
   // delete old stg fields that are not in default
   cleanOldStorage();
+  // refresh idb tweets (lookup)
+  setStg('doRefreshIdb', true);
   // remake index
 };
 
@@ -763,7 +810,7 @@ const onFirstInstalled = async (resetData, previousVersion, id) => {
   }
   resetData();
 };
-
+//
 const onInstalled = curry(
   (
     resetData: () => void,
@@ -829,6 +876,76 @@ function onTabUpdated(
     }
   }
 }
+
+const fetchBg = async ({ url, options }) => {
+  return await thFetch(url, options);
+};
+const getAuth = async (_) => {
+  return await getData('auth');
+};
+var rpcBgFns = {
+  fetchBg,
+  getAuth,
+};
+import 'chrome-extension-async';
+chrome.runtime.onMessage.addListener(async function (
+  request,
+  sender,
+  sendResponse
+) {
+  console.log(
+    sender.tab
+      ? 'from a content script:' + sender.tab.url
+      : 'from the extension',
+    { sender, request }
+  );
+
+  if (request.type != 'rpcBg') return;
+  // if (R.includes(request.fnName, keys(rpcBgFns))) {
+  //   try {
+  //     sendResponse(rpcBgFns[request.fnName](request.args));
+  //   } catch (error) {
+  //     console.error(error);
+  //   }
+  // } else {
+  //   console.error(`bgRpc no function ${request.fnName}`);
+  // }
+  if (request.fnName == 'fetchBg') {
+    const resP = thFetch(request.args.url, request.args.options);
+    console.log({ resP });
+    const res = await resP;
+    sendResponse(res);
+  }
+  if (request.fnName == 'getAuth') {
+    const auth = await getData('auth');
+    console.log({ auth });
+    sendResponse(auth);
+  }
+  return true;
+});
+
+// function logURL(requestDetails) {
+//   console.log('Loading: ' + requestDetails.url);
+// }
+// chrome.webRequest.onBeforeRequest.addListener(logURL, { urls: ['<all_urls>'] });
+
+// Talking to cs RPC
+// const fetchBg = async (url) => {
+//   console.log('fetchBg in bg', { url });
+//   return 'goodbye';
+// };
+// const bgOpts = {
+//   // permitMessage: (payload, sender) => true,
+//   // forTabId: 230,
+// };
+// const extTransport = new BrowserExtensionTransport(bgOpts);
+// const bgRpc = new WranggleRpc({
+//   transport: extTransport,
+//   channel: 'bgFetch1',
+//   debug: true,
+// });
+// bgRpc.addRequestHandler('fetchBg', fetchBg);
+
 main();
 //
 var settingUrl = chrome.runtime.setUninstallURL(

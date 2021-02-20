@@ -25,11 +25,14 @@ export const defaultStorage = (): StorageInterface => {
     api_results: [],
     api_users: [],
     temp_archive: [],
+    stgTweetQueue: [],
     sync: false,
     nTweets: 0,
     lastUpdated: '',
     query: '',
     auth: { authorization: null, 'x-csrf-token': null, name: 'empty_auth' },
+    userInfo: {},
+    doRefreshIdb: false,
   };
 };
 
@@ -42,15 +45,18 @@ export const devStorage = (): StorageInterface => {
     hasTimeline: {}, // {id_str: Bool}
     activeAccounts: accounts, //{screen_name: String, id_str: String, showTweets: Bool, ...}
     currentScreenName: 'TestUser',
-    latest_tweets: results,
-    search_results: results,
-    api_results: results,
+    latest_tweets: [],
+    search_results: [],
+    api_results: [],
     api_users: [],
     temp_archive: [],
+    stgTweetQueue: [],
     sync: true,
     nTweets: results.length,
     lastUpdated: 'never',
     query: '',
     auth: { authorization: null, 'x-csrf-token': null, name: 'devEmptyAuth' },
+    userInfo: {},
+    doRefreshIdb: false,
   };
 };

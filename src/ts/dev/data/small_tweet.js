@@ -1,4 +1,4 @@
-[ {
+window.YTD.tweet.part0 = [ {
   "tweet" : {
     "retweeted" : false,
     "source" : "<a href=\"http://twitter.com/download/android\" rel=\"nofollow\">Twitter for Android</a>",

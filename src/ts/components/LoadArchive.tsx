@@ -1,7 +1,8 @@
 import { h } from 'preact';
 import { useRef } from 'preact/hooks';
-import { defaultTo, find, propEq } from 'ramda'; // Object
+import { defaultTo, find, map, propEq } from 'ramda'; // Object
 import { useStorage } from '../hooks/useStorage';
+import { extractTweetPropIfNeeded } from '../utils/bgUtils';
 import { msgBG, setStg } from '../utils/dutils';
 import { csEvent, csException } from '../utils/ga';
 
@@ -64,7 +65,12 @@ export const ArchiveUploader = (props) => {
   // Parses json and stores in temp to be processed by BG
   function importArchive(this: any) {
     const result = this.result.replace(/^[a-z0-9A-Z\.]* = /, '');
-    const importedTweetArchive = JSON.parse(result);
+    let importedTweetArchive = [];
+    try {
+      importedTweetArchive = JSON.parse(result);
+    } catch (error) {
+      console.error(error);
+    }
 
     csEvent(
       'User',
@@ -73,7 +79,10 @@ export const ArchiveUploader = (props) => {
     );
 
     console.log('setting archive', importedTweetArchive);
-    setStg('temp_archive', importedTweetArchive).then(() => {
+    setStg(
+      'temp_archive',
+      map(extractTweetPropIfNeeded, importedTweetArchive)
+    ).then(() => {
       setHasArchive(true);
       // msgBG({ type: 'temp-archive-stored' });
       hiddenFileInput.current.value = null;

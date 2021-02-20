@@ -19,12 +19,16 @@ export const loadIndexFromIdb = async (
   return index;
 };
 
-export const importTweets = curry(async (db, prepFn, tweets: Status[]) => {
-  const thTweets: thTweet[] = map(prepFn, tweets);
-  return await dbPutMany(db, StoreName.tweets, thTweets);
-  // updateIndexAndStoreToDb(db, globalIndex, thTweets, []);
-  // globalIndex = addToIndex(globalIndex, thTweets);
-});
+export const importTweets = curry(
+  async (
+    db: IDBPDatabase<thTwitterDB>,
+    prepFn: (x: Status) => thTweet,
+    tweets: Status[]
+  ) => {
+    const thTweets: thTweet[] = map(prepFn, tweets);
+    return await dbPutMany(db, StoreName.tweets, thTweets);
+  }
+);
 
 export const findNewIdsInIdb = async (
   index: elasticlunr.Index<IndexTweet>,

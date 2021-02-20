@@ -1,10 +1,22 @@
 import { createContext, h } from 'preact';
-import { useEffect, useReducer, useRef, useState } from 'preact/hooks';
+import {
+  StateUpdater,
+  useEffect,
+  useReducer,
+  useRef,
+  useState,
+} from 'preact/hooks';
 import { ApiSearchBar } from './ApiSearchBar';
+import { Header } from './Header';
+import { TtReader } from './TtReader';
 import { DisplayController } from './Display';
 import { DisplayMode } from '../types/interfaceTypes';
+import { isEmpty } from 'ramda';
 import { useStorage } from '../hooks/useStorage';
+import Kefir, { Observable } from 'kefir';
 import { TweetResult } from '../types/msgTypes';
+import { makeStorageChangeObs } from '../utils/dutils';
+import { StorageChangeObs } from '../hooks/BrowserEventObs';
 
 export const AuthContext = createContext<Credentials>({
   authorization: null,
@@ -46,6 +58,8 @@ const updateFeedDisplay = (
       return DisplayMode.Api;
     case 'gotLatestTweets':
       return state;
+    case 'gotQts':
+      return DisplayMode.QTs;
     default:
       throw new Error('Unexpected action');
   }
@@ -74,10 +88,10 @@ function Sidebar(props: { active: any }) {
   renderCount += 1;
   console.log(`Sidebar render ${renderCount}`);
 
-  useEffect(() => {
-    console.log({ auth });
-    return () => {};
-  }, [auth]);
+  // useEffect(() => {
+  //   console.log({ auth });
+  //   return () => {};
+  // }, [auth]);
 
   return (
     <FeedDisplayMode.Provider
@@ -85,6 +99,7 @@ function Sidebar(props: { active: any }) {
     >
       <AuthContext.Provider value={auth}>
         <div class="sidebar">
+          <TtReader />
           <ApiSearchBar />
           <DisplayController />
         </div>

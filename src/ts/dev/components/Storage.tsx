@@ -39,7 +39,7 @@ import { thTweet } from '../../types/tweetTypes';
 import { IDBPDatabase } from 'idb';
 import { StoreName, thTwitterDB } from '../../types/dbTypes';
 import { Status } from 'twitter-d';
-import { updateIndexAndStoreToDb } from '../../worker/stgOps';
+import { storeIndexToDb, updateIndexAndStoreToDb } from '../../worker/stgOps';
 import {
   cbTimeFn,
   importTweets,
@@ -64,11 +64,18 @@ const initIdb = async (db_promise) => {
 const Storage = () => {
   const [query, setQuery] = useStorage('query', '');
   const [auth, setAuth] = useStorage('auth', {});
+  const [userInfo, setUserInfo] = useStorage('userInfo', {});
 
   useEffect(() => {
     initIdb(db_promise);
     return () => {};
   }, []);
+
+  useEffect(() => {
+    console.log('Storage userInfo change', { userInfo });
+
+    return () => {};
+  }, [userInfo]);
 
   const doResetStorage = async (_) => {
     const db = await db_promise;
@@ -79,6 +86,7 @@ const Storage = () => {
 
   return (
     <div id="Storage" class="m-4 bg-gray-100">
+      <StgUpdater />
       <div class="flex flex-row refresh h-4">
         <XIcon onClick={doResetStorage} />
         <div class="pl-4 title">{`Storage  `}</div>
@@ -92,6 +100,7 @@ const Storage = () => {
           json={{
             query,
             auth,
+            userInfo: { name: userInfo.screen_name },
           }}
         />
       </div>
@@ -101,48 +110,76 @@ const Storage = () => {
 
 const TweetStg = () => {
   const [tempArchive, setTempArchive] = useStorage('temp_archive', []);
+  const [importing, setImporting] = useState(false);
+  const [stgTweetQueue, setStgTweetQueue] = useStorage('stgTweetQueue', []);
+  const [importingStgTweetQueue, setImportingStgTweetQueue] = useState(false);
+  const [nTweetsArch, setNTweetsArch] = useState(0);
   const [nTweets, setNTweets] = useState(0);
   const [state, updateState] = useState({});
-  const [importing, setImporting] = useState(false);
   const idbUpdateMsg = useMsg('idbUpdateTweet');
   const [time, setTime] = useState(0);
 
   // console.log('TweetStg render');
   useEffect(() => {
-    getTweetN();
+    updateDbTweetN();
     return () => {};
   }, []);
 
+  // useEffect(() => {
+  //   // console.log('Storage', { tempArchive });
+  //   const importArchive = async (db_promise, tempArchive) => {
+  //     setImporting(true);
+  //     const db = await db_promise;
+  //     const tweets = await importTweets(db, prepArchTweet, tempArchive);
+  //     const postImport = (tweets) => {
+  //       postMsg({ type: 'idbUpdateTweet' });
+  //       const archN = length(tempArchive);
+  //       setNTweetsArch(archN);
+  //       setTempArchive([]);
+  //       updateDbTweetN();
+  //       setImporting(false);
+  //     };
+  //     postImport(tweets);
+  //   };
+
+  //   if (!(isEmpty(tempArchive) || isNil(tempArchive))) {
+  //     cbTimeFn(() => importArchive(db_promise, tempArchive), setTime);
+  //   }
+  //   return () => {};
+  // }, [tempArchive]);
+
   useEffect(() => {
     // console.log('Storage', { tempArchive });
-    const importArchive = async (db_promise, tempArchive) => {
-      setImporting(true);
+    const importTweetQueue = async (db_promise, stgTweetQueue) => {
+      setImportingStgTweetQueue(true);
       const db = await db_promise;
-      const tweets = await importTweets(db, prepArchTweet, tempArchive);
+      const tweets = await importTweets(db, (x) => x, stgTweetQueue);
       const postImport = (tweets) => {
         postMsg({ type: 'idbUpdateTweet' });
-        setTempArchive([]);
-        getTweetN();
-        setImporting(false);
+        setStgTweetQueue([]);
+        updateDbTweetN();
+        setImportingStgTweetQueue(false);
       };
       postImport(tweets);
     };
 
-    if (!(isEmpty(tempArchive) || isNil(tempArchive))) {
-      cbTimeFn(() => importArchive(db_promise, tempArchive), setTime);
+    if (!(isEmpty(stgTweetQueue) || isNil(stgTweetQueue))) {
+      cbTimeFn(() => importTweetQueue(db_promise, stgTweetQueue), setTime);
     }
     return () => {};
-  }, [tempArchive]);
+  }, [stgTweetQueue]);
 
   useEffect(() => {
-    getTweetN();
+    updateDbTweetN();
     return () => {};
   }, [idbUpdateMsg]);
 
-  const getTweetN = async () => {
+  const updateDbTweetN = async () => {
     const db = await db_promise;
     const keys = await db.getAllKeys('tweets');
-    setNTweets(length(keys));
+    const n = length(keys);
+    setNTweets(n);
+    return n;
   };
 
   return (
@@ -150,7 +187,9 @@ const TweetStg = () => {
       <div class="m-4 flex items-center flex-row refresh h-4">
         <RefreshIcon class="h-4" onClick={(_) => updateState({})} />
         <div class="pl-4">{`Tweet Stg:`}</div>
-        <div class="pl-4">{importing ? `Importing tweets...` : ''}</div>
+        <div class="pl-4">
+          {importing || importingStgTweetQueue ? `Importing tweets...` : ''}
+        </div>
       </div>
       <div class="m-4 flex">
         <JsonToTable
@@ -215,6 +254,52 @@ const IndexStg = () => {
           json={{
             'Size:': defaultTo('no index', indexN),
             'Load time': `${(time / 1000).toFixed(2)}s`,
+          }}
+        />
+      </div>
+    </div>
+  );
+};
+
+const StgUpdater = () => {
+  const idbUpdateMsg = useMsg('idbUpdateTweet');
+  const [updating, setUpdating] = useState(false);
+  const [timeKeys, setTimeKeys] = useState(0);
+  const [timeLookup, setTimeLookup] = useState(0);
+  const [timeStore, setTimeStore] = useState(0);
+  const [timeStoreIdx, setTimeStoreIdx] = useState(0);
+
+  useEffect(() => {
+    return () => {};
+  }, []);
+
+  useEffect(() => {
+    return () => {};
+  }, []);
+
+  const updateTweetStg = async () => {
+    setUpdating(true);
+    const db = await db_promise;
+    const keys = await cbTimeFn(() => db.getAllKeys('tweets'), setTimeKeys);
+    console.log('updateStg', { keys });
+    storeIndexToDb(db, makeIndex()).then(() =>
+      postMsg({ type: 'scraperLookup', ids: keys })
+    ); //temporary
+  };
+
+  return (
+    <div>
+      <div class="m-4 flex items-center flex-row refresh h-4">
+        <RefreshIcon class="h-4" onClick={(_) => updateTweetStg()} />
+        <div class="pl-4">{`Stg Updater:`}</div>
+      </div>
+      <div class="m-4 flex max-w-max overflow-x-auto ">
+        <JsonToTable
+          json={{
+            'Get keys time': `${(timeKeys / 1000).toFixed(2)}s`,
+            'Lookup time': `${(timeLookup / 1000).toFixed(2)}s`,
+            'Tweets store time': `${(timeStore / 1000).toFixed(2)}s`,
+            'Index store time': `${(timeStoreIdx / 1000).toFixed(2)}s`,
           }}
         />
       </div>

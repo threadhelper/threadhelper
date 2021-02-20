@@ -1,4 +1,5 @@
 const isDevelopment = process.env.NODE_ENV !== 'production';
+const isServe = process.env.DEV_MODE == 'serve';
 
 module.exports = {
   name: 'ThreadHelper',
@@ -19,8 +20,14 @@ module.exports = {
     'webRequest',
     'https://api.twitter.com/',
     'https://*.twitter.com/*',
-    ...(isDevelopment
-      ? ['ws://localhost/*', 'http://localhost/*', 'http://127.0.0.1/*']
+    ...(isServe || isDevelopment
+      ? [
+          'ws://localhost/*',
+          'http://localhost/*',
+          'http://127.0.0.1/*',
+          'webRequest',
+          'webRequestBlocking',
+        ]
       : []),
   ],
   manifest_version: 2,
@@ -28,6 +35,11 @@ module.exports = {
     {
       matches: ['https://*.twitter.com/*'],
       js: ['content-script.bundle.js'],
+    },
+    {
+      // matches: ['ws://localhost/*', 'http://localhost/*', 'http://127.0.0.1/*'],
+      matches: ['http://localhost/*'],
+      js: ['devCs.bundle.js'],
     },
   ],
   background: {

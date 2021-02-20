@@ -138,7 +138,7 @@ const makeStgEvent = (key_vals: object) => {
     cancelable: !0,
   });
 };
-const setDataLocalSync = (key_vals: object) => {
+export const setDataLocalSync = (key_vals: object) => {
   document.dispatchEvent(makeStgEvent(key_vals));
   const prepData = pipe(
     toPairs,
@@ -232,7 +232,7 @@ export const getStg = (key: string) =>
 // );
 
 export const setStg = curry(async (key, val) => {
-  // console.log('setStg', { key, val });
+  console.log('setStg', { key, val });
   return setData({ [key]: val });
 });
 
@@ -393,11 +393,9 @@ export const makeStorageChangeObs = (): Observable<StorageChange, Error> => {
   };
   if (SERVE) {
     const obs = makeCustomEventObs('localStorage', makeEmitStgCH);
-    console.log('makeStorageChangeObs', { obs, makeEmitStgCH, stgChObsCnt });
     return obs;
   } else {
     const obs = makeEventObs(chrome.storage.onChanged, makeEmitStgCH);
-    console.log('makeStorageChangeObs', { obs, makeEmitStgCH, stgChObsCnt });
     return obs;
     // return makeEventObs(chrome.storage.onChanged, makeEmitStgCH);
   }

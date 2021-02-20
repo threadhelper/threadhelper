@@ -1,7 +1,17 @@
 import { Curry } from 'Function/_api';
 import Kefir, { Observable } from 'kefir';
 // flattenModule(global,R)
-import { curry, equals, ifElse, isNil, pipe, prop } from 'ramda'; // Function
+import {
+  curry,
+  defaultTo,
+  equals,
+  find,
+  ifElse,
+  isNil,
+  map,
+  pipe,
+  prop,
+} from 'ramda'; // Function
 import { curProp, UrlModes } from '../types/types';
 import { currentValue } from '../utils/putils';
 import {
@@ -12,7 +22,7 @@ import {
   isFocused,
 } from '../utils/wutils';
 (Kefir.Property.prototype as any).currentValue = currentValue;
-const tweetHeaderSelector = '[data-testid="tweet"]'
+const tweetHeaderSelector = '[data-testid="tweet"]';
 const dateSelector = 'a time';
 const editorClass = 'DraftEditor-editorContainer';
 const editorSelector = '.DraftEditor-editorContainer';
@@ -37,11 +47,25 @@ let isTweetCardFocused = () => isFocused(tweetCardSelector);
 type ElParent = Element | Document | null;
 type InputCond = (e: MouseEvent | KeyboardEvent) => boolean;
 
-export function getShowTweetText(){
-  tweetHeads = document.querySelectorAll(tweetHeaderSelector)
-  tweets
-  .nextSibling.firstChild.textContent
-  for()
+// not using, doing lookups instead.
+export function getShowTweetText() {
+  const tweetHeads = document.querySelectorAll(tweetHeaderSelector);
+  const tweetEl = (x) => x.nextSibling;
+  const tweetEls = map((x) => x.nextSibling);
+  const tweetElId = (el) => {
+    return el;
+  };
+  const idFromUrl = (url) => {
+    return url;
+  };
+  const isOpenTweet = (el) => {
+    return tweetElId(el) == window.location.href;
+  };
+  const tweetText = (t) => t.firstChild.textContent;
+  return defaultTo(
+    '',
+    tweetText(find(pipe(tweetEl, isOpenTweet), Array.from(tweetHeads)))
+  );
 }
 
 export function buttonClicked(

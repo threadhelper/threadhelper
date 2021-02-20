@@ -1,7 +1,7 @@
 import { Observable } from 'kefir'
 import PromiseWorker from 'promise-worker'
 import { assoc, curry, defaultTo, filter, ifElse, isNil, map, not, path, pipe, prop, reduce } from 'ramda' // Function
-import { User } from 'twitter-d'
+import { Status, User } from 'twitter-d'
 import { apiToTweet, validateTweet } from '../bg/tweetImporter'
 import { ReqDefaultTweetsMsg, ReqSearchMsg } from '../types/msgTypes'
 import { IdleMode, Option, SearchFilters, SearchMode, StorageChange } from '../types/stgTypes'
@@ -10,6 +10,7 @@ import { getStg, getOption, makeOptionObs, makeStgItemObs, removeData, resetStor
 import { n_tweets_results } from './params'
 import { curVal } from './putils'
 import Kefir from 'kefir';
+import { thTweet } from '../types/tweetTypes'
 
 
 
@@ -23,7 +24,7 @@ export const extractTweetPropIfNeeded = ifElse(
   (x) => x
 );
 
-export const saferTweetMap = (fn: (x:any) => any) => pipe( // saferMap :: [x] -> [x]
+export const saferTweetMap = (fn: (x:Status) => thTweet) => pipe( // saferMap :: [x] -> [x]
   defaultTo([]), 
   filter(pipe(isNil, not)), 
   filter(validateTweet), 

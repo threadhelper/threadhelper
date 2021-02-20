@@ -22,7 +22,6 @@ export function ApiSearchBar() {
       tweets: [],
     });
     const timeOutId = setTimeout(() => {
-      // submitApiSearch(value);
       msgBG({ type: 'apiQuery', query: value });
     }, 500);
     return timeOutId;
@@ -65,12 +64,13 @@ export function ApiSearchBar() {
             }
             onKeyUp={(e) => (e.key === 'Enter' ? submitApiSearch(value) : null)}
             onFocus={(e) => e.target?.select()}
+            onBlur={(e) => setShowSearchBar(false)}
             type="text"
             placeholder="Search"
           />
         ) : (
-          <div class="ml-4 text-2xl font-bold">
-            <span>Thread Helper</span>
+          <div>
+            <span class="ml-4 text-2xl font-bold">Thread Helper</span>
             <span class="text-gray-500">{` v${process.env.VERSION}`}</span>
           </div>
         )}

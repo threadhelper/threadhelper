@@ -1,3 +1,6 @@
+import { Status, User } from 'twitter-d';
+
+export interface ArchTweet extends Status {}
 export interface thImg {
   current_text: string;
   url: string;
@@ -10,29 +13,30 @@ export interface thUrl {
 
 export type TweetId = string;
 export interface thTweet {
-  account: string;
+  account?: string;
   has_media?: boolean;
   has_quote?: boolean;
+  orig_id?: TweetId;
   id: TweetId;
   is_bookmark?: boolean;
-  is_quote_up?: false;
+  is_quote_up?: boolean;
   media: (thImg | any)[];
   mentions: string[];
   name: string;
   profile_image?: string;
   quote?: thTweet | null;
   reply_to: string | null;
-  retweeted: boolean;
+  retweeted?: boolean;
   favorited?: boolean;
   text: string;
-  time?: string;
+  time?: number;
   urls?: thUrl[] | any[];
   username: string;
   reply_count?: number;
   retweet_count?: number;
   quote_count?: number;
   favorite_count?: number;
-  conversation_id: string;
+  conversation_id?: string;
 }
 
 export interface IndexTweet {

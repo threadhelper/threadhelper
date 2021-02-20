@@ -91,11 +91,16 @@ export const updateSemanticIndex = async (olds, new_tweets) =>
     ),
     andThen(inspect('[INFO] reqSemIndexTweets'))
   )();
+
+export const storeIndexToDb = async (db, index) => {
+  await db.put('misc', index.toJSON(), 'index');
+  return index;
+};
 export const updateIndexAndStoreToDb = curry(
   async (db, index, tweets_to_add, ids_to_remove) => {
     const newIndex = await updateIndex(index, tweets_to_add, ids_to_remove);
     console.log('updateIndexAndStoreToDb', { newIndex });
-    await db.put('misc', newIndex.toJSON(), 'index');
+    storeIndexToDb(db, newIndex);
     return newIndex;
   }
 );

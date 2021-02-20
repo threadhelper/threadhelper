@@ -13,11 +13,13 @@ export interface StorageInterface {
   api_results: SearchResult[];
   api_users: User[];
   temp_archive: object;
+  stgTweetQueue: thTweet[];
   sync: boolean;
   query: string;
   nTweets: number;
   lastUpdated: string;
   auth: Credentials;
+  userInfo: User | null;
 }
 
 export interface SearchResult {
