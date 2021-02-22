@@ -1,12 +1,12 @@
 # Threadhelper
 
+## Version management
+
+We're using [Gitflow](https://www.atlassian.com/git/tutorials/comparing-workflows/gitflow-workflow)
+
 ## Development Instructions
 
 built extension is in ./dist, so load that into the browser
-
-dev version lives at `http://localhost:3000`
-
-sidebar lives at `http://localhost:3000/sidebar.html`
 
 don't forget to `npm install`
 
@@ -23,6 +23,8 @@ npm run commands:
   - builds final version for deployment,
   - with webpack-bundle-analyzer
   - cleans before
+
+Anythin in src/ts/dev/** is used only in the development playground in localhost, not in the browser extension.
 
 ## Rough description of how it works
 
