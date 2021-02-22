@@ -1,12 +1,12 @@
 # Threadhelper
 
+## Version management
+
+We're using [Gitflow](https://www.atlassian.com/git/tutorials/comparing-workflows/gitflow-workflow)
+
 ## Development Instructions
 
 built extension is in ./dist, so load that into the browser
-
-dev version lives at `http://localhost:3000`
-
-sidebar lives at `http://localhost:3000/sidebar.html`
 
 don't forget to `npm install`
 
