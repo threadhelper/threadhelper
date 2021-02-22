@@ -410,15 +410,28 @@ export async function main() {
   ]).thru(errorFilter('fetchedAnyAPIReq$'));
 
   /* User submitted tweets */
-  const reqArchiveLoad$ = msgStreamSafe('temp-archive-stored'); // reqArchiveLoad$ :: msg
+  // const archiveLoad$ = msgStreamSafe('temp-archive-stored'); // archiveLoad$ :: msg
+  const archiveLoad$ = makeStgItemObs('temp_archive').filter(
+    pipe(either(isEmpty, isNil), not)
+  );
+  archiveLoad$.log('archiveLoad$');
+  // const archiveLoadedTweets$ = Kefir.combine([
+  //   auth$,
+  //   userInfo$,
+  //   archiveLoad$,
+  // ])
+  //   .combine(([auth, user, arch]) => {
+  //     return [auth, user, arch];
+  //   })
+  //   .filter(([auth, user, arch]) => either(isEmpty, isNil)(arch))
+  //   .thru(promiseStream(([auth, user, arch]) => patchArchive(auth, user, arch)))
+  //   .thru(errorFilter('archiveLoadedTweets$'));
+  // const archiveLoadedTweets$ = archiveLoad$
+  //   .thru(
+  //     promiseStream(pipe((_) => getStg('temp_archive'), andThen(patchArchive)))
+  //   )
+  //   .thru(errorFilter('archiveLoadedTweets$'));
 
-  const archiveLoadedTweets$ = reqArchiveLoad$
-    .thru(
-      promiseStream(pipe((_) => getStg('temp_archive'), andThen(patchArchive)))
-    )
-    .thru(errorFilter('archiveLoadedTweets$'));
-  //
-  // const curAccount = pipe(_ => userInfo$, curVal, prop('id_str'));
   const assocAccount = (x) => {
     const _x = assoc('account', getAccId(1), x);
     return _x;
@@ -428,7 +441,7 @@ export async function main() {
     .filter(pipe(isEmpty, not))
     .map(map(assocAccount));
 
-  const archivePatched$ = archiveLoadedTweets$
+  const archivePatched$ = archiveLoad$
     .combine(userInfo$, (tempArchive, userInfo) => [tempArchive, userInfo])
     .combine(auth$, ([tempArchive, userInfo], auth) => [
       auth,
@@ -440,7 +453,7 @@ export async function main() {
         patchArchive(auth, userInfo, tempArchive)
       )
     );
-
+  archivePatched$.log('archivePatched$');
   const thTweets$ = Kefir.merge([
     thUpdate$, //fetchedUpdate$.map(saferTweetMap(apiToTweet)),
     fetchedTimeline$.map(saferTweetMap(apiToTweet)),
@@ -509,7 +522,7 @@ export async function main() {
     fetchedTimeline$,
     reqRemoveBookmark$,
     idsToRemove$,
-    reqArchiveLoad$,
+    archiveLoad$,
   ]); // like with anyAPIReq$, these should only be emitted as the worker request is sent but oh well\
   const makeFlag = curry((def, stream0, stream1) =>
     Kefir.merge([toVal(false, stream0), toVal(true, stream1)])
@@ -517,7 +530,7 @@ export async function main() {
       .toProperty(() => def)
   );
   const makeFlagT = makeFlag(true);
-  const notArchLoading$ = makeFlagT(reqArchiveLoad$, archiveLoadedTweets$);
+  const notArchLoading$ = makeFlagT(archiveLoad$, archivePatched$);
   const notFetchingAPI$ = makeFlagT(anyAPIReq$, fetchedAnyAPIReq$);
   const notMidWorkerReq$ = makeFlagT(anyWorkerReq$, anyTweetUpdate$);
   const syncLight$ = streamAnd([
@@ -722,7 +735,7 @@ export async function main() {
   );
   subObs({ idsToRemove$ }, nullFn); // happens on a request to remove a tweet from DB
   subObs({ reqAddBookmark$ }, nullFn); // happens on requests to add a bookmark
-  subObs({ archiveLoadedTweets$ }, (_) => removeData(['temp_archive'])); // happens after tweets are updated by worker, should only happen after loading archive
+  subObs({ archivePatched$ }, (_) => removeData(['temp_archive'])); // happens after tweets are updated by worker, should only happen after loading archive
   /* Search */
   subObs({ searchFilters$ }, nullFn);
   subObs({ reqDefaultTweets$ }, nullFn);
@@ -753,7 +766,7 @@ export async function main() {
   // reqBookmarks$.log('[DEBUG] reqBookmarks$');
   // anyAPIReq$.log('[DEBUG] anyAPIReq$');
   // fetchedAnyAPIReq$.log('[DEBUG] fetchedAnyAPIReq$');
-  // reqArchiveLoad$.log('[DEBUG] reqArchiveLoad$');
+  // archiveLoad$.log('[DEBUG] archiveLoad$');
   // archiveLoadedTweets$.log('[DEBUG] archiveLoadedTweets$');
   // thTweets$.log('[DEBUG] thTweets$');
   // idsToRemove$.log('[DEBUG] idsToRemove$');

@@ -24,6 +24,7 @@ import { ArchTweet, thTweet, TweetId } from '../types/tweetTypes';
 import {
   apiSearchToTweet,
   archPatchQtId,
+  getRTOwner,
   patchArchivePrep,
 } from './tweetImporter';
 import { TweetResult } from '../types/msgTypes';
@@ -387,22 +388,47 @@ const getUsers = curry(
     )()
 );
 
-// const assocUserToTweet = (users, tweet) => ({ ...tweet, user: users[tweet.user_id_str] })
-
+// finds non-RT tweet in archive, looks it up and takes its user if it exists, if not tries another one
+const getArchiveOwner = async (auth, archive: ArchTweet[]): Promise<User> => {
+  console.log('getArchiveOwner', { auth, archive });
+  for (const t of archive) {
+    if (pipe(getRTOwner, isNil)(t)) {
+      console.log('ownTweet', { t });
+      const ownTweetRes = await tweetLookupQuery(auth, [t.id_str]);
+      console.log('ownTweetRes', { ownTweetRes });
+      const ownTweet = ownTweetRes[0];
+      if (isNil(ownTweet)) {
+        console.log("ownTweet isn't there anymore, trying another one", {
+          t,
+          ownTweet,
+        });
+        break;
+      } else {
+        const ownUser = ownTweet.user;
+        console.log('found ownUser', { ownUser });
+        return ownUser;
+      }
+    }
+  }
+  return null;
+};
 // Most of the tweets are gotten when archive uploaded, this is to get users and QTs
 export async function patchArchive(
   auth: Credentials,
   userInfo: User,
   archive: ArchTweet[]
 ): Promise<Tweet[]> {
-  const patchedArch = map((t) => patchArchivePrep(userInfo, t), archive);
+  const _archOwner = await getArchiveOwner(auth, archive);
+  const archOwner = _archOwner ?? userInfo;
+  console.log('patchArchive', { _archOwner, archOwner });
+  const patchedArch = map((t) => patchArchivePrep(archOwner, t), archive);
   const authGetQTs = () => getQTs(auth, patchedArch);
   const authGetUsers = () => getUsers(auth, patchedArch);
   const qts = await loopRetry(authGetQTs);
   const users = await loopRetry(authGetUsers);
   const res = await map(pipe(assocQT(qts), assocUser(users)), patchedArch);
-  console.log('patchArchive', { res });
-  return res;
+  console.log('patchArchive', { res, users, prep: patchedArch });
+  return await res;
 }
 
 export async function getBookmarks(auth: Credentials): Promise<Tweet[]> {
@@ -442,7 +468,9 @@ export async function apiMetricsFetch(
       () => results,
       map(path(['tweet', 'id'])),
       tweetLookupQuery(auth),
+      andThen(inspect('apiMetricsFetch lookup')),
       andThen(map(apiSearchToTweet)),
+      andThen(inspect('apiMetricsFetch to thTweet')),
       andThen((apiRes) =>
         map(
           (r) =>
