@@ -24,6 +24,8 @@ npm run commands:
   - with webpack-bundle-analyzer
   - cleans before
 
+Anythin in src/ts/dev/** is used only in the development playground in localhost, not in the browser extension.
+
 ## Rough description of how it works
 
 [Whimsical diagrams](https://whimsical.com/threadhelper-6LhnuFH8f4BBLq9bmKetRd)
