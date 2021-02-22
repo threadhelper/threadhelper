@@ -1,6 +1,6 @@
 import { h } from 'preact';
 import ReactTooltip from 'react-tooltip';
-import { AccountsButton } from './Accounts';
+import { SyncIcon } from './Sync';
 import { ApiSearchBar } from './ApiSearchBar';
 import { SearchBar } from './SearchBar';
 import { SettingsButton } from './Settings';
@@ -16,7 +16,7 @@ export function Header() {
         </div>
         <ApiSearchBar />
         <SearchBar show={false} />
-        <AccountsButton />
+        <SyncIcon />
         <SettingsButton />
       </div>
     </div>

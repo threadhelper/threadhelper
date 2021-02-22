@@ -1,7 +1,6 @@
 import { h } from 'preact';
 import { useCallback, useState } from 'preact/hooks';
 import { defaultTo, map, pipe, values } from 'ramda'; // Function
-import ReactTooltip from 'react-tooltip';
 import { FullUser } from 'twitter-d';
 import AccountIcon from '../../images/account.svg';
 import { useStorage } from '../hooks/useStorage';
@@ -28,10 +27,8 @@ const makeAccItems = pipe(
   })
 );
 
-export function AccountsButton(props) {
-  const [open, setOpen] = useState(false);
-  const [activeAccounts, setActiveAccounts] = useStorage('activeAccounts', []);
-  //
+export function SyncButton(props) {
+  const [open, setOpen] = useState(false); //
   const [sync, setSync] = useStorage('sync', false);
   const [nTweets, setNTweets] = useStorage('nTweets', 0);
   const [lastUpdated, setLastUpdated] = useStorage('lastUpdated', 'never');
@@ -57,45 +54,25 @@ export function AccountsButton(props) {
   const onClickButton = useCallback(clickButton, [open]);
   return (
     <div id="accounts-menu" className="nav-item">
-      <a data-tip="React-tooltip" data-for="accountsMenu">
-        <Tooltip
-          content={
-            `Hi ${currentScreenName}, I have ${nTweets} tweets available. \n` +
-            (sync ? `Last synced: ${getTimeDiff(lastUpdated)}.` : `Syncing...`)
-          }
-          direction="bottom"
-        >
-          <div
-            class={`options icon-button`}
-            onClick={onClickButton}
-            onBlur={closeMenu}
-          >
-            <AccountIcon
-              class={`box-content account-icon hoverHighlight  ${
-                sync ? 'synced' : 'unsynced'
-              }`}
-            ></AccountIcon>
-          </div>
-        </Tooltip>
-      </a>
       <Tooltip
-        name={'accounts-tooltip'}
-        text={
+        content={
           `Hi ${currentScreenName}, I have ${nTweets} tweets available. \n` +
           (sync ? `Last synced: ${getTimeDiff(lastUpdated)}.` : `Syncing...`)
         }
-      />
-      {open && (
-        <DropdownMenu
-          name={'Accounts'}
-          componentItems={[]}
-          filterItems={makeAccItems(activeAccounts)}
-          items={[]}
-          debugItems={[]}
-          closeMenu={() => setOpen(false)}
-          itemClickClose={false}
-        />
-      )}
+        direction="bottom"
+      >
+        <div
+          class={`options icon-button`}
+          onClick={onClickButton}
+          onBlur={closeMenu}
+        >
+          <AccountIcon
+            class={`box-content account-icon hoverHighlight  ${
+              sync ? 'synced' : 'unsynced'
+            }`}
+          ></AccountIcon>
+        </div>
+      </Tooltip>
     </div>
   );
 }

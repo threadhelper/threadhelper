@@ -17,11 +17,12 @@ import {
 } from 'ramda'; // Function
 import { Status, User } from 'twitter-d';
 import { ArchTweet, thTweet } from '../types/tweetTypes';
+import { nullFn } from '../utils/putils';
 import { tweetLookupQuery } from './twitterScout';
 
 /* Constants */
 const rtRE = /RT @([a-zA-Z0-9_]+).*/;
-const rt_tag = /RT @([a-zA-Z0-9_]+:)/;
+const rt_tag = /RT @([a-zA-Z0-9_]+:?)/;
 const default_pic_url =
   'https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png';
 
@@ -44,29 +45,6 @@ const getRTAuthor = (user_info, rt: any[], t) => {
     return prop('name', author);
   }
 };
-const initArchRT = (user_info, rt: any[], t) => {
-  return {
-    username: isNil(rt) ? prop('screen_name', user_info) : rt[1],
-    text: unescape(
-      isNil(rt)
-        ? prop('full_text', t).replace(rt_tag, '')
-        : prop('full_text', t)
-    ),
-    name: getRTAuthor(user_info, rt, t),
-    profile_image: default_pic_url,
-    retweeted: true,
-  };
-};
-const initArchTweet = (user_info, t) => {
-  return {
-    username: prop('screen_name', user_info),
-    text: unescape(prop('full_text', t)),
-    name: prop('name', user_info),
-    profile_image: prop('profile_image_url_https', user_info),
-    retweeted: false,
-  };
-};
-
 const makeApiQuote = (quoted_status: Status): thTweet => {
   var qt: thTweet = {
     // Basic info.
@@ -112,6 +90,10 @@ const makeApiQuote = (quoted_status: Status): thTweet => {
   return qt;
 };
 
+export const getRTOwner = (t: Status | ArchTweet) => {
+  const username = rtRE.exec(t.full_text ?? t.text);
+  return username ? getArchUserId(t) : null;
+};
 const _isOwnTweet = (rt: any[], user_info) =>
   isNil(rt) || rt[1] === prop('screen_name', user_info);
 
@@ -147,8 +129,16 @@ const getMediaTweet = pipe(
 );
 
 export const validateTweet = (t: Status): boolean => {
-  const valid = R.prop('id_str');
-  if (!valid) console.log('ERROR invalid tweet', valid);
+  const valid = !isNil(t.id_str) && (!isNil(t.full_text) || !isNil(t.text));
+  if (!valid) {
+    console.error('ERROR invalid tweet', {
+      valid,
+      id_str: t.id_str,
+      full_text: t.full_text,
+      text: t.text,
+      t,
+    });
+  }
   return !isNil(valid);
 };
 
@@ -255,11 +245,11 @@ const _findAuthor = (screenName: string, t: ArchTweet) =>
   t.entities?.user_mentions?.find((t) => {
     return t.screen_name?.toLowerCase() === screenName.toLowerCase();
   });
-export const getArchUserId = (userInfo: User, t: ArchTweet) => {
+export const getArchUserId = (t: ArchTweet): string => {
   let rt = rtRE.exec(prop('full_text', t));
   const screenName = rt[1];
   const author = _findAuthor(screenName, t);
-  const id = author.id_str ?? userInfo.screen_name;
+  const id = author.id_str ?? null;
   return id;
 };
 
@@ -272,14 +262,13 @@ export const patchArchivePrep = curry(
 
 export const patchArchUser = curry(
   (userInfo: User, t: ArchTweet): ArchTweet => {
-    let rt = rtRE.exec(prop('full_text', t));
-    const isOwnTweet = _isOwnTweet(rt, userInfo);
-    const userId = isOwnTweet ? userInfo.id_str : getArchUserId(userInfo, t);
+    const rtOwner = getRTOwner(t);
+    const userId = rtOwner ?? userInfo.id_str;
     let _t = pipe(
       () => t,
       R.assoc('user_id', userId),
       R.assoc('user_id_str', userId),
-      R.assoc('retweeted', !isOwnTweet),
+      R.assoc('retweeted', !isNil(rtOwner)),
       R.assoc('text', prop('full_text', t).replace(rt_tag, ''))
     )();
     return _t;
@@ -317,15 +306,20 @@ export const apiToTweet = (entry) => {
 
 //no qt
 const toTweetCommon = (thTweet: thTweet, t: Status) => {
-  thTweet.retweeted = t.retweeted;
+  thTweet.retweeted = t.retweeted ?? false;
   if (thTweet.retweeted) {
     thTweet.orig_id = t.retweeted_status?.id_str ?? t.id_str;
+    thTweet.id = prop('id_str', t);
     t = t.retweeted_status ?? t;
+  } else if (t.retweeted_status) {
+    thTweet.orig_id = t.retweeted_status.id_str ?? t.id_str;
+    thTweet.id = prop('id_str', t);
+    t = t.retweeted_status ?? t;
+  } else {
+    thTweet.id = prop('id_str', t);
   }
   // Basic info, same for everyone
-  thTweet.id = prop('id_str', t);
-  // thTweet.id = t.id,
-  thTweet.time = new Date(prop('created_at', t)).getTime();
+  thTweet.time = new Date(prop('created_at', t)).getTime() ?? 0;
   // thTweet.human_time = new Date(prop('created_at', t)).toLocaleString()
   // Replies/mentions.
   thTweet.reply_to = t.in_reply_to_screen_name ?? null; // null if not present
@@ -340,7 +334,9 @@ const toTweetCommon = (thTweet: thTweet, t: Status) => {
   thTweet.is_quote_up = !isNil(t.quoted_status);
   thTweet.quote = null;
   thTweet.is_bookmark = false;
-  thTweet.text = unescape(prop('full_text', t) || prop('text', t));
+  thTweet.text =
+    unescape(prop('full_text', t).toString().replace(rt_tag, '')) ||
+    unescape(prop('text', t).toString().replace(rt_tag, ''));
   if (!isNil(t.user)) {
     thTweet.username = path(['user', 'screen_name'], t);
     thTweet.name = path(['user', 'name'], t);

@@ -7,6 +7,7 @@ const Tooltip = (props) => {
   const [active, setActive] = useState(false);
 
   const showTip = () => {
+    console.log('showing tooltip', props);
     timeout = setTimeout(() => {
       setActive(true);
     }, props.delay || 500);

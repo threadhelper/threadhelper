@@ -53,7 +53,11 @@ import {
   makeSidebarHome,
   removeSearchBar,
 } from './domInterface/sidebarHandler';
-import { makeBgColorObs, makeLastStatusObs } from './domInterface/tabsHandler';
+import {
+  makeBgColorObs,
+  makeLastStatusObs,
+  makeThemeObs,
+} from './domInterface/tabsHandler';
 import * as window from './global';
 import { UrlMsg } from './types/msgTypes';
 import { curProp } from './types/types';
@@ -181,10 +185,11 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
   //      webpage events
   //          theme
   const bgColor$ = makeBgColorObs();
-  const theme$ = bgColor$
-    .map(getBgColor)
-    .skipDuplicates()
-    .toProperty(() => getBgColor(document.body));
+  // const theme$ = bgColor$
+  //   .map(getBgColor)
+  //   .skipDuplicates()
+  //   .toProperty(() => getBgColor(document.body));
+  const theme$ = makeThemeObs();
   //          tweet ids
   const lastStatus$ = makeLastStatusObs(mode$);
   const getTargetId = getHostTweetId(lastStatus$);
@@ -267,7 +272,7 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
   });
   subObs(targetedTweetActions$, pipe(makeIdMsg, msgBG));
   subObs(theme$, updateTheme);
-
+  theme$.log('theme$');
   subObs(floatActive$, updateFloat);
   subObs(homeActiveSafe$, updateHome);
   subObs(storageChange$, nullFn);

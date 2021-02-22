@@ -1,8 +1,8 @@
 :root {
   --neutral-color: #697882;
   --text-size: 13px;
-  --accent-color: rgb(0, 157, 255);
-  /*
+  /*--accent-color: rgb(0, 157, 255);
+  
   --main-bg-color: white;
   --main-txt-color: black;
   --main-border-color: #e1e8ed;
@@ -18,7 +18,7 @@
   padding: 0px 10px 10px 10px;
   flex-grow: 1;
   background-color: var(--main-bg-color);
-  overflow-x: hidden;
+  overflow-x: visible;
 }
 /* Maximum width applies to stuff with width lower than this*/
 @media (max-width: 200px) {
@@ -32,7 +32,7 @@
   background-color: var(--main-bg-color);
   padding: 0px 10px 10px 10px;
   margin-bottom: 20px;
-  overflow-x: hidden;
+  overflow-x: visible;
 }
 
 /* Dropdown Menu */
@@ -70,11 +70,6 @@
   overflow-y: hidden;*/
 
   height: 90vh;
-
-  div {
-    // background-color: yellow;
-    background-color: var(--main-bg-color);
-  }
 
   .header {
     display: flex;
@@ -186,6 +181,11 @@
 
 /* Dropdown Menu */
 @import './dropdown.scss';
+
+/*make modal visible*/
+main > div > div > div > div:first-child {
+  z-index: 0;
+}
 
 /* width */
 .searchTweets::-webkit-scrollbar {

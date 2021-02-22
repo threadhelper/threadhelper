@@ -1,9 +1,10 @@
-import { isNil } from 'ramda';
+import { isNil, isEmpty } from 'ramda';
 import { UrlModes } from '../types/types';
 export const url_regex = /(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})/;
 export const last_tweet_id = 0;
 export const editorClass = 'DraftEditor-editorContainer';
 const editorSelector = '.DraftEditor-editorContainer';
+const tweetButtonSelector = '[data-testid="SideNav_NewTweet_Button"]';
 
 // gets all twitter tabs
 export function getTwitterTabIds() {
@@ -149,33 +150,43 @@ export function getIdFromUrl(url: string) {
   return tid;
 }
 
-function setTheme(bg_color: string, txt_color: string, border_color: string) {
+function setTheme(
+  bg_color: string,
+  txt_color: string,
+  border_color: string,
+  accent_color: string
+) {
   let root = document.documentElement;
   root.style.setProperty('--main-bg-color', bg_color);
   root.style.setProperty('--main-txt-color', txt_color);
   root.style.setProperty('--main-border-color', border_color);
+  root.style.setProperty('--accent-color', accent_color);
 }
 
-export function updateTheme(bg_color = null) {
+export function updateTheme(theme = null) {
+  const defaultAccent = 'rgb(0, 157, 255)';
   const light_theme = 'rgb(255, 255, 255)';
   const dim_theme = 'rgb(21, 32, 43)';
   const black_theme = 'rgb(0, 0, 0)';
-  bg_color =
-    bg_color === null ? document.body.style['background-color'] : bg_color;
+  theme = isNil(theme)
+    ? {
+        bgColor: document.body.style['background-color'],
+        accentColor: defaultAccent,
+      }
+    : theme;
 
-  console.log('setting theme', bg_color);
-  switch (bg_color) {
+  switch (theme.bgColor) {
     case light_theme:
-      setTheme('#f5f8fa', 'black', '#e1e8ed');
+      setTheme('#f5f8fa', 'black', '#e1e8ed', theme.accentColor);
       break;
     case dim_theme:
-      setTheme('#192734', 'white', '#38444d');
+      setTheme('#192734', 'white', '#38444d', theme.accentColor);
       break;
     case black_theme:
-      setTheme('black', 'white', '#2f3336');
+      setTheme('black', 'white', '#2f3336', theme.accentColor);
       break;
     default:
-      setTheme('#f5f8fa', 'black', '#e1e8ed');
+      setTheme('#f5f8fa', 'black', '#e1e8ed', theme.accentColor);
       break;
   }
 }

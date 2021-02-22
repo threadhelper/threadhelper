@@ -31,6 +31,19 @@ import { DropdownMenu } from './Dropdown';
 const getTweetUrl = (tweet: thTweet) =>
   `https://twitter.com/${tweet.username}/status/${tweet.id}`;
 
+const formatNumber = function (number) {
+  if (number >= 1000000) {
+    return (number / 1000000).toPrecision(2) + 'M';
+  }
+  if (number >= 10000) {
+    return Math.floor(number / 1000) + 'K';
+  } else if (number >= 1000) {
+    return (number / 1000).toPrecision(2) + 'K';
+  } else {
+    return number.toString();
+  }
+};
+
 const countReplies = (t) => t.reply_count ?? 0;
 
 export const ReplyAction = ({ tweet }) => {
@@ -44,7 +57,7 @@ export const ReplyAction = ({ tweet }) => {
   return (
     <div class="th-icon-field">
       <div class="th-reply-container">
-        <ReplyIcon /> <span>{count > 0 ? count : ''}</span>
+        <ReplyIcon /> <span>{count > 0 ? formatNumber(count) : ''}</span>
       </div>
     </div>
   );
@@ -115,7 +128,7 @@ const RetweetAction = ({ tweet }: { tweet: thTweet }) => {
           ) : (
             <RetweetIcon />
           )}
-          <span>{count > 0 ? count : ''}</span>
+          <span>{count > 0 ? formatNumber(count) : ''}</span>
         </div>
       </div>
       {open && (
@@ -171,7 +184,7 @@ const LikeAction = ({ tweet }) => {
           <LikeIcon />
         )}
         {'  '}
-        <span>{count > 0 ? count : ''}</span>
+        <span>{count > 0 ? formatNumber(count) : ''}</span>
       </div>
     </div>
   );

@@ -1,8 +1,8 @@
 :root {
   --neutral-color: #697882;
   --text-size: 13px;
-  --accent-color: rgb(0, 157, 255);
-  /*
+  /*--accent-color: rgb(0, 157, 255);
+  
   --main-bg-color: white;
   --main-txt-color: black;
   --main-border-color: #e1e8ed;
@@ -17,10 +17,10 @@
   border-radius: 10px;
   padding: 0px 10px 10px 10px;
   -webkit-box-flex: 1;
-  -ms-flex-positive: 1;
-  flex-grow: 1;
+      -ms-flex-positive: 1;
+          flex-grow: 1;
   background-color: var(--main-bg-color);
-  overflow-x: hidden;
+  overflow-x: visible;
 }
 
 /* Maximum width applies to stuff with width lower than this*/
@@ -35,7 +35,7 @@
   background-color: var(--main-bg-color);
   padding: 0px 10px 10px 10px;
   margin-bottom: 20px;
-  overflow-x: hidden;
+  overflow-x: visible;
 }
 
 /* Dropdown Menu */
@@ -189,10 +189,6 @@ input[type='checkbox'] + label {
   fill: var(--main-txt-color);
 }
 
-main > div > div > div > div:first-child {
-  z-index: 0;
-}
-
 .sidebar {
   /*display: grid;
   
@@ -203,12 +199,11 @@ main > div > div > div > div:first-child {
   display: flex;
   -webkit-box-orient: vertical;
   -webkit-box-direction: normal;
-  -ms-flex-direction: column;
-  flex-direction: column;
+      -ms-flex-direction: column;
+          flex-direction: column;
   white-space: pre-wrap;
   word-break: break-all;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-    Ubuntu, 'Helvetica Neue', sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Ubuntu, 'Helvetica Neue', sans-serif;
   font-size: var(--text-size);
   color: var(--main-txt-color);
   /* Don't break out */
@@ -225,21 +220,17 @@ main > div > div > div > div:first-child {
   height: 90vh;
 }
 
-/* .sidebar div {
-  background-color: var(--main-bg-color);
-} */
-
 .sidebar .header {
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;
   -webkit-box-orient: horizontal;
   -webkit-box-direction: normal;
-  -ms-flex-direction: row;
-  flex-direction: row;
+      -ms-flex-direction: row;
+          flex-direction: row;
   -webkit-box-pack: justify;
-  -ms-flex-pack: justify;
-  justify-content: space-between;
+      -ms-flex-pack: justify;
+          justify-content: space-between;
   margin-top: 15px;
   place-items: center;
 }
@@ -281,15 +272,14 @@ main > div > div > div > div:first-child {
 .sidebar .title-container {
   text-align: left;
   -webkit-box-flex: 8;
-  -ms-flex-positive: 8;
-  flex-grow: 8;
+      -ms-flex-positive: 8;
+          flex-grow: 8;
 }
 
 .sidebar .title-container .th-title {
   margin: 0;
   font-weight: 900;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-    Ubuntu, 'Helvetica Neue', sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Ubuntu, 'Helvetica Neue', sans-serif;
   font-size: 19px;
 }
 
@@ -299,8 +289,8 @@ main > div > div > div > div:first-child {
   display: flex;
   -webkit-box-orient: horizontal;
   -webkit-box-direction: normal;
-  -ms-flex-direction: row;
-  flex-direction: row;
+      -ms-flex-direction: row;
+          flex-direction: row;
   border: 1px solid var(--main-border-color);
   border-radius: 3px;
   padding: 8px 5px 8px 5px;
@@ -316,11 +306,11 @@ main > div > div > div > div:first-child {
   display: flex;
   -webkit-box-orient: horizontal;
   -webkit-box-direction: normal;
-  -ms-flex-direction: row;
-  flex-direction: row;
+      -ms-flex-direction: row;
+          flex-direction: row;
   -webkit-box-pack: justify;
-  -ms-flex-pack: justify;
-  justify-content: space-between;
+      -ms-flex-pack: justify;
+          justify-content: space-between;
   color: var(--main-txt-color);
   /*order: 1px solid var(--main-border-color);*/
   border-radius: 3px;
@@ -333,14 +323,14 @@ main > div > div > div > div:first-child {
   display: flex;
   -webkit-box-orient: vertical;
   -webkit-box-direction: normal;
-  -ms-flex-direction: column;
-  flex-direction: column;
+      -ms-flex-direction: column;
+          flex-direction: column;
   white-space: pre-wrap;
   height: auto;
   overflow-y: hidden;
   -webkit-box-flex: 1;
-  -ms-flex-positive: 1;
-  flex-grow: 1;
+      -ms-flex-positive: 1;
+          flex-grow: 1;
   padding-top: 5px;
 }
 
@@ -356,12 +346,12 @@ main > div > div > div > div:first-child {
 
 /* tweets */
 .th-tweet {
-  padding: 8px 5px 8px 5px;
+  padding: 8px 5px 0px 5px;
   margin-bottom: 5px;
   -webkit-box-orient: horizontal;
   -webkit-box-direction: normal;
-  -ms-flex-direction: row;
-  flex-direction: row;
+      -ms-flex-direction: row;
+          flex-direction: row;
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;
@@ -374,8 +364,8 @@ main > div > div > div > div:first-child {
 
 .th-gutter {
   -webkit-box-flex: 0;
-  -ms-flex-positive: 0;
-  flex-grow: 0;
+      -ms-flex-positive: 0;
+          flex-grow: 0;
 }
 
 .th-gutter img {
@@ -390,20 +380,20 @@ main > div > div > div > div:first-child {
   display: -ms-flexbox;
   display: flex;
   -webkit-box-flex: 1;
-  -ms-flex-positive: 1;
-  flex-grow: 1;
+      -ms-flex-positive: 1;
+          flex-grow: 1;
   -webkit-box-orient: vertical;
   -webkit-box-direction: normal;
-  -ms-flex-direction: column;
-  flex-direction: column;
+      -ms-flex-direction: column;
+          flex-direction: column;
   padding-left: 5px;
   min-width: 0;
 }
 
 .th-plus-container {
   -webkit-box-flex: 0;
-  -ms-flex-positive: 0;
-  flex-grow: 0;
+      -ms-flex-positive: 0;
+          flex-grow: 0;
 }
 
 .th-header {
@@ -424,8 +414,8 @@ main > div > div > div > div:first-child {
   overflow: hidden;
   text-overflow: ellipsis;
   -webkit-box-flex: 0;
-  -ms-flex: 0 1 auto;
-  flex: 0 1 auto;
+      -ms-flex: 0 1 auto;
+          flex: 0 1 auto;
 }
 
 .th-header-username {
@@ -434,16 +424,16 @@ main > div > div > div > div:first-child {
   overflow: hidden;
   text-overflow: ellipsis;
   -webkit-box-flex: 0;
-  -ms-flex: 0 1 auto;
-  flex: 0 1 auto;
+      -ms-flex: 0 1 auto;
+          flex: 0 1 auto;
 }
 
 .th-header-time {
   color: var(--neutral-color);
   background-color: rgba(0, 0, 0, 0);
   -webkit-box-flex: 0;
-  -ms-flex: 0 0 auto;
-  flex: 0 0 auto;
+      -ms-flex: 0 0 auto;
+          flex: 0 0 auto;
   z-index: 1;
 }
 
@@ -454,7 +444,7 @@ main > div > div > div > div:first-child {
 
 .th-header-time-link:hover {
   -webkit-text-decoration: 'underline';
-  text-decoration: 'underline';
+          text-decoration: 'underline';
 }
 
 .th-reply {
@@ -474,8 +464,8 @@ main > div > div > div > div:first-child {
   display: flex;
   -webkit-box-orient: vertical;
   -webkit-box-direction: normal;
-  -ms-flex-direction: column;
-  flex-direction: column;
+      -ms-flex-direction: column;
+          flex-direction: column;
   max-height: 200px;
   border: 1px solid var(--main-border-color);
   border-radius: 8px;
@@ -486,8 +476,8 @@ main > div > div > div > div:first-child {
 .th-media-image img {
   max-width: 100%;
   -ms-flex-item-align: center;
-  -ms-grid-row-align: center;
-  align-self: center;
+      -ms-grid-row-align: center;
+      align-self: center;
 }
 
 .th-media-image {
@@ -500,8 +490,8 @@ main > div > div > div > div:first-child {
 .th-media-top {
   min-height: 50%;
   -webkit-box-flex: 1;
-  -ms-flex-positive: 1;
-  flex-grow: 1;
+      -ms-flex-positive: 1;
+          flex-grow: 1;
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;
@@ -510,8 +500,8 @@ main > div > div > div > div:first-child {
 .th-media-bottom {
   min-height: 50%;
   -webkit-box-flex: 1;
-  -ms-flex-positive: 1;
-  flex-grow: 1;
+      -ms-flex-positive: 1;
+          flex-grow: 1;
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;
@@ -528,8 +518,8 @@ main > div > div > div > div:first-child {
   display: flex;
   -webkit-box-orient: vertical;
   -webkit-box-direction: normal;
-  -ms-flex-direction: column;
-  flex-direction: column;
+      -ms-flex-direction: column;
+          flex-direction: column;
   border: 1px solid var(--main-border-color);
   border-radius: 8px;
   margin-top: 8px;
@@ -541,8 +531,8 @@ main > div > div > div > div:first-child {
   display: -ms-flexbox;
   display: flex;
   -webkit-box-align: bottom;
-  -ms-flex-align: bottom;
-  align-items: bottom;
+      -ms-flex-align: bottom;
+          align-items: bottom;
 }
 
 .th-quote-header-profile {
@@ -558,8 +548,8 @@ main > div > div > div > div:first-child {
   overflow: hidden;
   text-overflow: ellipsis;
   -webkit-box-flex: 0;
-  -ms-flex: 0 1 auto;
-  flex: 0 1 auto;
+      -ms-flex: 0 1 auto;
+          flex: 0 1 auto;
 }
 
 .th-quote-header-username {
@@ -570,8 +560,8 @@ main > div > div > div > div:first-child {
   overflow: hidden;
   text-overflow: ellipsis;
   -webkit-box-flex: 0;
-  -ms-flex: 0 1 auto;
-  flex: 0 1 auto;
+      -ms-flex: 0 1 auto;
+          flex: 0 1 auto;
 }
 
 .th-header-dot {
@@ -583,8 +573,8 @@ main > div > div > div > div:first-child {
   color: var(--neutral-color);
   background-color: rgba(0, 0, 0, 0);
   -webkit-box-flex: 1;
-  -ms-flex: 1 0 auto;
-  flex: 1 0 auto;
+      -ms-flex: 1 0 auto;
+          flex: 1 0 auto;
   z-index: 1;
 }
 
@@ -595,7 +585,7 @@ main > div > div > div > div:first-child {
 
 .th-quote-header-time-link:hover {
   -webkit-text-decoration: 'underline';
-  text-decoration: 'underline';
+          text-decoration: 'underline';
 }
 
 .th-quote-reply {
@@ -622,11 +612,11 @@ main > div > div > div > div:first-child {
   display: flex;
   -webkit-box-orient: vertical;
   -webkit-box-direction: normal;
-  -ms-flex-direction: column;
-  flex-direction: column;
+      -ms-flex-direction: column;
+          flex-direction: column;
   -webkit-box-flex: 1;
-  -ms-flex-positive: 1;
-  flex-grow: 1;
+      -ms-flex-positive: 1;
+          flex-grow: 1;
   min-width: 0;
 }
 
@@ -636,8 +626,8 @@ main > div > div > div > div:first-child {
   display: flex;
   -webkit-box-orient: vertical;
   -webkit-box-direction: normal;
-  -ms-flex-direction: column;
-  flex-direction: column;
+      -ms-flex-direction: column;
+          flex-direction: column;
   max-height: 150px;
   margin-top: 10px;
   overflow: hidden;
@@ -651,8 +641,8 @@ main > div > div > div > div:first-child {
   display: flex;
   -webkit-box-orient: vertical;
   -webkit-box-direction: normal;
-  -ms-flex-direction: column;
-  flex-direction: column;
+      -ms-flex-direction: column;
+          flex-direction: column;
   padding-right: 5px;
 }
 
@@ -661,9 +651,8 @@ main > div > div > div > div:first-child {
   display: -ms-flexbox;
   display: flex;
   -webkit-box-flex: 1;
-  -ms-flex-positive: 1;
-  flex-grow: 1;
-  padding-top: 2px;
+      -ms-flex-positive: 1;
+          flex-grow: 1;
   color: var(--neutral-color);
 }
 
@@ -672,8 +661,8 @@ main > div > div > div > div:first-child {
   display: -ms-flexbox;
   display: flex;
   -webkit-box-flex: 1;
-  -ms-flex-positive: 1;
-  flex-grow: 1;
+      -ms-flex-positive: 1;
+          flex-grow: 1;
 }
 
 .th-icon-field div {
@@ -748,11 +737,11 @@ main > div > div > div > div:first-child {
   display: -ms-flexbox;
   display: flex;
   -webkit-box-align: center;
-  -ms-flex-align: center;
-  align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
   -webkit-box-pack: center;
-  -ms-flex-pack: center;
-  justify-content: center;
+      -ms-flex-pack: center;
+          justify-content: center;
   -webkit-user-select: none;
 }
 
@@ -776,8 +765,8 @@ main > div > div > div > div:first-child {
   display: flex;
   -webkit-box-orient: vertical;
   -webkit-box-direction: normal;
-  -ms-flex-direction: column;
-  flex-direction: column;
+      -ms-flex-direction: column;
+          flex-direction: column;
   --border-radius: 3px;
   --border: 1px solid #474a4d;
   --speed: 200ms;
@@ -807,15 +796,15 @@ main > div > div > div > div:first-child {
   display: flex;
   -webkit-box-orient: horizontal;
   -webkit-box-direction: normal;
-  -ms-flex-direction: row;
-  flex-direction: row;
+      -ms-flex-direction: row;
+          flex-direction: row;
   -webkit-box-pack: justify;
-  -ms-flex-pack: justify;
-  justify-content: space-between;
+      -ms-flex-pack: justify;
+          justify-content: space-between;
   height: 30px;
   -webkit-box-align: center;
-  -ms-flex-align: center;
-  align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
   border-radius: var(--border-radius);
   /*transition: background var(--speed);*/
   padding: 0.5rem;
@@ -829,7 +818,7 @@ main > div > div > div > div:first-child {
 
 .dropdown .menu-item .icon-button:hover {
   -webkit-filter: none;
-  filter: none;
+          filter: none;
 }
 
 .dropdown .menu-item:hover {
@@ -857,8 +846,8 @@ main > div > div > div > div:first-child {
 
 .dropdown .icon-img {
   -webkit-box-flex: 0;
-  -ms-flex-positive: 0;
-  flex-grow: 0;
+      -ms-flex-positive: 0;
+          flex-grow: 0;
   height: 30px;
   border-radius: 50%;
   cursor: pointer;
@@ -880,7 +869,12 @@ main > div > div > div > div:first-child {
 #accounts-menu .dropdown {
   top: 100%;
   -webkit-transform: translate(-50%);
-  transform: translate(-50%);
+          transform: translate(-50%);
+}
+
+/*make modal visible*/
+main > div > div > div > div:first-child {
+  z-index: 0;
 }
 
 /* width */
@@ -917,18 +911,18 @@ main > div > div > div > div:first-child {
 
 .dummyLeft {
   -ms-flex-preferred-size: 600px;
-  flex-basis: 600px;
+      flex-basis: 600px;
   -webkit-box-flex: 1;
-  -ms-flex-positive: 1;
-  flex-grow: 1;
+      -ms-flex-positive: 1;
+          flex-grow: 1;
 }
 
 .dummyRight {
   -webkit-box-flex: 1;
-  -ms-flex-positive: 1;
-  flex-grow: 1;
+      -ms-flex-positive: 1;
+          flex-grow: 1;
   -ms-flex-preferred-size: 0;
-  flex-basis: 0;
+      flex-basis: 0;
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;

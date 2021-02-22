@@ -20,6 +20,7 @@ export interface StorageInterface {
   lastUpdated: string;
   auth: Credentials;
   userInfo: User | null;
+  doRefreshIdb: boolean;
 }
 
 export interface SearchResult {

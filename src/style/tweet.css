@@ -1,5 +1,5 @@
 .th-tweet {
-  padding: 8px 5px 8px 5px;
+  padding: 8px 5px 0px 5px;
   margin-bottom: 5px;
   -webkit-box-orient: horizontal;
   -webkit-box-direction: normal;
@@ -306,7 +306,6 @@
   -webkit-box-flex: 1;
       -ms-flex-positive: 1;
           flex-grow: 1;
-  padding-top: 2px;
   color: var(--neutral-color);
 }
 

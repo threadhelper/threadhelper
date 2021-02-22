@@ -4,7 +4,7 @@ import { defaultTo, isEmpty, path } from 'ramda';
 import { msgBG } from '../utils/dutils';
 import { FeedDisplayMode } from './ThreadHelper';
 import { SettingsButton } from './Settings';
-import { AccountsButton } from './Accounts';
+import { SyncIcon } from './Sync';
 import SearchIcon from '../../images/search2.svg';
 import cx from 'classnames';
 
@@ -33,10 +33,14 @@ export function ApiSearchBar() {
   }, [value]);
 
   useEffect(() => {
+    if (showSearchBar) inputObj.current.focus();
+    return () => {};
+  }, [showSearchBar]);
+
+  useEffect(() => {
     function handleKeyDown(e) {
       if (e.getModifierState('Control') && (e.key == '/' || e.key == 'k')) {
-        inputObj.current.focus();
-        console.log(`pressed ${e.key}`);
+        setShowSearchBar(true);
       }
     }
     document.addEventListener('keydown', handleKeyDown);
@@ -48,16 +52,32 @@ export function ApiSearchBar() {
   }, []);
 
   return (
-    <div class="flex items-center justify-between p-3 flex-grow">
+    <div class="flex items-center justify-between p-3 flex-initial">
       <div class="flex items-center flex-grow">
-        <button onClick={() => setShowSearchBar(!showSearchBar)} class="mr-3">
+        <button
+          onClick={() => {
+            setShowSearchBar(!showSearchBar);
+            if (showSearchBar) inputObj.current?.focus();
+          }}
+          class="mr-3"
+          style={{
+            fill: 'var(--main-txt-color)',
+            stroke: 'var(--main-txt-color)',
+          }}
+        >
           <SearchIcon class="h-4 w-4" />
         </button>
 
         {showSearchBar ? (
           <input
             ref={inputObj}
-            class="h-8 px-5 rounded-full text-sm focus:outline-none bg-gray-200 shadow border-0 w-full"
+            class="h-8 px-5 rounded-full text-sm focus:outline-none shadow border-0 w-full"
+            style={{
+              backgroundColor: 'var(--main-bg-color)',
+              borderColor: 'var(--accent-color)',
+              border: '1px',
+              color: 'var(--main-txt-color)',
+            }}
             value={value}
             onInput={(e) =>
               setValue(defaultTo('', path(['target', 'value'], e)))
@@ -66,17 +86,19 @@ export function ApiSearchBar() {
             onFocus={(e) => e.target?.select()}
             onBlur={() => setShowSearchBar(false)}
             type="text"
-            placeholder="Search"
+            placeholder="Search Twitter"
           />
         ) : (
-          <div>
-            <span class="ml-4 text-2xl font-bold">Thread Helper</span>
-            <span class="text-gray-500">{` v${process.env.VERSION}`}</span>
+          <div class="inline-flex">
+            <span class="ml-4 text-2xl font-bold sm:hidden md:hidden lg:block">
+              Thread Helper
+            </span>
+            <span class="text-gray-500 sm:hidden md:hidden lg:block">{` v${process.env.VERSION}`}</span>
           </div>
         )}
       </div>
       <div class="flex items-center relative top-0.5">
-        <AccountsButton />
+        <SyncIcon />
         <SettingsButton />
       </div>
     </div>

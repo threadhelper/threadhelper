@@ -8,22 +8,22 @@ import { FilterButton } from './Console';
 
 const debug = false;
 
-export function DropdownMenu(_props: {
-  name: any;
-  itemClickClose: any;
-  closeMenu: () => any;
-  componentItems: any;
-  filterItems: any;
-  items: any;
-  debugItems: any;
+export function DropdownMenu({
+  name,
+  itemClickClose,
+  closeMenu,
+  componentItems,
+  filterItems,
+  items,
+  debugItems,
 }) {
   const dropdownRef = useRef(null);
 
   function DropdownItem(props) {
     const onClickItem = (e) => {
-      csEvent('User', `${_props.name} dropdown click`, props.id);
+      csEvent('User', `${name} dropdown click`, props.id);
       props.effect();
-      defaultTo(true, _props.itemClickClose) ? _props.closeMenu() : null;
+      defaultTo(true, itemClickClose) ? closeMenu() : null;
     };
     return (
       <a href="#" className="menu-item" onClick={onClickItem}>
@@ -41,9 +41,9 @@ export function DropdownMenu(_props: {
   function FilterItem(props) {
     const [filterItem, setFilterItem] = useStgPath(props.path, true);
     const onClickItem = (e) => {
-      csEvent('User', `${_props.name} dropdown click`, props.screen_name);
+      csEvent('User', `${name} dropdown click`, props.screen_name);
       props.effect();
-      defaultTo(true, _props.itemClickClose) ? _props.closeMenu() : null;
+      defaultTo(true, itemClickClose) ? closeMenu() : null;
     };
 
     return (
@@ -65,17 +65,12 @@ export function DropdownMenu(_props: {
       </a>
     );
   }
-  const filterItems = defaultTo([], _props.filterItems);
-  const componentItems = defaultTo([], _props.componentItems);
-  const items = defaultTo([], _props.items);
-  const debugItems = defaultTo([], _props.debugItems);
-
   return (
     <div className="dropdown" ref={dropdownRef}>
-      {componentItems.map((Item) => (
+      {defaultTo([], componentItems).map((Item) => (
         <Item />
       ))}
-      {filterItems.map(
+      {defaultTo([], filterItems).map(
         (item: { id: any; screen_name: any; leftIcon: any; effect: any }) => (
           <FilterItem
             path={['activeAccounts', item.id, 'showTweets']}
@@ -86,16 +81,24 @@ export function DropdownMenu(_props: {
           />
         )
       )}
-      {items.map((item: { id: any; leftIcon: any; effect: any }) => (
-        <DropdownItem
-          id={item.id}
-          leftIcon={item.leftIcon}
-          effect={item.effect}
-        />
-      ))}
-      {debugItems.map((item: { id: any; leftIcon: any; effect: any }) => (
-        <DebugItem id={item.id} leftIcon={item.leftIcon} effect={item.effect} />
-      ))}
+      {defaultTo([], items).map(
+        (item: { id: any; leftIcon: any; effect: any }) => (
+          <DropdownItem
+            id={item.id}
+            leftIcon={item.leftIcon}
+            effect={item.effect}
+          />
+        )
+      )}
+      {defaultTo([], debugItems).map(
+        (item: { id: any; leftIcon: any; effect: any }) => (
+          <DebugItem
+            id={item.id}
+            leftIcon={item.leftIcon}
+            effect={item.effect}
+          />
+        )
+      )}
     </div>
   );
 }

@@ -45,24 +45,23 @@ import { User } from 'twitter-d';
 const prepTweets = (list: TweetResult[] | null): SearchResult[] =>
   filter(pipe(prop('tweet'), isNil, not), defaultTo([], list));
 
-function useApiMetrics(auth, _results, setResults) {
-  useEffect(() => {
-    const results = prepTweets(_results);
-    let isMounted = true;
-    const timeOutId = setTimeout(() => {
-      if (isMounted && !isNil(auth) && !isEmpty(results)) {
-        apiMetricsFetch(auth, results).then((x) => {
-          if (isMounted) {
-            setResults(x);
-          }
-        });
-      }
-    }, 500);
-    return () => {
-      isMounted = false;
-      clearTimeout(timeOutId);
-    };
-  }, [auth, _results]);
+function getApiMetrics(auth, _results, setResults) {
+  const results = prepTweets(_results);
+  let isMounted = true;
+  const timeOutId = setTimeout(() => {
+    if (isMounted && !isNil(auth) && !isEmpty(results)) {
+      console.log('requesting api metrics');
+      apiMetricsFetch(auth, results).then((x) => {
+        if (isMounted) {
+          setResults(x);
+        }
+      });
+    }
+  }, 500);
+  return () => {
+    isMounted = false;
+    clearTimeout(timeOutId);
+  };
 }
 
 export function DisplayController(props: any) {
@@ -182,7 +181,20 @@ function IdleDisplay() {
   const [stgLatestTweets, setStgLatestTweets] = useStorage('latest_tweets', []);
 
   const [idleMode, setIdleMode] = useOption('idleMode');
-  // useApiMetrics(auth, res, setRes);
+  const [res, setRes] = useState([]);
+  const auth = useContext(AuthContext);
+  // const [res, setRes] = useState(results);
+  const [searchMode, setSearchMode] = useOption('searchMode');
+
+  useEffect(() => {
+    return getApiMetrics(auth, prepTweets(stgLatestTweets), setRes);
+  }, [auth, stgLatestTweets]);
+
+  useEffect(() => {
+    setRes([]);
+    // setRes(prepTweets(stgLatestTweets));
+  }, [stgLatestTweets]);
+
   console.log('rerender Idle SearchResults');
 
   return (
@@ -194,7 +206,7 @@ function IdleDisplay() {
           ? 'Random tweets:'
           : ''
       }
-      results={prepTweets(stgLatestTweets)}
+      results={isEmpty(res) ? prepTweets(stgLatestTweets) : res}
       emptyMsg={'No tweets yet!'}
     />
   );
@@ -224,14 +236,24 @@ function SearchResults() {
     'search_results',
     []
   );
+  const [res, setRes] = useState([]);
   const auth = useContext(AuthContext);
   // const [res, setRes] = useState(results);
   const [searchMode, setSearchMode] = useOption('searchMode');
-  // useApiMetrics(auth, res, setRes);
 
   useEffect(() => {
-    console.log('', { stgSearchResults });
+    return getApiMetrics(auth, prepTweets(stgSearchResults), setRes);
+  }, [auth, stgSearchResults]);
+
+  useEffect(() => {
+    setRes([]);
+    console.log('got stg search', { stgSearchResults });
+    // setRes(prepTweets(stgSearchResults));
   }, [stgSearchResults]);
+
+  useEffect(() => {
+    console.log('got api metrics', { res });
+  }, [res]);
 
   return (
     <TweetDisplay
@@ -242,7 +264,7 @@ function SearchResults() {
           ? 'Semantic search results:'
           : ''
       }
-      results={prepTweets(stgSearchResults)}
+      results={isEmpty(res) ? prepTweets(stgSearchResults) : res}
       // results={res}
       // emptyMsg={`No search results. Yet!`}
       emptyMsg={<SearchResMsg />}
