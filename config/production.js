@@ -19,13 +19,13 @@ module.exports = function (configDirs) {
     ...prodConfig.plugins,
     new BundleAnalyzerPlugin(),
     new CleanWebpackPlugin(),
-    new ZipPlugin({ filename: 'threadhelper.zip' }),
     new WebpackExtensionManifestPlugin({
       config: {
         base: baseManifest,
         extend: { version: pkg.version },
       },
     }),
+    new ZipPlugin({ filename: 'threadhelper.zip' }),
   ];
   console.log('\x1b[36m%s\x1b[0m', 'Building for production ...');
   return prodConfig;

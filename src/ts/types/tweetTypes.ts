@@ -13,25 +13,25 @@ export interface thUrl {
 
 export type TweetId = string;
 export interface thTweet {
+  id: TweetId;
+  text: string;
+  username: string;
+  name: string;
+  media: (thImg | any)[];
+  mentions: string[];
   account?: string;
   has_media?: boolean;
   has_quote?: boolean;
   orig_id?: TweetId;
-  id: TweetId;
   is_bookmark?: boolean;
   is_quote_up?: boolean;
-  media: (thImg | any)[];
-  mentions: string[];
-  name: string;
   profile_image?: string;
   quote?: thTweet | null;
   reply_to: string | null;
   retweeted?: boolean;
   favorited?: boolean;
-  text: string;
   time?: number;
   urls?: thUrl[] | any[];
-  username: string;
   reply_count?: number;
   retweet_count?: number;
   quote_count?: number;

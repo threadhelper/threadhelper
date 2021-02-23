@@ -335,8 +335,10 @@ const toTweetCommon = (thTweet: thTweet, t: Status) => {
   thTweet.quote = null;
   thTweet.is_bookmark = false;
   thTweet.text =
-    unescape(prop('full_text', t).toString().replace(rt_tag, '')) ||
-    unescape(prop('text', t).toString().replace(rt_tag, ''));
+    unescape(
+      defaultTo('', prop('full_text', t)).toString().replace(rt_tag, '')
+    ) ||
+    unescape(defaultTo('', prop('text', t)).toString().replace(rt_tag, ''));
   if (!isNil(t.user)) {
     thTweet.username = path(['user', 'screen_name'], t);
     thTweet.name = path(['user', 'name'], t);

@@ -1,3 +1,4 @@
+// Running extension as proxy for dev environment
 import '@babel/polyfill';
 import {
   getData,

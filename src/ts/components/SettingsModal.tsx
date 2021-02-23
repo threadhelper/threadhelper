@@ -70,8 +70,9 @@ const SettingsModal = ({ setOpen }) => {
     <div
       class="fixed z-40 overflow-auto bg-gray-100 bg-opacity-50 flex bottom-0 top-0 left-0 right-0  items-center justify-center"
       onClick={(e) => {
-        if (e.target === event.currentTarget) setOpen(false);
+        if (e.target === e.currentTarget) setOpen(false);
       }}
+      // onFocus=(()=>{setOpen(false)})
     >
       <div
         style={{
