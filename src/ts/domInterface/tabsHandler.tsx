@@ -50,23 +50,24 @@ const getAccent = (htmlList: NodeList) => {
   const color = window.getComputedStyle(el).backgroundColor;
   return color ?? defaultAccent;
 };
+const initAccent = () => {
+  const tweetButton = document.querySelector(tweetButtonSelector);
+  if (isNil(tweetButton)) return defaultAccent;
+  return window.getComputedStyle(tweetButton).backgroundColor ?? defaultAccent;
+};
+
+const initBg = () => getBgColor(document.body);
 export function makeThemeObs() {
   const accent$ = obsAdded(document, tweetButtonSelector, true)
     .map(getAccent)
-    .toProperty(() => {
-      const tweetButton = document.querySelector(tweetButtonSelector);
-      if (isNil(tweetButton)) return defaultAccent;
-      return (
-        window.getComputedStyle(tweetButton).backgroundColor ?? defaultAccent
-      );
-    });
-  accent$.log('accent$ theme');
-  const bg$ = makeBgColorObs().toProperty(() => getBgColor(document.body));
+    .toProperty(initAccent);
+  const bg$ = makeBgColorObs().toProperty(initBg);
   const theme$ = Kefir.combine([bg$, accent$], (bgColor, accentColor) => {
     return { bgColor, accentColor };
+  }).toProperty(() => {
+    return { accentColor: initAccent(), bgColor: initBg() };
   });
   // .skipDuplicates(equals)
 
-  theme$.log('theme$ in tabs');
   return theme$;
 }

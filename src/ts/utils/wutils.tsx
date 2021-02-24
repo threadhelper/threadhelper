@@ -175,6 +175,8 @@ export function updateTheme(theme = null) {
       }
     : theme;
 
+  console.log('updateTheme', { theme });
+
   switch (theme.bgColor) {
     case light_theme:
       setTheme('#f5f8fa', 'black', '#e1e8ed', theme.accentColor);

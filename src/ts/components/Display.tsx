@@ -65,8 +65,6 @@ function getApiMetrics(auth, _results, setResults) {
 }
 
 export function DisplayController(props: any) {
-  console.log('rerender Display');
-
   const auth = useContext(AuthContext);
   const { feedDisplayMode, dispatchFeedDisplayMode } = useContext(
     FeedDisplayMode
@@ -195,8 +193,6 @@ function IdleDisplay() {
     // setRes(prepTweets(stgLatestTweets));
   }, [stgLatestTweets]);
 
-  console.log('rerender Idle SearchResults');
-
   return (
     <TweetDisplay
       title={
@@ -274,7 +270,6 @@ function SearchResults() {
 
 function ApiSearchResults() {
   const [stgApiResults, setStgApiResults] = useStorage('api_results', []);
-  console.log('rerender APISearchResults');
   return (
     <TweetDisplay
       title={'Twitter search results:'}
