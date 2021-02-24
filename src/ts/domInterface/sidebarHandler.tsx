@@ -16,6 +16,7 @@ export function makeSidebarHome() {
 }
 // impure
 export function injectSidebarHome(thBar: Element) {
+  removeSearchBar();
   let sidebarElement = document.querySelector(sideBarSelector);
   if (!isNil(sidebarElement)) {
     let innerSidebar =
@@ -106,9 +107,8 @@ export function makeSearchBarObserver(): Observable<Element, any> {
   return searchBarAdd$;
 }
 
-export function removeSearchBar(bars: Element) {
+export function removeSearchBar(_?) {
   const sidebarElement = document.querySelector(sideBarSelector);
-  const bar = bars[0];
   const slot =
     sidebarElement.firstElementChild.lastElementChild.firstElementChild
       .firstElementChild.firstElementChild;
@@ -117,7 +117,7 @@ export function removeSearchBar(bars: Element) {
     try {
       el.remove();
     } catch (e) {
-      console.error("Couldn't remove sidebar element", { bar, slot, el });
+      console.error("Couldn't remove sidebar element", { slot, el });
     }
   });
   // try {
