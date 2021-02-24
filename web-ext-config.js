@@ -10,10 +10,10 @@ module.exports = {
     firefox: 'firefox',
     firefoxProfile:
       '/mnt/c/Users/frsc/Documents/Projects/th/devopsTh/web-ext/ffProfiles/th',
-    profileCreateIfMissing: true,
+    // profileCreateIfMissing: true,
     keepProfileChanges: true,
     startUrl: ['www.twitter.com'],
   },
   ignoreFiles: ['package-lock.json'],
-  sourceDir: 'build',
+  sourceDir: 'dist',
 };

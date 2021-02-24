@@ -45,7 +45,6 @@ const formatNumber = function (number) {
 };
 
 const countReplies = (t) => t.reply_count ?? 0;
-
 export const ReplyAction = ({ tweet }) => {
   const [count, setCount] = useState(countReplies(tweet));
 
@@ -56,8 +55,9 @@ export const ReplyAction = ({ tweet }) => {
 
   return (
     <div class="th-icon-field">
-      <div class="th-reply-container">
-        <ReplyIcon /> <span>{count > 0 ? formatNumber(count) : ''}</span>
+      <div class="th-reply-container inline-flex items-center">
+        <ReplyIcon />{' '}
+        <span class="ml-1">{count > 0 ? formatNumber(count) : ''}</span>
       </div>
     </div>
   );
@@ -65,7 +65,6 @@ export const ReplyAction = ({ tweet }) => {
 
 const countRts = (t) =>
   (t.retweet_count ?? (t.retweeted ? 1 : 0)) + (t.quote_count ?? 0);
-
 const RetweetAction = ({ tweet }: { tweet: thTweet }) => {
   const [active, setActive] = useState(tweet.retweeted ?? false);
   const [count, setCount] = useState(countRts(tweet));
@@ -115,9 +114,12 @@ const RetweetAction = ({ tweet }: { tweet: thTweet }) => {
 
   return (
     <div class="relative flex-grow">
-      <div class="th-icon-field">
+      <div class="th-icon-field ">
         <div
-          class={(active ? `text-green-600` : ``) + ' th-rt-container'}
+          class={
+            (active ? `text-green-600` : ``) +
+            ' th-rt-container inline-flex items-center'
+          }
           // onClick={active ? offFunc : onFunc}
           onClick={() => {
             setOpen(!open);
@@ -128,7 +130,7 @@ const RetweetAction = ({ tweet }: { tweet: thTweet }) => {
           ) : (
             <RetweetIcon />
           )}
-          <span>{count > 0 ? formatNumber(count) : ''}</span>
+          <span class="ml-1">{count > 0 ? formatNumber(count) : ''}</span>
         </div>
       </div>
       {open && (
@@ -147,7 +149,6 @@ const RetweetAction = ({ tweet }: { tweet: thTweet }) => {
 };
 
 const countFavs = (t) => t.favorite_count ?? (t.favorited ? 1 : 0);
-
 const LikeAction = ({ tweet }) => {
   const [active, setActive] = useState(tweet.favorited ?? false);
   const [count, setCount] = useState(countFavs(tweet));
@@ -175,7 +176,10 @@ const LikeAction = ({ tweet }) => {
   return (
     <div class="th-icon-field">
       <div
-        class={(active ? `text-red-700` : ``) + ' th-like-container'}
+        class={
+          (active ? `text-red-700` : ``) +
+          ' th-like-container inline-flex items-center'
+        }
         onClick={active ? offFunc : onFunc}
       >
         {active ? (
@@ -184,7 +188,7 @@ const LikeAction = ({ tweet }) => {
           <LikeIcon />
         )}
         {'  '}
-        <span>{count > 0 ? formatNumber(count) : ''}</span>
+        <span class="ml-1">{count > 0 ? formatNumber(count) : ''}</span>
       </div>
     </div>
   );

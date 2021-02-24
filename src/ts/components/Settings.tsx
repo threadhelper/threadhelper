@@ -106,6 +106,7 @@ export function SettingsButton(props) {
         <div class="options icon-button box-content">
           <GearIcon
             class="dropdown-icon"
+            style=""
             onClick={() => {
               setOpen(!open);
             }}

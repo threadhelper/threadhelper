@@ -5,8 +5,10 @@ import { msgBG } from '../utils/dutils';
 import { FeedDisplayMode } from './ThreadHelper';
 import { SettingsButton } from './Settings';
 import { SyncIcon } from './Sync';
-import SearchIcon from '../../images/search2.svg';
+import SearchIcon from '../../images/search.svg';
 import cx from 'classnames';
+
+var DEBUG = process.env.NODE_ENV != 'production';
 
 export function ApiSearchBar() {
   const inputObj = useRef(null);
@@ -54,51 +56,75 @@ export function ApiSearchBar() {
   return (
     <div class="flex items-center justify-between p-3 flex-initial">
       <div class="flex items-center flex-grow">
-        <button
-          onClick={() => {
-            setShowSearchBar(!showSearchBar);
-            if (showSearchBar) inputObj.current?.focus();
-          }}
-          class="mr-3"
-          style={{
-            fill: 'var(--main-txt-color)',
-            stroke: 'var(--main-txt-color)',
-          }}
-        >
-          <SearchIcon class="h-4 w-4" />
-        </button>
-
+        {!showSearchBar ? (
+          <button
+            onClick={() => {
+              setShowSearchBar(!showSearchBar);
+              if (showSearchBar) inputObj.current?.focus();
+            }}
+            class="mr-3"
+            style={{
+              fill: 'var(--main-txt-color)',
+              stroke: 'var(--main-txt-color)',
+            }}
+          >
+            <SearchIcon class="h-4 w-4" />
+          </button>
+        ) : null}
         {showSearchBar ? (
-          <input
-            ref={inputObj}
-            class="h-8 px-5 rounded-full text-sm focus:outline-none shadow border-0 w-full"
+          <div
+            class="inline-flex items-center h-8 px-5 rounded-full text-sm focus:outline-none shadow border-0 w-full"
             style={{
               backgroundColor: 'var(--main-bg-color)',
               borderColor: 'var(--accent-color)',
               border: '1px',
               color: 'var(--main-txt-color)',
             }}
-            value={value}
-            onInput={(e) =>
-              setValue(defaultTo('', path(['target', 'value'], e)))
-            }
-            onKeyUp={(e) => (e.key === 'Enter' ? submitApiSearch(value) : null)}
-            onFocus={(e) => e.target?.select()}
-            onBlur={() => setShowSearchBar(false)}
-            type="text"
-            placeholder="Search Twitter"
-          />
+          >
+            {' '}
+            <SearchIcon
+              class="h-4 w-4 mr-4"
+              style="fill:var(--accent-color); stroke:var(--accent-color)"
+            />{' '}
+            <input
+              ref={inputObj}
+              class="outline-none"
+              // style={{
+              //   backgroundColor: 'var(--main-bg-color)',
+              //   borderColor: 'var(--accent-color)',
+              //   border: '1px',
+              //   color: 'var(--main-txt-color)',
+              // }}
+              style={{
+                backgroundColor: 'var(--main-bg-color)',
+                border: '0px',
+                color: 'var(--main-txt-color)',
+              }}
+              value={value}
+              onInput={(e) =>
+                setValue(defaultTo('', path(['target', 'value'], e)))
+              }
+              onKeyUp={(e) =>
+                e.key === 'Enter' ? submitApiSearch(value) : null
+              }
+              onFocus={(e) => e.target?.select()}
+              onBlur={() => setShowSearchBar(false)}
+              type="text"
+              placeholder="Search Twitter"
+            />
+          </div>
         ) : (
-          <div class="inline-flex">
+          <div class="inline-flex items-baseline">
             <span class="ml-4 text-2xl font-bold sm:hidden md:hidden lg:block">
               Thread Helper
             </span>
-            <span class="text-gray-500 sm:hidden md:hidden lg:block">{` v${process.env.VERSION}`}</span>
+            {DEBUG ? (
+              <span class="text-gray-500 sm:hidden md:hidden lg:block">{` v${process.env.VERSION}`}</span>
+            ) : null}
           </div>
         )}
       </div>
-      <div class="flex items-center relative top-0.5">
-        <SyncIcon />
+      <div class="flex items-center relative ml-8 top-0.5">
         <SettingsButton />
       </div>
     </div>

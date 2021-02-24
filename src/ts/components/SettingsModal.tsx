@@ -3,6 +3,7 @@ import { useState } from 'preact/hooks';
 import { isNil, pipe, values } from 'ramda';
 import { useOption, useStgPath, useStorage } from '../hooks/useStorage';
 import { ArchiveUploader } from './LoadArchive';
+import { SyncIcon } from './Sync';
 import Tooltip from './Tooltip';
 
 const Checkbox = ({ get, set, label }) => {
@@ -82,6 +83,11 @@ const SettingsModal = ({ setOpen }) => {
         }}
         class="bg-white max-w-full p-4 rounded-lg text-lg shadow-lg"
       >
+        {/* modal header */}
+        <div class="flex justify-end">
+          <SyncIcon />
+        </div>
+
         <ArchiveUploader />
         {/* checkmark section */}
         <div class="w-full mb-5">

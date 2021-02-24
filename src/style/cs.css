@@ -182,11 +182,11 @@ input[type='checkbox'] + label {
 
 .dropdown-icon {
   border-radius: 40%;
-  fill: var(--neutral-color);
+  fill: var(--accent-color);
 }
 
 .dropdown-icon:hover {
-  fill: var(--main-txt-color);
+  opacity: 0.8;
 }
 
 .sidebar {

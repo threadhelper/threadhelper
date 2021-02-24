@@ -136,12 +136,13 @@ input[type='checkbox'] + label {
   display: inline-block;
   fill: var(--neutral-color);
 }
-
+//
 .dropdown-icon {
   border-radius: 40%;
-  fill: var(--neutral-color);
+  fill: var(--accent-color);
 }
 
 .dropdown-icon:hover {
-  fill: var(--main-txt-color);
+  // fill: var(--main-txt-color);
+  opacity: 0.8;
 }

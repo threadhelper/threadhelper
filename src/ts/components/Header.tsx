@@ -5,6 +5,8 @@ import { ApiSearchBar } from './ApiSearchBar';
 import { SearchBar } from './SearchBar';
 import { SettingsButton } from './Settings';
 
+var DEBUG = process.env.NODE_ENV != 'production';
+
 export function Header() {
   return (
     <div>
