@@ -45,12 +45,10 @@ import { User } from 'twitter-d';
 const prepTweets = (list: TweetResult[] | null): SearchResult[] =>
   filter(pipe(prop('tweet'), isNil, not), defaultTo([], list));
 
-function getApiMetrics(auth, _results, setResults) {
-  const results = prepTweets(_results);
+function getApiMetrics(auth, results, setResults) {
   let isMounted = true;
   const timeOutId = setTimeout(() => {
     if (isMounted && !isNil(auth) && !isEmpty(results)) {
-      console.log('requesting api metrics');
       apiMetricsFetch(auth, results).then((x) => {
         if (isMounted) {
           setResults(x);
@@ -94,11 +92,10 @@ export function DisplayController(props: any) {
 
   return (
     <div class="searchWidget" ref={myRef}>
-      {showUserSearch(apiUsers, feedDisplayMode) ? (
+      {showUserSearch(apiUsers, feedDisplayMode) && (
         <UserDisplay results={apiUsers} />
-      ) : null}
+      )}
       {makeFeedDisplay(feedDisplayMode)}
-      {/* <SearchResults results={prepTweets(stgSearchResults)} /> */}
     </div>
   );
 }
@@ -202,7 +199,7 @@ function IdleDisplay() {
           ? 'Random tweets:'
           : ''
       }
-      results={isEmpty(res) ? prepTweets(stgLatestTweets) : res}
+      results={isEmpty(res) ? prepTweets(stgLatestTweets) : prepTweets(res)}
       emptyMsg={'No tweets yet!'}
     />
   );
@@ -260,7 +257,7 @@ function SearchResults() {
           ? 'Semantic search results:'
           : ''
       }
-      results={isEmpty(res) ? prepTweets(stgSearchResults) : res}
+      results={isEmpty(res) ? prepTweets(stgSearchResults) : prepTweets(res)}
       // results={res}
       // emptyMsg={`No search results. Yet!`}
       emptyMsg={<SearchResMsg />}

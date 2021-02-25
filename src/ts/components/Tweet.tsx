@@ -14,7 +14,7 @@ import RetweetIcon from '../../images/retweet.svg';
 import LikeIcon from '../../images/like.svg';
 import FullLikeIcon from '../../images/like_full.svg';
 import PencilIcon from '../../images/pencil.svg';
-import { andThen, any, defaultTo, isNil, last, pipe } from 'ramda';
+import { andThen, any, defaultTo, isNil, last, pipe, prop } from 'ramda';
 import {
   sendLikeRequest,
   sendRetweetRequest,
@@ -27,9 +27,11 @@ import { AuthContext } from './ThreadHelper';
 import { apiSearchToTweet } from '../bg/tweetImporter';
 import { inspect } from '../utils/putils';
 import { DropdownMenu } from './Dropdown';
+import defaultProfilePic from '../../images/defaultProfilePic.png';
 
+const getUserUrl = (username: string) => `https://twitter.com/${username}`;
 const getTweetUrl = (tweet: thTweet) =>
-  `https://twitter.com/${tweet.username}/status/${tweet.id}`;
+  getUserUrl(tweet.username) + `/status/${tweet.id}`;
 
 const formatNumber = function (number) {
   if (number >= 1000000) {
@@ -262,12 +264,23 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
     <div class="th-tweet-container">
       <div class="th-tweet">
         <div class="th-gutter">
-          <img class="th-profile" src={tweet.profile_image} />
+          <div class="z-10">
+            <a href={getUserUrl(tweet.username)}>
+              <img
+                class="th-profile"
+                src={prop('profile_image', tweet) ?? defaultProfilePic}
+              />
+            </a>
+          </div>
         </div>
         <div class="th-body">
           <div class="th-header">
-            <div class="th-header-name">{tweet.name}</div>
-            <div class="th-header-username">@{tweet.username}</div>
+            <div class="th-header-name z-10 hover:underline">
+              <a href={getUserUrl(tweet.username)}>{tweet.name}</a>
+            </div>
+            <div class="th-header-username z-10">
+              <a href={getUserUrl(tweet.username)}>@{tweet.username}</a>
+            </div>
             <div class="th-header-dot">·</div>
             <div class="th-header-time">
               <a
@@ -279,7 +292,7 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
             </div>
           </div>
           <div class="th-reply">{reply_text}</div>
-          <div class="th-text">{reformattedText(tweet)}</div>
+          <div class="th-text z-10 select-text">{reformattedText(tweet)}</div>
           {maybeMedia(tweet)}
           {maybeQuote(tweet)}
           <div class="th-icons">
@@ -294,23 +307,49 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
           </div>
         </div>
       </div>
-      <div class="th-hover" onClick={onClick}>
-        <textarea
-          style="display: none"
-          id={`th-link-${tweet.id}`}
-          class="th-link"
-          ref={linkField}
+      {isNil(tweet.unavailable) ? (
+        <div
+          class="th-hover absolute inset-0 rounded-sm opacity-0 flex items-center justify-center bg-gray-200 hover:cursor-default hover:bg-opacity-70"
+          onClick={onClick}
         >
-          {getTweetUrl(tweet)}
-        </textarea>
-        <div class="th-hover-copy">{copyText}</div>
+          <textarea
+            style="display: none"
+            id={`th-link-${tweet.id}`}
+            class="th-link"
+            ref={linkField}
+          >
+            {getTweetUrl(tweet)}
+          </textarea>
+          <div class="flex flex-col bg-gray-200 items-center">
+            <div class="text-base font-medium bg-transparent z-20">
+              <div class="" style={{ color: 'var(--main-bg-color)' }}>
+                {copyText}
+              </div>
+              {isNil(score) || process.env.NODE_ENV != 'development' ? null : (
+                <div class="text-green-400">{`score: ${score.toFixed(2)}`}</div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <UnavailableHover score={score} />
+      )}
+    </div>
+  );
+}
+
+const UnavailableHover = ({ score }) => {
+  return (
+    <div class="absolute inset-0 rounded-sm opacity-0 flex items-center justify-center bg-gray-200 hover:cursor-default hover:bg-opacity-70">
+      <div class="flex flex-col items-center z-20 text-base font-medium bg-transparent">
+        <div class=" text-red-700 ">{'tweet unavailable'}</div>
         {isNil(score) || process.env.NODE_ENV != 'development' ? null : (
-          <div class="th-hover-copy">{`\nscore: ${score.toFixed(2)}`}</div>
+          <div class=" text-green-400">{`score: ${score.toFixed(2)}`}</div>
         )}
       </div>
     </div>
   );
-}
+};
 
 const selectComposer = (input: HTMLElement) => {
   if (isNil(input)) return;
@@ -523,7 +562,10 @@ function renderQuote(quote: thTweet, parent_has_media) {
     let template = (
       <div class="th-quote">
         <div class="th-quote-header">
-          <img class="th-quote-header-profile" src={quote.profile_image} />
+          <img
+            class="th-quote-header-profile"
+            src={prop('profile_image', quote) ?? defaultProfilePic}
+          />
           <div class="th-quote-header-name">{quote.name}</div>
           <div class="th-quote-header-username">@{quote.username}</div>
           <div class="th-header-dot">·</div>

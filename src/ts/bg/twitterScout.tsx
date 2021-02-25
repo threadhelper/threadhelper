@@ -61,8 +61,12 @@ const makeTweetLookupUrl = (ids) =>
     ',',
     ids
   )}&tweet_mode=extended&include_entities=true`;
-const makeUserLookupUrl = (ids) =>
-  `https://api.twitter.com/1.1/users/lookup.json?user_id=${R.join(',', ids)}`;
+const makeUserLookupUrl = (ids, names = []) =>
+  `https://api.twitter.com/1.1/users/lookup.json?${
+    isEmpty(ids)
+      ? ''
+      : 'user_id=$' + R.join(',', ids) + (isEmpty(names) ? '' : '&')
+  }${isEmpty(names) ? '' : 'screen_name=' + R.join(',', names)}`;
 
 const makeTimelineQueryUrl = curry(
   (max_id: number, screen_name: string, count: number) => {
@@ -264,11 +268,17 @@ export const tweetLookupQuery = curry(
     )(ids);
   }
 );
+// takes ids or names and sorts them in fetch100Ids
 export const userLookupQuery = curry(
   async (auth: Credentials, ids: string[]): Promise<User[]> => {
-    const fetch100Ids = (ids: string[]): Promise<User[]> =>
-      fetchTweets(makeUserLookupUrl(ids), auth);
-
+    const idRE = /[0-9]+/;
+    const nameRE = /[\w+]{1,15}\b/;
+    const fetch100Ids = (ids: string[]): Promise<User[]> => {
+      const userIds = ids.filter(R.test(idRE));
+      const userNames = ids.filter(R.test(nameRE));
+      console.log('userLookupQuery', { userIds, userNames });
+      return fetchTweets(makeUserLookupUrl(userIds, userNames), auth);
+    };
     return pipe<
       string[],
       string[][],
@@ -458,6 +468,21 @@ export const searchAPI = curry(
     return res;
   }
 );
+// order b by pathB according to a's pathA
+const orderBy = curry(
+  (pathA: string[], as: any[], pathB: string[], bs: any[]): any[] => {
+    const getBInA = (a) => R.find(R.pathEq(pathB, path(pathA, a)), bs);
+    return map(getBInA, as);
+  }
+);
+
+// replaces prop propName of a with that of b unless b's is nil
+const mixThAndMetrics = curry((a, b) => {
+  if (isNil(b)) {
+    return R.assocPath(['tweet', 'unavailable'], true, a);
+  }
+  return R.set(R.lensProp('tweet'), b, a);
+});
 
 export async function apiMetricsFetch(
   auth: Credentials,
@@ -468,22 +493,42 @@ export async function apiMetricsFetch(
       () => results,
       map(path(['tweet', 'id'])),
       tweetLookupQuery(auth),
-      andThen(inspect('apiMetricsFetch lookup')),
       andThen(map(apiSearchToTweet)),
-      andThen(inspect('apiMetricsFetch to thTweet')),
-      andThen((apiRes) =>
-        map(
-          (r) =>
-            R.set(
-              R.lensProp('tweet'),
-              R.find(R.propEq('id', path(['tweet', 'id'], r)))(apiRes),
-              r
-            ),
-          results
-        )
-      ),
-      andThen(filter(pipe(prop('tweet'), isNil, not)))
+      andThen(orderBy(['tweet', 'id'], results, ['id'])),
+      andThen(R.zipWith(mixThAndMetrics, results))
     )();
     return tweets;
   }
 }
+
+// export async function apiMetricsFetch(
+//   auth: Credentials,
+//   results: TweetResult[]
+// ) {
+//   if (!isNil(auth)) {
+//     const tweets = await pipe(
+//       () => results,
+//       map(path(['tweet', 'id'])),
+//       tweetLookupQuery(auth),
+//       andThen(inspect('apiMetricsFetch lookup')),
+//       andThen(map(apiSearchToTweet)),
+//       andThen(inspect('apiMetricsFetch to thTweet')),
+//       andThen((apiRes) =>
+//         map(
+//           (r) =>
+//             R.set(
+//               R.lensProp('tweet'),
+//               defaultTo(
+//                 r['tweet'],
+//                 R.find(R.propEq('id', path(['tweet', 'id'], r)))(apiRes)
+//               ),
+//               r
+//             ),
+//           results
+//         )
+//       ),
+//       andThen(filter(pipe(prop('tweet'), isNil, not)))
+//     )();
+//     return tweets;
+//   }
+// }

@@ -1,10 +1,30 @@
 import { h, Fragment } from 'preact';
-import { useState } from 'preact/hooks';
-import { isNil, pipe, values } from 'ramda';
+import { useContext, useEffect, useState } from 'preact/hooks';
+import {
+  flatten,
+  indexBy,
+  isEmpty,
+  isNil,
+  keys,
+  length,
+  map,
+  pick,
+  pipe,
+  prop,
+  propIs,
+  props,
+  propSatisfies,
+  values,
+} from 'ramda';
+import { userLookupQuery } from '../bg/twitterScout';
 import { useOption, useStgPath, useStorage } from '../hooks/useStorage';
+import { isExist } from '../utils/putils';
 import { ArchiveUploader } from './LoadArchive';
 import { SyncIcon } from './Sync';
+import { AuthContext } from './ThreadHelper';
 import Tooltip from './Tooltip';
+import defaultProfilePic from '../../images/defaultProfilePic.png';
+import { ArchiveExporter } from './ArchiveExporter';
 
 const Checkbox = ({ get, set, label }) => {
   return (
@@ -45,20 +65,36 @@ const ListCheckbox = ({ get, set, label, keyVal }) => {
   );
 };
 
-const AccountCheckbox = ({ id_str, screen_name }) => {
+const accountProps = ['name', 'screen_name', 'profile_image_url_https'];
+
+// const AccountCheckbox = ({ id_str, screen_name }) => {
+const AccountCheckbox = ({ account }) => {
   const [filterItem, setFilterItem] = useStgPath(
-    ['activeAccounts', id_str, 'showTweets'],
+    ['activeAccounts', account.id_str, 'showTweets'],
     true
   );
+  const [accProp, setAccProp] = useState(() => pick(accountProps, account));
   return (
-    <Checkbox get={filterItem} set={setFilterItem} label={'@' + screen_name} />
+    <>
+      {/* <Checkbox
+        get={filterItem}
+        set={setFilterItem}
+        label={'@' + account.screen_name}
+      /> */}
+      <div
+        onClick={() => setFilterItem(!filterItem)}
+        class={filterItem ? '' : 'opacity-50'}
+      >
+        <AvatarTrophy {...accProp} link={false} />
+      </div>
+    </>
   );
 };
 
 const idle2Bool = (idleMode: string) => (idleMode === 'random' ? true : false); // String -> Bool
 const bool2Idle = (val) => (val ? 'random' : 'timeline');
 
-const SettingsModal = ({ setOpen }) => {
+const SettingsModal = ({ setOpen, setSecretOpen }) => {
   const [getRTs, setGetRTs] = useOption('getRTs');
   const [useBookmarks, setUseBookmarks] = useOption('useBookmarks');
   const [useReplies, setUseReplies] = useOption('useReplies');
@@ -81,14 +117,16 @@ const SettingsModal = ({ setOpen }) => {
           'background-color': 'var(--main-bg-color)',
           color: 'var(--main-txt-color)',
         }}
-        class="bg-white max-w-full p-4 rounded-lg text-lg shadow-lg"
+        class="bg-white max-w-full p-6 rounded-lg text-lg shadow-lg"
       >
         {/* modal header */}
         <div class="flex justify-end">
           <SyncIcon />
         </div>
-
-        <ArchiveUploader />
+        <div class="inline-flex justify-between">
+          <ArchiveUploader />
+          {/* <ArchiveExporter /> */}
+        </div>
         {/* checkmark section */}
         <div class="w-full mb-5">
           <div class=" font-semibold">Let magic search include:</div>
@@ -114,26 +152,176 @@ const SettingsModal = ({ setOpen }) => {
           </div>
         </div>
         {/* carousel */}
-        <div class="mb-5">
-          {/* header */}
-          <div class=" font-semibold">Search the following accounts:</div>
-          {values(activeAccounts).map((x) => {
-            return isNil(x.id_str) ? null : (
-              <AccountCheckbox id_str={x.id_str} screen_name={x.screen_name} />
-            );
-          })}
-        </div>
+        {length(keys(activeAccounts)) > 1 && (
+          <div class="mb-5 ">
+            {/* header */}
+            <div class=" font-semibold ">Search the following accounts:</div>
+            <div class="flex flex-row flex-wrap justify-evenly">
+              {values(activeAccounts).map((x) => {
+                return isNil(x.id_str) ? null : <AccountCheckbox account={x} />;
+              })}
+            </div>
+          </div>
+        )}
+
         <div class="px-5">
           <button
-            class="w-full border font-bold py-2 px-4 rounded-3xl text-center"
+            class="w-full border font-bold py-2 px-4 rounded-3xl text-center hover:opacity-80"
             // class="w-full border text-blue-500 border-blue-500 hover:border-blue-700 hover:text-blue-700 font-bold py-2 px-4 rounded-3xl text-center"
             style={{
               color: 'var(--accent-color)',
               borderColor: 'var(--accent-color)',
             }}
+            onClick={() => setSecretOpen(true)}
           >
             Extremely Secret Button
           </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export const AvatarTrophy = ({
+  profile_image_url_https,
+  name,
+  screen_name,
+  link,
+}) => {
+  return (
+    <div class="flex flex-col items-center px-4 text-xs leading-none">
+      {link ? (
+        <a href={`https://twitter.com/${screen_name}`}>
+          <img
+            class="rounded-full h-16 w-16 mb-2"
+            src={profile_image_url_https}
+          />
+        </a>
+      ) : (
+        <img
+          class="rounded-full h-16 w-16 mb-2"
+          src={profile_image_url_https}
+        />
+      )}
+      <div class="font-bold">{name}</div>
+      <div class="font-semibold underline text-gray-400">
+        {link ? (
+          <a href={`https://twitter.com/${screen_name}`}>{screen_name}</a>
+        ) : (
+          screen_name
+        )}
+      </div>
+    </div>
+  );
+};
+
+const accountNames: string[] = ['exgenesis', 'nosilverv', 'thlpr'];
+interface AvatarType {
+  name;
+  screen_name;
+  profile_image;
+}
+
+export const SecretModal = ({ setOpen }) => {
+  const auth = useContext(AuthContext);
+  const [accounts, setAccounts] = useState(() => {
+    return accountNames.map((name) => {
+      return {
+        name,
+        screen_name: name,
+        profile_image_url_https: defaultProfilePic,
+      };
+    });
+  });
+
+  useEffect(() => {
+    const getUsers = async () => {
+      const accPs = accountNames.map((name) => {
+        return userLookupQuery(auth, [name]);
+      });
+      console.log('SecretModal', { accountNames, accPs });
+      const accs = await Promise.all(accPs);
+      console.log('SecretModal', { accountNames, accs });
+      if (!isExist(accs)) {
+        console.error('failed to look up author users');
+        return;
+      }
+      const accProps = map(pick(accountProps), flatten(accs));
+      console.log('SecretModal', { accountNames, accs, accProps });
+      setAccounts(accProps);
+    };
+    getUsers();
+    return;
+  }, []);
+
+  return (
+    // background shim
+    <div
+      class="fixed z-40 overflow-auto bg-gray-100 bg-opacity-50 flex bottom-0 top-0 left-0 right-0 whitespace-nowrap items-center justify-center"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) setOpen(false);
+      }}
+      // onFocus=(()=>{setOpen(false)})
+    >
+      <div
+        style={{
+          width: '560px',
+          'background-color': 'var(--main-bg-color)',
+          color: 'var(--main-txt-color)',
+        }}
+        class="bg-white max-w-full p-6 rounded-lg text-lg shadow-lg"
+      >
+        {/* header */}
+        <div class="text-sm  w-full mb-5">
+          <div class="text-gray-400 font-semibold">
+            You don’t follow rules. We like that.
+          </div>
+          <div class="text-gray-400 font-semibold">
+            We made ThreadHelper for you.
+          </div>
+        </div>
+        {/* downer */}
+        <div class="flex flex-row justify-between">
+          {/* us */}
+          <div class="flex flex-row">
+            {accounts.map((acc) => (
+              <AvatarTrophy {...acc} link={true} />
+            ))}
+          </div>
+          {/* buttons */}
+          <div class="flex flex-col justify-evenly text-base">
+            <div class="px-5">
+              <a
+                href="https://www.notion.so/Help-us-3b7734d28c514412aab56d51e9886d25"
+                target="_blank"
+              >
+                <button
+                  class="w-full border font-bold py-1 px-4 rounded-3xl text-center hover:opacity-80"
+                  // class="w-full border text-blue-500 border-blue-500 hover:border-blue-700 hover:text-blue-700 font-bold py-1 px-4 rounded-3xl text-center"
+                  style={{
+                    color: 'var(--accent-color)',
+                    borderColor: 'var(--accent-color)',
+                  }}
+                >
+                  Help us
+                </button>
+              </a>
+            </div>
+            <div class="px-5">
+              <a href="https://twitter.com/messages/compose?recipient_id=1329161144817377283">
+                <button
+                  class="w-full border font-bold py-1 px-4 rounded-3xl text-center hover:opacity-80"
+                  // class="w-full border text-blue-500 border-blue-500 hover:border-blue-700 hover:text-blue-700 font-bold py-1 px-4 rounded-3xl text-center"
+                  style={{
+                    color: 'var(--accent-color)',
+                    borderColor: 'var(--accent-color)',
+                  }}
+                >
+                  Chat with us
+                </button>
+              </a>
+            </div>
+          </div>
         </div>
       </div>
     </div>

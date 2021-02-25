@@ -1,13 +1,17 @@
 import { fromEvents, Kefir, Observable } from 'kefir';
 import { isNil } from 'ramda'; // Logic, Type, Relation, String, Math
 import { obsAdded, obsRemoved } from '../utils/kefirMutationObs';
+import { inspect } from '../utils/putils';
 import { isSidebar } from '../utils/wutils';
+const photoSelector = '[data-testid="tweetPhoto"]'; // can't use this bc sidebar doesn't start with photos loaded
+const photoHrefSelector = '[href*="/photo"]';
 const trendText = '[aria-label="Timeline: Trending now"]';
 const searchBarSelector = '[data-testid="SearchBox_Search_Input"] ';
 const sideBarSelector = '[data-testid="sidebarColumn"]';
 const editorClass = 'DraftEditor-editorContainer';
 const floatingComposeSelector =
   '[aria-labelledby="modal-header"] .DraftEditor-editorContainer';
+
 let activeSidebar = {};
 export function makeSidebarHome() {
   let thBar = document.createElement('div');
@@ -106,15 +110,23 @@ export function makeSearchBarObserver(): Observable<Element, any> {
   const searchBarRemove$ = obsRemoved(document, searchBarSelector, true); // searchBarAdd$ :: Element // Trends element is remove
   return searchBarAdd$;
 }
-
+//
 export function removeSearchBar(_?) {
   const sidebarElement = document.querySelector(sideBarSelector);
+  const istTh = (el) => el.className.includes('sug_home');
+  const isUserPhotos = (el) =>
+    inspect('isUserPhotos', !isNil(el.querySelector(photoHrefSelector)));
   const slot =
     sidebarElement.firstElementChild.lastElementChild.firstElementChild
       .firstElementChild.firstElementChild;
+  console.log('deleting sidebar children', { children: slot.children });
   Array.from(slot.children).forEach((el: Element) => {
-    if (el.className.includes('sug_home')) return;
+    if (istTh(el) || isUserPhotos(el)) {
+      console.log('skipped', el);
+      return;
+    }
     try {
+      console.log('removing', el);
       el.remove();
     } catch (e) {
       console.error("Couldn't remove sidebar element", { slot, el });

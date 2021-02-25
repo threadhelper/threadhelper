@@ -283,24 +283,24 @@
 }
 
 .th-hover {
-  top: 0;
-  left: 0;
-  position: absolute;
-  height: 100%;
-  width: 100%;
-  border-radius: 3px;
-  opacity: 0;
-  background: lightgray;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  -webkit-user-select: none;
+  // top: 0;
+  // left: 0;
+  // position: absolute;
+  // height: 100%;
+  // width: 100%;
+  // border-radius: 3px;
+  // opacity: 0;
+  // // background: lightgray;
+  // display: flex;
+  // align-items: center;
+  // justify-content: center;
+  // -webkit-user-select: none;
 }
 
 .th-hover:hover {
   transition: 0.1s ease;
   cursor: copy;
-  opacity: 0.7;
+  // opacity: 0.7;
 }
 
 .th-hover-copy {

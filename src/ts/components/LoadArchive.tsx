@@ -11,7 +11,7 @@ import Tooltip from './Tooltip';
 const archiveTooltip = (
   <>
     <a
-      class="underline"
+      class="underline hover:opacity-80"
       // class="underline text-blue-600 hover:text-blue-800 visited:text-purple-600"
       style="color: var(--accent-color)"
       href="https://twitter.com/settings/your_twitter_data"

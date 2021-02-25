@@ -55,7 +55,10 @@ export function ApiSearchBar() {
 
   return (
     <div class="flex items-center justify-between p-3 flex-initial">
-      <div class="flex items-center flex-grow">
+      <div
+        class="flex items-center flex-grow"
+        style={{ borderColor: 'var(--accent-color)' }}
+      >
         {!showSearchBar ? (
           <button
             onClick={() => {
@@ -73,12 +76,12 @@ export function ApiSearchBar() {
         ) : null}
         {showSearchBar ? (
           <div
-            class="inline-flex items-center h-8 px-5 rounded-full text-sm focus:outline-none shadow border-0 w-full"
+            class="inline-flex items-center h-8 px-5 rounded-full text-sm focus-within:ring-2 ring-current w-full"
             style={{
-              backgroundColor: 'var(--main-bg-color)',
-              borderColor: 'var(--accent-color)',
-              border: '1px',
-              color: 'var(--main-txt-color)',
+              // backgroundColor: 'var(--main-bg-color)',
+              // borderColor: 'var(--accent-color)',
+              // border: '1px',
+              color: 'var(--accent-color)',
             }}
           >
             {' '}
@@ -89,15 +92,10 @@ export function ApiSearchBar() {
             <input
               ref={inputObj}
               class="outline-none"
-              // style={{
-              //   backgroundColor: 'var(--main-bg-color)',
-              //   borderColor: 'var(--accent-color)',
-              //   border: '1px',
-              //   color: 'var(--main-txt-color)',
-              // }}
+              style={{ color: 'var(--main-txt-color)' }}
               style={{
                 backgroundColor: 'var(--main-bg-color)',
-                border: '0px',
+                // border: '0px',
                 color: 'var(--main-txt-color)',
               }}
               value={value}

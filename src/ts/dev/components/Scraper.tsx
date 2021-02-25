@@ -37,6 +37,7 @@ import {
   patchArchive,
   timelineQuery,
   tweetLookupQuery,
+  userLookupQuery,
 } from '../../bg/twitterScout';
 import RefreshIcon from '../../../images/refresh.svg';
 import WranggleRpc from '@wranggle/rpc';
@@ -203,7 +204,10 @@ const LookupScraper = () => {
   const [stgTweetQueue, setStgTweetQueue] = useStorage('stgTweetQueue', []);
   const [lookupIds, setLookupIds] = useState([]);
   const [lookup, setLookup] = useState([]);
+  const [lookupUsersIds, setLookupUsersIds] = useState([]);
+  const [lookupUsers, setLookupUsers] = useState([]);
   const lookupInputObj = useRef();
+  const lookupUsersInputObj = useRef();
   const worker = useWorker(createWorker);
 
   const appendStgTweetQueue = async (tweets) => {
@@ -236,24 +240,50 @@ const LookupScraper = () => {
   const getLookupInput = async () => {
     getLookup(lookupIds);
   };
-  const lookupInput = pipe(
+
+  const processInput = pipe(
     path(['target', 'value']),
     defaultTo(''),
     split(','),
-    map(trim),
-    setLookupIds
+    map(trim)
   );
+  const lookupInput = pipe(processInput, setLookupIds);
+
+  const getLookupUsers = async (names) => {
+    if (authValid) {
+      const lookupUsers = await userLookupQuery(auth, names);
+      console.log('lookup', { lookupUsers });
+      setLookupUsers(lookupUsers);
+    }
+  };
+
+  const getLookupUsersInput = async () => {
+    getLookupUsers(lookupUsersIds);
+  };
+  const lookupUsersInput = pipe(processInput, setLookupUsersIds);
 
   return (
     <div>
       <div class="m-4 flex items-center flex-row refresh h-4">
         <RefreshIcon class="h-4" onClick={(_) => getLookupInput()} />
-        Lookup: {length(lookup)} tweets.
+        Lookup Tweets: {length(lookup)} tweets.
         <textarea
           ref={lookupInputObj}
           class="bg-gray-200 w-64 h-8"
           value={lookupIds}
           onInput={lookupInput}
+          // onKeyUp={(e) => (e.key === 'Enter' ? submitSearch(query) : null)}
+          onFocus={(e) => e.target?.select()}
+        />
+      </div>
+      <div class="m-4 flex items-center flex-row refresh h-4">
+        <RefreshIcon class="h-4" onClick={(_) => getLookupUsersInput()} />
+        Lookup Users: {length(lookupUsers)} users.
+        <textarea
+          ref={lookupUsersInputObj}
+          class="bg-gray-200 w-64 h-8"
+          value={lookupUsersIds}
+          onInput={lookupUsersInput}
           // onKeyUp={(e) => (e.key === 'Enter' ? submitSearch(query) : null)}
           onFocus={(e) => e.target?.select()}
         />

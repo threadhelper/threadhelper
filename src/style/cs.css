@@ -732,7 +732,6 @@ input[type='checkbox'] + label {
   width: 100%;
   border-radius: 3px;
   opacity: 0;
-  background: lightgray;
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;
@@ -742,7 +741,6 @@ input[type='checkbox'] + label {
   -webkit-box-pack: center;
       -ms-flex-pack: center;
           justify-content: center;
-  -webkit-user-select: none;
 }
 
 .th-hover:hover {

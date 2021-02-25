@@ -9,7 +9,7 @@ import { Console } from './Console';
 import { DropdownMenu } from './Dropdown';
 import { ArchiveUploader } from './LoadArchive';
 import Tooltip from './Tooltip';
-import SettingsModal from './SettingsModal';
+import SettingsModal, { SecretModal } from './SettingsModal';
 
 function onClearStorage() {
   console.log('clear storage');
@@ -81,6 +81,7 @@ const debugItems = [
 
 export function SettingsButton(props) {
   const [open, setOpen] = useState(false);
+  const [secretOpen, setSecretOpen] = useState(false);
 
   const closeMenu = pipe(defaultTo(null), (e: MouseEvent) => {
     return !(e.currentTarget as Node).contains(document.activeElement)
@@ -113,7 +114,10 @@ export function SettingsButton(props) {
           />
         </div>
       </Tooltip>
-      {open && <SettingsModal setOpen={setOpen} />}
+      {open && !secretOpen && (
+        <SettingsModal setOpen={setOpen} setSecretOpen={setSecretOpen} />
+      )}
+      {secretOpen && <SecretModal setOpen={setSecretOpen} />}
     </div>
   );
 }
