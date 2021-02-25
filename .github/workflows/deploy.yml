@@ -1,0 +1,82 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Tester CD
+
+# Controls when the action will run. 
+on:
+  # Triggers the workflow on push or pull request events but only for the main branch
+  push:
+    branches: [ release, main ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains 2 jobs build and deploy
+  build:
+    env:
+      DEV_EXTENSION_ID: "dkclpenpaealjpjmgjfgcbjejobimjnj" # Chrome test page id  
+      PROD_EXTENSION_ID: "nfadnflafdfmekapgcgddbccooagpndk" # Chrome production page id  
+      CLIENT_ID: "990187593175-iurgn499pfh1urue4smreg0ato5fftee.apps.googleusercontent.com"
+      DEV_ADDON_ID: "{5e51829e-7295-4747-bcaf-585510eb379c}" # Firefox test page id
+      PROD_ADDON_ID: "{5e51829e-7295-4747-bcaf-585510eb379c}" # Firefox production page id
+      WEB_EXT_API_KEY: "user:16542531:891"
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2.3.4
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 15.4
+      - run: npm ci
+      - run: npm run build-prod
+      - name: Chrome Extension upload & publish
+        # You may pin to the exact commit or the version.
+        uses: Passiverecords/chrome-extension-upload-action@1.4.1
+        with:
+          # Auth refresh token
+          refresh-token: ${{secrets.CWS_REFRESH_TOKEN}}
+          # Extension application target id
+          app-id: $DEV_EXTENSION_ID
+          # Token client id
+          client-id: $CLIENT_ID 
+          # Token client secret
+          client-secret: ${{secrets.CWS_CLIENT_SECRET}}
+          # Name of zipped target upload file
+          file-name: threadhelper.zip
+          # True Or False to publish after upload
+          publish: True
+      - name: Firefox Addon Action
+        # You may pin to the exact commit or the version.
+        uses: trmcnvn/firefox-addon@v1
+        with:
+          # Your addons UUID as defined by Mozilla
+          uuid: $DEV_ADDON_ID
+          # Path to your addons .xpi file
+          xpi: threadhelper.zip # optional
+          # Path to your addons manifest.json file to read the version
+          manifest: dist/manifest.json # optional
+          # Firefox Addon API Key
+          api-key: $WEB_EXT_API_KEY # optional
+          # Firefox Addon API Secret
+          api-secret: ${{secrets.WEB_EXT_API_SECRET}}# optional
+
+
+  
+  deploy:
+    needs: build
+    
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Run a multi-line script
+        run: |
+          echo Add other actions to build,
+          echo test, and deploy your project.
+          
+      
