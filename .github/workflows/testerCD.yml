@@ -74,7 +74,6 @@ jobs:
 #           file-name: dist/threadhelper.zip
 #           # True Or False to publish after upload
 #           publish: True
-
 #       - name: Firefox Addon Action
 #         # You may pin to the exact commit or the version.
 #         uses: trmcnvn/firefox-addon@v1
