@@ -63,16 +63,3 @@ jobs:
           api-key: $WEB_EXT_API_KEY # optional
           # Firefox Addon API Secret
           api-secret: ${{secrets.WEB_EXT_API_SECRET}}# optional
-
-  deploy:
-    needs: build
-
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Run a multi-line script
-        run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
