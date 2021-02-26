@@ -17,7 +17,7 @@ module.exports = function (configDirs) {
   prodConfig.output.path = configDirs.DIST_DIR;
   prodConfig.plugins = [
     ...prodConfig.plugins,
-    new BundleAnalyzerPlugin(),
+    // new BundleAnalyzerPlugin(),
     new CleanWebpackPlugin(),
     new WebpackExtensionManifestPlugin({
       config: {

@@ -32,7 +32,6 @@ jobs:
         with:
           node-version: 15.4
       - run: npm ci
-      - run: npm version patch
       - run: npm run build-prod
       - name: Chrome Extension upload & publish
         # You may pin to the exact commit or the version.
