@@ -1,7 +1,7 @@
 {
   "name": "threadhelper",
   "version": "0.3.16",
-  "description": "",
+  "description": "ThreadHelper, a serendipity engine on the Twitter sidebar.",
   "main": "index.js",
   "scripts": {
     "watch:css": "postcss src/tailwind.css -o src/index.css",
