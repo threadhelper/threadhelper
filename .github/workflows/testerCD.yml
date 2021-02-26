@@ -46,7 +46,7 @@ jobs:
           # Token client secret
           client-secret: ${{secrets.CWS_CLIENT_SECRET}}
           # Name of zipped target upload file
-          file-name: threadhelper.zip
+          file-name: dist/threadhelper.zip
           # True Or False to publish after upload
           publish: True
       - name: Firefox Addon Action
@@ -56,7 +56,7 @@ jobs:
           # Your addons UUID as defined by Mozilla
           uuid: $DEV_ADDON_ID
           # Path to your addons .xpi file
-          xpi: threadhelper.zip # optional
+          xpi: dist/threadhelper.zip # optional
           # Path to your addons manifest.json file to read the version
           manifest: dist/manifest.json # optional
           # Firefox Addon API Key
