@@ -65,17 +65,27 @@ jobs:
 #           file-name: dist/threadhelper.zip
 #           # True Or False to publish after upload
 #           publish: True
-      - name: Firefox Addon Action
-        # You may pin to the exact commit or the version.
-        uses: trmcnvn/firefox-addon@v1
+      - name: "web-ext sign"
+        id: web-ext-sign
+        uses: kewisch/action-web-ext@v1
         with:
-          # Your addons UUID as defined by Mozilla
-          uuid: ${{env.DEV_ADDON_ID}}
-          # Path to your addons .xpi file
-          xpi: dist/threadhelper.zip # optional
-          # Path to your addons manifest.json file to read the version
-          manifest: dist/manifest.json # optional
-          # Firefox Addon API Key
-          api-key: ${{env.WEB_EXT_API_KEY}} # optional
-          # Firefox Addon API Secret
-          api-secret: ${{secrets.WEB_EXT_API_SECRET}}# optional
+          cmd: sign
+          source: dist
+          channel: listed
+          apiKey: ${{env.WEB_EXT_API_KEY}}
+          apiSecret: ${{secrets.WEB_EXT_API_SECRET}}
+          timeout: 900000
+#       - name: Firefox Addon Action
+#         # You may pin to the exact commit or the version.
+#         uses: trmcnvn/firefox-addon@v1
+#         with:
+#           # Your addons UUID as defined by Mozilla
+#           uuid: ${{env.DEV_ADDON_ID}}
+#           # Path to your addons .xpi file
+#           xpi: dist/threadhelper.zip # optional
+#           # Path to your addons manifest.json file to read the version
+#           manifest: dist/manifest.json # optional
+#           # Firefox Addon API Key
+#           api-key: ${{env.WEB_EXT_API_KEY}} # optional
+#           # Firefox Addon API Secret
+#           api-secret: ${{secrets.WEB_EXT_API_SECRET}}# optional
