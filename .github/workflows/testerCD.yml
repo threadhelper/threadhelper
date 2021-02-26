@@ -40,9 +40,9 @@ jobs:
           # Auth refresh token
           refresh-token: ${{secrets.CWS_REFRESH_TOKEN}}
           # Extension application target id
-          app-id: $DEV_EXTENSION_ID
+          app-id: '$DEV_EXTENSION_ID'
           # Token client id
-          client-id: $CLIENT_ID
+          client-id: '$CLIENT_ID'
           # Token client secret
           client-secret: ${{secrets.CWS_CLIENT_SECRET}}
           # Name of zipped target upload file
@@ -54,12 +54,12 @@ jobs:
         uses: trmcnvn/firefox-addon@v1
         with:
           # Your addons UUID as defined by Mozilla
-          uuid: $DEV_ADDON_ID
+          uuid: '$DEV_ADDON_ID'
           # Path to your addons .xpi file
           xpi: dist/threadhelper.zip # optional
           # Path to your addons manifest.json file to read the version
           manifest: dist/manifest.json # optional
           # Firefox Addon API Key
-          api-key: $WEB_EXT_API_KEY # optional
+          api-key: '$WEB_EXT_API_KEY' # optional
           # Firefox Addon API Secret
           api-secret: ${{secrets.WEB_EXT_API_SECRET}}# optional
