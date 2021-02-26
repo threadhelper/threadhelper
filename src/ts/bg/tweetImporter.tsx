@@ -19,12 +19,13 @@ import { Status, User } from 'twitter-d';
 import { ArchTweet, thTweet } from '../types/tweetTypes';
 import { nullFn } from '../utils/putils';
 import { tweetLookupQuery } from './twitterScout';
+import default_pic_url from '../../images/defaultProfilePic.png';
 
 /* Constants */
 const rtRE = /RT @([a-zA-Z0-9_]+).*/;
 const rt_tag = /RT @([a-zA-Z0-9_]+:?)/;
-const default_pic_url =
-  'https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png';
+// const default_pic_url =
+//   'https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png';
 
 /* Utils */
 

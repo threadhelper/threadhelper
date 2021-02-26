@@ -194,7 +194,7 @@ export const AvatarTrophy = ({
         <a href={`https://twitter.com/${screen_name}`}>
           <img
             class="rounded-full h-16 w-16 mb-2"
-            src={profile_image_url_https}
+            src={profile_image_url_https.replace('_normal', '')}
           />
         </a>
       ) : (

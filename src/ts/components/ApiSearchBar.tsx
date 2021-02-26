@@ -114,7 +114,7 @@ export function ApiSearchBar() {
         ) : (
           <div class="inline-flex items-baseline">
             <span class="ml-4 text-2xl font-bold sm:hidden md:hidden lg:block">
-              Thread Helper
+              ThreadHelper
             </span>
             {DEBUG ? (
               <span class="text-gray-500 sm:hidden md:hidden lg:block">{` v${process.env.VERSION}`}</span>
