@@ -21,6 +21,7 @@ export interface StorageInterface {
   auth: Credentials;
   userInfo: User | null;
   doRefreshIdb: boolean;
+  showPatchNotes: boolean;
 }
 
 export interface SearchResult {

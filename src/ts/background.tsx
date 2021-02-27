@@ -801,9 +801,9 @@ const onUpdated = async (previousVersion) => {
   console.log(`[INFO] updated from version ${previousVersion}`);
   // add new stg fields from defaults
   if (!DEBUG) {
-    chrome.tabs.create({
-      url: 'https://www.notion.so/Patch-Notes-afab29148a0c49358df0e55131978d48',
-    });
+    // chrome.tabs.create({
+    //   url: 'https://www.notion.so/Patch-Notes-afab29148a0c49358df0e55131978d48',
+    // });
   }
   // msgSomeWorker(pWorker, { type: 'resetIndex' });
   updateStorage();

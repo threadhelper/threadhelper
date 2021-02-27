@@ -1,3 +1,14 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  /* --color-primary: theme('colors.teal.100');
+  --color-secondary: theme('colors.yellow.500'); */
+  --custom-orange: rgb(255, 128, 0);
+}
+
+/* .funky-theme {
+--color-primary: theme("colors.red.800");
+--color-secondary: theme("colors.green.500");
+} */

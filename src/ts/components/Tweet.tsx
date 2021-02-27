@@ -29,6 +29,8 @@ import { inspect } from '../utils/putils';
 import { DropdownMenu } from './Dropdown';
 import defaultProfilePic from '../../images/defaultProfilePic.png';
 
+const isProduction = process.env.NODE_ENV != 'development';
+
 const getUserUrl = (username: string) => `https://twitter.com/${username}`;
 const getTweetUrl = (tweet: thTweet) =>
   getUserUrl(tweet.username) + `/status/${tweet.id}`;
@@ -309,7 +311,7 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
       </div>
       {isNil(tweet.unavailable) ? (
         <div
-          class="th-hover absolute inset-0 rounded-sm opacity-0 flex items-center justify-center bg-gray-200 hover:cursor-default hover:bg-opacity-70"
+          class="th-hover absolute inset-0 rounded-sm bg-opacity-0 flex items-center justify-center bg-gray-200 hover:cursor-default hover:bg-opacity-70"
           onClick={onClick}
         >
           <textarea
@@ -320,12 +322,10 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
           >
             {getTweetUrl(tweet)}
           </textarea>
-          <div class="flex flex-col bg-gray-200 items-center">
+          <div class="flex flex-col bg-transparent items-center">
             <div class="text-base font-medium bg-transparent z-20">
-              <div class="" style={{ color: 'var(--main-bg-color)' }}>
-                {copyText}
-              </div>
-              {isNil(score) || process.env.NODE_ENV != 'development' ? null : (
+              <div class="text-mainBg">{copyText}</div>
+              {!(isNil(score) || isProduction) && (
                 <div class="text-green-400">{`score: ${score.toFixed(2)}`}</div>
               )}
             </div>
@@ -340,7 +340,7 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
 
 const UnavailableHover = ({ score }) => {
   return (
-    <div class="absolute inset-0 rounded-sm opacity-0 flex items-center justify-center bg-gray-200 hover:cursor-default hover:bg-opacity-70">
+    <div class="absolute inset-0 rounded-sm bg-opacity-0 flex items-center justify-center bg-gray-200 hover:cursor-default hover:bg-opacity-70">
       <div class="flex flex-col items-center z-20 text-base font-medium bg-transparent">
         <div class=" text-red-700 ">{'tweet unavailable'}</div>
         {isNil(score) || process.env.NODE_ENV != 'development' ? null : (

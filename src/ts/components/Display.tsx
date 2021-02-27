@@ -110,21 +110,28 @@ const showUserSearch = (apiUsers, displayMode) => {
 
 function UserCard({ user }) {
   return (
-    <div class="th-tweet">
+    <div class="items-center flex flex-row">
       <div class="th-gutter">
-        <img class="th-profile" src={user.profile_image_url_https} />
+        <a href={`https://twitter.com/${user.screen_name}`}>
+          <img class="th-profile" src={user.profile_image_url_https} />
+        </a>
       </div>
       <div class="th-body">
         <div class="th-header">
-          <div class="th-header-name">
+          <div class="th-header-name hover:underline">
             <a href={`https://twitter.com/${user.screen_name}`}>{user.name}</a>
           </div>
-          <div class="th-header-username">@{user.screen_name}</div>
+          <div class="th-header-username">
+            <a href={`https://twitter.com/${user.screen_name}`}>
+              @{user.screen_name}
+            </a>
+          </div>
         </div>
       </div>
     </div>
   );
 }
+//
 
 function UserDisplay({ results }: { results: User[] }) {
   return (
@@ -161,7 +168,7 @@ type TweetDisplayProps = {
 function TweetDisplay({ title, results, emptyMsg }: TweetDisplayProps) {
   return (
     <>
-      <div class="text-right text-gray-500 ">
+      <div class="text-right text-gray-500 mb-1 ">
         <span class="hover:text-white hover:underline">{title}</span>
       </div>
       <div class="searchTweets">

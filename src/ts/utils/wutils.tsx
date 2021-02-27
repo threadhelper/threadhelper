@@ -163,6 +163,11 @@ function setTheme(
   root.style.setProperty('--accent-color', accent_color);
 }
 
+// function setTheme(bg, accent) {
+//   let root = document.documentElement;
+
+// }
+
 export function updateTheme(theme = null) {
   const defaultAccent = 'rgb(0, 157, 255)';
   const light_theme = 'rgb(255, 255, 255)';

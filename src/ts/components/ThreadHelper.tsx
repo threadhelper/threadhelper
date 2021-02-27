@@ -17,6 +17,7 @@ import Kefir, { Observable } from 'kefir';
 import { TweetResult } from '../types/msgTypes';
 import { makeStorageChangeObs } from '../utils/dutils';
 import { StorageChangeObs } from '../hooks/BrowserEventObs';
+import { Banner } from './Banner';
 
 export const AuthContext = createContext<Credentials>({
   authorization: null,
@@ -81,6 +82,10 @@ var renderCount = 0;
 function Sidebar(props: { active: any }) {
   // const [feedDisplayMode, setFeedDisplayMode] = useState('idle');
   const [auth, setAuth] = useStorage('auth', {});
+  const [showPatchNotes, setShowPatchNotes] = useStorage(
+    'showPatchNotes',
+    true
+  );
   const [feedDisplayMode, dispatchFeedDisplayMode] = useReducer(
     updateFeedDisplay,
     DisplayMode.Idle
@@ -99,6 +104,13 @@ function Sidebar(props: { active: any }) {
     >
       <AuthContext.Provider value={auth}>
         <div class="sidebar">
+          {/* {showPatchNotes && (
+            <Banner
+              text="New TH update!"
+              redirect="https://www.notion.so/Patch-Notes-afab29148a0c49358df0e55131978d48"
+              onDismiss={() => setShowPatchNotes(false)}
+            />
+          )} */}
           <TtReader />
           <ApiSearchBar />
           <DisplayController />

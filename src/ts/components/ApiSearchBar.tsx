@@ -56,8 +56,8 @@ export function ApiSearchBar() {
   return (
     <div class="flex items-center justify-between p-3 flex-initial">
       <div
-        class="flex items-center flex-grow"
-        style={{ borderColor: 'var(--accent-color)' }}
+        class="flex items-center flex-grow border-accent"
+        // style={{ borderColor: 'var(--accent-color)' }}
       >
         {!showSearchBar ? (
           <button
@@ -65,39 +65,38 @@ export function ApiSearchBar() {
               setShowSearchBar(!showSearchBar);
               if (showSearchBar) inputObj.current?.focus();
             }}
-            class="mr-3"
-            style={{
-              fill: 'var(--main-txt-color)',
-              stroke: 'var(--main-txt-color)',
-            }}
+            class="mr-3 text-mainTxt hover:text-accent fill-current stroke-current"
+            // style={{
+            //   fill: 'var(--main-txt-color)',
+            //   stroke: 'var(--main-txt-color)',
+            // }}
           >
             <SearchIcon class="h-4 w-4" />
           </button>
         ) : null}
         {showSearchBar ? (
           <div
-            class="inline-flex items-center h-8 px-5 rounded-full text-sm focus-within:ring-2 ring-current w-full"
-            style={{
-              // backgroundColor: 'var(--main-bg-color)',
-              // borderColor: 'var(--accent-color)',
-              // border: '1px',
-              color: 'var(--accent-color)',
-            }}
+            class="inline-flex items-center h-8 px-5 rounded-full text-sm focus-within:ring-2 ring-current w-full text-accent"
+            // style={{
+            //   // backgroundColor: 'var(--main-bg-color)',
+            //   // borderColor: 'var(--accent-color)',
+            //   // border: '1px',
+            //   color: 'var(--accent-color)',
+            // }}
           >
             {' '}
             <SearchIcon
-              class="h-4 w-4 mr-4"
-              style="fill:var(--accent-color); stroke:var(--accent-color)"
+              class="h-4 w-4 mr-4 text-accent fill-default stroke-default"
+              // style="fill:var(--accent-color); stroke:var(--accent-color)"
             />{' '}
             <input
               ref={inputObj}
-              class="outline-none"
-              style={{ color: 'var(--main-txt-color)' }}
-              style={{
-                backgroundColor: 'var(--main-bg-color)',
-                // border: '0px',
-                color: 'var(--main-txt-color)',
-              }}
+              class="outline-none text-mainTxt bg-mainBg"
+              // style={{
+              //   backgroundColor: 'var(--main-bg-color)',
+              //   // border: '0px',
+              //   color: 'var(--main-txt-color)',
+              // }}
               value={value}
               onInput={(e) =>
                 setValue(defaultTo('', path(['target', 'value'], e)))
@@ -113,9 +112,10 @@ export function ApiSearchBar() {
           </div>
         ) : (
           <div class="inline-flex items-baseline">
-            <span class="ml-4 text-2xl font-bold sm:hidden md:hidden lg:block">
+            <span class="ml-4 text-2xl font-bold hidden lg:inline">
               ThreadHelper
             </span>
+            <span class="ml-4 text-2xl font-bold lg:hidden">TH</span>
             {DEBUG ? (
               <span class="text-gray-500 sm:hidden md:hidden lg:block">{` v${process.env.VERSION}`}</span>
             ) : null}

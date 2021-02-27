@@ -114,10 +114,8 @@ const SettingsModal = ({ setOpen, setSecretOpen }) => {
       <div
         style={{
           width: '560px',
-          'background-color': 'var(--main-bg-color)',
-          color: 'var(--main-txt-color)',
         }}
-        class="bg-white max-w-full p-6 rounded-lg text-lg shadow-lg"
+        class="bg-mainBg text-mainTxt max-w-full p-6 rounded-lg text-lg shadow-lg"
       >
         {/* modal header */}
         <div class="flex justify-end">
@@ -152,7 +150,9 @@ const SettingsModal = ({ setOpen, setSecretOpen }) => {
           </div>
         </div>
         {/* carousel */}
-        {length(keys(activeAccounts)) > 1 && (
+        {
+          // TODO: REMOVE THIS COMMENT, ONLY HERE FOR CSS DEVELOPMENT
+          // length(keys(activeAccounts)) > 1 &&
           <div class="mb-5 ">
             {/* header */}
             <div class=" font-semibold ">Search the following accounts:</div>
@@ -162,16 +162,12 @@ const SettingsModal = ({ setOpen, setSecretOpen }) => {
               })}
             </div>
           </div>
-        )}
+        }
 
         <div class="px-5">
           <button
-            class="w-full border font-bold py-2 px-4 rounded-3xl text-center hover:opacity-80"
+            class="w-full text-accent border-accent border font-bold py-2 px-4 rounded-3xl text-center hover:opacity-80"
             // class="w-full border text-blue-500 border-blue-500 hover:border-blue-700 hover:text-blue-700 font-bold py-2 px-4 rounded-3xl text-center"
-            style={{
-              color: 'var(--accent-color)',
-              borderColor: 'var(--accent-color)',
-            }}
             onClick={() => setSecretOpen(true)}
           >
             Extremely Secret Button
@@ -296,12 +292,8 @@ export const SecretModal = ({ setOpen }) => {
                 target="_blank"
               >
                 <button
-                  class="w-full border font-bold py-1 px-4 rounded-3xl text-center hover:opacity-80"
+                  class="w-full border font-bold py-1 px-4 rounded-3xl text-accent border-accent text-center hover:opacity-80"
                   // class="w-full border text-blue-500 border-blue-500 hover:border-blue-700 hover:text-blue-700 font-bold py-1 px-4 rounded-3xl text-center"
-                  style={{
-                    color: 'var(--accent-color)',
-                    borderColor: 'var(--accent-color)',
-                  }}
                 >
                   Help us
                 </button>
@@ -310,12 +302,8 @@ export const SecretModal = ({ setOpen }) => {
             <div class="px-5">
               <a href="https://twitter.com/messages/compose?recipient_id=1329161144817377283">
                 <button
-                  class="w-full border font-bold py-1 px-4 rounded-3xl text-center hover:opacity-80"
+                  class="w-full border font-bold py-1 px-4 rounded-3xl text-accent border-accent text-center hover:opacity-80"
                   // class="w-full border text-blue-500 border-blue-500 hover:border-blue-700 hover:text-blue-700 font-bold py-1 px-4 rounded-3xl text-center"
-                  style={{
-                    color: 'var(--accent-color)',
-                    borderColor: 'var(--accent-color)',
-                  }}
                 >
                   Chat with us
                 </button>
