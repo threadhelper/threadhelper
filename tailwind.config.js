@@ -38,13 +38,14 @@ module.exports = {
       green: colors.emerald,
       purple: colors.violet,
     },
-    fontSize: {
-      'lsm': '0.933rem'
-    },
     extend: {
       borderRadius: {
         '4xl': '2rem',
-      }
+      },
+      fontSize: {
+        'xxs': '0.5rem',
+        'lsm': '0.933rem'
+      },
     },
   },  
 };

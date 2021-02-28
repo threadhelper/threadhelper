@@ -199,12 +199,12 @@ export const AvatarTrophy = ({
           src={profile_image_url_https}
         />
       )}
-      <div class="font-black">{name}</div>
+      <div class="font-black text-base">{name}</div>
       <div class="font-medium underline text-lsm text-neutral mt-1">
         {link ? (
           <a href={`https://twitter.com/${screen_name}`}>@{screen_name}</a>
         ) : (
-          screen_name
+          `@${screen_name}`
         )}
       </div>
     </div>
