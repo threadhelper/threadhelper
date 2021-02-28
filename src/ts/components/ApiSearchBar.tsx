@@ -71,7 +71,7 @@ export function ApiSearchBar() {
             //   stroke: 'var(--main-txt-color)',
             // }}
           >
-            <SearchIcon class="h-4 w-4" />
+            <SearchIcon class="h-6 w-6" />
           </button>
         ) : null}
         {showSearchBar ? (
@@ -86,7 +86,7 @@ export function ApiSearchBar() {
           >
             {' '}
             <SearchIcon
-              class="h-4 w-4 mr-4 text-accent fill-default stroke-default"
+              class="h-6 w-6 mr-4 text-accent fill-default stroke-default"
               // style="fill:var(--accent-color); stroke:var(--accent-color)"
             />{' '}
             <input

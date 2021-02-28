@@ -32,7 +32,7 @@ const Tooltip = (props) => {
           //   style={
           //     'background-color: var(--main-bg-color); color: var(--main-txt-color);;'
           //   }
-          class={`max-w-32 min-w-max opacity-90 text-center Tooltip-Tip tt-${
+          class={`Tooltip-Tip max-w-32 min-w-max p-1 bg-opacity-90 rounded-md text-xs text-center tt-${
             props.direction || 'top'
           }`}
         >
