@@ -28,16 +28,16 @@ import { ArchiveExporter } from './ArchiveExporter';
 
 const Checkbox = ({ get, set, label }) => {
   return (
-    <label class="flex items-center mt-3 flex-grow">
+    <label class="flex items-center mt-4 flex-grow">
       <input
         type="checkbox"
-        class="h-5 w-5"
+        class={`h-5 w-5 rounded-md border-2 ${get ? 'bg-accent border-borderBg' : 'bg-mainBg border-borderBg'}`}
         checked={get}
         onClick={() => {
           set(!get);
         }}
       />
-      <span class="ml-2">{label}</span>
+      <span class="ml-4 text-lsm font-medium text-neutral">{label}</span>
     </label>
   );
 };
@@ -115,7 +115,7 @@ const SettingsModal = ({ setOpen, setSecretOpen }) => {
         style={{
           width: '560px',
         }}
-        class="bg-mainBg text-mainTxt max-w-full p-6 rounded-lg text-lg shadow-lg"
+        class="bg-mainBg text-mainTxt max-w-full p-7 rounded-4xl text-lg shadow-lg"
       >
         {/* modal header */}
         <div class="flex justify-end">
@@ -127,7 +127,7 @@ const SettingsModal = ({ setOpen, setSecretOpen }) => {
         </div>
         {/* checkmark section */}
         <div class="w-full mb-5">
-          <div class=" font-semibold">Let magic search include:</div>
+          <div class="font-medium text-lsm text-neutral">Let magic search include:</div>
           <div class="flex">
             <Checkbox get={getRTs} set={setGetRTs} label="Retweets" />
             <Checkbox
@@ -140,7 +140,7 @@ const SettingsModal = ({ setOpen, setSecretOpen }) => {
         </div>
         {/* idle mode */}
         <div class="w-full mb-5">
-          <div class=" font-semibold">Shuffle tweets when idle:</div>
+          <div class="font-medium text-lsm text-neutral">Shuffle tweets when idle:</div>
           <div class="flex">
             <Checkbox
               get={idle2Bool(idleMode)}
@@ -153,9 +153,9 @@ const SettingsModal = ({ setOpen, setSecretOpen }) => {
         {
           // TODO: REMOVE THIS COMMENT, ONLY HERE FOR CSS DEVELOPMENT
           // length(keys(activeAccounts)) > 1 &&
-          <div class="mb-5 ">
+          <div class="mb-5 mt-4">
             {/* header */}
-            <div class=" font-semibold ">Search the following accounts:</div>
+            <div class="font-medium text-lsm text-neutral">Search the following accounts:</div>
             <div class="flex flex-row flex-wrap justify-evenly">
               {values(activeAccounts).map((x) => {
                 return isNil(x.id_str) ? null : <AccountCheckbox account={x} />;
@@ -166,7 +166,7 @@ const SettingsModal = ({ setOpen, setSecretOpen }) => {
 
         <div class="px-5">
           <button
-            class="w-full text-accent border-accent border font-bold py-2 px-4 rounded-3xl text-center hover:opacity-80"
+            class="w-full text-accent border-accent border-2 font-black py-2 px-4 rounded-3xl text-center text-xl hover:opacity-80"
             // class="w-full border text-blue-500 border-blue-500 hover:border-blue-700 hover:text-blue-700 font-bold py-2 px-4 rounded-3xl text-center"
             onClick={() => setSecretOpen(true)}
           >
@@ -185,7 +185,7 @@ export const AvatarTrophy = ({
   link,
 }) => {
   return (
-    <div class="flex flex-col items-center px-4 text-xs leading-none">
+    <div class="flex flex-col items-center px-4 text-xs leading-none mt-6">
       {link ? (
         <a href={`https://twitter.com/${screen_name}`}>
           <img
@@ -195,14 +195,14 @@ export const AvatarTrophy = ({
         </a>
       ) : (
         <img
-          class="rounded-full h-16 w-16 mb-2"
+          class="rounded-full h-16 w-16 mb-3"
           src={profile_image_url_https}
         />
       )}
-      <div class="font-bold">{name}</div>
-      <div class="font-semibold underline text-gray-400">
+      <div class="font-black">{name}</div>
+      <div class="font-medium underline text-lsm text-neutral mt-1">
         {link ? (
-          <a href={`https://twitter.com/${screen_name}`}>{screen_name}</a>
+          <a href={`https://twitter.com/${screen_name}`}>@{screen_name}</a>
         ) : (
           screen_name
         )}

@@ -15,7 +15,8 @@ module.exports = {
       secondBg: 'var(--second-bg-color)',
       thirdBg: 'var(--third-bg-color)',
       lines: 'var(--line-color)',
-
+      borderBg: 'var(--main-border-color)',
+      neutral: 'var(--neutral-color)',
       //default colors
       transparent: 'transparent',
       current: 'currentColor',
@@ -32,5 +33,13 @@ module.exports = {
       green: colors.emerald,
       purple: colors.violet,
     },
-  },
+    fontSize: {
+      'lsm': '0.933rem'
+    },
+    extend: {
+      borderRadius: {
+        '4xl': '2rem',
+      }
+    },
+  },  
 };
