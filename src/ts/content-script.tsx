@@ -52,6 +52,8 @@ import {
   makeSidebarCompose,
   makeSidebarHome,
   removeSearchBar,
+  resizeSidebar,
+  ttSidebarObserver,
 } from './domInterface/sidebarHandler';
 import {
   makeBgColorObs,
@@ -247,6 +249,8 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
     value
       ? activateHomeSidebar(storageChange$, msgObs$)
       : deactivateSidebar(thBarHome); //function
+  // const ttSidebar$ = ttSidebarObserver().flatten();
+  // ttSidebar$.log('ttSidebar$');
   const searchBar$ = makeSearchBarObserver();
   searchBar$.log('searchBar$');
   const floatSidebar$ = makeFloatSidebarObserver(thBarComp); // floatSidebar$ :: String || Element  // for floating sidebar in compose mode
@@ -278,6 +282,7 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
   subObs(storageChange$, nullFn);
   subObs(msgObs$, nullFn);
   subObs(searchBar$, removeSearchBar);
+  // subObs(ttSidebar$, resizeSidebar);
 }
 function destructor(destructionEvent: any) {
   // Destruction is needed only once
