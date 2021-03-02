@@ -24,6 +24,8 @@ import default_pic_url from '../../images/defaultProfilePic.png';
 /* Constants */
 const rtRE = /RT @([a-zA-Z0-9_]+).*/;
 const rt_tag = /RT @([a-zA-Z0-9_]+:?)/;
+// const rt_tag = /RT @[\w+]{1,15}\b:/;
+
 // const default_pic_url =
 //   'https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png';
 
@@ -91,10 +93,10 @@ const makeApiQuote = (quoted_status: Status): thTweet => {
   return qt;
 };
 
-export const getRTOwner = (t: Status | ArchTweet) => {
-  const username = rtRE.exec(t.full_text ?? t.text);
-  return username ? getArchUserId(t) : null;
-};
+// export const getRTOwner = (t: Status | ArchTweet) => {
+//   const username = rtRE.exec(t.full_text ?? t.text);
+//   return username ? getArchUserId(t) : null;
+// };
 const _isOwnTweet = (rt: any[], user_info) =>
   isNil(rt) || rt[1] === prop('screen_name', user_info);
 
@@ -246,12 +248,19 @@ const _findAuthor = (screenName: string, t: ArchTweet) =>
   t.entities?.user_mentions?.find((t) => {
     return t.screen_name?.toLowerCase() === screenName.toLowerCase();
   });
-export const getArchUserId = (t: ArchTweet): string => {
+// returns null if it's not a retweet
+export const getArchUserId = (
+  t: ArchTweet
+): { name: string; screen_name: string; id: string; id_str: string } => {
   let rt = rtRE.exec(prop('full_text', t));
+  if (isNil(rt)) return null;
   const screenName = rt[1];
   const author = _findAuthor(screenName, t);
   const id = author.id_str ?? null;
-  return id;
+  const name = author.name ?? null;
+  const screen_name = author.screen_name ?? null;
+  // return {name, screen_name, id};
+  return author ?? null;
 };
 
 export const patchArchivePrep = curry(
@@ -263,15 +272,20 @@ export const patchArchivePrep = curry(
 
 export const patchArchUser = curry(
   (userInfo: User, t: ArchTweet): ArchTweet => {
-    const rtOwner = getRTOwner(t);
-    const userId = rtOwner ?? userInfo.id_str;
+    const rtAuthor = getArchUserId(t);
+    const user = isNil(rtAuthor) ? userInfo : rtAuthor;
+    const userProp = R.pick(['id', 'id_str', 'screen_name', 'name'], user);
     let _t = pipe(
       () => t,
-      R.assoc('user_id', userId),
-      R.assoc('user_id_str', userId),
-      R.assoc('retweeted', !isNil(rtOwner)),
+      // R.assoc('user_id', user.id),
+      // R.assoc('user_id_str', user.id_str),
+      // R.assoc('screen_name', user.screen_name),
+      // R.assoc('name', user.name),
+      R.assoc('user', userProp),
+      R.assoc('retweeted', !isNil(rtAuthor)),
       R.assoc('text', prop('full_text', t).replace(rt_tag, ''))
     )();
+    console.log('patchArchUser', { rtAuthor, user, _t });
     return _t;
   }
 );
@@ -335,11 +349,9 @@ const toTweetCommon = (thTweet: thTweet, t: Status) => {
   thTweet.is_quote_up = !isNil(t.quoted_status);
   thTweet.quote = null;
   thTweet.is_bookmark = false;
-  thTweet.text =
-    unescape(
-      defaultTo('', prop('full_text', t)).toString().replace(rt_tag, '')
-    ) ||
-    unescape(defaultTo('', prop('text', t)).toString().replace(rt_tag, ''));
+  thTweet.text = unescape(
+    defaultTo('', prop('full_text', t) || prop('text', t)).toString()
+  );
   if (!isNil(t.user)) {
     thTweet.username = path(['user', 'screen_name'], t);
     thTweet.name = path(['user', 'name'], t);

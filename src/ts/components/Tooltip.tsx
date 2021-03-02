@@ -10,7 +10,7 @@ const Tooltip = (props) => {
     console.log('showing tooltip', props);
     timeout = setTimeout(() => {
       setActive(true);
-    }, props.delay || 100);
+    }, props.delay || 800);
   };
 
   const hideTip = () => {

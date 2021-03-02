@@ -84,7 +84,7 @@ function Sidebar(props: { active: any }) {
   const [auth, setAuth] = useStorage('auth', {});
   const [showPatchNotes, setShowPatchNotes] = useStorage(
     'showPatchNotes',
-    true
+    false
   );
   const [feedDisplayMode, dispatchFeedDisplayMode] = useReducer(
     updateFeedDisplay,
@@ -104,13 +104,13 @@ function Sidebar(props: { active: any }) {
     >
       <AuthContext.Provider value={auth}>
         <div class="sidebar">
-          {/* {showPatchNotes && (
+          {showPatchNotes && (
             <Banner
               text="New TH update!"
               redirect="https://www.notion.so/Patch-Notes-afab29148a0c49358df0e55131978d48"
               onDismiss={() => setShowPatchNotes(false)}
             />
-          )} */}
+          )}
           <TtReader />
           <ApiSearchBar />
           <DisplayController />

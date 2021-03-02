@@ -66,7 +66,7 @@ export function DropdownMenu({
     );
   }
   return (
-    <div className="dropdown" ref={dropdownRef}>
+    <div className="dropdown z-30" ref={dropdownRef}>
       {defaultTo([], componentItems).map((Item) => (
         <Item />
       ))}

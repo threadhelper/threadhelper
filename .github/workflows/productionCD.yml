@@ -16,9 +16,9 @@ jobs:
   # This workflow contains 2 jobs build and deploy
   build:
     env:
-      DEV_EXTENSION_ID: 'dkclpenpaealjpjmgjfgcbjejobimjnj' # Chrome test page id
+      PROD_EXTENSION_ID: 'nfadnflafdfmekapgcgddbccooagpndk' # Chrome production page id
       CLIENT_ID: '990187593175-iurgn499pfh1urue4smreg0ato5fftee.apps.googleusercontent.com'
-      DEV_ADDON_ID: '{5e51829e-7295-4747-bcaf-585510eb379c}' # Firefox test page id
+      PROD_ADDON_ID: '{4ab270d0-d033-4cee-8d72-a88fd8bc44f7}' # Firefox production page id
       WEB_EXT_API_KEY: 'user:16542531:891'
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
@@ -39,7 +39,7 @@ jobs:
         uses: trmcnvn/chrome-addon@v2
         with:
           # ID of the extension that you are updating
-          extension: ${{env.DEV_EXTENSION_ID}} # optional
+          extension: ${{env.PROD_EXTENSION_ID}} # optional
           # Path to a .zip of your addon
           zip: dist/threadhelper.zip # optional
           # Google OAuth2 client id
@@ -59,7 +59,7 @@ jobs:
           # Your secret for Mozilla's API
           amo-api-secret: ${{secrets.WEB_EXT_API_SECRET}}
           # UUID of your existing extension. Signing new extensions is not supported.
-          web-ext-id: ${{env.DEV_ADDON_ID}}
+          web-ext-id: ${{env.PROD_ADDON_ID}}
           # Set to 'true' to list the extension on AMO. Defaults to 'false' for unlisted signing.
           sign-listed: true
       - name: Check on failures

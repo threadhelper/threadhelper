@@ -116,7 +116,7 @@ import { makeValidateTweet } from './worker/search';
 PageView('/background.html');
 // Project business
 var DEBUG = process.env.NODE_ENV != 'production';
-// toggleDebug(window, DEBUG);
+toggleDebug(window, DEBUG);
 (Kefir.Property.prototype as any).currentValue = currentValue;
 
 // Stream clean up
@@ -811,6 +811,7 @@ const onUpdated = async (previousVersion) => {
   cleanOldStorage();
   // refresh idb tweets (lookup)
   setStg('doRefreshIdb', true);
+  setStg('showPatchNotes', true);
   // remake index
 };
 

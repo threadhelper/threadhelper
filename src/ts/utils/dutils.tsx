@@ -397,7 +397,6 @@ export const makeStorageChangeObs = (): Observable<StorageChange, Error> => {
   } else {
     const obs = makeEventObs(chrome.storage.onChanged, makeEmitStgCH);
     return obs;
-    // return makeEventObs(chrome.storage.onChanged, makeEmitStgCH);
   }
 };
 export const stgPathObs = (
