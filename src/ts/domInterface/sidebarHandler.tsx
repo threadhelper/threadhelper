@@ -15,7 +15,7 @@ const floatingComposeSelector =
 let activeSidebar = {};
 export function makeSidebarHome() {
   let thBar = document.createElement('div');
-  thBar.setAttribute('class', 'sug_home');
+  thBar.setAttribute('class', 'sug_home bg-mainBg');
   return thBar;
 }
 // impure
@@ -97,7 +97,7 @@ export function injectDummy(thBar: Element): Element {
 }
 export function makeSidebarCompose(): Element {
   let thBar = document.createElement('div');
-  thBar.setAttribute('class', 'sug_compose');
+  thBar.setAttribute('class', 'sug_compose bg-mainBg');
   return thBar;
 }
 // Produces events every time a sidebar should be created (trends sidebar shows up or compose screen comes up)

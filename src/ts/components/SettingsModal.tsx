@@ -32,7 +32,9 @@ const Checkbox = ({ get, set, label }) => {
     <label class="flex items-center mt-4 flex-grow">
       <input
         type="checkbox"
-        class={`h-5 w-5 rounded-md border-2 ${get ? 'bg-accent border-borderBg' : 'bg-mainBg border-borderBg'}`}
+        class={`h-5 w-5 rounded-md border-2 ${
+          get ? 'bg-accent border-borderBg' : 'bg-mainBg border-borderBg'
+        }`}
         checked={get}
         onClick={() => {
           set(!get);
@@ -125,7 +127,9 @@ const SettingsModal = ({ setOpen, setSecretOpen }) => {
         </div>
         {/* checkmark section */}
         <div class="w-full mb-5">
-          <div class="font-medium text-lsm text-twitterGray">Let magic search include:</div>
+          <div class="font-medium text-lsm text-twitterGray">
+            Let magic search include:
+          </div>
           <div class="flex">
             <Checkbox get={getRTs} set={setGetRTs} label="Retweets" />
             <Checkbox
@@ -138,7 +142,9 @@ const SettingsModal = ({ setOpen, setSecretOpen }) => {
         </div>
         {/* idle mode */}
         <div class="w-full mb-5">
-          <div class="font-medium text-lsm text-twitterGray">Shuffle tweets when idle:</div>
+          <div class="font-medium text-lsm text-twitterGray">
+            Shuffle tweets when idle:
+          </div>
           <div class="flex">
             <Checkbox
               get={idle2Bool(idleMode)}
@@ -153,7 +159,9 @@ const SettingsModal = ({ setOpen, setSecretOpen }) => {
           // length(keys(activeAccounts)) > 1 &&
           <div class="mb-5 mt-4">
             {/* header */}
-            <div class="font-medium text-lsm text-twitterGray">Search the following accounts:</div>
+            <div class="font-medium text-lsm text-twitterGray">
+              Search the following accounts:
+            </div>
             <div class="flex flex-row flex-wrap justify-evenly">
               {values(activeAccounts).map((x) => {
                 return isNil(x.id_str) ? null : <AccountCheckbox account={x} />;
@@ -194,12 +202,12 @@ export const AvatarTrophy = ({
         </a>
       ) : (
         <div class="relative">
-          <CrossIcon class="top-0 absolute w-3 h-3 cursor-pointer" style={{right: '-5px'}}/>
-          <div class="w-full h-full absolute rounded-full inset-0 transition-colors duration-200 hover:bg-black hover:bg-opacity-15 mb-3"></div>
-          <img
-            class="rounded-full h-16 w-16"
-            src={profile_image_url_https}
+          <CrossIcon
+            class="top-0 absolute w-3 h-3 cursor-pointer"
+            style={{ right: '-5px' }}
           />
+          <div class="w-full h-full absolute rounded-full inset-0 transition-colors duration-200 hover:bg-black hover:bg-opacity-15 mb-3"></div>
+          <img class="rounded-full h-16 w-16" src={profile_image_url_https} />
         </div>
       )}
       <div class="font-black text-base">{name}</div>
@@ -264,11 +272,9 @@ export const SecretModal = ({ setOpen }) => {
     >
       <div
         style={{
-          'background-color': 'var(--main-bg-color)',
-          color: 'var(--main-txt-color)',
-          borderRadius: '30px'
+          width: '560px',
         }}
-        class="bg-white max-w-full px-8 py-5 text-lg shadow-lg"
+        class="bg-white text-mainTxt max-w-full p-6 rounded-lg text-lg shadow-lg"
       >
         {/* header */}
         <div class="text-sm  w-full mb-5">
