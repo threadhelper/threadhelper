@@ -8,6 +8,13 @@ module.exports = {
       spacing: {
         128: '32rem',
       },
+      borderRadius: {
+        '4xl': '2rem',
+      },
+      fontSize: {
+        'xxs': '0.5rem',
+        'lsm': '0.933rem'
+      },
     },
     colors: {
       accent: 'var(--accent-color)', // exists
@@ -37,15 +44,6 @@ module.exports = {
       indigo: colors.indigo,
       green: colors.emerald,
       purple: colors.violet,
-    },
-    extend: {
-      borderRadius: {
-        '4xl': '2rem',
-      },
-      fontSize: {
-        'xxs': '0.5rem',
-        'lsm': '0.933rem'
-      },
     },
   },  
 };
