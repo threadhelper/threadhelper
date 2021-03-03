@@ -14,9 +14,8 @@ export function ApiSearchBar() {
   const inputObj = useRef(null);
   const [value, setValue] = useState('');
   const [showSearchBar, setShowSearchBar] = useState(false);
-  const { feedDisplayMode, dispatchFeedDisplayMode } = useContext(
-    FeedDisplayMode
-  );
+  const { feedDisplayMode, dispatchFeedDisplayMode } =
+    useContext(FeedDisplayMode);
 
   const submitApiSearch = (value) => {
     dispatchFeedDisplayMode({
@@ -85,18 +84,10 @@ export function ApiSearchBar() {
             // }}
           >
             {' '}
-            <SearchIcon
-              class="h-6 w-9 mr-3 text-accent fill-current stroke-current flex-grow"
-              // style="fill:var(--accent-color); stroke:var(--accent-color)"
-            />{' '}
+            <SearchIcon class="h-4 w-4 mr-4 text-accent fill-default stroke-default" />{' '}
             <input
               ref={inputObj}
-              class="outline-none text-mainTxt bg-searchBarBg w-full flex-shrink"
-              // style={{
-              //   backgroundColor: 'var(--main-bg-color)',
-              //   // border: '0px',
-              //   color: 'var(--main-txt-color)',
-              // }}
+              class="outline-none text-mainTxt bg-mainBg"
               value={value}
               onInput={(e) =>
                 setValue(defaultTo('', path(['target', 'value'], e)))
