@@ -296,84 +296,128 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
     tweet.has_quote ? renderQuote(tweet.quote, tweet.has_media) : '';
 
   return (
-    <div class="th-tweet-container">
-      <div class="th-tweet">
-        <div class="th-gutter">
-          <div class="z-10">
+    <div class="p-4 border-b border-borderBg">
+      <div class="flex">
+        <div class="flex-none mr-3">
+          <div class="w-9 h-9">
             <a href={getUserUrl(tweet.username)}>
               <img
-                class="th-profile"
+                class="rounded-full"
                 src={prop('profile_image', tweet) ?? defaultProfilePic}
               />
             </a>
           </div>
         </div>
-        <div class="th-body">
-          <div class="th-header">
-            <div class="th-header-name z-10 hover:underline">
-              <a href={getUserUrl(tweet.username)}>{tweet.name}</a>
-            </div>
-            <div class="th-header-username z-10">
-              <a href={getUserUrl(tweet.username)}>@{tweet.username}</a>
-            </div>
-            <div class="th-header-dot">·</div>
-            <div class="th-header-time">
-              <a
-                class="hover:underline th-header-time-link"
-                href={getTweetUrl(tweet)}
-              >
-                {getTimeDiff(tweet.time)}
-              </a>
-            </div>
-          </div>
-          <div class="th-reply">{reply_text}</div>
-          <div class="th-text z-10 select-text">{reformattedText(tweet)}</div>
-          {maybeMedia(tweet)}
-          {maybeQuote(tweet)}
-          <div class="th-icons">
-            <ReplyAction tweet={_tweet} />
-            <RetweetAction tweet={_tweet} />
-            <LikeAction tweet={_tweet} />
-            <CopyAction
-              url={
-                isNil(prop('unavailable', tweet)) ? getTweetUrl(tweet) : null
-              }
-              setCopyText={setCopyText}
-            />
-            {/* <div class="th-icon-field">
-              <div class="th-share-container">
-                <ShareIcon />
+        <div class="flex-grow">
+          <div>
+            <div class="flex flex-shrink font-medium text-lsm">
+              <div class="flex-initial text-lsm font-bold overflow-ellipsis whitespace-nowrap overflow-hidden">
+                <a href={getUserUrl(tweet.username)}>{tweet.name}</a>
               </div>
-            </div> */}
+              <div class="flex-initial ml-1 text-neutral overflow-ellipsis whitespace-nowrap overflow-hidden">
+                <a href={getUserUrl(tweet.username)}>@{tweet.username}</a>
+              </div>
+              <div class="px-1 text-neutral">·</div>
+              <div class="flex-none text-neutral">
+                <a class="hover:underline" href={getTweetUrl(tweet)}>
+                  {getTimeDiff(tweet.time)}
+                </a>
+              </div>
+            </div>
+            <div class="flex-none">
+              <div class="text-neutral">{reply_text}</div>
+              {reformattedText(tweet)}
+            </div>
+            {maybeMedia(tweet)}
+            {maybeQuote(tweet)}
+          </div>
+          <div class="mt-3 max-w-md	flex justify-between text-neutral">
+            <div>
+              <ReplyAction tweet={_tweet} />
+            </div>
+            <div>
+              <RetweetAction tweet={_tweet} />
+            </div>
+            <div>
+              <LikeAction tweet={_tweet} />
+            </div>
+            <div></div>
           </div>
         </div>
       </div>
-      {/* {isNil(tweet.unavailable) ? (
-        <div
-          class="th-hover absolute inset-0 rounded-sm bg-opacity-0 flex items-center justify-center bg-gray-200 hover:cursor-default hover:bg-opacity-70"
-          onClick={onClick}
-        >
-          <textarea
-            style="display: none"
-            id={`th-link-${tweet.id}`}
-            class="th-link"
-            ref={linkField}
-          >
-            {getTweetUrl(tweet)}
-          </textarea>
-          <div class="flex flex-col bg-transparent items-center">
-            <div class="text-base font-medium bg-transparent z-20">
-              <div class="text-mainBg">{copyText}</div>
-              {!(isNil(score) || isProduction) && (
-                <div class="text-green-400">{`score: ${score.toFixed(2)}`}</div>
-              )}
-            </div>
-          </div>
-        </div>
-      ) : (
-        <UnavailableHover score={score} />
-      )} */}
     </div>
+    // <div class="th-tweet-container">
+    //   <div class="th-tweet">
+    //     <div class="th-gutter">
+    //       <div class="z-10">
+    //         <a href={getUserUrl(tweet.username)}>
+    //           <img
+    //             class="th-profile"
+    //             src={prop('profile_image', tweet) ?? defaultProfilePic}
+    //           />
+    //         </a>
+    //       </div>
+    //     </div>
+    //     <div class="th-body">
+    //       <div class="th-header">
+    //         <div class="th-header-name z-10 hover:underline">
+    //           <a href={getUserUrl(tweet.username)}>{tweet.name}</a>
+    //         </div>
+    //         <div class="th-header-username z-10">
+    //           <a href={getUserUrl(tweet.username)}>@{tweet.username}</a>
+    //         </div>
+    //         <div class="th-header-dot">·</div>
+    //         <div class="th-header-time">
+    //           <a
+    //             class="hover:underline th-header-time-link"
+    //             href={getTweetUrl(tweet)}
+    //           >
+    //             {getTimeDiff(tweet.time)}
+    //           </a>
+    //         </div>
+    //       </div>
+    //       <div class="th-reply">{reply_text}</div>
+    //       <div class="th-text z-10 select-text">{reformattedText(tweet)}</div>
+    //       {maybeMedia(tweet)}
+    //       {maybeQuote(tweet)}
+    //       <div class="th-icons">
+    //         <ReplyAction tweet={_tweet} />
+    //         <RetweetAction tweet={_tweet} />
+    //         <LikeAction tweet={_tweet} />
+    //         {/* <div class="th-icon-field">
+    //           <div class="th-share-container">
+    //             <ShareIcon />
+    //           </div>
+    //         </div> */}
+    //       </div>
+    //     </div>
+    //   </div>
+    //   {isNil(tweet.unavailable) ? (
+    //     <div
+    //       class="th-hover absolute inset-0 rounded-sm bg-opacity-0 flex items-center justify-center bg-gray-200 hover:cursor-default hover:bg-opacity-70"
+    //       onClick={onClick}
+    //     >
+    //       <textarea
+    //         style="display: none"
+    //         id={`th-link-${tweet.id}`}
+    //         class="th-link"
+    //         ref={linkField}
+    //       >
+    //         {getTweetUrl(tweet)}
+    //       </textarea>
+    //       <div class="flex flex-col bg-transparent items-center">
+    //         <div class="text-base font-medium bg-transparent z-20">
+    //           <div class="text-mainBg">{copyText}</div>
+    //           {!(isNil(score) || isProduction) && (
+    //             <div class="text-green-400">{`score: ${score.toFixed(2)}`}</div>
+    //           )}
+    //         </div>
+    //       </div>
+    //     </div>
+    //   ) : (
+    //     <UnavailableHover score={score} />
+    //   )}
+    // </div>
   );
 }
 
