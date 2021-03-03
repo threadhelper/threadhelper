@@ -4,6 +4,11 @@ module.exports = {
   purge: ['./src/**/*.{js,jsx,ts,tsx}'],
   darkMode: false, // or 'media' or 'class'
   theme: {
+    extend: {
+      spacing: {
+        128: '32rem',
+      },
+    },
     colors: {
       accent: 'var(--accent-color)', // exists
       lightAccent: 'var(--light-accent-color)',

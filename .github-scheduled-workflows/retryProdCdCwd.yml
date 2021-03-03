@@ -6,7 +6,7 @@ on:
 jobs:
   retryTesterCwdDeploy:
     env:
-      DEV_EXTENSION_ID: 'dkclpenpaealjpjmgjfgcbjejobimjnj' # Chrome test page id
+      PROD_EXTENSION_ID: 'nfadnflafdfmekapgcgddbccooagpndk' # Chrome production page id
       CLIENT_ID: '990187593175-iurgn499pfh1urue4smreg0ato5fftee.apps.googleusercontent.com'
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
@@ -32,7 +32,7 @@ jobs:
         uses: trmcnvn/chrome-addon@v2
         with:
           # ID of the extension that you are updating
-          extension: ${{env.DEV_EXTENSION_ID}} # optional
+          extension: ${{env.PROD_EXTENSION_ID}} # optional
           # Path to a .zip of your addon
           zip: dist/threadhelper.zip # optional
           # Google OAuth2 client id

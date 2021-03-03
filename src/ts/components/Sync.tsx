@@ -21,6 +21,7 @@ export function SyncIcon() {
         (sync ? `Last synced: ${getTimeDiff(lastUpdated)} ago.` : `Syncing...`)
       }
       direction="bottom"
+      delay={100}
     >
       <div
         class={

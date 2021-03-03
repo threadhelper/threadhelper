@@ -51,6 +51,7 @@ import {
   inspect,
   wTimeFn,
   promiseStream,
+  toggleDebug,
 } from './utils/putils';
 import * as db from './worker/idb_wrapper';
 import { loadIndex, makeIndex, search, updateIndex } from './worker/nlp';
@@ -70,9 +71,9 @@ import {
 
 const wSelf: Worker = self as any;
 // Project business
-// var DEBUG = process.env.NODE_ENV != 'production';
+var DEBUG = process.env.NODE_ENV != 'production';
 // toggleDebug(null, DEBUG);
-// toggleDebug(wSelf, DEBUG);
+toggleDebug(wSelf, DEBUG);
 (Kefir.Property.prototype as any).currentValue = currentValue;
 // Stream clean up
 const subscriptions: Subscription[] = [];

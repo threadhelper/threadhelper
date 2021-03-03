@@ -24,6 +24,7 @@ import { ArchTweet, thTweet, TweetId } from '../types/tweetTypes';
 import {
   apiSearchToTweet,
   archPatchQtId,
+  getArchUserId,
   getRTOwner,
   patchArchivePrep,
 } from './tweetImporter';
@@ -275,7 +276,7 @@ export const userLookupQuery = curry(
     const nameRE = /[\w+]{1,15}\b/;
     const fetch100Ids = (ids: string[]): Promise<User[]> => {
       const userIds = ids.filter(R.test(idRE));
-      const userNames = ids.filter(R.test(nameRE));
+      const userNames = R.difference(ids.filter(R.test(nameRE)), userIds);
       console.log('userLookupQuery', { userIds, userNames });
       return fetchTweets(makeUserLookupUrl(userIds, userNames), auth);
     };
@@ -353,8 +354,25 @@ const unpackApiTweets = pipe(path(['globalObjects', 'tweets']), (x) =>
 const unpackApiUsers = pipe(path(['globalObjects', 'users']));
 // const assocUserToTweet = (users, tweet) => ({ ...tweet, user: users[tweet.user_id_str] })
 const assocUser = curry(
-  (users: { [x: string]: User }, tweet: Tweet | ArchTweet) =>
-    assoc('user', users[tweet.user_id_str], tweet)
+  (users: { [x: string]: User }, tweet: Tweet | ArchTweet) => {
+    const user = prop(prop('user_id_str', tweet), users);
+    return assoc(
+      'user',
+      user, // undefined users (e.g. deleted accounts) will be null
+      tweet
+    ); //
+  }
+);
+const assocUserArch = curry(
+  (users: { [x: string]: User }, tweet: Tweet | ArchTweet) => {
+    const user = prop(path(['user', 'id_str'], tweet), users);
+    if (isNil(user)) return tweet;
+    return assoc(
+      'user',
+      user, // undefined users (e.g. deleted accounts) will be null
+      tweet
+    );
+  }
 );
 // const assocQT =  curry((qts, tweet) => assoc('quote', qts[tweet.quoted_status_id_str], tweet))
 const assocQT = curry((qts: { [x: string]: Tweet }, tweet: Tweet | ArchTweet):
@@ -389,8 +407,9 @@ const getUsers = curry(
     pipe(
       () => tweets,
       // unpackApiTweets,
-      map(prop('user_id')),
-      filter(pipe(isNil, not)),
+      map(path(['user', 'id_str'])),
+      inspect('before user lookupquery'),
+      filter(pipe(R.either(isNil, R.equals('-1')), not)), // deleted accounts get -1 user_id
       R.uniq,
       userLookupQuery(auth),
       andThen(indexBy(prop('id_str'))),
@@ -402,7 +421,7 @@ const getUsers = curry(
 const getArchiveOwner = async (auth, archive: ArchTweet[]): Promise<User> => {
   console.log('getArchiveOwner', { auth, archive });
   for (const t of archive) {
-    if (pipe(getRTOwner, isNil)(t)) {
+    if (pipe(getArchUserId, prop('id_str'), isNil)(t)) {
       console.log('ownTweet', { t });
       const ownTweetRes = await tweetLookupQuery(auth, [t.id_str]);
       console.log('ownTweetRes', { ownTweetRes });
@@ -436,7 +455,8 @@ export async function patchArchive(
   const authGetUsers = () => getUsers(auth, patchedArch);
   const qts = await loopRetry(authGetQTs);
   const users = await loopRetry(authGetUsers);
-  const res = await map(pipe(assocQT(qts), assocUser(users)), patchedArch);
+  const _users = assoc(prop('id_str', archOwner), archOwner, users);
+  const res = await map(pipe(assocQT(qts), assocUserArch(_users)), patchedArch);
   console.log('patchArchive', { res, users, prep: patchedArch });
   return await res;
 }

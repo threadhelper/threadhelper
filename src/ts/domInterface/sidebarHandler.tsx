@@ -21,6 +21,7 @@ export function makeSidebarHome() {
 // impure
 export function injectSidebarHome(thBar: Element) {
   removeSearchBar();
+  resizeSidebar();
   let sidebarElement = document.querySelector(sideBarSelector);
   if (!isNil(sidebarElement)) {
     let innerSidebar =
@@ -114,19 +115,18 @@ export function makeSearchBarObserver(): Observable<Element, any> {
 export function removeSearchBar(_?) {
   const sidebarElement = document.querySelector(sideBarSelector);
   const istTh = (el) => el.className.includes('sug_home');
-  const isUserPhotos = (el) =>
-    inspect('isUserPhotos', !isNil(el.querySelector(photoHrefSelector)));
+  const isUserPhotos = (el) => !isNil(el.querySelector(photoHrefSelector));
   const slot =
     sidebarElement.firstElementChild.lastElementChild.firstElementChild
       .firstElementChild.firstElementChild;
-  console.log('deleting sidebar children', { children: slot.children });
+  // console.log('deleting sidebar children', { children: slot.children });
   Array.from(slot.children).forEach((el: Element) => {
     if (istTh(el) || isUserPhotos(el)) {
-      console.log('skipped', el);
+      // console.log('skipped', el);
       return;
     }
     try {
-      console.log('removing', el);
+      // console.log('removing', el);
       el.remove();
     } catch (e) {
       console.error("Couldn't remove sidebar element", { slot, el });
@@ -148,6 +148,31 @@ export function removeSearchBar(_?) {
   // } catch (e) {
   //   console.error("Couldn't remove search bar", { bar, e });
   // }
+}
+export function resizeSidebar() {
+  const sidebarElement = document.querySelector(
+    sideBarSelector + ' div div div div div'
+  );
+  console.log('[DEBUG] resizeSidebar', { sidebarElement });
+  sidebarElement.classList.add('2xl:w-128');
+}
+
+// export function resizeSidebar(ttSidebar) {
+//   const sidebarElement = document.querySelector(sideBarSelector);
+//   console.log('[DEBUG] resizeSidebar', { ttSidebar });
+//   ttSidebar.classList.add('2xl:w-136');
+// }
+
+export function ttSidebarObserver() {
+  const ttSidebar$ = obsAdded(
+    document,
+    sideBarSelector + ' div div div div div',
+    false
+  ); // trendAdd$ :: Element // Trends element is added
+  const inits =
+    document.querySelector(sideBarSelector + ' div div div div div') ?? [];
+  console.log({ inits });
+  return Kefir.merge([Kefir.sequentially(1, inits).take(1), ttSidebar$]);
 }
 
 // Produces events every time a sidebar should be created (trends sidebar shows up or compose screen comes up)

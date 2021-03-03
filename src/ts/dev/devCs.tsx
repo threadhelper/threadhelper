@@ -15,18 +15,6 @@ import {
 import 'chrome-extension-async';
 import { defaultTo, prop } from 'ramda';
 
-// Talking to bg
-// const bgOpts = {
-//   //   permitMessage: (payload, sender) => true,
-// };
-// const extTransport = new BrowserExtensionTransport(bgOpts);
-// const bgRpc = new WranggleRpc({
-//   transport: extTransport,
-//   channel: 'bgFetch1',
-//   //   debug: true,
-// });
-// const remote = bgRpc.remoteInterface();
-
 const rpcBg = async (fnName, args?) => {
   try {
     return await chrome.runtime.sendMessage({
@@ -44,29 +32,11 @@ const fetchBg = async (url, options) => {
   return rpcBg('fetchBg', { url, options });
 };
 const getAuth = async () => {
-  console.log('getAuth');
   const auth = await getData('auth');
   console.log('getAuth1', auth);
   setDataLocalSync(auth);
   return auth;
 };
-// const fetchBg = async (url, init?) => {
-//   console.log('fetchBg in cs', { url });
-//   var data = [];
-//   try {
-//     var dataP = remote.fetchBg('hello');
-//     dataP.updateTimeout(5000);
-//     console.log({ info: dataP.info() });
-//     data = await dataP;
-//   } catch (error) {
-//     console.error(error);
-//   }
-//   return data;
-
-//   console.log('got bg response', { data });
-//   const response = await remote.fetchBg('memes', '');
-//   return response;
-// };
 
 // Talking to serve dev pPlayground
 const opts = { targetWindow: window, shouldReceive: (x) => true };
@@ -77,13 +47,6 @@ const rpc = new WranggleRpc({
   //   debug: true,
 });
 rpc.addRequestHandler('fetchBg', fetchBg);
-
-// const scrapeRpc = new WranggleRpc({
-//   transport: new PostMessageTransport(opts),
-//   channel: 'scraper',
-//   //   debug: true,
-// });
-// scrapeRpc.addRequestHandler('getAuth', getAuth);
 
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   console.log(
@@ -96,9 +59,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 
 //init auth
 getAuth();
-const storageChange$ = makeStorageChangeObs();
-storageChange$.log('storageChange$');
-const auth$ = storageChange$
+const auth$ = makeStorageChangeObs()
   .filter((x: { itemName: string }) => x.itemName == 'auth')
   .map(prop('newVal'));
 auth$.onValue((val) => {

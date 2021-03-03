@@ -22,7 +22,7 @@ module.exports = function (configDirs) {
     new WebpackExtensionManifestPlugin({
       config: {
         base: baseManifest,
-        extend: { version: pkg.version },
+        extend: { version: pkg.publicVersion },
       },
     }),
     new ZipPlugin({ filename: 'threadhelper.zip' }),

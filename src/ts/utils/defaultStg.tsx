@@ -33,7 +33,7 @@ export const defaultStorage = (): StorageInterface => {
     auth: { authorization: null, 'x-csrf-token': null, name: 'empty_auth' },
     userInfo: {},
     doRefreshIdb: false,
-    showPatchNotes: true,
+    showPatchNotes: false,
   };
 };
 
@@ -59,6 +59,6 @@ export const devStorage = (): StorageInterface => {
     auth: { authorization: null, 'x-csrf-token': null, name: 'devEmptyAuth' },
     userInfo: {},
     doRefreshIdb: false,
-    showPatchNotes: true,
+    showPatchNotes: false,
   };
 };

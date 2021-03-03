@@ -14,6 +14,7 @@ import RetweetIcon from '../../images/retweet.svg';
 import LikeIcon from '../../images/like.svg';
 import FullLikeIcon from '../../images/like_full.svg';
 import PencilIcon from '../../images/pencil.svg';
+import LinkIcon from '../../images/link.svg';
 import { andThen, any, defaultTo, isNil, last, pipe, prop } from 'ramda';
 import {
   sendLikeRequest,
@@ -28,6 +29,7 @@ import { apiSearchToTweet } from '../bg/tweetImporter';
 import { inspect } from '../utils/putils';
 import { DropdownMenu } from './Dropdown';
 import defaultProfilePic from '../../images/defaultProfilePic.png';
+import Tooltip from './Tooltip';
 
 const isProduction = process.env.NODE_ENV != 'development';
 
@@ -117,7 +119,7 @@ const RetweetAction = ({ tweet }: { tweet: thTweet }) => {
   };
 
   return (
-    <div class="relative flex-grow">
+    <div class="relative flex flex-grow">
       <div class="th-icon-field ">
         <div
           class={
@@ -198,6 +200,55 @@ const LikeAction = ({ tweet }) => {
   );
 };
 
+export const CopyAction = ({
+  url,
+  setCopyText,
+}: {
+  url: string | null;
+  setCopyText;
+}) => {
+  const linkField = useRef(null);
+  const [copied, setCopied] = useState(false);
+
+  let copyUrl = function (e: Event) {
+    if (isNil(url)) return;
+    csEvent('User', 'Clicked tweet', '');
+
+    const input = getActiveComposer();
+    linkField.current.style.display = 'flex';
+    linkField.current.select();
+    document.execCommand('copy');
+    linkField.current.style.display = 'none';
+
+    selectComposer(input);
+    setCopied(true);
+    setTimeout(function () {
+      setCopied(false);
+    }, 1000);
+    return;
+  };
+
+  return (
+    <div class="th-icon-field">
+      <textarea class="th-link hidden" ref={linkField}>
+        {url}
+      </textarea>
+
+      <Tooltip content={'Copy URL'} direction="bottom">
+        <div
+          class={
+            'th-share-container inline-flex items-center' +
+            (isNil(url) ? 'text-red-200' : '')
+          }
+          onClick={copyUrl}
+        >
+          <LinkIcon /> <span class="ml-1">{copied ? 'copied!' : null}</span>
+        </div>
+      </Tooltip>
+    </div>
+  );
+};
+
 export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
   // placeholder is just text
   // const [auth, setAuth] = useStorage('auth', null);
@@ -208,7 +259,6 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
   // const [rtCount, setRtCount] = useState(0);
   // const [rtActive, setRtActive] = useState(false);
   // const [favActive, setFavActive] = useState(false);
-  const linkField = useRef(null);
 
   const setCounts = (t) => {
     // setReplyCount(t.reply_count ?? 0);
@@ -244,23 +294,6 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
     tweet.has_media ? renderMedia(tweet.media, 'th-media') : '';
   const maybeQuote = (tweet) =>
     tweet.has_quote ? renderQuote(tweet.quote, tweet.has_media) : '';
-
-  let onClick = function (e: Event) {
-    csEvent('User', 'Clicked tweet', '');
-
-    const input = getActiveComposer();
-    linkField.current.style.display = 'flex';
-    linkField.current.select();
-    document.execCommand('copy');
-    linkField.current.style.display = 'none';
-
-    selectComposer(input);
-    setCopyText('copied!');
-    setTimeout(function () {
-      setCopyText('copy');
-    }, 1000);
-    return;
-  };
 
   return (
     <div class="p-4 border-b border-borderBg">
