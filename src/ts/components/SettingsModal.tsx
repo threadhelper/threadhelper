@@ -262,10 +262,8 @@ export const SecretModal = ({ setOpen }) => {
       <div
         style={{
           width: '560px',
-          'background-color': 'var(--main-bg-color)',
-          color: 'var(--main-txt-color)',
         }}
-        class="bg-white max-w-full p-6 rounded-lg text-lg shadow-lg"
+        class="bg-white text-mainTxt max-w-full p-6 rounded-lg text-lg shadow-lg"
       >
         {/* header */}
         <div class="text-sm  w-full mb-5">

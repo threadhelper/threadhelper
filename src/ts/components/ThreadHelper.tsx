@@ -69,9 +69,20 @@ const updateFeedDisplay = (
 export default function ThreadHelper(props: any) {
   const [active, setActive] = useState(true);
   const myRef = useRef(null);
+  const [showPatchNotes, setShowPatchNotes] = useStorage(
+    'showPatchNotes',
+    false
+  );
 
   return (
     <div class="ThreadHelper" ref={myRef}>
+      {showPatchNotes && (
+        <Banner
+          text="New TH update!"
+          redirect="https://www.notion.so/Patch-Notes-afab29148a0c49358df0e55131978d48"
+          onDismiss={() => setShowPatchNotes(false)}
+        />
+      )}
       <Sidebar active={active} />
     </div>
   );
@@ -82,35 +93,17 @@ var renderCount = 0;
 function Sidebar(props: { active: any }) {
   // const [feedDisplayMode, setFeedDisplayMode] = useState('idle');
   const [auth, setAuth] = useStorage('auth', {});
-  const [showPatchNotes, setShowPatchNotes] = useStorage(
-    'showPatchNotes',
-    false
-  );
+
   const [feedDisplayMode, dispatchFeedDisplayMode] = useReducer(
     updateFeedDisplay,
     DisplayMode.Idle
   );
-  renderCount += 1;
-  console.log(`Sidebar render ${renderCount}`);
-
-  // useEffect(() => {
-  //   console.log({ auth });
-  //   return () => {};
-  // }, [auth]);
-
   return (
     <FeedDisplayMode.Provider
       value={{ feedDisplayMode, dispatchFeedDisplayMode }}
     >
       <AuthContext.Provider value={auth}>
         <div class="sidebar">
-          {showPatchNotes && (
-            <Banner
-              text="New TH update!"
-              redirect="https://www.notion.so/Patch-Notes-afab29148a0c49358df0e55131978d48"
-              onDismiss={() => setShowPatchNotes(false)}
-            />
-          )}
           <TtReader />
           <ApiSearchBar />
           <DisplayController />
