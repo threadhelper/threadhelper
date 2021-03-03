@@ -85,18 +85,10 @@ export function ApiSearchBar() {
             // }}
           >
             {' '}
-            <SearchIcon
-              class="h-4 w-4 mr-4 text-accent fill-default stroke-default"
-              // style="fill:var(--accent-color); stroke:var(--accent-color)"
-            />{' '}
+            <SearchIcon class="h-4 w-4 mr-4 text-accent fill-default stroke-default" />{' '}
             <input
               ref={inputObj}
               class="outline-none text-mainTxt bg-mainBg"
-              // style={{
-              //   backgroundColor: 'var(--main-bg-color)',
-              //   // border: '0px',
-              //   color: 'var(--main-txt-color)',
-              // }}
               value={value}
               onInput={(e) =>
                 setValue(defaultTo('', path(['target', 'value'], e)))
