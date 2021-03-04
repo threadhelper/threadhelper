@@ -60,11 +60,13 @@ export const ReplyAction = ({ tweet }) => {
   }, []);
 
   return (
-    <div class="th-icon-field">
-      <div class="th-reply-container inline-flex items-center">
+    <div class="flex">
+      <div class="w-5 inline-flex items-center">
         <ReplyIcon />{' '}
-        <span class="ml-1">{count > 0 ? formatNumber(count) : ''}</span>
       </div>
+      <span class="px-3 inline-flex" style={{ minWidth: 'calc(1em + 24px)' }}>
+        {count > 0 ? formatNumber(count) : ''}
+      </span>
     </div>
   );
 };
@@ -119,26 +121,21 @@ const RetweetAction = ({ tweet }: { tweet: thTweet }) => {
   };
 
   return (
-    <div class="relative flex flex-grow">
-      <div class="th-icon-field ">
-        <div
-          class={
-            (active ? `text-green-600` : ``) +
-            ' th-rt-container inline-flex items-center'
-          }
-          // onClick={active ? offFunc : onFunc}
-          onClick={() => {
-            setOpen(!open);
-          }}
-        >
-          {active ? (
-            <RetweetIcon class={`stroke-1 stroke-current fill-current`} />
-          ) : (
-            <RetweetIcon />
-          )}
-          <span class="ml-1">{count > 0 ? formatNumber(count) : ''}</span>
-        </div>
+    <div class="flex">
+      <div
+        class={
+          (active ? `text-green-600 ` : ``) + 'w-5 inline-flex items-center'
+        }
+        // onClick={active ? offFunc : onFunc}
+        onClick={() => {
+          setOpen(!open);
+        }}
+      >
+        {active ? <RetweetIcon class={`fill-current`} /> : <RetweetIcon />}
       </div>
+      <span class="px-3 inline-flex" style={{ minWidth: 'calc(1em + 24px)' }}>
+        {count > 0 ? formatNumber(count) : ''}
+      </span>
       {open && (
         <DropdownMenu
           name={'rt-button'}
@@ -180,22 +177,17 @@ const LikeAction = ({ tweet }) => {
   };
 
   return (
-    <div class="th-icon-field">
+    <div class="flex">
       <div
-        class={
-          (active ? `text-red-700` : ``) +
-          ' th-like-container inline-flex items-center'
-        }
+        class={(active ? `text-red-700 ` : ``) + 'w-5 inline-flex items-center'}
         onClick={active ? offFunc : onFunc}
       >
-        {active ? (
-          <FullLikeIcon class={`stroke-1 stroke-current fill-current`} />
-        ) : (
-          <LikeIcon />
-        )}
+        {active ? <FullLikeIcon class={`fill-current`} /> : <LikeIcon />}
         {'  '}
-        <span class="ml-1">{count > 0 ? formatNumber(count) : ''}</span>
       </div>
+      <span class="px-3 inline-flex" style={{ minWidth: 'calc(1em + 24px)' }}>
+        {count > 0 ? formatNumber(count) : ''}
+      </span>
     </div>
   );
 };
@@ -332,13 +324,13 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
             {maybeQuote(tweet)}
           </div>
           <div class="mt-3 max-w-md	flex justify-between text-neutral">
-            <div>
+            <div class="flex">
               <ReplyAction tweet={_tweet} />
             </div>
-            <div>
+            <div class="flex">
               <RetweetAction tweet={_tweet} />
             </div>
-            <div>
+            <div class="flex">
               <LikeAction tweet={_tweet} />
             </div>
             <div></div>
@@ -572,47 +564,19 @@ function reformatText(
 }
 
 function renderMedia(media: string | any[], className: string) {
-  // let topImgs: Element[] = []
-  // let botImgs: Element[] = []
-  let topImgs: JSX.Element[] = [];
-  let botImgs: JSX.Element[] = [];
-  if (media.length > 0) {
-    topImgs.push(
-      <div class="th-media-image">
-        <img src={media[0].url} />
-      </div>
-    );
-  }
-  if (media.length > 1) {
-    topImgs.push(
-      <div class="th-media-image">
-        <img src={media[1].url} />
-      </div>
-    );
-  }
-  if (media.length > 2) {
-    botImgs.push(
-      <div class="th-media-image">
-        <img src={media[2].url} />
-      </div>
-    );
-  }
-  if (media.length > 3) {
-    botImgs.push(
-      <div class="th-media-image">
-        <img src={media[3].url} />
-      </div>
-    );
-  }
+  //@miguel: I had to refactor this code, hope you understand why :)
+  let images = Array.isArray(media) ? media : [media];
 
-  let top = <div class="th-media-top">{topImgs}</div>;
-  let bottom =
-    botImgs.length <= 0 ? '' : <div class="th-media-bottom">{botImgs}</div>;
+  const imgs = images.map((e) => (
+    <div class="th-media-image">
+      <img src={e.url} />
+    </div>
+  ));
 
   return (
     <div class={className}>
-      {top}
-      {bottom}
+      <div class="th-media-top">{imgs.slice(0, 2)}</div>
+      <div class="th-media-bottom">{imgs.slice(2, 4)}</div>
     </div>
   );
 }
