@@ -254,7 +254,6 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
   // const [auth, setAuth] = useStorage('auth', null);
   const [copyText, setCopyText] = useState('copy');
   const [_tweet, setTweet] = useState(tweet);
-  const [hover, setHover] = useState(false);
   // const [favCount, setFavCount] = useState(0);
   // const [replyCount, setReplyCount] = useState(0);
   // const [rtCount, setRtCount] = useState(0);
@@ -298,8 +297,7 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
 
   return (
     <div
-      onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
-      class={`p-4 border-b border-borderBg transition-colors duration-200 cursor-pointer ${hover ? "bg-white bg-opacity-5 " : ""}` }>
+      class="p-4 border-b border-borderBg transition-colors duration-200 cursor-pointer hover:bg-white hover:bg-opacity-5">
       <div class="flex">
         <div class="flex-none mr-3">
           <div class="w-9 h-9">
@@ -615,35 +613,76 @@ function renderQuote(quote: thTweet, parent_has_media) {
         mainmedia = renderMedia(quote.media, 'th-quote-content-main-media');
       }
     }
-    let template = (
-      <div class="th-quote">
-        <div class="th-quote-header">
-          <img
-            class="th-quote-header-profile"
-            src={prop('profile_image', quote) ?? defaultProfilePic}
-          />
-          <div class="th-quote-header-name">{quote.name}</div>
-          <div class="th-quote-header-username">@{quote.username}</div>
-          <div class="th-header-dot">·</div>
-          <div class="th-quote-header-time">
-            <a
-              class="hover:underline th-quote-header-time-link"
-              href={getTweetUrl(quote)}
-            >
+
+    const template = (
+      <div
+      class="p-3 mt-3 border border-borderBg rounded-2xl transition-colors duration-200 cursor-pointer hover:bg-white hover:bg-opacity-5">
+      <div class="flex">
+        <div class="flex flex-shrink font-medium text-lsm items-center h-6">
+          <div class="w-5 h-5 mr-2 flex items-center justify-center">
+            <a href={getUserUrl(quote.username)}>
+              <img
+                class="rounded-full"
+                src={prop('profile_image', quote) ?? defaultProfilePic}
+              />
+            </a>
+          </div>
+          <div class="flex-initial text-lsm font-bold overflow-ellipsis whitespace-nowrap overflow-hidden leading-none">
+            <a href={getUserUrl(quote.username)}>
+              {quote.name}
+            </a>
+          </div>
+          <div class="flex-initial ml-1 text-neutral overflow-ellipsis whitespace-nowrap overflow-hidden leading-none">
+            <a href={getUserUrl(quote.username)}>
+              @{quote.username}
+            </a>
+          </div>
+          <div class="px-1 text-neutral leading-none">·</div>
+          <div class="flex-none text-neutral leading-none">
+            <a class="hover:underline" href={getTweetUrl(quote)}>
               {timeDiff}
             </a>
           </div>
         </div>
-        <div class="th-quote-reply">{replyText}</div>
-        <div class="th-quote-content">
-          {minimedia}
-          <div class="th-quote-content-main">
-            <div class="th-text">{text}</div>
-            {mainmedia}
-          </div>
-        </div>
       </div>
-    );
+      <div>
+        <div class="text-neutral">{replyText}</div>
+        {text}
+        { /*TODO add media*/ }
+      </div>
+    </div>
+    )
+
+
+    // let template = (
+    //   <div class="th-quote">
+    //     <div class="th-quote-header">
+    //       <img
+    //         class="th-quote-header-profile"
+    //         src={prop('profile_image', quote) ?? defaultProfilePic}
+    //       />
+    //       <div class="th-quote-header-name">{quote.name}</div>
+    //       <div class="th-quote-header-username">@{quote.username}</div>
+    //       <div class="th-header-dot">·</div>
+    //       <div class="th-quote-header-time">
+    //         <a
+    //           class="hover:underline th-quote-header-time-link"
+    //           href={getTweetUrl(quote)}
+    //         >
+    //           {timeDiff}
+    //         </a>
+    //       </div>
+    //     </div>
+    //     <div class="th-quote-reply">{replyText}</div>
+    //     <div class="th-quote-content">
+    //       {minimedia}
+    //       <div class="th-quote-content-main">
+    //         <div class="th-text">{text}</div>
+    //         {mainmedia}
+    //       </div>
+    //     </div>
+    //   </div>
+    // );
     return template;
   } else {
     let template = (
