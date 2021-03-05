@@ -53,6 +53,7 @@ const formatNumber = function (number) {
 const countReplies = (t) => t.reply_count ?? 0;
 export const ReplyAction = ({ tweet }) => {
   const [count, setCount] = useState(countReplies(tweet));
+  const [hover, setHover] = useState(false);
 
   useEffect(() => {
     setCount(countReplies(tweet));
@@ -60,8 +61,17 @@ export const ReplyAction = ({ tweet }) => {
   }, []);
 
   return (
-    <div class="flex">
-      <div class="w-5 inline-flex items-center">
+    <div
+      class="flex cursor-pointer"
+      onMouseOver={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
+      <div class="relative w-5 inline-flex items-center justify-center">
+        <div
+          class={`absolute inset-0 rounded-full -m-2 transition-colors duration-200 ${
+            hover ? 'bg-blue-600 bg-opacity-10 ' : ''
+          }`}
+        ></div>
         <ReplyIcon />{' '}
       </div>
       <span class="px-3 inline-flex" style={{ minWidth: 'calc(1em + 24px)' }}>
@@ -79,6 +89,7 @@ const RetweetAction = ({ tweet }: { tweet: thTweet }) => {
   const [id, setId] = useState(tweet.id);
   const auth = useContext(AuthContext);
   const [open, setOpen] = useState(false);
+  const [hover, setHover] = useState(false);
 
   useEffect(() => {
     setActive(tweet.retweeted ?? false);
@@ -121,19 +132,31 @@ const RetweetAction = ({ tweet }: { tweet: thTweet }) => {
   };
 
   return (
-    <div class="flex">
+    <div
+      class="flex cursor-pointer"
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
       <div
-        class={
-          (active ? `text-green-600 ` : ``) + 'w-5 inline-flex items-center'
-        }
+        class={`relative w-5 inline-flex items-center ${
+          active || hover ? 'text-green-600 ' : ''
+        }`}
         // onClick={active ? offFunc : onFunc}
         onClick={() => {
           setOpen(!open);
         }}
       >
+        <div
+          class={`absolute inset-0 rounded-full -m-2 transition-colors duration-200 ${
+            hover ? 'bg-green-600 bg-opacity-10 ' : ''
+          }`}
+        ></div>
         {active ? <RetweetIcon class={`fill-current`} /> : <RetweetIcon />}
       </div>
-      <span class="px-3 inline-flex" style={{ minWidth: 'calc(1em + 24px)' }}>
+      <span
+        class={`px-3 inline-flex ${active || hover ? 'text-green-600 ' : ''}`}
+        style={{ minWidth: 'calc(1em + 24px)' }}
+      >
         {count > 0 ? formatNumber(count) : ''}
       </span>
       {open && (
@@ -156,6 +179,7 @@ const LikeAction = ({ tweet }) => {
   const [active, setActive] = useState(tweet.favorited ?? false);
   const [count, setCount] = useState(countFavs(tweet));
   const [id, setId] = useState(count);
+  const [hover, setHover] = useState(false);
   const auth = useContext(AuthContext);
 
   useEffect(() => {
@@ -177,15 +201,33 @@ const LikeAction = ({ tweet }) => {
   };
 
   return (
-    <div class="flex">
+    <div
+      class="flex cursor-pointer"
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
       <div
-        class={(active ? `text-red-700 ` : ``) + 'w-5 inline-flex items-center'}
+        class={
+          (active ? `text-red-700 ` : ``) +
+          'w-5 inline-flex items-center relative'
+        }
         onClick={active ? offFunc : onFunc}
       >
-        {active ? <FullLikeIcon class={`fill-current`} /> : <LikeIcon />}
-        {'  '}
+        <div
+          class={`absolute inset-0 rounded-full -m-2 transition-colors duration-200 ${
+            hover ? 'bg-red-600 bg-opacity-10 ' : ''
+          }`}
+        ></div>
+        {active ? (
+          <FullLikeIcon class={`fill-current`} />
+        ) : (
+          <LikeIcon class={`fill-current ${hover ? 'text-red-700' : ''}`} />
+        )}
       </div>
-      <span class="px-3 inline-flex" style={{ minWidth: 'calc(1em + 24px)' }}>
+      <span
+        class={`px-3 inline-flex ${active || hover ? `text-red-700 ` : ``}`}
+        style={{ minWidth: 'calc(1em + 24px)' }}
+      >
         {count > 0 ? formatNumber(count) : ''}
       </span>
     </div>
@@ -246,6 +288,7 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
   // const [auth, setAuth] = useStorage('auth', null);
   const [copyText, setCopyText] = useState('copy');
   const [_tweet, setTweet] = useState(tweet);
+  const [hover, setHover] = useState(false);
   // const [favCount, setFavCount] = useState(0);
   // const [replyCount, setReplyCount] = useState(0);
   // const [rtCount, setRtCount] = useState(0);
@@ -288,7 +331,13 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
     tweet.has_quote ? renderQuote(tweet.quote, tweet.has_media) : '';
 
   return (
-    <div class="p-4 border-b border-borderBg">
+    <div
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      class={`p-4 border-b border-borderBg transition-colors duration-200 cursor-pointer ${
+        hover ? 'bg-white bg-opacity-5 ' : ''
+      }`}
+    >
       <div class="flex">
         <div class="flex-none mr-3">
           <div class="w-9 h-9">
