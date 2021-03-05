@@ -28,6 +28,7 @@ import { AuthContext } from './ThreadHelper';
 import { apiSearchToTweet } from '../bg/tweetImporter';
 import { inspect } from '../utils/putils';
 import { DropdownMenu } from './Dropdown';
+import { Media } from './Media';
 import defaultProfilePic from '../../images/defaultProfilePic.png';
 import Tooltip from './Tooltip';
 
@@ -325,7 +326,7 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
       tweet.media
     );
   const maybeMedia = (tweet) =>
-    tweet.has_media ? renderMedia(tweet.media, 'th-media') : '';
+    tweet.has_media ? renderMedia(tweet.media) : '';
   const maybeQuote = (tweet) =>
     tweet.has_quote ? renderQuote(tweet.quote, tweet.has_media) : '';
 
@@ -380,78 +381,6 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
         </div>
       </div>
     </div>
-    // <div class="th-tweet-container">
-    //   <div class="th-tweet">
-    //     <div class="th-gutter">
-    //       <div class="z-10">
-    //         <a href={getUserUrl(tweet.username)}>
-    //           <img
-    //             class="th-profile"
-    //             src={prop('profile_image', tweet) ?? defaultProfilePic}
-    //           />
-    //         </a>
-    //       </div>
-    //     </div>
-    //     <div class="th-body">
-    //       <div class="th-header">
-    //         <div class="th-header-name z-10 hover:underline">
-    //           <a href={getUserUrl(tweet.username)}>{tweet.name}</a>
-    //         </div>
-    //         <div class="th-header-username z-10">
-    //           <a href={getUserUrl(tweet.username)}>@{tweet.username}</a>
-    //         </div>
-    //         <div class="th-header-dot">·</div>
-    //         <div class="th-header-time">
-    //           <a
-    //             class="hover:underline th-header-time-link"
-    //             href={getTweetUrl(tweet)}
-    //           >
-    //             {getTimeDiff(tweet.time)}
-    //           </a>
-    //         </div>
-    //       </div>
-    //       <div class="th-reply">{reply_text}</div>
-    //       <div class="th-text z-10 select-text">{reformattedText(tweet)}</div>
-    //       {maybeMedia(tweet)}
-    //       {maybeQuote(tweet)}
-    //       <div class="th-icons">
-    //         <ReplyAction tweet={_tweet} />
-    //         <RetweetAction tweet={_tweet} />
-    //         <LikeAction tweet={_tweet} />
-    //         {/* <div class="th-icon-field">
-    //           <div class="th-share-container">
-    //             <ShareIcon />
-    //           </div>
-    //         </div> */}
-    //       </div>
-    //     </div>
-    //   </div>
-    //   {isNil(tweet.unavailable) ? (
-    //     <div
-    //       class="th-hover absolute inset-0 rounded-sm bg-opacity-0 flex items-center justify-center bg-gray-200 hover:cursor-default hover:bg-opacity-70"
-    //       onClick={onClick}
-    //     >
-    //       <textarea
-    //         style="display: none"
-    //         id={`th-link-${tweet.id}`}
-    //         class="th-link"
-    //         ref={linkField}
-    //       >
-    //         {getTweetUrl(tweet)}
-    //       </textarea>
-    //       <div class="flex flex-col bg-transparent items-center">
-    //         <div class="text-base font-medium bg-transparent z-20">
-    //           <div class="text-mainBg">{copyText}</div>
-    //           {!(isNil(score) || isProduction) && (
-    //             <div class="text-green-400">{`score: ${score.toFixed(2)}`}</div>
-    //           )}
-    //         </div>
-    //       </div>
-    //     </div>
-    //   ) : (
-    //     <UnavailableHover score={score} />
-    //   )}
-    // </div>
   );
 }
 
@@ -605,22 +534,11 @@ function reformatText(
   return ret;
 }
 
-function renderMedia(media: string | any[], className: string) {
+function renderMedia(media: string | any[], inQuote?: boolean) {
   //@miguel: I had to refactor this code, hope you understand why :)
-  let images = Array.isArray(media) ? media : [media];
+  let images = Array.isArray(media) ? media : [{ url: media }];
 
-  const imgs = images.map((e) => (
-    <div class="th-media-image">
-      <img src={e.url} />
-    </div>
-  ));
-
-  return (
-    <div class={className}>
-      <div class="th-media-top">{imgs.slice(0, 2)}</div>
-      <div class="th-media-bottom">{imgs.slice(2, 4)}</div>
-    </div>
-  );
+  return <Media media={images} inQuote={inQuote} />;
 }
 
 function renderQuote(quote: thTweet, parent_has_media) {
@@ -639,79 +557,45 @@ function renderQuote(quote: thTweet, parent_has_media) {
       null,
       quote.media
     );
-    let minimedia: string | JSX.Element = '';
-    let mainmedia: string | JSX.Element = '';
-    if (quote.has_media) {
-      if (parent_has_media) {
-        minimedia = renderMedia(quote.media, 'th-quote-content-minimedia');
-      } else {
-        mainmedia = renderMedia(quote.media, 'th-quote-content-main-media');
-      }
-    }
+
+    const media = quote.has_media ? renderMedia(quote.media, true) : null;
 
     const template = (
-      <div class="p-3 mt-3 border border-borderBg rounded-2xl transition-colors duration-200 cursor-pointer hover:bg-white hover:bg-opacity-5">
-        <div class="flex">
-          <div class="flex flex-shrink font-medium text-lsm items-center h-6">
-            <div class="w-5 h-5 mr-2 flex items-center justify-center">
-              <a href={getUserUrl(quote.username)}>
-                <img
-                  class="rounded-full"
-                  src={prop('profile_image', quote) ?? defaultProfilePic}
-                />
-              </a>
-            </div>
-            <div class="flex-initial text-lsm font-bold overflow-ellipsis whitespace-nowrap overflow-hidden leading-none">
-              <a href={getUserUrl(quote.username)}>{quote.name}</a>
-            </div>
-            <div class="flex-initial ml-1 text-neutral overflow-ellipsis whitespace-nowrap overflow-hidden leading-none">
-              <a href={getUserUrl(quote.username)}>@{quote.username}</a>
-            </div>
-            <div class="px-1 text-neutral leading-none">·</div>
-            <div class="flex-none text-neutral leading-none">
-              <a class="hover:underline" href={getTweetUrl(quote)}>
-                {timeDiff}
-              </a>
+      <div class="mt-3 border border-borderBg rounded-2xl transition-colors duration-200 cursor-pointer hover:bg-white hover:bg-opacity-5">
+        <div class="p-3 pb-1">
+          <div class="flex">
+            <div class="flex flex-shrink font-medium text-lsm items-center h-6">
+              <div class="w-5 h-5 mr-2 flex items-center justify-center">
+                <a href={getUserUrl(quote.username)}>
+                  <img
+                    class="rounded-full"
+                    src={prop('profile_image', quote) ?? defaultProfilePic}
+                  />
+                </a>
+              </div>
+              <div class="flex-initial text-lsm font-bold overflow-ellipsis whitespace-nowrap overflow-hidden leading-none">
+                <a href={getUserUrl(quote.username)}>{quote.name}</a>
+              </div>
+              <div class="flex-initial ml-1 text-neutral overflow-ellipsis whitespace-nowrap overflow-hidden leading-none">
+                <a href={getUserUrl(quote.username)}>@{quote.username}</a>
+              </div>
+              <div class="px-1 text-neutral leading-none">·</div>
+              <div class="flex-none text-neutral leading-none">
+                <a class="hover:underline" href={getTweetUrl(quote)}>
+                  {timeDiff}
+                </a>
+              </div>
             </div>
           </div>
+          <div>
+            <div class="text-neutral">{replyText}</div>
+            {text}
+          </div>
         </div>
-        <div>
-          <div class="text-neutral">{replyText}</div>
-          {text}
-          {/*TODO add media*/}
-        </div>
+        {media}
       </div>
     );
 
-    // let template = (
-    //   <div class="th-quote">
-    //     <div class="th-quote-header">
-    //       <img
-    //         class="th-quote-header-profile"
-    //         src={prop('profile_image', quote) ?? defaultProfilePic}
-    //       />
-    //       <div class="th-quote-header-name">{quote.name}</div>
-    //       <div class="th-quote-header-username">@{quote.username}</div>
-    //       <div class="th-header-dot">·</div>
-    //       <div class="th-quote-header-time">
-    //         <a
-    //           class="hover:underline th-quote-header-time-link"
-    //           href={getTweetUrl(quote)}
-    //         >
-    //           {timeDiff}
-    //         </a>
-    //       </div>
-    //     </div>
-    //     <div class="th-quote-reply">{replyText}</div>
-    //     <div class="th-quote-content">
-    //       {minimedia}
-    //       <div class="th-quote-content-main">
-    //         <div class="th-text">{text}</div>
-    //         {mainmedia}
-    //       </div>
-    //     </div>
-    //   </div>
-    // );
     return template;
   } else {
     let template = (
