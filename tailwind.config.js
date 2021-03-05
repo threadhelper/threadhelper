@@ -29,6 +29,8 @@ module.exports = {
       lines: 'var(--line-color)',
       borderBg: 'var(--main-border-color)',
       neutral: 'var(--neutral-color)',
+      tooltipBg: 'var(--tooltip-color)',
+      twitterBlue: 'rgb(29, 161, 224)',
       //default colors
       transparent: 'transparent',
       current: 'currentColor',

@@ -154,13 +154,15 @@ function setTheme(
   bg_color: string,
   txt_color: string,
   border_color: string,
-  accent_color: string
+  accent_color: string,
+  tooltip_color: string,
 ) {
   let root = document.documentElement;
   root.style.setProperty('--main-bg-color', bg_color);
   root.style.setProperty('--main-txt-color', txt_color);
   root.style.setProperty('--main-border-color', border_color);
   root.style.setProperty('--accent-color', accent_color);
+  root.style.setProperty('--tooltip-color', tooltip_color);
 }
 
 // function setTheme(bg, accent) {
@@ -184,16 +186,16 @@ export function updateTheme(theme = null) {
 
   switch (theme.bgColor) {
     case light_theme:
-      setTheme('#f5f8fa', 'black', '#e1e8ed', theme.accentColor);
+      setTheme('#f5f8fa', 'black', '#e1e8ed', theme.accentColor, '#666666');
       break;
     case dim_theme:
-      setTheme('#192734', 'white', '#38444d', theme.accentColor);
+      setTheme('#192734', 'white', '#38444d', theme.accentColor, '#4d6072');
       break;
     case black_theme:
-      setTheme('black', 'white', '#2f3336', theme.accentColor);
+      setTheme('black', 'white', '#2f3336', theme.accentColor, '#495a69');
       break;
     default:
-      setTheme('#f5f8fa', 'black', '#e1e8ed', theme.accentColor);
+      setTheme('#f5f8fa', 'black', '#e1e8ed', theme.accentColor, '#666666');
       break;
   }
 }

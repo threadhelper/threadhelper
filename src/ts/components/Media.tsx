@@ -1,3 +1,5 @@
+import { h, Fragment } from 'preact';
+
 export function Media({media, inQuote}: {media: {url: string}[], inQuote?: boolean}) {
   if(media.length == 0) return null;
   let component; 
