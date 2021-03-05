@@ -62,22 +62,12 @@ export const ReplyAction = ({ tweet }) => {
   }, []);
 
   return (
-    <div
-      class="flex cursor-pointer"
-      onMouseOver={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-    >
-      <div class="relative w-5 inline-flex items-center justify-center">
-        <div
-          class={`absolute inset-0 rounded-full -m-2 transition-colors duration-200 ${
-            hover ? 'bg-blue-600 bg-opacity-10 ' : ''
-          }`}
-        ></div>
-        <ReplyIcon />{' '}
+    <div class="flex cursor-pointer" onMouseOver={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+      <div class="relative w-5 h-5 inline-flex items-center justify-center">
+        <div class={`absolute inset-0 rounded-full -m-2 transition-colors duration-200 ${hover ? "bg-twitterBlue bg-opacity-10 " : ""}`}></div>
+        <ReplyIcon class={`fill-current ${hover ? "text-twitterBlue" : ""}`} />
       </div>
-      <span class="px-3 inline-flex" style={{ minWidth: 'calc(1em + 24px)' }}>
-        {count > 0 ? formatNumber(count) : ''}
-      </span>
+      <span class="px-3 h-5 items-center inline-flex" style={{minWidth: 'calc(1em + 24px)'}}>{count > 0 ? formatNumber(count) : ''}</span>
     </div>
   );
 };
@@ -148,18 +138,16 @@ const RetweetAction = ({ tweet }: { tweet: thTweet }) => {
         }}
       >
         <div
-          class={`absolute inset-0 rounded-full -m-2 transition-colors duration-200 ${
-            hover ? 'bg-green-600 bg-opacity-10 ' : ''
-          }`}
-        ></div>
-        {active ? <RetweetIcon class={`fill-current`} /> : <RetweetIcon />}
-      </div>
-      <span
-        class={`px-3 inline-flex ${active || hover ? 'text-green-600 ' : ''}`}
-        style={{ minWidth: 'calc(1em + 24px)' }}
-      >
-        {count > 0 ? formatNumber(count) : ''}
-      </span>
+          class={`relative w-5 h-5 inline-flex items-center ${((active || hover) ? 'text-green-600 ' : '')}`}
+          // onClick={active ? offFunc : onFunc}
+          onClick={() => {
+            setOpen(!open);
+          }}
+        > 
+          <div class={`absolute inset-0 rounded-full -m-2 transition-colors duration-200 ${hover ? "bg-green-600 bg-opacity-10 " : ""}`}></div>
+          <RetweetIcon class="fill-current" />
+        </div>
+        <span class={`px-3 h-5 items-center inline-flex ${((active || hover) ? 'text-green-600 ' : '')}`} style={{minWidth: 'calc(1em + 24px)'}}>{count > 0 ? formatNumber(count) : ''}</span>
       {open && (
         <DropdownMenu
           name={'rt-button'}
@@ -210,7 +198,7 @@ const LikeAction = ({ tweet }) => {
       <div
         class={
           (active ? `text-red-700 ` : ``) +
-          'w-5 inline-flex items-center relative'
+          'w-5 h-5 inline-flex items-center relative'
         }
         onClick={active ? offFunc : onFunc}
       >
@@ -220,17 +208,12 @@ const LikeAction = ({ tweet }) => {
           }`}
         ></div>
         {active ? (
-          <FullLikeIcon class={`fill-current`} />
-        ) : (
-          <LikeIcon class={`fill-current ${hover ? 'text-red-700' : ''}`} />
-        )}
+          <FullLikeIcon class="fill-current" />
+        ) : 
+          <LikeIcon class={`fill-current ${hover ? "text-red-700" : ""}`}/>
+        }
       </div>
-      <span
-        class={`px-3 inline-flex ${active || hover ? `text-red-700 ` : ``}`}
-        style={{ minWidth: 'calc(1em + 24px)' }}
-      >
-        {count > 0 ? formatNumber(count) : ''}
-      </span>
+      <span class={`px-3 h-5 items-center inline-flex ${active || hover ? `text-red-700 ` : ``}`} style={{minWidth: 'calc(1em + 24px)'}}>{count > 0 ? formatNumber(count) : ''}</span>
     </div>
   );
 };
@@ -244,6 +227,7 @@ export const CopyAction = ({
 }) => {
   const linkField = useRef(null);
   const [copied, setCopied] = useState(false);
+  const [hover, setHover] = useState(false);
 
   let copyUrl = function (e: Event) {
     if (isNil(url)) return;
@@ -263,25 +247,25 @@ export const CopyAction = ({
     return;
   };
 
-  return (
-    <div class="th-icon-field">
+  return(
+    <div class="flex cursor-pointer" onMouseOver={() => setHover(true)} onMouseLeave={() => setHover(false)}>
       <textarea class="th-link hidden" ref={linkField}>
         {url}
       </textarea>
-
+      
       <Tooltip content={'Copy URL'} direction="bottom">
-        <div
-          class={
-            'th-share-container inline-flex items-center' +
-            (isNil(url) ? 'text-red-200' : '')
-          }
-          onClick={copyUrl}
-        >
-          <LinkIcon /> <span class="ml-1">{copied ? 'copied!' : null}</span>
+        <div class="relative w-5 h-5 inline-flex items-center justify-center" onClick={copyUrl}>
+            <div class={
+              "absolute inset-0 rounded-full -m-2 transition-colors duration-2000 " +
+              (hover && !isNil(url) ? "bg-blue-500 bg-opacity-10 " : "") +
+              (isNil(url) ? "text-red-200 " : "")
+              }></div>
+            <LinkIcon />
         </div>
       </Tooltip>
+      <span class="px-3 h-5 inline-flex" style={{minWidth: 'calc(1em + 24px)'}}>{copied ? 'copied!' : null}</span>
     </div>
-  );
+  )
 };
 
 export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
@@ -331,7 +315,8 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
     tweet.has_quote ? renderQuote(tweet.quote, tweet.has_media) : '';
 
   return (
-    <div class="p-4 border-b border-borderBg transition-colors duration-200 cursor-pointer hover:bg-white hover:bg-opacity-5">
+    <div
+      class="px-4 py-3 border-b border-borderBg transition-colors duration-200 cursor-pointer hover:bg-white hover:bg-opacity-5">
       <div class="flex">
         <div class="flex-none mr-3">
           <div class="w-9 h-9">
@@ -367,16 +352,17 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
             {maybeQuote(tweet)}
           </div>
           <div class="mt-3 max-w-md	flex justify-between text-neutral">
+            <div class="flex"><ReplyAction tweet={_tweet} /></div>
+            <div class="flex"><RetweetAction tweet={_tweet} /></div>
+            <div class="flex"><LikeAction tweet={_tweet} /></div>
             <div class="flex">
-              <ReplyAction tweet={_tweet} />
+              <CopyAction
+                url={
+                  isNil(prop('unavailable', tweet)) ? getTweetUrl(tweet) : null
+                }
+                setCopyText={setCopyText}
+              />
             </div>
-            <div class="flex">
-              <RetweetAction tweet={_tweet} />
-            </div>
-            <div class="flex">
-              <LikeAction tweet={_tweet} />
-            </div>
-            <div></div>
           </div>
         </div>
       </div>

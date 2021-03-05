@@ -1,7 +1,7 @@
 /* Custom properties */
 :root {
-  --tooltip-text-color: var(--main-txt-color);
-  --tooltip-background-color: var(--main-bg-color);
+  --tooltip-text-color: #ffffff;
+  --tooltip-background-color: var(--tooltip-color);
   --tooltip-margin: 30px;
   --tooltip-arrow-size: 6px;
 }
