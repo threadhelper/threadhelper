@@ -261,7 +261,6 @@ export const SecretModal = ({ setOpen }) => {
     >
       <div
         style={{
-          width: '560px',
           'background-color': 'var(--main-bg-color)',
           color: 'var(--main-txt-color)',
         }}
@@ -292,7 +291,7 @@ export const SecretModal = ({ setOpen }) => {
                 target="_blank"
               >
                 <button
-                  class="w-full border font-bold py-1 px-4 rounded-3xl text-accent border-accent text-center hover:opacity-80"
+                  class="w-full border-2 font-black py-1 px-4 rounded-3xl text-accent border-accent text-center hover:opacity-80"
                   // class="w-full border text-blue-500 border-blue-500 hover:border-blue-700 hover:text-blue-700 font-bold py-1 px-4 rounded-3xl text-center"
                 >
                   Help us
@@ -302,7 +301,7 @@ export const SecretModal = ({ setOpen }) => {
             <div class="px-5">
               <a href="https://twitter.com/messages/compose?recipient_id=1329161144817377283">
                 <button
-                  class="w-full border font-bold py-1 px-4 rounded-3xl text-accent border-accent text-center hover:opacity-80"
+                  class="w-full border-2 font-black py-1 px-4 rounded-3xl text-accent border-accent text-center hover:opacity-80"
                   // class="w-full border text-blue-500 border-blue-500 hover:border-blue-700 hover:text-blue-700 font-bold py-1 px-4 rounded-3xl text-center"
                 >
                   Chat with us

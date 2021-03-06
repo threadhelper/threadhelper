@@ -86,7 +86,7 @@ export function ApiSearchBar() {
           >
             {' '}
             <SearchIcon
-              class="h-6 w-6 mr-4 text-accent fill-default stroke-default"
+              class="h-6 w-6 mr-4 text-accent fill-current stroke-current"
               // style="fill:var(--accent-color); stroke:var(--accent-color)"
             />{' '}
             <input
