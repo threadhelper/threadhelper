@@ -313,14 +313,16 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
     tweet.has_media ? renderMedia(tweet.media) : '';
   const maybeQuote = (tweet) =>
     tweet.has_quote ? renderQuote(tweet.quote, tweet.has_media) : '';
+  
 
   return (
     <div
-      class="px-4 py-3 border-b border-borderBg transition-colors duration-200 cursor-pointer hover:bg-white hover:bg-opacity-5">
+      class="px-4 py-3 border-b border-borderBg transition-colors duration-200 cursor-pointer hover:bg-hoverBg">
       <div class="flex">
         <div class="flex-none mr-3">
-          <div class="w-9 h-9">
+          <div class="relative w-9 h-9 rounded-full transition-colors duration-200">
             <a href={getUserUrl(tweet.username)}>
+              <div class="w-full h-full absolute rounded-full inset-0 transition-colors duration-200 hover:bg-black hover:bg-opacity-15"></div>
               <img
                 class="rounded-full"
                 src={prop('profile_image', tweet) ?? defaultProfilePic}
@@ -328,18 +330,20 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
             </a>
           </div>
         </div>
-        <div class="flex-grow">
+        <div class="flex-grow max-w-full overflow-hidden">
           <div>
-            <div class="flex flex-shrink font-medium text-lsm">
-              <div class="flex-initial text-lsm font-bold overflow-ellipsis whitespace-nowrap overflow-hidden">
-                <a href={getUserUrl(tweet.username)}>{tweet.name}</a>
+            <div class="flex flex-shrink font-normal text-lsm">
+              <div class="flex-initial text-lsm font-bold overflow-ellipsis whitespace-nowrap overflow-hidden hover:underline">
+                <a href={getUserUrl(tweet.username)}>
+                  {tweet.name}
+                </a>
               </div>
               <div class="flex-initial ml-1 text-neutral overflow-ellipsis whitespace-nowrap overflow-hidden">
                 <a href={getUserUrl(tweet.username)}>@{tweet.username}</a>
               </div>
               <div class="px-1 text-neutral">·</div>
-              <div class="flex-none text-neutral">
-                <a class="hover:underline" href={getTweetUrl(tweet)}>
+              <div class="flex-none text-neutral hover:underline">
+                <a href={getTweetUrl(tweet)}>
                   {getTimeDiff(tweet.time)}
                 </a>
               </div>
@@ -547,30 +551,35 @@ function renderQuote(quote: thTweet, parent_has_media) {
     const media = quote.has_media ? renderMedia(quote.media, true) : null;
 
     const template = (
-      <div class="mt-3 border border-borderBg rounded-2xl transition-colors duration-200 cursor-pointer hover:bg-white hover:bg-opacity-5">
-        <div class="p-3 pb-1">
-          <div class="flex">
-            <div class="flex flex-shrink font-medium text-lsm items-center h-6">
-              <div class="w-5 h-5 mr-2 flex items-center justify-center">
-                <a href={getUserUrl(quote.username)}>
+      <div
+      class="mt-3 border border-borderBg rounded-2xl transition-colors duration-200 cursor-pointer hover:bg-hoverBg">
+      <div class="p-3 pb-1">
+        <div class="flex max-w-full overflow-hidden">
+          <div class="flex flex-shrink font-normal text-lsm items-center h-6">
+            <div class="relative w-5 h-5 mr-2 flex items-center justify-center rounded-full">
+              <a href={getUserUrl(quote.username)}>
+                <div class="w-full h-full rounded-full absolute inset-0 transition-colors duration-200 hover:bg-black hover:bg-opacity-15"></div>
                   <img
                     class="rounded-full"
                     src={prop('profile_image', quote) ?? defaultProfilePic}
                   />
-                </a>
-              </div>
-              <div class="flex-initial text-lsm font-bold overflow-ellipsis whitespace-nowrap overflow-hidden leading-none">
-                <a href={getUserUrl(quote.username)}>{quote.name}</a>
-              </div>
-              <div class="flex-initial ml-1 text-neutral overflow-ellipsis whitespace-nowrap overflow-hidden leading-none">
-                <a href={getUserUrl(quote.username)}>@{quote.username}</a>
-              </div>
-              <div class="px-1 text-neutral leading-none">·</div>
-              <div class="flex-none text-neutral leading-none">
-                <a class="hover:underline" href={getTweetUrl(quote)}>
-                  {timeDiff}
-                </a>
-              </div>
+              </a>
+            </div>
+            <div class="flex-initial text-lsm font-bold overflow-ellipsis whitespace-nowrap overflow-hidden leading-none hover:underline">
+              <a href={getUserUrl(quote.username)}>
+                {quote.name}
+              </a>
+            </div>
+            <div class="flex-initial ml-1 text-neutral overflow-ellipsis whitespace-nowrap overflow-hidden leading-none hover:underline">
+              <a href={getUserUrl(quote.username)}>
+                @{quote.username}
+              </a>
+            </div>
+            <div class="px-1 text-neutral leading-none">·</div>
+            <div class="flex-none text-neutral leading-none">
+              <a class="hover:underline" href={getTweetUrl(quote)}>
+                {timeDiff}
+              </a>
             </div>
           </div>
           <div>

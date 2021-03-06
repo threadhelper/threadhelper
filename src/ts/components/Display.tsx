@@ -110,26 +110,28 @@ const showUserSearch = (apiUsers, displayMode) => {
 
 function UserCard({ user }) {
   return (
-    <div class="items-center flex flex-row mb-2">
-      <div class="th-gutter">
+    <div class="flex font-normal text-lsm items-center my-2">
+      <div class="flex-auto flex-grow-0 flex-shrink-0 relative w-9 h-9 mr-2 flex items-center justify-center rounded-full">
+        <div class="w-full h-full rounded-full absolute inset-0 transition-colors duration-200 hover:bg-black hover:bg-opacity-15 -z-1"></div>
         <a href={`https://twitter.com/${user.screen_name}`}>
-          <img class="th-profile" src={user.profile_image_url_https} />
+          <div class="w-full h-full absolute rounded-full inset-0 transition-colors duration-200 hover:bg-black hover:bg-opacity-15"></div>
+          <img
+            class="rounded-full"
+            src={user.profile_image_url_https}
+          />
         </a>
       </div>
-      <div class="th-body">
-        <div class="th-header">
-          <div class="th-header-name hover:underline">
-            <a href={`https://twitter.com/${user.screen_name}`}>{user.name}</a>
-          </div>
-          <div class="th-header-username">
-            <a href={`https://twitter.com/${user.screen_name}`}>
-              @{user.screen_name}
-            </a>
-          </div>
-        </div>
+      <div class="flex-initial text-lsm font-bold overflow-ellipsis overflow-hidden whitespace-nowrap leading-none hover:underline">
+        <a href={`https://twitter.com/${user.screen_name}`}>
+          {user.name}
+        </a>
       </div>
-    </div>
-  );
+      <div class="flex-initial flex-shrink-0 ml-1 text-neutral leading-none">
+        <a href={`https://twitter.com/${user.screen_name}`}>
+          @{user.screen_name}
+        </a>
+      </div>
+    </div>);
 }
 //
 
