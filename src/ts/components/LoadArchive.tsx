@@ -58,9 +58,9 @@ export const ArchiveUploader = (props) => {
 
   const LoadArchiveIcon = () => {
     return (
-      <div class="mb-3 inline-flex">
+      <div class="mb-7 inline-flex">
         <Tooltip content={archiveTooltip} direction="bottom">
-          <button class="underline">Upload Twitter archive</button>
+          <button class="underline text-lsm font-medium text-neutral">Upload Twiter archive</button>
         </Tooltip>
         <div class="ml-8">{statusMsg[status]}</div>
       </div>

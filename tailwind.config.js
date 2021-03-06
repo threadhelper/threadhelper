@@ -8,6 +8,13 @@ module.exports = {
       spacing: {
         128: '32rem',
       },
+      borderRadius: {
+        '4xl': '2rem',
+      },
+      fontSize: {
+        'xxs': '0.5rem',
+        'lsm': '0.933rem'
+      },
     },
     colors: {
       accent: 'var(--accent-color)', // exists
@@ -20,7 +27,10 @@ module.exports = {
       secondBg: 'var(--second-bg-color)',
       thirdBg: 'var(--third-bg-color)',
       lines: 'var(--line-color)',
-
+      borderBg: 'var(--main-border-color)',
+      neutral: 'var(--neutral-color)',
+      tooltipBg: 'var(--tooltip-color)',
+      twitterBlue: 'rgb(29, 161, 224)',
       //default colors
       transparent: 'transparent',
       current: 'currentColor',
@@ -37,5 +47,5 @@ module.exports = {
       green: colors.emerald,
       purple: colors.violet,
     },
-  },
+  },  
 };
