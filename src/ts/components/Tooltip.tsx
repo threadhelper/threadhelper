@@ -29,10 +29,8 @@ const Tooltip = (props) => {
       {props.children}
       {active && (
         <div
-          //   style={
-          //     'background-color: var(--main-bg-color); color: var(--main-txt-color);;'
-          //   }
-          class={`max-w-32 min-w-max opacity-90 text-center Tooltip-Tip tt-${
+          style="font-size: 10px"
+          class={`Tooltip-Tip max-w-32 min-w-max p-1 bg-opacity-90 rounded-md text-center tt-${
             props.direction || 'top'
           }`}
         >

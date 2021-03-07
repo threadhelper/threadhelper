@@ -290,7 +290,7 @@ export async function main() {
         msgSomeWorker(pWorker, { type: 'removeAccount', id })
       )
     );
-  const incomingAccounts$ = userInfo$
+  const incomingAccounts$ = userInfo$.map(assoc('showTweets', true))
     .thru(
       promiseStream((x) =>
         msgSomeWorker(pWorker, { type: 'addAccount', res: x })
