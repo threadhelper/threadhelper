@@ -55,19 +55,32 @@ const countReplies = (t) => t.reply_count ?? 0;
 export const ReplyAction = ({ tweet }) => {
   const [count, setCount] = useState(countReplies(tweet));
   const [hover, setHover] = useState(false);
-  
+
   useEffect(() => {
     setCount(countReplies(tweet));
     return () => {};
   }, []);
 
   return (
-    <div class="flex cursor-pointer" onMouseOver={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+    <div
+      class="flex cursor-pointer"
+      onMouseOver={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
       <div class="relative w-5 h-5 inline-flex items-center justify-center">
-        <div class={`absolute inset-0 rounded-full -m-2 transition-colors duration-200 ${hover ? "bg-twitterBlue bg-opacity-10 " : ""}`}></div>
-        <ReplyIcon class={`fill-current ${hover ? "text-twitterBlue" : ""}`} />
+        <div
+          class={`absolute inset-0 rounded-full -m-2 transition-colors duration-200 ${
+            hover ? 'bg-twitterBlue bg-opacity-10 ' : ''
+          }`}
+        ></div>
+        <ReplyIcon class={`fill-current ${hover ? 'text-twitterBlue' : ''}`} />
       </div>
-      <span class="px-3 h-5 items-center inline-flex" style={{minWidth: 'calc(1em + 24px)'}}>{count > 0 ? formatNumber(count) : ''}</span>
+      <span
+        class="px-3 h-5 items-center inline-flex"
+        style={{ minWidth: 'calc(1em + 24px)' }}
+      >
+        {count > 0 ? formatNumber(count) : ''}
+      </span>
     </div>
   );
 };
@@ -123,18 +136,35 @@ const RetweetAction = ({ tweet }: { tweet: thTweet }) => {
   };
 
   return (
-    <div class="flex cursor-pointer" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+    <div
+      class="flex cursor-pointer"
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
+      <div
+        class={`relative w-5 h-5 inline-flex items-center ${
+          active || hover ? 'text-green-600 ' : ''
+        }`}
+        // onClick={active ? offFunc : onFunc}
+        onClick={() => {
+          setOpen(!open);
+        }}
+      >
         <div
-          class={`relative w-5 h-5 inline-flex items-center ${((active || hover) ? 'text-green-600 ' : '')}`}
-          // onClick={active ? offFunc : onFunc}
-          onClick={() => {
-            setOpen(!open);
-          }}
-        > 
-          <div class={`absolute inset-0 rounded-full -m-2 transition-colors duration-200 ${hover ? "bg-green-600 bg-opacity-10 " : ""}`}></div>
-          <RetweetIcon class="fill-current" />
-        </div>
-        <span class={`px-3 h-5 items-center inline-flex ${((active || hover) ? 'text-green-600 ' : '')}`} style={{minWidth: 'calc(1em + 24px)'}}>{count > 0 ? formatNumber(count) : ''}</span>
+          class={`absolute inset-0 rounded-full -m-2 transition-colors duration-200 ${
+            hover ? 'bg-green-600 bg-opacity-10 ' : ''
+          }`}
+        ></div>
+        <RetweetIcon class="fill-current" />
+      </div>
+      <span
+        class={`px-3 h-5 items-center inline-flex ${
+          active || hover ? 'text-green-600 ' : ''
+        }`}
+        style={{ minWidth: 'calc(1em + 24px)' }}
+      >
+        {count > 0 ? formatNumber(count) : ''}
+      </span>
       {open && (
         <DropdownMenu
           name={'rt-button'}
@@ -177,22 +207,37 @@ const LikeAction = ({ tweet }) => {
   };
 
   return (
-    <div class="flex cursor-pointer" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+    <div
+      class="flex cursor-pointer"
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
       <div
         class={
           (active ? `text-red-700 ` : ``) +
           'w-5 h-5 inline-flex items-center relative'
         }
         onClick={active ? offFunc : onFunc}
-      > 
-        <div class={`absolute inset-0 rounded-full -m-2 transition-colors duration-200 ${hover ? "bg-red-600 bg-opacity-10 " : ""}`}></div>
+      >
+        <div
+          class={`absolute inset-0 rounded-full -m-2 transition-colors duration-200 ${
+            hover ? 'bg-red-600 bg-opacity-10 ' : ''
+          }`}
+        ></div>
         {active ? (
           <FullLikeIcon class="fill-current" />
-        ) : 
-          <LikeIcon class={`fill-current ${hover ? "text-red-700" : ""}`}/>
-        }
+        ) : (
+          <LikeIcon class={`fill-current ${hover ? 'text-red-700' : ''}`} />
+        )}
       </div>
-      <span class={`px-3 h-5 items-center inline-flex ${active || hover ? `text-red-700 ` : ``}`} style={{minWidth: 'calc(1em + 24px)'}}>{count > 0 ? formatNumber(count) : ''}</span>
+      <span
+        class={`px-3 h-5 items-center inline-flex ${
+          active || hover ? `text-red-700 ` : ``
+        }`}
+        style={{ minWidth: 'calc(1em + 24px)' }}
+      >
+        {count > 0 ? formatNumber(count) : ''}
+      </span>
     </div>
   );
 };
@@ -226,25 +271,39 @@ export const CopyAction = ({
     return;
   };
 
-  return(
-    <div class="flex cursor-pointer" onMouseOver={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+  return (
+    <div
+      class="flex cursor-pointer"
+      onMouseOver={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
       <textarea class="th-link hidden" ref={linkField}>
         {url}
       </textarea>
-      
+
       <Tooltip content={'Copy URL'} direction="bottom">
-        <div class="relative w-5 h-5 inline-flex items-center justify-center" onClick={copyUrl}>
-            <div class={
-              "absolute inset-0 rounded-full -m-2 transition-colors duration-2000 " +
-              (hover && !isNil(url) ? "bg-blue-500 bg-opacity-10 " : "") +
-              (isNil(url) ? "text-red-200 " : "")
-              }></div>
-            <LinkIcon />
+        <div
+          class="relative w-5 h-5 inline-flex items-center justify-center"
+          onClick={copyUrl}
+        >
+          <div
+            class={
+              'absolute inset-0 rounded-full -m-2 transition-colors duration-2000 ' +
+              (hover && !isNil(url) ? 'bg-blue-500 bg-opacity-10 ' : '') +
+              (isNil(url) ? 'text-red-200 ' : '')
+            }
+          ></div>
+          <LinkIcon />
         </div>
       </Tooltip>
-      <span class="px-3 h-5 inline-flex" style={{minWidth: 'calc(1em + 24px)'}}>{copied ? 'copied!' : null}</span>
+      <span
+        class="px-3 h-5 inline-flex"
+        style={{ minWidth: 'calc(1em + 24px)' }}
+      >
+        {copied ? 'copied!' : null}
+      </span>
     </div>
-  )
+  );
 };
 
 export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
@@ -252,6 +311,9 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
   // const [auth, setAuth] = useStorage('auth', null);
   const [copyText, setCopyText] = useState('copy');
   const [_tweet, setTweet] = useState(tweet);
+  const [profilePicSrc, setProfilePicSrc] = useState(() => {
+    return prop('profile_image', tweet) ?? defaultProfilePic;
+  });
   // const [favCount, setFavCount] = useState(0);
   // const [replyCount, setReplyCount] = useState(0);
   // const [rtCount, setRtCount] = useState(0);
@@ -294,15 +356,15 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
     tweet.has_quote ? renderQuote(tweet.quote, tweet.has_media) : '';
 
   return (
-    <div
-      class="px-4 py-3 border-b border-borderBg transition-colors duration-200 cursor-pointer hover:bg-white hover:bg-opacity-5">
+    <div class="px-4 py-3 border-b border-borderBg transition-colors duration-200 cursor-pointer hover:bg-white hover:bg-opacity-5">
       <div class="flex">
         <div class="flex-none mr-3">
           <div class="w-9 h-9">
             <a href={getUserUrl(tweet.username)}>
               <img
                 class="rounded-full"
-                src={prop('profile_image', tweet) ?? defaultProfilePic}
+                src={profilePicSrc}
+                onError={() => setProfilePicSrc(defaultProfilePic)}
               />
             </a>
           </div>
@@ -311,14 +373,10 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
           <div>
             <div class="flex flex-shrink font-medium text-lsm">
               <div class="flex-initial text-lsm font-bold overflow-ellipsis whitespace-nowrap overflow-hidden">
-                <a href={getUserUrl(tweet.username)}>
-                  {tweet.name}
-                </a>
+                <a href={getUserUrl(tweet.username)}>{tweet.name}</a>
               </div>
               <div class="flex-initial ml-1 text-neutral overflow-ellipsis whitespace-nowrap overflow-hidden">
-                <a href={getUserUrl(tweet.username)}>
-                  @{tweet.username}
-                </a>
+                <a href={getUserUrl(tweet.username)}>@{tweet.username}</a>
               </div>
               <div class="px-1 text-neutral">·</div>
               <div class="flex-none text-neutral">
@@ -335,9 +393,15 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
             {maybeQuote(tweet)}
           </div>
           <div class="mt-3 max-w-md	flex justify-between text-neutral">
-            <div class="flex"><ReplyAction tweet={_tweet} /></div>
-            <div class="flex"><RetweetAction tweet={_tweet} /></div>
-            <div class="flex"><LikeAction tweet={_tweet} /></div>
+            <div class="flex">
+              <ReplyAction tweet={_tweet} />
+            </div>
+            <div class="flex">
+              <RetweetAction tweet={_tweet} />
+            </div>
+            <div class="flex">
+              <LikeAction tweet={_tweet} />
+            </div>
             <div class="flex">
               <CopyAction
                 url={
@@ -504,10 +568,10 @@ function reformatText(
 }
 
 function renderMedia(media: string | any[], inQuote?: boolean) {
-  //@miguel: I had to refactor this code, hope you understand why :) 
-  let images = Array.isArray(media) ? media : [{url:media}];
+  //@miguel: I had to refactor this code, hope you understand why :)
+  let images = Array.isArray(media) ? media : [{ url: media }];
 
-  return <Media media={images} inQuote={inQuote}/>
+  return <Media media={images} inQuote={inQuote} />;
 }
 
 function renderQuote(quote: thTweet, parent_has_media) {
@@ -526,49 +590,44 @@ function renderQuote(quote: thTweet, parent_has_media) {
       null,
       quote.media
     );
-    
+
     const media = quote.has_media ? renderMedia(quote.media, true) : null;
-    
+
     const template = (
-      <div
-      class="mt-3 border border-borderBg rounded-2xl transition-colors duration-200 cursor-pointer hover:bg-white hover:bg-opacity-5">
-      <div class="p-3 pb-1">
-        <div class="flex">
-          <div class="flex flex-shrink font-medium text-lsm items-center h-6">
-            <div class="w-5 h-5 mr-2 flex items-center justify-center">
-              <a href={getUserUrl(quote.username)}>
-                <img
-                  class="rounded-full"
-                  src={prop('profile_image', quote) ?? defaultProfilePic}
-                />
-              </a>
-            </div>
-            <div class="flex-initial text-lsm font-bold overflow-ellipsis whitespace-nowrap overflow-hidden leading-none">
-              <a href={getUserUrl(quote.username)}>
-                {quote.name}
-              </a>
-            </div>
-            <div class="flex-initial ml-1 text-neutral overflow-ellipsis whitespace-nowrap overflow-hidden leading-none">
-              <a href={getUserUrl(quote.username)}>
-                @{quote.username}
-              </a>
-            </div>
-            <div class="px-1 text-neutral leading-none">·</div>
-            <div class="flex-none text-neutral leading-none">
-              <a class="hover:underline" href={getTweetUrl(quote)}>
-                {timeDiff}
-              </a>
+      <div class="mt-3 border border-borderBg rounded-2xl transition-colors duration-200 cursor-pointer hover:bg-white hover:bg-opacity-5">
+        <div class="p-3 pb-1">
+          <div class="flex">
+            <div class="flex flex-shrink font-medium text-lsm items-center h-6">
+              <div class="w-5 h-5 mr-2 flex items-center justify-center">
+                <a href={getUserUrl(quote.username)}>
+                  <img
+                    class="rounded-full"
+                    src={prop('profile_image', quote) ?? defaultProfilePic}
+                  />
+                </a>
+              </div>
+              <div class="flex-initial text-lsm font-bold overflow-ellipsis whitespace-nowrap overflow-hidden leading-none">
+                <a href={getUserUrl(quote.username)}>{quote.name}</a>
+              </div>
+              <div class="flex-initial ml-1 text-neutral overflow-ellipsis whitespace-nowrap overflow-hidden leading-none">
+                <a href={getUserUrl(quote.username)}>@{quote.username}</a>
+              </div>
+              <div class="px-1 text-neutral leading-none">·</div>
+              <div class="flex-none text-neutral leading-none">
+                <a class="hover:underline" href={getTweetUrl(quote)}>
+                  {timeDiff}
+                </a>
+              </div>
             </div>
           </div>
+          <div>
+            <div class="text-neutral">{replyText}</div>
+            {text}
+          </div>
         </div>
-        <div>
-          <div class="text-neutral">{replyText}</div>
-          {text}
-        </div>
+        {media}
       </div>
-      {media}
-    </div>
-  )
+    );
 
     return template;
   } else {

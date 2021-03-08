@@ -290,7 +290,8 @@ export async function main() {
         msgSomeWorker(pWorker, { type: 'removeAccount', id })
       )
     );
-  const incomingAccounts$ = userInfo$.map(assoc('showTweets', true))
+  const incomingAccounts$ = userInfo$
+    .map(assoc('showTweets', true))
     .thru(
       promiseStream((x) =>
         msgSomeWorker(pWorker, { type: 'addAccount', res: x })
@@ -381,7 +382,8 @@ export async function main() {
     .thru(promiseStream(([ids, auth]) => tweetLookupQuery(auth, ids)))
     .thru(errorFilter('fetchedBookmark$'));
 
-  const reqLookup$ = Kefir.merge([
+  // Looks up all the tweets in idb. Used when a new update changed the format of tweets in idb. TODO: do lenses that translate
+  const reqFullllLookup$ = Kefir.merge([
     didRefreshIndex$.thru(
       promiseStream((_) => msgSomeWorker(pWorker, { type: 'getAllIds' }))
     ),
