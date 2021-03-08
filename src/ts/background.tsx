@@ -169,10 +169,9 @@ export async function main() {
   const csGaEvent$ = (msgStream('gaEvent') as Observable<GaMsg, any>).map(
     prop('event')
   );
-  const csGaException$ = (msgStream('gaException') as Observable<
-    GaException,
-    any
-  >).map(prop('exception'));
+  const csGaException$ = (
+    msgStream('gaException') as Observable<GaException, any>
+  ).map(prop('exception'));
 
   /* Storage */
   // const refreshIdb = async () => {
@@ -291,6 +290,7 @@ export async function main() {
       )
     );
   const incomingAccounts$ = userInfo$
+    .map(assoc('showTweets', true))
     .thru(
       promiseStream((x) =>
         msgSomeWorker(pWorker, { type: 'addAccount', res: x })
@@ -304,7 +304,7 @@ export async function main() {
   accountsUpdate$.log('[DEBUG] accountsUpdate$');
   /* read */
   const accounts$ = (await _makeStgObs('activeAccounts')).map(defaultTo([]));
-  const accsShown$ = (accounts$.map(
+  const accsShown$ = accounts$.map(
     pipe(
       // it's a search filter
       values,
@@ -312,7 +312,7 @@ export async function main() {
         either(pipe(prop('showTweets'), isNil), propEq('showTweets', true))
       )
     )
-  ) as unknown) as Observable<User[], any>;
+  ) as unknown as Observable<User[], any>;
 
   const filters$ = Kefir.merge([
     searchFilters$,
@@ -381,7 +381,8 @@ export async function main() {
     .thru(promiseStream(([ids, auth]) => tweetLookupQuery(auth, ids)))
     .thru(errorFilter('fetchedBookmark$'));
 
-  const reqLookup$ = Kefir.merge([
+  // Looks up all the tweets in idb. Used when a new update changed the format of tweets in idb. TODO: do lenses that translate
+  const reqFullllLookup$ = Kefir.merge([
     didRefreshIndex$.thru(
       promiseStream((_) => msgSomeWorker(pWorker, { type: 'getAllIds' }))
     ),
