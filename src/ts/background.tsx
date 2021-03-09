@@ -32,7 +32,7 @@ import {
   when,
 } from 'ramda'; // Function
 import { FullUser, User } from 'twitter-d';
-import { makeAuthObs } from './bg/auth';
+import { makeAuthObs, makePermissionsObs } from './bg/auth';
 import {
   apiSearchToTweet,
   apiToTweet,
@@ -109,6 +109,9 @@ import {
   waitFor,
 } from './utils/putils';
 import { makeValidateTweet } from './worker/search';
+import 'chrome-extension-async';
+import { permissions } from '../../baseManifest';
+
 // Analytics //IMPORTANT: this block must come before setting the currentValue for Kefir. Property and I have no idea why
 (function initAnalytics() {
   initGA();
@@ -137,9 +140,10 @@ export async function main() {
   const pWorker = new PromiseWorker(worker); //promise worker
 
   /* Extension business */
-  chrome.tabs.onActivated.addListener(onTabActivated);
   chrome.runtime.onInstalled.addListener(onInstalled(() => resetData(pWorker)));
+  chrome.tabs.onActivated.addListener(onTabActivated);
   chrome.tabs.onUpdated.addListener(onTabUpdated);
+  chrome.tabs.onRemoved.addListener(onTabRemoved);
 
   /* Stream value getters */
   // const getAuthInit = (_: any): RequestInit => makeInit(curVal(auth$));
@@ -248,7 +252,25 @@ export async function main() {
   const workerConsole$ = workerMsg$.filter(propEq('type', 'console'));
 
   /* Auth */
+  const permissions$ = makePermissionsObs();
+  permissions$.log('permissions$');
+  const webRequestPermitted$ = permissions$.thru(
+    promiseStream((_) =>
+      chrome.permissions.contains({ permissions: ['webRequest'] })
+    )
+  );
+  webRequestPermitted$.log('webRequestPermitted$');
+  subObs({ webRequestPermitted$ }, setStg('webRequestPermission'));
   const auth$ = makeAuthObs().skipDuplicates(compareAuths).toProperty();
+
+  // const auth$ = webRequestPermitted$
+  //   .filter((x) => x)
+  //   .map(inspect('about to make auth'))
+  //   .skipDuplicates()
+  //   .flatMap((_) => makeAuthObs())
+  //   .map(inspect('made and flatmapped auth obs'))
+  //   .skipDuplicates(compareAuths)
+  //   .toProperty();
   auth$.log('[DEBUG] auth$');
   //
   /* User Info */
@@ -857,19 +879,53 @@ const onInstalled = curry(
     // chrome.pageAction.hide(tabId);
   }
 );
+
+var openTwitterTabs: number[] = [];
+const addTtTab = (id) => {
+  openTwitterTabs = R.union(openTwitterTabs, [id]);
+};
+const remTtTab = (id) => {
+  openTwitterTabs = R.without([id], openTwitterTabs);
+};
 // TODO emit to active tab
-function onTabActivated(activeInfo: { tabId: any }) {
-  chrome.tabs.get(activeInfo.tabId, function (tab: chrome.tabs.Tab) {
-    if (tab.url != null) {
-      try {
-        if (tab.url.match(twitter_url)) {
-        }
-      } catch (e) {
-        console.log(e);
-      }
-    }
+async function onTabActivated(activeInfo: { tabId: number }) {
+  console.log('[DEBUG] Tab opened ', {
+    tab: activeInfo,
+    openTwitterTabs,
   });
+  const tab = await chrome.tabs.get(activeInfo.tabId);
+  console.log('[DEBUG] Tab get', { tab, openTwitterTabs });
+  if (isNil(prop('url', tab))) return;
+  try {
+    if (tab.url.match(twitter_url)) {
+      addTtTab(activeInfo.tabId);
+      console.log('[DEBUG] Tab opened: Twitter', {
+        tab: activeInfo.tabId,
+        openTwitterTabs,
+      });
+    }
+  } catch (e) {
+    console.error(e);
+  }
 }
+// function onTabActivated(activeInfo: { tabId: number }) {
+//   console.log('[DEBUG] Tab opened ', { tab: activeInfo.tabId, openTwitterTabs });
+//   chrome.tabs.get(activeInfo.tabId, function (tab: chrome.tabs.Tab) {
+//     if (tab.url != null) {
+//       try {
+//         if (tab.url.match(twitter_url)) {
+//           openTwitterTabs = [...openTwitterTabs, activeInfo.tabId];
+//           console.log('[DEBUG] Tab opened: Twitter', {
+//             tab: activeInfo.tabId,
+//             openTwitterTabs,
+//           });
+//         }
+//       } catch (e) {
+//         console.log(e);
+//       }
+//     }
+//   });
+// }
 // function onTabUpdated(tabId, change: {status: string; url: string;}, tab: {url: string; active: any; id: any;}) {
 function onTabUpdated(
   tabId,
@@ -877,20 +933,40 @@ function onTabUpdated(
   tab: chrome.tabs.Tab
 ) {
   try {
-    // console.log(`[DEBUG] onTabUpdated`, {change, tab})
-    if (change.status === 'complete' && tab.url.match(twitter_url)) {
-      chrome.browserAction.disable(tabId);
-    } else {
+    // console.log(`[DEBUG] onTabUpdated, urls=`, {change, tab})
+    if (change.status === 'complete' && tab.url && tab.url.match(twitter_url)) {
+      console.log('[DEBUG] Browser action: enabling');
       chrome.browserAction.enable(tabId);
+    } else {
+      console.log('[DEBUG] Browser action: disabling');
+      // chrome.browserAction.disable(tabId);
     }
   } catch (e) {
-    chrome.browserAction.disable(tabId);
+    // chrome.browserAction.disable(tabId);
+    console.error(e);
   }
-  if (tab.active && change.url) {
-    if (change.url.match(twitter_url)) {
+  if (change.status === 'complete' && tab.active && tab.url) {
+    if (tab.url.match(twitter_url)) {
+      addTtTab(tab.id);
+      console.log('[DEBUG] Tab changed: Twitter', {
+        tab: tab.id,
+        openTwitterTabs,
+      });
+
       msgCS(tab.id, { type: 'tab-change-url', url: change.url, cs_id: tab.id });
+    } else {
+      remTtTab(tab.id);
+      console.log('[DEBUG] Tab changed: Twitter', {
+        tab: tab.id,
+        openTwitterTabs,
+      });
     }
   }
+}
+
+function onTabRemoved(tabId, removeInfo) {
+  remTtTab(tabId);
+  console.log('[DEBUG] Tab removed: Twitter', { tab: tabId, openTwitterTabs });
 }
 
 const fetchBg = async ({ url, options }) => {
@@ -903,7 +979,6 @@ var rpcBgFns = {
   fetchBg,
   getAuth,
 };
-import 'chrome-extension-async';
 chrome.runtime.onMessage.addListener(async function (
   request,
   sender,
@@ -926,6 +1001,11 @@ chrome.runtime.onMessage.addListener(async function (
   // } else {
   //   console.error(`bgRpc no function ${request.fnName}`);
   // }
+  if (request.fnName == 'webReqPermission') {
+    const granted = await reqWebReqPermission();
+    setStg('webRequestPermission', granted);
+    sendResponse(granted);
+  }
   if (request.fnName == 'fetchBg') {
     const resP = thFetch(request.args.url, request.args.options);
     console.log({ resP });
@@ -940,6 +1020,30 @@ chrome.runtime.onMessage.addListener(async function (
   return true;
 });
 
+async function reqWebReqPermission() {
+  console.log('reqWebReqPermission... ');
+  const granted = await chrome.permissions.request({
+    permissions: ['webRequest'],
+  });
+  console.log('reqWebReqPermission', { granted });
+  return granted;
+}
+
+// background-script.js
+
+let ports = [];
+
+function connected(p) {
+  ports[p.sender.tab.id] = p;
+}
+
+chrome.runtime.onConnect.addListener(connected);
+
+chrome.browserAction.onClicked.addListener(function () {
+  ports.forEach((p) => {
+    p.postMessage({ greeting: 'they clicked the button!' });
+  });
+});
 // function logURL(requestDetails) {
 //   console.log('Loading: ' + requestDetails.url);
 // }
@@ -964,6 +1068,16 @@ chrome.runtime.onMessage.addListener(async function (
 
 main();
 //
-var settingUrl = chrome.runtime.setUninstallURL(
-  'https://docs.google.com/forms/d/e/1FAIpQLSf2s5y8tIFEQj4dIyk55QXS0DQmHQ_cmspmJmKNTslISOJ6oA/viewform'
-);
+
+chrome.browserAction.onClicked.addListener(reqWebReqPermission);
+
+if (!DEBUG) {
+  chrome.runtime.setUninstallURL(
+    'https://docs.google.com/forms/d/e/1FAIpQLSf2s5y8tIFEQj4dIyk55QXS0DQmHQ_cmspmJmKNTslISOJ6oA/viewform'
+  );
+}
+
+chrome.runtime.onSuspend.addListener(function () {
+  console.log('[DEBUG] Unloading, suspending.');
+  chrome.browserAction.setBadgeText({ text: '' });
+});

@@ -278,6 +278,21 @@ export function postMsg(_msg: Msg) {
   }
 }
 
+export const rpcBg = async (fnName, args?) => {
+  try {
+    const returnValue = await chrome.runtime.sendMessage({
+      type: 'rpcBg',
+      fnName,
+      args: defaultTo({}, args),
+    })
+    console.log('rpcBg', {returnValue})
+    return returnValue;
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
+};
+
 export function msgBG(msg: Msg) {
   if (SERVE) {
     window.postMessage(msg, '*');
