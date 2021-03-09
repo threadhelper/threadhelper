@@ -383,12 +383,12 @@ export async function main() {
     .thru(errorFilter('fetchedBookmark$'));
 
   // Looks up all the tweets in idb. Used when a new update changed the format of tweets in idb. TODO: do lenses that translate
-  const reqFullllLookup$ = Kefir.merge([
+  const reqFullLookup$ = Kefir.merge([
     didRefreshIndex$.thru(
       promiseStream((_) => msgSomeWorker(pWorker, { type: 'getAllIds' }))
     ),
   ]);
-  const fetchedLookup$ = reqLookup$
+  const fetchedLookup$ = reqFullLookup$
     .combine(auth$, (ids, auth) => [ids, auth])
     .thru(promiseStream(([ids, auth]) => tweetLookupQuery(auth, ids)))
     .thru(errorFilter('fetchedLookup$'));
@@ -399,7 +399,7 @@ export async function main() {
     reqTimeline$,
     reqBookmarks$,
     reqAddBookmark$,
-    reqLookup$,
+    reqFullLookup$,
   ]).map((_) => true); // flag
 
   /* Tweet API promise returns */
