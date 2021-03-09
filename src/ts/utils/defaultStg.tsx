@@ -34,6 +34,7 @@ export const defaultStorage = (): StorageInterface => {
     userInfo: {},
     doRefreshIdb: false,
     showPatchNotes: false,
+    webRequestPermission: false,
   };
 };
 

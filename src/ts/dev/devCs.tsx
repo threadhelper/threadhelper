@@ -5,6 +5,7 @@ import {
   makeStorageChangeObs,
   msgBG,
   setDataLocalSync,
+  rpcBg,
 } from '../utils/dutils';
 import {
   WranggleRpc,
@@ -15,18 +16,18 @@ import {
 import 'chrome-extension-async';
 import { defaultTo, prop } from 'ramda';
 
-const rpcBg = async (fnName, args?) => {
-  try {
-    return await chrome.runtime.sendMessage({
-      type: 'rpcBg',
-      fnName,
-      args: defaultTo({}, args),
-    });
-  } catch (error) {
-    console.error(error);
-    return [];
-  }
-};
+// const rpcBg = async (fnName, args?) => {
+//   try {
+//     return await chrome.runtime.sendMessage({
+//       type: 'rpcBg',
+//       fnName,
+//       args: defaultTo({}, args),
+//     });
+//   } catch (error) {
+//     console.error(error);
+//     return [];
+//   }
+// };
 
 const fetchBg = async (url, options) => {
   return rpcBg('fetchBg', { url, options });
