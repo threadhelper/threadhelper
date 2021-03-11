@@ -110,7 +110,7 @@ const showUserSearch = (apiUsers, displayMode) => {
 
 function UserCard({ user }) {
   return (
-    <div class="flex font-normal text-lsm items-center my-2">
+    <div class="flex font-normal text-lsm items-center px-4 py-2 transition-colors duration-200 hover:bg-hoverBg cursor:pointer">
       <div class="flex-auto flex-grow-0 flex-shrink-0 relative w-9 h-9 mr-2 flex items-center justify-center rounded-full">
         <div class="w-full h-full rounded-full absolute inset-0 transition-colors duration-200 hover:bg-black hover:bg-opacity-15 -z-1"></div>
         <a href={`https://twitter.com/${user.screen_name}`}>
@@ -139,8 +139,8 @@ function UserDisplay({ results }: { results: User[] }) {
   return (
     <>
       <div class="text-right text-gray-500 ">
-        <span class="hover:text-mainTxt hover:underline">
-          User search results
+        <span class="hover:text-mainTxt hover:underline p-3">
+          User search results:
         </span>
       </div>
       <div class="flex-1 searchUsers">
@@ -170,11 +170,11 @@ type TweetDisplayProps = {
 function TweetDisplay({ title, results, emptyMsg }: TweetDisplayProps) {
   return (
     <>
-      <div class="text-right text-gray-500 mb-1 ">
+      <div class="text-right text-gray-500 my-1 px-3">
         <span class="hover:text-mainTxt hover:underline">{title}</span>
       </div>
       <div class="searchTweets">
-        {isEmpty(results) ? emptyMsg : map(buildTweetComponent, results)}
+        {isEmpty(results) ? <span class="px-3">{emptyMsg}</span> : map(buildTweetComponent, results)}
       </div>
     </>
   );

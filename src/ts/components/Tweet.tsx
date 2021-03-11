@@ -309,8 +309,8 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
             </a>
           </div>
         </div>
-        <div class="flex-grow max-w-full overflow-hidden">
-          <div>
+        <div class="flex-grow max-w-full">
+          <div class="overflow-hidden">
             <div class="flex flex-shrink font-normal text-lsm">
               <div class="flex-initial text-lsm font-bold overflow-ellipsis whitespace-nowrap overflow-hidden hover:underline">
                 <a href={getUserUrl(tweet.username)}>
@@ -336,7 +336,7 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
             {maybeMedia(tweet)}
             {maybeQuote(tweet)}
           </div>
-          <div class="mt-3 max-w-md	flex justify-between text-neutral">
+          <div class="mt-3 max-w-md	flex justify-between text-neutral z-50">
             <div class="flex"><ReplyAction tweet={_tweet} /></div>
             <div class="flex"><RetweetAction tweet={_tweet} /></div>
             <div class="flex"><LikeAction tweet={_tweet} /></div>

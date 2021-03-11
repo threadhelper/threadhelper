@@ -33,7 +33,7 @@
 .sug_home {
   border-radius: 10px;
   background-color: var(--main-bg-color);
-  padding: 0px 10px 10px 10px;
+  padding-bottom: 10px;
   margin-bottom: 20px;
   overflow-x: visible;
 }
