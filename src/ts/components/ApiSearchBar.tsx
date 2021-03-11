@@ -54,7 +54,7 @@ export function ApiSearchBar() {
   }, []);
 
   return (
-    <div class="flex items-center justify-between p-3 flex-initial">
+    <div class="flex items-center justify-between pt-3 px-5 flex-initial">
       <div
         class="flex items-center flex-grow border-accent"
         // style={{ borderColor: 'var(--accent-color)' }}
