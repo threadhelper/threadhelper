@@ -105,7 +105,7 @@ const SettingsModal = ({ setOpen, setSecretOpen }) => {
   return (
     // background shim
     <div
-      class="fixed z-40 overflow-auto bg-gray-100 bg-opacity-50 flex bottom-0 top-0 left-0 right-0  items-center justify-center"
+      class="fixed z-40 overflow-auto bg-gray-800 bg-opacity-50 flex bottom-0 top-0 left-0 right-0  items-center justify-center"
       onClick={(e) => {
         if (e.target === e.currentTarget) setOpen(false);
       }}
@@ -170,7 +170,7 @@ const SettingsModal = ({ setOpen, setSecretOpen }) => {
             // class="w-full border text-blue-500 border-blue-500 hover:border-blue-700 hover:text-blue-700 font-bold py-2 px-4 rounded-3xl text-center"
             onClick={() => setSecretOpen(true)}
           >
-            Extremely Secret Button
+            Extremely Secret Button - DO NOT CLICK!
           </button>
         </div>
       </div>
@@ -187,17 +187,21 @@ export const AvatarTrophy = ({
   return (
     <div class="flex flex-col items-center px-4 text-xs leading-none mt-6">
       {link ? (
-        <a href={`https://twitter.com/${screen_name}`}>
+        <a href={`https://twitter.com/${screen_name}`} class="relative mb-2">
+          <div class="w-full h-full absolute rounded-full inset-0 transition-colors duration-200 hover:bg-black hover:bg-opacity-15"></div>
           <img
-            class="rounded-full h-16 w-16 mb-2"
+            class="rounded-full h-16 w-16"
             src={profile_image_url_https.replace('_normal', '')}
           />
         </a>
       ) : (
-        <img
-          class="rounded-full h-16 w-16 mb-3"
-          src={profile_image_url_https}
-        />
+        <div class="relative">
+          <div class="w-full h-full absolute rounded-full inset-0 transition-colors duration-200 hover:bg-black hover:bg-opacity-15 mb-3"></div>
+          <img
+            class="rounded-full h-16 w-16"
+            src={profile_image_url_https}
+          />
+        </div>
       )}
       <div class="font-black text-base">{name}</div>
       <div class="font-medium underline text-lsm text-neutral mt-1">
@@ -253,7 +257,7 @@ export const SecretModal = ({ setOpen }) => {
   return (
     // background shim
     <div
-      class="fixed z-40 overflow-auto bg-gray-100 bg-opacity-50 flex bottom-0 top-0 left-0 right-0 whitespace-nowrap items-center justify-center"
+      class="fixed z-50 overflow-auto bg-gray-800 bg-opacity-50 flex bottom-0 top-0 left-0 right-0 whitespace-nowrap items-center justify-center"
       onClick={(e) => {
         if (e.target === e.currentTarget) setOpen(false);
       }}
@@ -263,8 +267,9 @@ export const SecretModal = ({ setOpen }) => {
         style={{
           'background-color': 'var(--main-bg-color)',
           color: 'var(--main-txt-color)',
+          borderRadius: '30px'
         }}
-        class="bg-white max-w-full p-6 rounded-lg text-lg shadow-lg"
+        class="bg-white max-w-full px-8 py-5 text-lg shadow-lg"
       >
         {/* header */}
         <div class="text-sm  w-full mb-5">
@@ -291,7 +296,7 @@ export const SecretModal = ({ setOpen }) => {
                 target="_blank"
               >
                 <button
-                  class="w-full border-2 font-black py-1 px-4 rounded-3xl text-accent border-accent text-center hover:opacity-80"
+                  class="w-full border-2 font-black py-1 px-4 rounded-3xl text-accent border-accent text-center hover:opacity-80 text-lg"
                   // class="w-full border text-blue-500 border-blue-500 hover:border-blue-700 hover:text-blue-700 font-bold py-1 px-4 rounded-3xl text-center"
                 >
                   Help us
@@ -301,7 +306,7 @@ export const SecretModal = ({ setOpen }) => {
             <div class="px-5">
               <a href="https://twitter.com/messages/compose?recipient_id=1329161144817377283">
                 <button
-                  class="w-full border-2 font-black py-1 px-4 rounded-3xl text-accent border-accent text-center hover:opacity-80"
+                  class="w-full border-2 font-black py-1 px-4 rounded-3xl text-accent border-accent text-center hover:opacity-80 text-lg"
                   // class="w-full border text-blue-500 border-blue-500 hover:border-blue-700 hover:text-blue-700 font-bold py-1 px-4 rounded-3xl text-center"
                 >
                   Chat with us
