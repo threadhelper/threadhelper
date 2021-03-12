@@ -60,7 +60,7 @@ export const ArchiveUploader = (props) => {
     return (
       <div class="mb-7 inline-flex">
         <Tooltip content={archiveTooltip} direction="bottom">
-          <button class="underline text-lsm font-medium text-neutral">Upload Twiter archive</button>
+          <button class="underline text-lsm font-bold text-neutral">Upload Twiter archive</button>
         </Tooltip>
         <div class="ml-8">{statusMsg[status]}</div>
       </div>
