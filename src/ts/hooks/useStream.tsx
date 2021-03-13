@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'preact/hooks';
+import { msgBG } from '../utils/dutils';
 
 export const useStream = (stream, initialState) => {
   // const init = stream.currentValue != null ? stream.currentValue() : initialState
@@ -37,7 +38,10 @@ export const _useStream = (stream, initialState = null) => {
       end() {},
     });
 
-    return () => sub.unsubscribe();
+    return () => {
+      msgBG({ type: '_useStream unsubscribe' });
+      sub.unsubscribe();
+    };
   }, []);
 
   // Just return our current value, since that's the thing we're interested in

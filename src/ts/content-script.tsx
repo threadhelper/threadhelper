@@ -78,6 +78,8 @@ import {
   PostMessageTransport,
   BrowserExtensionTransport,
 } from '@wranggle/rpc';
+import 'chrome-extension-async';
+
 console.log('hi pcss', pcss);
 console.log('hi css', css);
 
@@ -100,6 +102,11 @@ console.log('chrome.storage', { chrome });
 var DEBUG = process.env.NODE_ENV != 'production';
 toggleDebug(window, DEBUG);
 (Kefir.Property.prototype as any).currentValue = currentValue;
+
+// Connection to BG
+// for knowing when to unload BG
+let myPort = chrome.runtime.connect({ name: 'port-from-cs' });
+
 // Sidebar functions
 let thBarHome = makeSidebarHome();
 let thBarComp = makeSidebarCompose();
@@ -284,6 +291,8 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
   subObs(searchBar$, removeSearchBar);
   // subObs(ttSidebar$, resizeSidebar);
 }
+
+// Destructor if another CS comes to the same page(is this possible?)
 function destructor(destructionEvent: any) {
   // Destruction is needed only once
   document.removeEventListener(destructionEvent, destructor);
@@ -307,5 +316,13 @@ function setDestruction(destructor: {
   //port.onDisconnect.addListener(destructor)
 }
 setDestruction(destructor); // destroys previous content script
+
+// Destructor for when tab (and thus CS)
+window.addEventListener('unload', () => {
+  msgBG({ type: 'window is closing!' });
+  subscriptions.forEach((x: { unsubscribe: () => void }) => x.unsubscribe());
+  render(null, thBarHome);
+  render(null, thBarComp);
+});
 main(); // Let's go
 //

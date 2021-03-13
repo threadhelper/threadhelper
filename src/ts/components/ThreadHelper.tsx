@@ -1,23 +1,13 @@
 import { createContext, h } from 'preact';
-import {
-  StateUpdater,
-  useEffect,
-  useReducer,
-  useRef,
-  useState,
-} from 'preact/hooks';
-import { ApiSearchBar } from './ApiSearchBar';
-import { Header } from './Header';
-import { TtReader } from './TtReader';
-import { DisplayController } from './Display';
-import { DisplayMode } from '../types/interfaceTypes';
-import { isEmpty, isNil } from 'ramda';
+import { useReducer, useRef, useState } from 'preact/hooks';
 import { useStorage } from '../hooks/useStorage';
-import Kefir, { Observable } from 'kefir';
+import { DisplayMode } from '../types/interfaceTypes';
 import { TweetResult } from '../types/msgTypes';
-import { makeStorageChangeObs, rpcBg } from '../utils/dutils';
-import { StorageChangeObs } from '../hooks/BrowserEventObs';
+import { rpcBg } from '../utils/dutils';
+import { ApiSearchBar } from './ApiSearchBar';
 import { Banner } from './Banner';
+import { DisplayController } from './Display';
+import { TtReader } from './TtReader';
 
 export const AuthContext = createContext<Credentials>({
   authorization: null,
@@ -72,11 +62,6 @@ async function askPermission() {
   const grantedP = rpcBg('webReqPermission');
   const granted = await grantedP;
   console.log('askPermission', { granted, grantedP });
-  if (granted) {
-  } else {
-    alert('I need permission to work!');
-  }
-  // callback(granted); // TODO just replace the anonymous function with callback
 }
 
 function PermissionAsker() {

@@ -60,6 +60,10 @@ export const _makeStgObs = curry (async (itemName) => {
   return makeStgPathObs([itemName]).toProperty(()=>initVal)
   // return makeStgItemObs(itemName).toProperty(()=>initVal)
 })
+export const makeInitStgObs = curry ((itemName) => {
+  return Kefir.fromPromise(_makeStgObs(itemName)).flatMap((x) => x)
+})
+
 export const combineOptions = (...args: Option[]): SearchFilters => pipe(reduce((a,b)=>assoc(b.name, b.value, a),{}))(args)
 
 export const makeReqDefaultTweetsMsg = (filters:SearchFilters, idleMode: IdleMode, accsShown:User[]): ReqDefaultTweetsMsg => {return{
