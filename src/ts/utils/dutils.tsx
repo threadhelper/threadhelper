@@ -25,6 +25,8 @@ import {
   toPairs,
   when,
   zipObj,
+  unionWith,
+  eqBy,
   __,
 } from 'ramda'; // Function
 import { Msg, MsgWrapper } from '../types/msgTypes';
@@ -220,7 +222,7 @@ export const updateStorage = async () => {
 };
 
 export const resetStorage = () => setData(defaultStorage());
-export const resetStorageField = (key) =>
+export const resetStorageField = (key: string) =>
   setData({ [key]: defaultStorage()[key] });
 
 export const getStg = (key: string) =>
@@ -231,7 +233,7 @@ export const getStg = (key: string) =>
 //   pipe(prop(key), defaultTo(defaultStorage()[key])  , addNewDefault(key))
 // );
 
-export const setStg = curry(async (key, val) => {
+export const setStg = curry(async (key: string, val: any) => {
   console.log('setStg', { key, val });
   return setData({ [key]: val });
 });
@@ -243,6 +245,50 @@ export const setStgPath = curry(async (_path: string, val) =>
   getStg(head(_path)).then(
     pipe(set(lensPath(tail(_path)), val), tap(setStg(head(_path))))
   )
+);
+
+// Modify storage with a function fn
+export const modStg = curry(async (key: string, fn) => {
+  const oldVal = await getStg(key);
+  const newVal = fn(oldVal);
+  console.log('modStg', { key, fn, oldVal, newVal });
+  return setData({ [key]: newVal });
+});
+
+const enqueue = curry(<T,>(incoming: T[], old: T[]): T[] => {
+  return defaultTo([], old).concat(incoming);
+});
+
+export const enqueueStg = curry(async (key: string, vals: any[]) => {
+  console.log('enqueueStg', { key, vals });
+  modStg(key, enqueue(vals));
+});
+
+export const enqueueTweetStg = curry(async (key: string, vals: any[]) => {
+  console.log('enqueueTweetStg', { key, vals });
+  const enqueueNoDups = (olds) =>
+    unionWith(eqBy(prop('id')), vals, defaultTo([], olds));
+  modStg(key, enqueueNoDups);
+});
+
+//
+export const dequeueStg = curry(async (key: string, N: number) => {
+  const curVal = await getStg(key);
+  const workLoad = slice(0, N, curVal);
+  console.log('dequeueStg', { key, N, workLoad });
+  modStg(key, slice(N, Infinity));
+  return workLoad;
+});
+
+// Dequeues and places in a work queue called {key}+"_work_queue". Need to clean that queue with `dequeueStg` after using
+export const dequeue4WorkStg = curry(async (key: string, N: number) => {
+  const workLoad: any[] = await dequeueStg(key, N);
+  enqueueStg(key + '_work_queue', workLoad);
+  return workLoad;
+});
+
+export const dequeueWorkQueueStg = curry((key, N) =>
+  dequeueStg(key + '_work_queue', N)
 );
 
 /* Options API */
@@ -284,8 +330,8 @@ export const rpcBg = async (fnName, args?) => {
       type: 'rpcBg',
       fnName,
       args: defaultTo({}, args),
-    })
-    console.log('rpcBg', {returnValue})
+    });
+    console.log('rpcBg', { returnValue });
     return returnValue;
   } catch (error) {
     console.error(error);

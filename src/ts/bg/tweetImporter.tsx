@@ -192,11 +192,6 @@ export const apiSearchToTweet = (entry) => {
   return tweet;
 };
 
-export const bookmarkToTweet = (entry) => {
-  let tweet: thTweet = apiToTweet(entry);
-  tweet.is_bookmark = true;
-  return tweet;
-};
 // FUNCTIONAL ATTEMPT
 // TOOD: make user and pic queue emit events
 // export const apiToTweet = (entry) => {
@@ -318,6 +313,8 @@ export const apiToTweet = (entry) => {
   tweet = toTweetCommon(tweet, entry);
   return tweet;
 };
+
+export const bookmarkToTweet = pipe(apiToTweet, R.assoc('is_bookmark', true));
 
 //no qt
 const toTweetCommon = (thTweet: thTweet, t: Status) => {

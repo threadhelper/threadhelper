@@ -22,7 +22,7 @@ export const loadIndexFromIdb = async (
 export const importTweets = curry(
   async (
     db: IDBPDatabase<thTwitterDB>,
-    prepFn: (x: Status) => thTweet,
+    prepFn: (x: any) => thTweet,
     tweets: Status[]
   ) => {
     const thTweets: thTweet[] = map(prepFn, tweets);

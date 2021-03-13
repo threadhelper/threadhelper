@@ -15,6 +15,7 @@ const SERVE = process.env.DEV_MODE == 'serve';
 var counter = {};
 var renderCount = 0;
 
+const setStgItem = setStg(name);
 export function useStorage(name, default_val) {
   const storageChangeObs = useContext(StorageChangeObs);
   const storageChangeObsState = useState(() => storageChangeObs);
@@ -26,8 +27,6 @@ export function useStorage(name, default_val) {
     stgPathObs(storageChangeObs, [name]),
     default_val
   );
-
-  const setStgItem = setStg(name);
 
   // ATTENTION: this is commented out bc it might be needed in chrome. The observer use below needs to be the path one, not the whole stg
   useEffect(() => {

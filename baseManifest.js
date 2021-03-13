@@ -13,7 +13,7 @@ module.exports = {
       128: 'public/extension/thread_128.png',
     },
     default_title: 'ThreadHelper',
-    // default_popup: 'popup.html',
+    default_popup: 'popup.html',
   },
 
   // "declarative_net_request" : {
@@ -27,12 +27,12 @@ module.exports = {
   //     "path": "rules_2.json"
   //   }]
   // },
-  // optional_permissions: ['webRequest'],
+  optional_permissions: ['webRequest'],
 
   permissions: [
     'storage',
     'unlimitedStorage',
-    'webRequest',
+    // 'webRequest',
     // "declarativeNetRequest",
     // "declarativeNetRequestFeedback",
     'https://api.twitter.com/',
@@ -65,7 +65,8 @@ module.exports = {
   ],
   background: {
     scripts: ['background.bundle.js'],
-    persistent: true,
+    // persistent: true,
+    persistent: false,
   },
   icons: {
     16: 'public/extension/thread_16.png',

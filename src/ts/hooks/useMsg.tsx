@@ -1,15 +1,7 @@
 import { useContext, useEffect, useMemo } from 'preact/hooks';
-import { andThen, defaultTo, path, pipe, prop } from 'ramda';
-import { MsgObs, StorageChangeObs } from './BrowserEventObs';
-import {
-  getStg,
-  getStgPath,
-  msgStream,
-  setStg,
-  setStgPath,
-  stgPathObs,
-} from '../utils/dutils';
+import { msgStream } from '../utils/dutils';
 import { nullFn } from '../utils/putils';
+import { MsgObs } from './BrowserEventObs';
 import { _useStream } from './useStream';
 
 const SERVE = process.env.DEV_MODE == 'serve';
