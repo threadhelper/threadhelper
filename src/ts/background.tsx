@@ -97,6 +97,7 @@ import {
   _makeStgObs,
   extractTweetPropIfNeeded,
   makeInitStgObs,
+  makeInitOptionsObs,
 } from './utils/bgUtils';
 import {
   cleanOldStorage,
@@ -106,6 +107,7 @@ import {
   enqueueStg,
   enqueueTweetStg,
   getData,
+  getOption,
   getStg,
   makeGotMsgObs,
   makeStgItemObs,
@@ -118,12 +120,13 @@ import {
   updateStorage,
 } from './utils/dutils';
 import { Event, Exception, initGA, PageView } from './utils/ga';
-import { update_size } from './utils/params';
+import { update_size, n_tweets_results } from './utils/params';
 import {
   currentValue,
   curVal,
   errorFilter,
   inspect,
+  isExist,
   list2Obj,
   makeMsgStream,
   nullFn,
@@ -133,17 +136,23 @@ import {
   toVal,
   waitFor,
 } from './utils/putils';
-import { makeValidateTweet } from './worker/search';
+import {
+  getLatestTweets,
+  getRandomSampleTweets,
+  makeValidateTweet,
+} from './worker/search';
 import 'chrome-extension-async';
 import { permissions } from '../../baseManifest';
 import {
   importTweets,
   loadIndexFromIdb,
+  removeTweets,
   updateIdxFromIdb,
 } from './dev/storage/devStgUtils';
+import { thTweet } from './types/tweetTypes';
 
 const createSearchWorker = createWorkerFactory(
-  () => import('./dev/workers/searchWorker.tsx')
+  () => import('./dev/workers/searchWorker')
 );
 // const createScrapeWorker = createWorkerFactory(() => import('../dev/workers/scrapeWorker.tsx'));
 // const createStorageWorker = createWorkerFactory(() => import('../dev/workers/storageWorker.tsx'));
@@ -175,6 +184,10 @@ const subObs = (
   rememberSub(obs.observe({ value: effect }));
 };
 
+const emitIndexUpdated = () => {
+  window.dispatchEvent(new CustomEvent('indexUpdated'));
+};
+
 /* TODO: Functions to move out of this file */
 // Scraping functions
 const assocUser = (userInfo) => assoc('account', prop('id_str', userInfo));
@@ -199,8 +212,10 @@ const doTimelineUpdateScrape = async (auth, userInfo) => {
 };
 
 const doBigTweetScrape = async (_) => {
-  const auth = await getStg('auth');
-  const userInfo = await getStg('userInfo');
+  const [auth, userInfo] = await Promise.all([
+    getStg('auth'),
+    getStg('userInfo'),
+  ]);
   const timeline = await doTimelineScrape(auth, userInfo);
   const bookmarks = await doBookmarkScrape(auth, userInfo);
   const toAdd = R.concat(timeline, bookmarks);
@@ -209,8 +224,10 @@ const doBigTweetScrape = async (_) => {
 };
 
 const doSmallTweetScrape = async (_) => {
-  const auth = await getStg('auth');
-  const userInfo = await getStg('userInfo');
+  const [auth, userInfo] = await Promise.all([
+    getStg('auth'),
+    getStg('userInfo'),
+  ]);
   const timeline = await doTimelineUpdateScrape(auth, userInfo);
   const bookmarks = await doBookmarkScrape(auth, userInfo);
   const toAdd = R.concat(timeline, bookmarks);
@@ -218,18 +235,39 @@ const doSmallTweetScrape = async (_) => {
   setStg('doSmallTweetScrape', false);
 };
 
+// TODO: mind the associated account in full lookup: should be the original one, not the one doing the lookup
+const genericLookupAPI = curry(
+  async (toTweet: (ts: thTweet) => thTweet, ids) => {
+    const [auth, userInfo] = await Promise.all([
+      getStg('auth'),
+      getStg('userInfo'),
+    ]);
+    const toTh = saferTweetMap(pipe(toTweet, assocUser(userInfo), transform));
+    const lookupTweets = await tweetLookupQuery(auth, ids);
+    const thLookupTweets = toTh(lookupTweets);
+    enqueueTweetStg('queue_addTweets', thLookupTweets);
+  }
+);
+
+const doLookupAPI = genericLookupAPI(apiToTweet);
+const doLookupBookmarkAPI = genericLookupAPI(bookmarkToTweet);
+
 // IDB functions
+
 const importTweetQueue = async (queue) => {
   const db = await dbOpen();
-  const queueContents = await dequeue4WorkStg(
-    'queue_addTweets',
-    R.length(queue)
-  );
-  await importTweets(db, (x) => x, queueContents);
+  await importTweets(db, (x) => x, queue);
   db.close();
-  updateNTweets();
   setStg('doIndexUpdate', true);
-  dequeueWorkQueueStg('queue_addTweets', R.length(queueContents)); // need to empty the working queue after using it
+  dequeueWorkQueueStg('queue_addTweets', R.length(queue)); // need to empty the working queue after using it
+};
+// remove tweets in the remove queue
+const removeTweetQueue = async (queue) => {
+  const db = await dbOpen();
+  await removeTweets(db, queue);
+  db.close();
+  setStg('doIndexUpdate', true);
+  dequeueWorkQueueStg('queue_removeTweets', R.length(queue)); // need to empty the working queue after using it
 };
 
 const updateNTweets = async () => {
@@ -241,10 +279,24 @@ const updateNTweets = async () => {
   return n;
 };
 
+const setLastUpdated = async () => {
+  const date = getDateFormatted();
+  setStg('lastUpdated', date);
+  return date;
+};
+
 const doIndexUpdate = async () => {
   const db_promise = dbOpen();
   const index = await loadIndexFromIdb(db_promise);
   const newIndex = await updateIdxFromIdb(index, db_promise);
+  setStg('doIndexUpdate', false);
+  emitIndexUpdated();
+};
+
+const onIndexUpdated = () => {
+  updateNTweets();
+  setLastUpdated();
+  getLatest();
 };
 
 // RPC functions
@@ -268,6 +320,92 @@ const getAuth = async (_) => {
   return await getData('auth');
 };
 
+const calcAccsShown = (activeAccounts) =>
+  filter(
+    either(pipe(prop('showTweets'), isNil), propEq('showTweets', true)),
+    activeAccounts
+  );
+
+const getSearchParams = async () => {
+  const [getRTs, useBookmarks, useReplies, activeAccounts] = await Promise.all([
+    getOption('getRTs'),
+    getOption('useBookmarks'),
+    getOption('useReplies'),
+    getStg('activeAccounts'),
+  ]);
+  const accsShown: User[] = calcAccsShown(activeAccounts);
+  const filters: SearchFilters = { getRTs, useBookmarks, useReplies };
+  return { accsShown, filters };
+};
+const seek = async ({ query }) => {
+  // const isMidSearch = getStg('isMidSearch')
+  if (await getStg('isMidSearch')) return;
+  const { accsShown, filters } = await getSearchParams();
+  const searchResults = await searchWorker.seek(
+    filters,
+    accsShown,
+    n_tweets_results,
+    query
+  );
+  setStg('isMidSearch', false);
+  setStg('search_results', searchResults);
+  return map(prop('id'), searchResults);
+};
+const getLatest = async () => {
+  const { accsShown, filters } = await getSearchParams();
+  const db = await dbOpen();
+  const dbGet = curry((storeName, key) => db.get(storeName, key));
+  const latestTweets = await getLatestTweets(
+    n_tweets_results,
+    filters,
+    dbGet,
+    accsShown,
+    () => db.getAllKeys('tweets')
+  );
+  const res = map((tweet) => {
+    return { tweet };
+  }, latestTweets);
+  db.close();
+  setStg('latest_tweets', res);
+  return map(prop('id'), latestTweets);
+};
+
+const getRandom = async () => {
+  const { accsShown, filters } = await getSearchParams();
+  const db = await dbOpen();
+  const dbGet = curry((storeName, key) => db.get(storeName, key));
+  const randomSample = await getRandomSampleTweets(
+    n_tweets_results,
+    filters,
+    dbGet,
+    accsShown,
+    () => db.getAllKeys('tweets')
+  );
+  const res = map((tweet) => {
+    return { tweet };
+  }, randomSample);
+  db.close();
+  setStg('latest_tweets', res);
+  setStg('random_tweets', res);
+  return map(prop('id'), randomSample);
+};
+
+const getDefault = (mode) => {
+  if (mode === 'random') {
+    getRandom();
+  } else {
+    getLatest();
+  }
+  return;
+};
+
+const bookmarkTh = (ids) => {
+  enqueueTweetStg('queue_removeTweets', ids);
+};
+const removeTh = (ids) => {
+  enqueueTweetStg('queue_removeTweets', ids);
+};
+
 /* BG flow */
 // Listen for auth and store it. simple.
 //
@@ -282,7 +420,7 @@ const auth$ = webRequestPermission$
 subObs({ auth$ }, setStg('auth'));
 const _userInfo$ = auth$
   .thru<Observable<User, any>>(
-    promiseStream((auth: RequestInit) => fetchUserInfo(auth))
+    promiseStream((auth: Credentials) => fetchUserInfo(auth))
   )
   .filter(pipe(isNil, not))
   .filter(pipe(prop('id'), isNil, not))
@@ -293,19 +431,19 @@ const userInfo$ = Kefir.merge([
 ]);
 subObs({ userInfo$ }, setStg('userInfo'));
 subObs({ userInfo$ }, (_) => setStg('doSmallTweetScrape', true));
-const accounts$ = makeInitStgObs('activeAccounts').map(defaultTo([]));
-accounts$.log('accounts$');
+
 const incomingAccount$ = userInfo$.map(assoc('showTweets', true)).toProperty();
 // Add to a list with no duplicates of the key (so no duplicates)
-subObs({ incomingAccount$ }, async (acc) => {
-  if (!R.has('id_str', acc)) return;
+
+const onIncomingAccount = async (acc: User) => {
+  if (!R.has('id_str', acc)) return; // it needs to have at least an id_str to be valid
   const oldAccs = await getStg('activeAccounts');
-  const isNew = isNil(R.find(propEq('id_str', prop('id_str', acc)), oldAccs));
+  const isNew = isNil(R.find(propEq('id_str', prop('id_str', acc)), oldAccs)); // check
   if (isNew) setStg('doBigTweetScrape', true);
-  modStg('activeAccounts', (oldAccs) =>
-    R.unionWith(R.eqBy(R.prop('id_str')), [acc], oldAccs)
-  );
-});
+  const eqById = curry(R.eqBy)(prop('id_str'));
+  modStg('activeAccounts', (oldAccs) => R.unionWith(eqById, [acc], oldAccs));
+};
+subObs({ incomingAccount$ }, onIncomingAccount);
 
 // we need userinfo and auth to do these
 const doBigTweetScrape$ = userInfo$
@@ -320,45 +458,104 @@ const doSmallTweetScrape$ = userInfo$
   .filter((x) => x);
 subObs({ doSmallTweetScrape$ }, doSmallTweetScrape);
 
-const queue_addTweets$ = makeInitStgObs('queue_addTweets').filter(
-  (queue) => !(isEmpty(queue) || isNil(queue))
+const dq = curry((name, queue) => {
+  dequeue4WorkStg(name, R.length(queue));
+});
+
+const queue_lookupTweets$ = makeInitStgObs('queue_lookupTweets').filter(
+  isExist
 );
+subObs({ queue_lookupTweets$ }, dq('queue_lookupTweets'));
+const queue_lookupTweets_work_queue$ = makeInitStgObs(
+  'queue_lookupTweets_work_queue'
+).filter(isExist);
+subObs({ queue_lookupTweets_work_queue$ }, doLookupAPI);
+
+const queue_addTweets$ = makeInitStgObs('queue_addTweets').filter(isExist);
+subObs({ queue_addTweets$ }, dq('queue_addTweets'));
+const queue_addTweets_work_queue$ = makeInitStgObs(
+  'queue_addTweets_work_queue'
+).filter(isExist);
 subObs({ queue_addTweets$ }, importTweetQueue);
+
+const queue_removeTweets$ = makeInitStgObs('queue_removeTweets').filter(
+  isExist
+);
+subObs({ queue_removeTweets$ }, dq('queue_removeTweets'));
+const queue_removeTweets_work_queue$ = makeInitStgObs(
+  'queue_removeTweets_work_queue'
+).filter(isExist);
+subObs({ queue_removeTweets_work_queue$ }, removeTweetQueue);
 
 const doIndexUpdate$ = makeInitStgObs('doIndexUpdate').filter((x) => x);
 subObs({ doIndexUpdate$ }, doIndexUpdate);
 
+const indexUpdated$ = Kefir.fromEvents(window, 'indexUpdated');
+subObs({ indexUpdated$ }, (_) => onIndexUpdated());
+
+const query$ = makeInitStgObs('query');
+subObs({ query$ }, (query) => seek({ query }));
+const isMidSearch$ = makeInitStgObs('isMidSearch');
+// just to make sure isMidSearch$ never gets stuck
+subObs(
+  { isMidSearch$: isMidSearch$.filter((x) => x).delay(2000 * 5) },
+  setStg('isMidSearch', false)
+);
+
 // const accountsUpdate$ = Kefir.merge([incomingAccounts$])
 // // const accountsUpdate$ = Kefir.merge([removeAccount$, incomingAccounts$])
 // subObs({ accountsUpdate$ }, setStg('activeAccounts'));
+const accounts$ = makeInitStgObs('activeAccounts').map(defaultTo([]));
+accounts$.log('accounts$');
 const accsShown$ = (accounts$.map(
-  pipe(
-    // it's a search filter
-    values,
-    filter(either(pipe(prop('showTweets'), isNil), propEq('showTweets', true)))
-  )
+  filter(either(pipe(prop('showTweets'), isNil), propEq('showTweets', true)))
 ) as unknown) as Observable<User[], any>;
 accsShown$.log('accsShown$');
+/* Display options and Search filters */
+const idleMode$ = makeInitOptionsObs('idleMode').map(
+  prop('value')
+) as Observable<IdleMode, any>;
+idleMode$.log('idleMode$');
+// subObs({ idleMode$ }, getDefault);
+
+const searchMode$ = makeInitOptionsObs('searchMode').map(prop('value'));
+const searchFilters$ = Kefir.combine(
+  [
+    makeInitOptionsObs('getRTs'),
+    makeInitOptionsObs('useBookmarks'),
+    makeInitOptionsObs('useReplies'),
+  ],
+  combineOptions
+).toProperty();
+subObs({ searchFilters$ }, (_) => getLatest());
 
 /* RPC BG */
+// RPC INSTRUCTIONS:
+// write rpc functions like this: fnName({arg0, arg1....})
+// call bg functions like this, rpcBg(fnName, args?)
 
+var searchFns = {
+  seek,
+  getLatest,
+  getRandom,
+};
 var proxyFns = {
   fetchBg,
   getAuth,
 };
-var rpcFns = { ...proxyFns, webReqPermission };
+var rpcFns = { ...proxyFns, ...searchFns, webReqPermission };
 // RPC central
 chrome.runtime.onMessage.addListener(async function (
   request,
   sender,
   sendResponse
 ) {
-  console.log(
-    sender.tab
-      ? 'from a content script:' + sender.tab.url
-      : 'from the extension',
-    { sender, request }
-  );
+  // console.log(
+  //   sender.tab
+  //     ? 'from a content script:' + sender.tab.url
+  //     : 'from the extension',
+  //   { sender, request }
+  // );
 
   if (request.type != 'rpcBg' || R.has('fname', request)) {
     sendResponse('not RPC');
@@ -382,21 +579,26 @@ chrome.runtime.onMessage.addListener(async function (
   //   default:
   //     break;
   // }
+  let response = '';
   if (
     propEq('type', 'rpcBg') &&
     R.has('fnName', request) &&
     R.includes(request.fnName, keys(rpcFns))
   ) {
     try {
-      sendResponse(await rpcFns[request.fnName](defaultTo({}, request.args)));
+      console.time(`[TIME] RPC ${request.fnName}`);
+      response = await rpcFns[request.fnName](defaultTo({}, request.args));
+      console.timeEnd(`[TIME] RPC ${request.fnName}`);
+      sendResponse(response);
     } catch (error) {
-      sendResponse('RPC call failed');
+      response = 'RPC call failed';
       console.error(error);
     }
   } else {
-    sendResponse('not RPC');
+    response = 'not RPC';
     console.error(`bgRpc no function ${request.fnName}`);
   }
+  sendResponse(response);
 
   return true;
 });
@@ -411,7 +613,7 @@ function disconnected(p: chrome.runtime.Port) {
 }
 
 function connected(p: chrome.runtime.Port) {
-  if (R.length(ports) <= 0) setStg('doBigTweetScrape', true);
+  if (R.length(ports) <= 0 && !DEBUG) setStg('doBigTweetScrape', true);
   ports = R.append(p, ports);
   p.onDisconnect.addListener(disconnected);
   console.log('[DEBUG] Port connected', { p, ports });
@@ -501,6 +703,7 @@ const onInstalled = curry(
       id,
     }: { reason: string; previousVersion: string; id: string }
   ) => {
+    if (DEBUG) setStg('doBigTweetScrape', true);
     console.log('[DEBUG] onInstalled', { reason, previousVersion, id });
     switch (
       reason // "install", "update", "chrome_update", or "shared_module_update"

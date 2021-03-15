@@ -1,4 +1,4 @@
-import { User } from 'twitter-d';
+import { FullUser, User } from 'twitter-d';
 import { thTweet } from './tweetTypes';
 import { Credentials } from './types';
 
@@ -6,7 +6,7 @@ export interface StorageInterface {
   options: Options;
   hasArchive: boolean;
   hasTimeline: object; // {id_str: Bool}
-  activeAccounts: object; //{screen_name: String, id_str: String, showTweets: Bool, ...}
+  activeAccounts: FullUser[]; //{screen_name: String, id_str: String, showTweets: Bool, ...}
   currentScreenName: string;
   latest_tweets: SearchResult[];
   search_results: SearchResult[];
@@ -19,7 +19,7 @@ export interface StorageInterface {
   nTweets: number;
   lastUpdated: string;
   auth: Credentials;
-  userInfo: User | null;
+  userInfo: User;
   doRefreshIdb: boolean;
   showPatchNotes: boolean;
 }

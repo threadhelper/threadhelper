@@ -39,7 +39,7 @@ export const _useStream = (stream, initialState = null) => {
     });
 
     return () => {
-      msgBG({ type: '_useStream unsubscribe' });
+      // msgBG({ type: '_useStream unsubscribe' });
       sub.unsubscribe();
     };
   }, []);
