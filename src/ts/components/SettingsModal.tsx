@@ -24,6 +24,7 @@ import { SyncIcon } from './Sync';
 import { AuthContext } from './ThreadHelper';
 import Tooltip from './Tooltip';
 import defaultProfilePic from '../../images/defaultProfilePic.png';
+import CrossIcon from '../../images/x-red.svg';
 import { ArchiveExporter } from './ArchiveExporter';
 
 const Checkbox = ({ get, set, label }) => {
@@ -196,6 +197,7 @@ export const AvatarTrophy = ({
         </a>
       ) : (
         <div class="relative">
+          <CrossIcon class="top-0 absolute w-3 h-3 cursor-pointer" style={{right: '-5px'}}/>
           <div class="w-full h-full absolute rounded-full inset-0 transition-colors duration-200 hover:bg-black hover:bg-opacity-15 mb-3"></div>
           <img
             class="rounded-full h-16 w-16"

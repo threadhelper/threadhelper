@@ -41,6 +41,7 @@ import { inspect } from '../utils/putils';
 import { AuthContext, FeedDisplayMode } from './ThreadHelper';
 import { Tweet as TweetCard } from './Tweet';
 import { User } from 'twitter-d';
+import CrossIcon from '../../images/x-red.svg';
 
 const prepTweets = (list: TweetResult[] | null): SearchResult[] =>
   filter(pipe(prop('tweet'), isNil, not), defaultTo([], list));
