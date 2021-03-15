@@ -299,7 +299,7 @@ export const getOptions = async (): Promise<Options> =>
   );
 
 export const getOption = async (name: string): Promise<Option> =>
-  getOptions().then(prop(name));
+  getStgPath(['options', name]);
 
 export const setOption = (name: string) =>
   setStgPath(['options', name, 'value']);

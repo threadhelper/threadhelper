@@ -198,9 +198,9 @@ export async function main() {
   const optionsChange$ = makeStorageChangeObs().filter(
     propEq('itemName', 'options')
   );
-  const makeOptionObs = _makeOptionObs(optionsChange$); // const storageChange$ = makeStorageChangeObs();
 
   /* Display options and Search filters */
+  const makeOptionObs = _makeOptionObs(optionsChange$); // const storageChange$ = makeStorageChangeObs();
   const idleMode$ = (await makeOptionObs('idleMode')).map(
     prop('value')
   ) as Observable<IdleMode, any>;

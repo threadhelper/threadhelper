@@ -39,8 +39,11 @@ export const defaultStorage = (): StorageInterface => {
     doSmallTweetScrape: false,
     doIndexUpdate: false,
     doIndexLoad: false,
+    queue_lookupTweets: [],
     queue_addTweets: [],
     queue_removeTweets: [],
+    isMidSearch: false,
+    random_tweets: [],
   };
 };
 

@@ -24,12 +24,13 @@ export const extractTweetPropIfNeeded = ifElse(
   (x) => x
 );
 
-export const saferTweetMap = (fn: (x:Status) => thTweet) => pipe( // saferMap :: [x] -> [x]
+export const saferTweetMap = curry((fn: (x:Status) => thTweet, tweets):thTweet[] => pipe(
+  (()=>tweets),
   defaultTo([]), 
   filter(pipe(isNil, not)), 
   filter(validateTweet), 
   map(fn),
-  ) // fn -> ([x] -> [fn(x)])
+  )())
 
   // auth
 export const makeInit = (auth: Credentials) : RequestInit => {
@@ -54,15 +55,18 @@ export const _makeOptionObs = curry (async (optionsChange$: Observable<StorageCh
   const initVal = await getOption(itemName)
   return makeOptionObs(optionsChange$,itemName).toProperty(()=>initVal)
 })
+export const makeInitOptionsObs = (itemName) => {
+  return Kefir.fromPromise(_makeOptionObs(itemName)).flatMap((x) => x)
+}
 // makeStgObs :: String -> a
 export const _makeStgObs = curry (async (itemName) => {
   const initVal = await getStg(itemName)
   return makeStgPathObs([itemName]).toProperty(()=>initVal)
   // return makeStgItemObs(itemName).toProperty(()=>initVal)
 })
-export const makeInitStgObs = curry ((itemName) => {
+export const makeInitStgObs = (itemName) => {
   return Kefir.fromPromise(_makeStgObs(itemName)).flatMap((x) => x)
-})
+}
 
 export const combineOptions = (...args: Option[]): SearchFilters => pipe(reduce((a,b)=>assoc(b.name, b.value, a),{}))(args)
 

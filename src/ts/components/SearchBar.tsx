@@ -4,14 +4,16 @@ import { defaultTo, isEmpty, path, trim } from 'ramda';
 import { useStorage } from '../hooks/useStorage';
 import SearchIcon from '../../images/search.svg';
 import Kefir from 'kefir';
-import { msgBG } from '../utils/dutils';
+import { msgBG, rpcBg } from '../utils/dutils';
 import { FeedDisplayMode } from './ThreadHelper';
 import { DisplayMode } from '../types/interfaceTypes';
 
 const trimNewlines = (str) =>
   trim(str).replace(/(^\s*(?!.+)\n+)|(\n+\s+(?!.+)$)/g, '');
 const reqSearch = (query) => {
-  msgBG({ type: 'search', query });
+  // console.log('SearchBar reqSearch');
+  // // msgBG({ type: 'search', query });
+  // rpcBg('seek', { query });
 };
 
 export function SearchBar({ show }) {

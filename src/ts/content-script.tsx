@@ -14,7 +14,7 @@ import Kefir, { Observable, Property, Subscription } from 'kefir';
 import { h, render } from 'preact';
 import 'preact/debug';
 import 'preact/devtools';
-import { MsgObs, StorageChangeObs } from './hooks/BrowserEventObs';
+import { MsgObs, QueryObs, StorageChangeObs } from './hooks/BrowserEventObs';
 import * as R from 'ramda';
 import {
   and,
@@ -111,13 +111,21 @@ let myPort = chrome.runtime.connect({ name: 'port-from-cs' });
 let thBarHome = makeSidebarHome();
 let thBarComp = makeSidebarCompose();
 const activateSidebar = curry(
-  (inject: (arg0: Element) => any, bar: Element, storageChange$, msgObs$) => {
+  (
+    inject: (arg0: Element) => any,
+    bar: Element,
+    storageChange$,
+    msgObs$,
+    composeQuery$
+  ) => {
     console.log('[DEBUG] activating sidebar', { storageChange$ });
     inject(bar);
     render(
       <StorageChangeObs.Provider value={storageChange$}>
         <MsgObs.Provider value={msgObs$}>
-          <ThreadHelper />
+          <QueryObs.Provider value={composeQuery$}>
+            <ThreadHelper />
+          </QueryObs.Provider>
         </MsgObs.Provider>
       </StorageChangeObs.Provider>,
       bar
@@ -250,11 +258,11 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
   // Sidebar control
   const updateFloat = (value: any) =>
     value
-      ? activateFloatSidebar(storageChange$, msgObs$)
+      ? activateFloatSidebar(storageChange$, msgObs$, composeQuery$)
       : deactivateSidebar(thBarComp); //function
   const updateHome = (value: any) =>
     value
-      ? activateHomeSidebar(storageChange$, msgObs$)
+      ? activateHomeSidebar(storageChange$, msgObs$, composeQuery$)
       : deactivateSidebar(thBarHome); //function
   // const ttSidebar$ = ttSidebarObserver().flatten();
   // ttSidebar$.log('ttSidebar$');
