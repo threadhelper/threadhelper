@@ -54,7 +54,7 @@ export function ApiSearchBar() {
   }, []);
 
   return (
-    <div class="flex items-center justify-between pt-3 px-5 flex-initial">
+    <div class="flex items-center justify-between pt-3 pr-5 flex-initial">
       <div
         class="flex items-center flex-grow border-accent"
         // style={{ borderColor: 'var(--accent-color)' }}
@@ -65,18 +65,18 @@ export function ApiSearchBar() {
               setShowSearchBar(!showSearchBar);
               if (showSearchBar) inputObj.current?.focus();
             }}
-            class="mr-3 text-mainTxt hover:text-accent fill-current stroke-current"
+            class="mr-3 ml-5 text-mainTxt hover:text-accent"
             // style={{
             //   fill: 'var(--main-txt-color)',
             //   stroke: 'var(--main-txt-color)',
             // }}
           >
-            <SearchIcon class="h-6 w-6" />
+            <SearchIcon class="h-6 w-6 fill-current stroke-current" />
           </button>
         ) : null}
         {showSearchBar ? (
           <div
-            class="inline-flex items-center h-8 px-5 rounded-full text-sm focus-within:ring-2 ring-current w-full text-accent"
+            class="inline-flex items-center h-8 pl-3 pr-5 ml-2 rounded-full text-sm focus-within:ring-2 ring-current w-full text-accent"
             // style={{
             //   // backgroundColor: 'var(--main-bg-color)',
             //   // borderColor: 'var(--accent-color)',
