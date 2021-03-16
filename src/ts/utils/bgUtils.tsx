@@ -55,9 +55,9 @@ export const _makeOptionObs = curry (async (optionsChange$: Observable<StorageCh
   const initVal = await getOption(itemName)
   return makeOptionObs(optionsChange$,itemName).toProperty(()=>initVal)
 })
-export const makeInitOptionsObs = (itemName) => {
-  return Kefir.fromPromise(_makeOptionObs(itemName)).flatMap((x) => x)
-}
+export const makeInitOptionsObs = curry((optionsChange$, itemName) => {
+  return Kefir.fromPromise(_makeOptionObs(optionsChange$, itemName)).flatMap((x) => x).map(prop('value'))
+})
 // makeStgObs :: String -> a
 export const _makeStgObs = curry (async (itemName) => {
   const initVal = await getStg(itemName)

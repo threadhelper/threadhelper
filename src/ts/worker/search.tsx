@@ -66,7 +66,6 @@ export const genRandomSample: SampleGen = function* (keys) {
       Math.floor,
       // tap(() => console.log('genRandomSample', { keys })),
       (x) => {
-        console.log('genRandomSample', { x });
         return nth(x, keys);
       }
     )(keys);

@@ -252,7 +252,8 @@ export const modStg = curry(async (key: string, fn) => {
   const oldVal = await getStg(key);
   const newVal = fn(oldVal);
   console.log('modStg', { key, fn, oldVal, newVal });
-  return setData({ [key]: newVal });
+  return setStg(key, newVal);
+  // return setData({ [key]: newVal });
 });
 
 const enqueue = curry(<T,>(incoming: T[], old: T[]): T[] => {
@@ -273,10 +274,11 @@ export const enqueueTweetStg = curry(async (key: string, vals: any[]) => {
 
 //
 export const dequeueStg = curry(async (key: string, N: number) => {
-  const curVal = await getStg(key);
+  const curVal: any[] = defaultTo([], await getStg(key));
   const workLoad = slice(0, N, curVal);
   console.log('dequeueStg', { key, N, workLoad });
-  modStg(key, slice(N, Infinity));
+  const dequeueMod = pipe(defaultTo([]), slice(N, Infinity));
+  modStg(key, dequeueMod);
   return workLoad;
 });
 

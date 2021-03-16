@@ -1,4 +1,5 @@
 import { Options, StorageInterface } from '../types/stgTypes';
+import { TweetId } from '../types/tweetTypes';
 
 // DEFAULT OPTIONS V IMPORTANT
 export const defaultOptions = (): Options => {
@@ -18,14 +19,14 @@ export const defaultStorage = (): StorageInterface => {
     options: defaultOptions(),
     hasArchive: false,
     hasTimeline: {}, // {id_str: Bool}
-    activeAccounts: [], //{screen_name: String, id_str: String, showTweets: Bool, ...}
+    activeAccounts: {}, //{id:FullUser}
     currentScreenName: '',
     latest_tweets: [],
     search_results: [],
     api_results: [],
     api_users: [],
-    temp_archive: [],
-    stgTweetQueue: [],
+    // temp_archive: [],
+    queue_tempArchive: [],
     sync: false,
     nTweets: 0,
     lastUpdated: '',
@@ -40,10 +41,12 @@ export const defaultStorage = (): StorageInterface => {
     doIndexUpdate: false,
     doIndexLoad: false,
     queue_lookupTweets: [],
+    queue_lookupBookmarks: [],
     queue_addTweets: [],
     queue_removeTweets: [],
     isMidSearch: false,
     random_tweets: [],
+    lastClickedId: null,
   };
 };
 

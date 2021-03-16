@@ -1,12 +1,13 @@
 import { FullUser, User } from 'twitter-d';
-import { thTweet } from './tweetTypes';
+import { thTweet, TweetId } from './tweetTypes';
 import { Credentials } from './types';
 
+export type activeAccsType = { [id: TweetId]: FullUser };
 export interface StorageInterface {
   options: Options;
   hasArchive: boolean;
   hasTimeline: object; // {id_str: Bool}
-  activeAccounts: FullUser[]; //{screen_name: String, id_str: String, showTweets: Bool, ...}
+  activeAccounts: activeAccsType; //{screen_name: String, id_str: String, showTweets: Bool, ...}
   currentScreenName: string;
   latest_tweets: SearchResult[];
   search_results: SearchResult[];

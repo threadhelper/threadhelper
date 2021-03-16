@@ -8,7 +8,7 @@ import * as css from '././style/cs.css';
 import * as pcss from '././styles.css';
 import { MsgObs, StorageChangeObs } from './hooks/BrowserEventObs';
 import { updateTheme } from './utils/wutils';
-import { dbOpen } from './worker/idb_wrapper';
+import { dbFilter, dbOpen } from './worker/idb_wrapper';
 import Scraper from './bgModules/Scraper';
 import Search from './bgModules/Search';
 import Storage from './bgModules/Storage';
@@ -150,13 +150,17 @@ import {
   updateIdxFromIdb,
 } from './dev/storage/devStgUtils';
 import { thTweet } from './types/tweetTypes';
+import { StoreName } from './types/dbTypes';
 
 const createSearchWorker = createWorkerFactory(
   () => import('./dev/workers/searchWorker')
 );
+const createIdbWorker = createWorkerFactory(
+  () => import('./dev/workers/idbWorker')
+);
 // const createScrapeWorker = createWorkerFactory(() => import('../dev/workers/scrapeWorker.tsx'));
-// const createStorageWorker = createWorkerFactory(() => import('../dev/workers/storageWorker.tsx'));
 const searchWorker = createSearchWorker();
+const idbWorker = createIdbWorker();
 
 // Analytics //IMPORTANT: this block must come before setting the currentValue for Kefir. Property and I have no idea why
 (function initAnalytics() {
@@ -184,31 +188,96 @@ const subObs = (
   rememberSub(obs.observe({ value: effect }));
 };
 
+const queue_load = 2000;
+const isQueueBusy = async (name) => {
+  const wQ = await getStg(name + '_work_queue');
+  console.log('isQueueBusy', { wQ });
+  return isExist(wQ);
+};
+
+const maybeDq = curry(async (name) => {
+  const busy = await isQueueBusy(name);
+  if (!busy) {
+    console.log('[DEBUG] dq', { name });
+    dequeue4WorkStg(name, queue_load);
+  } else {
+    console.log('[DEBUG] dq: queue busy ', { name });
+  }
+  // dequeue4WorkStg(name, R.length(defaultTo([], queue)));
+});
+const subWorkQueue = (name, workFn) => {
+  const queue$ = makeInitStgObs(name).filter(isExist);
+  queue$.log(name + '$');
+  subObs({ [name + '$']: queue$ }, (_) => maybeDq(name));
+  const workQueue$ = makeInitStgObs(name + '_work_queue').filter(
+    pipe(isNil, not)
+  );
+  workQueue$.log(name + '_work_queue' + '$');
+  const _workFn = async (queue) => {
+    if (isExist(queue)) {
+      await workFn(queue);
+      dequeueWorkQueueStg(name, R.length(queue));
+    } else {
+      maybeDq(name);
+    }
+  };
+  subObs({ [name + '_work_queue' + '$']: workQueue$ }, _workFn);
+};
+
 const emitIndexUpdated = () => {
   window.dispatchEvent(new CustomEvent('indexUpdated'));
 };
 
 /* TODO: Functions to move out of this file */
 // Scraping functions
+const checkGotTimeline = async (
+  userInfo: FullUser,
+  timeline: string | any[]
+) => {
+  // const userInfo = await getStg('userInfo');
+  return (
+    timeline.length > 3000 || timeline.length >= userInfo.statuses_count - 1
+  );
+};
+var usernameFilterRegex = /(from|to):([a-zA-Z0-9_]*\s?[a-zA-Z0-9_]*)$/;
+const makeUserQuery = (userQuery) => {
+  var usernameMatch = userQuery.match(usernameFilterRegex);
+  return usernameMatch ? usernameMatch[2] : userQuery;
+};
 const assocUser = (userInfo) => assoc('account', prop('id_str', userInfo));
 
 const doBookmarkScrape = async (auth, userInfo) => {
   const toTh = saferTweetMap(pipe(bookmarkToTweet, assocUser(userInfo)));
-  const bookmarks = await getBookmarks(auth);
-  const thBookmarks = toTh(bookmarks);
-  return thBookmarks;
+  try {
+    const bookmarks = await getBookmarks(auth);
+    const thBookmarks = toTh(bookmarks);
+    return thBookmarks;
+  } catch (e) {
+    console.error("couldn't doBookmarkScrape");
+    return [];
+  }
 };
 const doTimelineScrape = async (auth, userInfo) => {
+  // try {
   const toTh = saferTweetMap(pipe(apiToTweet, assocUser(userInfo)));
   const timelineTweets = await timelineQuery(auth, userInfo);
   const thTimelineTweets = toTh(timelineTweets);
   return thTimelineTweets;
+  // } catch (e) {
+  //   console.error("couldn't doTimelineScrape");
+  //   return [];
+  // }
 };
 const doTimelineUpdateScrape = async (auth, userInfo) => {
   const toTh = saferTweetMap(pipe(apiToTweet, assocUser(userInfo)));
-  const updateTweets = await updateQuery(auth, userInfo, update_size);
-  const thUpdateTweets = toTh(updateTweets);
-  return thUpdateTweets;
+  try {
+    const updateTweets = await updateQuery(auth, userInfo, update_size);
+    const thUpdateTweets = toTh(updateTweets);
+    return thUpdateTweets;
+  } catch (e) {
+    console.error("couldn't doTimelineUpdateScrape");
+    return [];
+  }
 };
 
 const doBigTweetScrape = async (_) => {
@@ -216,11 +285,15 @@ const doBigTweetScrape = async (_) => {
     getStg('auth'),
     getStg('userInfo'),
   ]);
-  const timeline = await doTimelineScrape(auth, userInfo);
-  const bookmarks = await doBookmarkScrape(auth, userInfo);
-  const toAdd = R.concat(timeline, bookmarks);
-  enqueueTweetStg('queue_addTweets', toAdd);
-  setStg('doBigTweetScrape', false);
+  try {
+    const timeline = await doTimelineScrape(auth, userInfo);
+    const bookmarks = await doBookmarkScrape(auth, userInfo);
+    const toAdd = R.concat(timeline, bookmarks);
+    enqueueTweetStg('queue_addTweets', toAdd);
+    setStg('doBigTweetScrape', false);
+  } catch (e) {
+    console.error('doBigTweetScrape failed', { e });
+  }
 };
 
 const doSmallTweetScrape = async (_) => {
@@ -228,6 +301,7 @@ const doSmallTweetScrape = async (_) => {
     getStg('auth'),
     getStg('userInfo'),
   ]);
+  console.log('[DEBUG] doSmallTweetScrape', { auth, userInfo });
   const timeline = await doTimelineUpdateScrape(auth, userInfo);
   const bookmarks = await doBookmarkScrape(auth, userInfo);
   const toAdd = R.concat(timeline, bookmarks);
@@ -237,12 +311,13 @@ const doSmallTweetScrape = async (_) => {
 
 // TODO: mind the associated account in full lookup: should be the original one, not the one doing the lookup
 const genericLookupAPI = curry(
-  async (toTweet: (ts: thTweet) => thTweet, ids) => {
-    const [auth, userInfo] = await Promise.all([
+  async (toTweet: (ts: Status) => thTweet, ids) => {
+    const [auth, userInfo] = await Promise.all<Credentials, User>([
       getStg('auth'),
       getStg('userInfo'),
     ]);
-    const toTh = saferTweetMap(pipe(toTweet, assocUser(userInfo), transform));
+    const toTweetAndAcc = pipe(toTweet, assocUser(userInfo));
+    const toTh = saferTweetMap(toTweetAndAcc);
     const lookupTweets = await tweetLookupQuery(auth, ids);
     const thLookupTweets = toTh(lookupTweets);
     enqueueTweetStg('queue_addTweets', thLookupTweets);
@@ -254,12 +329,23 @@ const doLookupBookmarkAPI = genericLookupAPI(bookmarkToTweet);
 
 // IDB functions
 
+const importArchive = async (queue) => {
+  const [auth, userInfo] = await Promise.all<Credentials, User>([
+    getStg('auth'),
+    getStg('userInfo'),
+  ]);
+  const patchedArchive = await patchArchive(auth, userInfo, queue);
+  const toTh = saferTweetMap(archToTweet);
+  const thArchiveTweets = toTh(patchedArchive);
+  enqueueTweetStg('queue_addTweets', thArchiveTweets);
+};
+
 const importTweetQueue = async (queue) => {
   const db = await dbOpen();
   await importTweets(db, (x) => x, queue);
   db.close();
   setStg('doIndexUpdate', true);
-  dequeueWorkQueueStg('queue_addTweets', R.length(queue)); // need to empty the working queue after using it
+  // dequeueWorkQueueStg('queue_addTweets', R.length(queue)); // need to empty the working queue after using it
 };
 // remove tweets in the remove queue
 const removeTweetQueue = async (queue) => {
@@ -267,7 +353,7 @@ const removeTweetQueue = async (queue) => {
   await removeTweets(db, queue);
   db.close();
   setStg('doIndexUpdate', true);
-  dequeueWorkQueueStg('queue_removeTweets', R.length(queue)); // need to empty the working queue after using it
+  // dequeueWorkQueueStg('queue_removeTweets', R.length(queue)); // need to empty the working queue after using it
 };
 
 const updateNTweets = async () => {
@@ -293,7 +379,8 @@ const doIndexUpdate = async () => {
   emitIndexUpdated();
 };
 
-const onIndexUpdated = () => {
+const onIndexUpdated = async () => {
+  await searchWorker.loadIndex();
   updateNTweets();
   setLastUpdated();
   getLatest();
@@ -302,16 +389,23 @@ const onIndexUpdated = () => {
 // RPC functions
 
 // Chrome extension business
+
 const webReqPermission = async ({}) => {
   console.log('webReqPermission... ');
-  const granted = await chrome.permissions.request({
+  const permitted = await chrome.permissions.contains({
     permissions: ['webRequest'],
   });
-  setStg('webRequestPermission', granted);
-  // console.log('webReqPermission', { granted });
-  return granted;
+  if (permitted) {
+    setStg('webRequestPermission', permitted);
+    return permitted;
+  } else {
+    const granted = await chrome.permissions.request({
+      permissions: ['webRequest'],
+    });
+    setStg('webRequestPermission', granted);
+    return granted;
+  }
 };
-
 // Playground proxy functions
 const fetchBg = async ({ url, options }) => {
   return await thFetch(url, options);
@@ -320,10 +414,10 @@ const getAuth = async (_) => {
   return await getData('auth');
 };
 
-const calcAccsShown = (activeAccounts) =>
+const calcAccsShown = (activeAccounts: activeAccsType): User[] =>
   filter(
     either(pipe(prop('showTweets'), isNil), propEq('showTweets', true)),
-    activeAccounts
+    values(activeAccounts)
   );
 
 const getSearchParams = async () => {
@@ -334,27 +428,35 @@ const getSearchParams = async () => {
     getStg('activeAccounts'),
   ]);
   const accsShown: User[] = calcAccsShown(activeAccounts);
-  const filters: SearchFilters = { getRTs, useBookmarks, useReplies };
+  const filters: SearchFilters = {
+    getRTs: getRTs.value,
+    useBookmarks: useBookmarks.value,
+    useReplies: useReplies.value,
+  };
   return { accsShown, filters };
 };
 const seek = async ({ query }) => {
   // const isMidSearch = getStg('isMidSearch')
+  // console.trace(`seek ${query}`);
   if (await getStg('isMidSearch')) return;
   const { accsShown, filters } = await getSearchParams();
+  console.time(`${query} seek`);
   const searchResults = await searchWorker.seek(
     filters,
     accsShown,
     n_tweets_results,
     query
   );
+  console.timeEnd(`${query} seek`);
   setStg('isMidSearch', false);
-  setStg('search_results', searchResults);
+  await setStg('search_results', searchResults);
   return map(prop('id'), searchResults);
 };
 const getLatest = async () => {
   const { accsShown, filters } = await getSearchParams();
   const db = await dbOpen();
   const dbGet = curry((storeName, key) => db.get(storeName, key));
+  console.log('getting latest tweets ', { accsShown, filters });
   const latestTweets = await getLatestTweets(
     n_tweets_results,
     filters,
@@ -387,6 +489,7 @@ const getRandom = async () => {
   db.close();
   setStg('latest_tweets', res);
   setStg('random_tweets', res);
+  console.log('getRandom', { res, accsShown, filters });
   return map(prop('id'), randomSample);
 };
 
@@ -399,17 +502,77 @@ const getDefault = (mode) => {
   return;
 };
 
-const bookmarkTh = (ids) => {
+const doUserSearch = async ({ query }) => {
+  if (
+    isEmpty(query) ||
+    (query.match(/^\/(?!from|to)/) && !query.match(/(from|to)/))
+  ) {
+    setStg('api_users', []);
+    return [];
+  }
+  const auth = await getStg('auth');
+  const usersRes = await searchUsers(auth, query);
+  const users = prop('users', usersRes);
+  console.log('doUserSearch', { usersRes, users });
+  setStg('api_users', users);
+};
+
+const doSearchApi = async ({ query }) => {
+  if (isEmpty(query)) {
+    setStg('api_results', []);
+    return [];
+  }
+  const auth = await getStg('auth');
+  const apiResults = await searchAPI(auth, query);
+  const toTh = pipe(
+    saferTweetMap(apiSearchToTweet),
+    map((tweet) => {
+      return { tweet };
+    })
+  );
+  const res = toTh(apiResults);
+  setStg('api_results', res);
+  return res;
+};
+
+const addBookmark = ({ ids }) => {
+  enqueueTweetStg('queue_lookupBookmark', ids);
+};
+const removeBookmark = ({ ids }) => {
   enqueueTweetStg('queue_removeTweets', ids);
 };
-const removeTh = (ids) => {
+const deleteTweet = ({ ids }) => {
   enqueueTweetStg('queue_removeTweets', ids);
 };
 
+const removeAccount = async ({ id }) => {
+  const db = await dbOpen();
+  const removeAccount = async (id_str: string): Promise<any> => {
+    db.delete('accounts', id_str);
+    return db.getAll('accounts');
+  };
+  const filterByAccount = (id) => {
+    dbFilter<thTweet>(db, StoreName.tweets, propEq('account', id));
+  };
+  const remainingAccounts = removeAccount(id);
+  await pipe(
+    () => filterByAccount(id),
+    andThen(map(prop('id'))),
+    andThen((ids) => enqueueTweetStg('queue_removeTweets', ids))
+  )();
+
+  db.close();
+  return remainingAccounts;
+};
+
+const updateTimeline = ({}) => setStg('doSmallTweetScrape', true);
+
 /* BG flow */
 // Listen for auth and store it. simple.
-//
+//const webRequestPermitted$ = permissions$.thru(
+
 const webRequestPermission$ = makeInitStgObs('webRequestPermission');
+// const webRequestPermission$ = makeInitStgObs('webRequestPermission');
 webRequestPermission$.log('webRequestPermission$');
 const auth$ = webRequestPermission$
   .filter((x) => x)
@@ -438,10 +601,12 @@ const incomingAccount$ = userInfo$.map(assoc('showTweets', true)).toProperty();
 const onIncomingAccount = async (acc: User) => {
   if (!R.has('id_str', acc)) return; // it needs to have at least an id_str to be valid
   const oldAccs = await getStg('activeAccounts');
-  const isNew = isNil(R.find(propEq('id_str', prop('id_str', acc)), oldAccs)); // check
+  const isNew = !R.has(prop('id_str', acc), oldAccs); // check
   if (isNew) setStg('doBigTweetScrape', true);
-  const eqById = curry(R.eqBy)(prop('id_str'));
-  modStg('activeAccounts', (oldAccs) => R.unionWith(eqById, [acc], oldAccs));
+  console.log('[DEBUG] onIncomingAccount', { acc, oldAccs, isNew });
+  modStg('activeAccounts', (olds) =>
+    R.set(R.lensProp(prop('id_str', acc)), acc, olds)
+  );
 };
 subObs({ incomingAccount$ }, onIncomingAccount);
 
@@ -449,43 +614,23 @@ subObs({ incomingAccount$ }, onIncomingAccount);
 const doBigTweetScrape$ = userInfo$
   .take(1)
   .flatMapLatest((_) => makeInitStgObs('doBigTweetScrape'))
-  .filter((x) => x);
+  .map(inspect('[DEBUG] doBigTweetScrape change'))
+  .filter((x) => x)
+  .throttle(2500);
 subObs({ doBigTweetScrape$ }, doBigTweetScrape);
 
 const doSmallTweetScrape$ = userInfo$
   .take(1)
   .flatMapLatest((_) => makeInitStgObs('doSmallTweetScrape'))
-  .filter((x) => x);
+  .filter((x) => x)
+  .throttle(2500);
 subObs({ doSmallTweetScrape$ }, doSmallTweetScrape);
 
-const dq = curry((name, queue) => {
-  dequeue4WorkStg(name, R.length(queue));
-});
-
-const queue_lookupTweets$ = makeInitStgObs('queue_lookupTweets').filter(
-  isExist
-);
-subObs({ queue_lookupTweets$ }, dq('queue_lookupTweets'));
-const queue_lookupTweets_work_queue$ = makeInitStgObs(
-  'queue_lookupTweets_work_queue'
-).filter(isExist);
-subObs({ queue_lookupTweets_work_queue$ }, doLookupAPI);
-
-const queue_addTweets$ = makeInitStgObs('queue_addTweets').filter(isExist);
-subObs({ queue_addTweets$ }, dq('queue_addTweets'));
-const queue_addTweets_work_queue$ = makeInitStgObs(
-  'queue_addTweets_work_queue'
-).filter(isExist);
-subObs({ queue_addTweets$ }, importTweetQueue);
-
-const queue_removeTweets$ = makeInitStgObs('queue_removeTweets').filter(
-  isExist
-);
-subObs({ queue_removeTweets$ }, dq('queue_removeTweets'));
-const queue_removeTweets_work_queue$ = makeInitStgObs(
-  'queue_removeTweets_work_queue'
-).filter(isExist);
-subObs({ queue_removeTweets_work_queue$ }, removeTweetQueue);
+subWorkQueue('queue_lookupBookmark', doLookupBookmarkAPI);
+subWorkQueue('queue_lookupTweets', doLookupAPI);
+subWorkQueue('queue_addTweets', importTweetQueue);
+subWorkQueue('queue_removeTweets', removeTweetQueue);
+subWorkQueue('queue_tempArchive', importArchive);
 
 const doIndexUpdate$ = makeInitStgObs('doIndexUpdate').filter((x) => x);
 subObs({ doIndexUpdate$ }, doIndexUpdate);
@@ -494,6 +639,7 @@ const indexUpdated$ = Kefir.fromEvents(window, 'indexUpdated');
 subObs({ indexUpdated$ }, (_) => onIndexUpdated());
 
 const query$ = makeInitStgObs('query');
+query$.log('query$');
 subObs({ query$ }, (query) => seek({ query }));
 const isMidSearch$ = makeInitStgObs('isMidSearch');
 // just to make sure isMidSearch$ never gets stuck
@@ -501,49 +647,77 @@ subObs(
   { isMidSearch$: isMidSearch$.filter((x) => x).delay(2000 * 5) },
   setStg('isMidSearch', false)
 );
+// const msg$ = makeGotMsgObs().map(prop('m'));
+// const msgStream = makeMsgStream(msg$);
+// const apiQuery$ = msgStream('apiQuery').map(prop('query'));
+// subObs({ apiQuery$ }, doSearchApi);
+
+// const apiReqUsers$ = apiQuery$
+//   .filter(
+//     (q) => !(isEmpty(q) || (q.match(/^\/(?!from|to)/) && !q.match(/(from|to)/)))
+//   )
+//   .map(makeUserQuery);
+// subObs({ apiReqUsers$ }, doUserSearch);
 
 // const accountsUpdate$ = Kefir.merge([incomingAccounts$])
 // // const accountsUpdate$ = Kefir.merge([removeAccount$, incomingAccounts$])
 // subObs({ accountsUpdate$ }, setStg('activeAccounts'));
+const optionsChange$ = makeStorageChangeObs().filter(
+  propEq('itemName', 'options')
+);
+
+const _makeInitOptionsObs = makeInitOptionsObs(optionsChange$);
 const accounts$ = makeInitStgObs('activeAccounts').map(defaultTo([]));
 accounts$.log('accounts$');
 const accsShown$ = (accounts$.map(
   filter(either(pipe(prop('showTweets'), isNil), propEq('showTweets', true)))
 ) as unknown) as Observable<User[], any>;
+subObs({ accsShown$ }, (_) => getLatest());
 accsShown$.log('accsShown$');
 /* Display options and Search filters */
-const idleMode$ = makeInitOptionsObs('idleMode').map(
-  prop('value')
-) as Observable<IdleMode, any>;
+const idleMode$ = _makeInitOptionsObs('idleMode') as Observable<IdleMode, any>;
 idleMode$.log('idleMode$');
-// subObs({ idleMode$ }, getDefault);
+subObs({ idleMode$ }, getDefault);
 
-const searchMode$ = makeInitOptionsObs('searchMode').map(prop('value'));
-const searchFilters$ = Kefir.combine(
-  [
-    makeInitOptionsObs('getRTs'),
-    makeInitOptionsObs('useBookmarks'),
-    makeInitOptionsObs('useReplies'),
-  ],
-  combineOptions
-).toProperty();
+const searchMode$ = _makeInitOptionsObs('searchMode');
+const searchFilters$ = Kefir.merge([
+  _makeInitOptionsObs('getRTs'),
+  _makeInitOptionsObs('useBookmarks'),
+  _makeInitOptionsObs('useReplies'),
+]).toProperty();
 subObs({ searchFilters$ }, (_) => getLatest());
 
 /* RPC BG */
 // RPC INSTRUCTIONS:
 // write rpc functions like this: fnName({arg0, arg1....})
 // call bg functions like this, rpcBg(fnName, args?)
-
+var scrapingFns = {
+  updateTimeline,
+};
+var idbFns = {
+  addBookmark,
+  removeBookmark,
+  deleteTweet,
+  removeAccount,
+};
 var searchFns = {
   seek,
   getLatest,
   getRandom,
+  doUserSearch,
+  doSearchApi,
 };
 var proxyFns = {
   fetchBg,
   getAuth,
 };
-var rpcFns = { ...proxyFns, ...searchFns, webReqPermission };
+var rpcFns = {
+  ...proxyFns,
+  ...searchFns,
+  ...idbFns,
+  ...scrapingFns,
+  webReqPermission,
+};
 // RPC central
 chrome.runtime.onMessage.addListener(async function (
   request,
@@ -586,9 +760,9 @@ chrome.runtime.onMessage.addListener(async function (
     R.includes(request.fnName, keys(rpcFns))
   ) {
     try {
-      console.time(`[TIME] RPC ${request.fnName}`);
+      // console.time(`[TIME] RPC ${request.fnName}`);
       response = await rpcFns[request.fnName](defaultTo({}, request.args));
-      console.timeEnd(`[TIME] RPC ${request.fnName}`);
+      // console.timeEnd(`[TIME] RPC ${request.fnName}`);
       sendResponse(response);
     } catch (error) {
       response = 'RPC call failed';
@@ -694,40 +868,33 @@ function onTabRemoved(tabId, removeInfo) {
 
 // Onboarding, Upboarding, Off boarding
 
-const onInstalled = curry(
-  (
-    resetData: () => void,
-    {
-      reason,
-      previousVersion,
-      id,
-    }: { reason: string; previousVersion: string; id: string }
-  ) => {
-    if (DEBUG) setStg('doBigTweetScrape', true);
-    console.log('[DEBUG] onInstalled', { reason, previousVersion, id });
-    switch (
-      reason // "install", "update", "chrome_update", or "shared_module_update"
-    ) {
-      case 'update':
-        onUpdated(previousVersion);
-        break;
-      case 'install':
-        onFirstInstalled(resetData, previousVersion, id);
-        break;
-      default:
-        break;
-    }
+const onInstalled = ({ reason, previousVersion, id }) => {
+  if (DEBUG) webReqPermission({}); // check and request webReqpermission on install
+  console.log('[DEBUG] onInstalled', { reason, previousVersion, id });
+  switch (
+    reason // "install", "update", "chrome_update", or "shared_module_update"
+  ) {
+    case 'update':
+      onUpdated(previousVersion);
+      break;
+    case 'install':
+      onFirstInstalled(previousVersion, id);
+      break;
+    default:
+      console.log('on installed', { reason, previousVersion, id });
+      break;
   }
-);
+};
 
-const onFirstInstalled = async (resetData, previousVersion, id) => {
+const onFirstInstalled = async (previousVersion, id) => {
   console.log(`[INFO] first install. Welcome to TH! ${previousVersion}`);
+  if (DEBUG) setStg('doBigTweetScrape', true);
   if (!DEBUG) {
     const welcomeUrl =
       'https://www.notion.so/Welcome-e7c1b2b8d8064a80bdf5600c329b370d';
     chrome.tabs.create({ url: welcomeUrl });
   }
-  resetData();
+  // resetData();
 };
 
 const onUpdated = async (previousVersion) => {
@@ -738,13 +905,12 @@ const onUpdated = async (previousVersion) => {
     //   url: 'https://www.notion.so/Patch-Notes-afab29148a0c49358df0e55131978d48',
     // });
   }
-  // msgSomeWorker(pWorker, { type: 'resetIndex' });
-  updateStorage();
-  // delete old stg fields that are not in default
-  cleanOldStorage();
-  // refresh idb tweets (lookup)
-  setStg('doRefreshIdb', true);
-  setStg('showPatchNotes', true);
+  // updateStorage();
+  // // delete old stg fields that are not in default
+  // cleanOldStorage();
+  // // refresh idb tweets (lookup)
+  // setStg('doRefreshIdb', true);
+  // setStg('showPatchNotes', true);
   // remake index
 };
 
@@ -758,6 +924,8 @@ chrome.runtime.onSuspend.addListener(function () {
   console.log('[DEBUG] Unloading, suspending.');
   chrome.browserAction.setBadgeText({ text: '' });
 });
+
+chrome.runtime.onInstalled.addListener(onInstalled);
 
 /* modular bg */
 

@@ -64,10 +64,12 @@ import * as window from './global';
 import { UrlMsg } from './types/msgTypes';
 import { curProp } from './types/types';
 import {
+  getStg,
   makeGotMsgObs,
   makeStorageChangeObs,
   msgBG,
   resetStorageField,
+  rpcBg,
   setStg,
 } from './utils/dutils';
 import { currentValue, inspect, nullFn, toggleDebug } from './utils/putils';
@@ -151,7 +153,7 @@ const handlePosting = () => {
 const reqSearch = R.pipe<any, string, void>(defaultTo(''), (query) => {
   // console.log('reqSearch', { query });
   // msgBG({ type: 'search', query });
-  setStg('query', query);
+  // setStg('query', query);
 });
 // Stream clean up
 const subscriptions: Subscription[] = [];
@@ -214,24 +216,37 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
     .map(getTargetId)
     .filter((x) => !isNil(x))
     .toProperty() as unknown) as curProp<string>;
+  subObs(lastClickedId$, setStg('lastClickedId'));
   const makeIdMsg = makeIdObsMsg(lastClickedId$); // function
   //          actions
   const actions$ = makeActionStream(); // post, rt, unrt
   actions$.log('actions$');
   const post$ = actions$.filter((x) => x == 'tweet');
   post$.log('post$');
+  subObs(post$.delay(1000), async (_) =>
+    rpcBg('post', rpcBg('updateTimeline'))
+  );
   const replyTo$ = makeReplyObs(mode$)
     .map(getTargetId)
     .toProperty(() => null) as curProp<string>;
   const addBookmark$ = makeAddBookmarkStream()
     .map(inspect('add bookmark'))
     .map((_) => 'add-bookmark');
+  subObs(addBookmark$, async (_) =>
+    rpcBg('addBookmark', { ids: [await getStg('lastClickedId')] })
+  );
   const removeBookmark$ = makeRemoveBookmarkStream()
     .map(inspect('remove bookmark'))
     .map((_) => 'remove-bookmark');
+  subObs(removeBookmark$, async (_) =>
+    rpcBg('removeBookmark', { ids: [await getStg('lastClickedId')] })
+  );
   const delete$ = makeDeleteEventStream()
     .map(inspect('delete'))
     .map((_) => 'delete-tweet');
+  subObs(delete$, async (_) =>
+    rpcBg('deleteTweet', { ids: [await getStg('lastClickedId')] })
+  );
   const targetedTweetActions$ = Kefir.merge([
     addBookmark$,
     removeBookmark$,

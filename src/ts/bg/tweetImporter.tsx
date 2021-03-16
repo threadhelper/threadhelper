@@ -178,7 +178,7 @@ export const findInnerDiff = curry(
 
 /* Importers */
 
-export const apiSearchToTweet = (entry) => {
+export const apiSearchToTweet = (entry: Status): thTweet => {
   let tweet: {} = apiToTweet(entry);
   tweet = {
     ...tweet,
@@ -280,7 +280,6 @@ export const patchArchUser = curry(
       R.assoc('retweeted', !isNil(rtAuthor)),
       R.assoc('text', prop('full_text', t).replace(rt_tag, ''))
     )();
-    console.log('patchArchUser', { rtAuthor, user, _t });
     return _t;
   }
 );
@@ -308,7 +307,7 @@ export const archToTweet = curry(
   }
 );
 
-export const apiToTweet = (entry) => {
+export const apiToTweet = (entry: Status) => {
   let tweet: thTweet = {};
   tweet = toTweetCommon(tweet, entry);
   return tweet;
