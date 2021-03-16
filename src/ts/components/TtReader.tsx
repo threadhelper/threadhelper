@@ -228,10 +228,10 @@ const trimNewlines = (str) =>
 const reqSearch = async (query) => {
   // msgBG({ type: 'search', query });
   setStg('query', query);
-  console.time(`[TIME] reqSearch`);
-  const searchResults = await rpcBg('seek', { query });
-  console.timeEnd(`[TIME] reqSearch`);
-  return searchResults;
+  // console.time(`[TIME] reqSearch`);
+  // const searchResults = await rpcBg('seek', { query });
+  // console.timeEnd(`[TIME] reqSearch`);
+  // return searchResults;
 };
 
 export function SearchBar({ show }) {
@@ -269,28 +269,33 @@ export function SearchBar({ show }) {
   }, []);
 
   useEffect(() => {
-    if (!midSearch) {
-      console.log('[INFO] making query', { query });
-      setMidSearch(true);
-      submitSearch(query).then((_) => setMidSearch(false));
-    } else {
-      // console.log('[INFO] queueing query', { query });
-      setNextQuery(query);
-    }
+    submitSearch(query);
     return () => {};
   }, [query]);
 
-  useEffect(() => {
-    if (!midSearch && !isNil(nextQuery)) {
-      console.log('[INFO] making queued query', { midSearch, nextQuery });
-      setMidSearch(true);
-      submitSearch(nextQuery).then((_) => {
-        setMidSearch(false);
-        setNextQuery(null);
-      });
-    }
-    return () => {};
-  }, [midSearch]);
+  // useEffect(() => {
+  //   if (!midSearch) {
+  //     console.log('[INFO] making query', { query });
+  //     setMidSearch(true);
+  //     submitSearch(query).then((_) => setMidSearch(false));
+  //   } else {
+  //     // console.log('[INFO] queueing query', { query });
+  //     setNextQuery(query);
+  //   }
+  //   return () => {};
+  // }, [query]);
+
+  // useEffect(() => {
+  //   if (!midSearch && !isNil(nextQuery)) {
+  //     console.log('[INFO] making queued query', { midSearch, nextQuery });
+  //     setMidSearch(true);
+  //     submitSearch(nextQuery).then((_) => {
+  //       setMidSearch(false);
+  //       setNextQuery(null);
+  //     });
+  //   }
+  //   return () => {};
+  // }, [midSearch]);
 
   return (
     <>

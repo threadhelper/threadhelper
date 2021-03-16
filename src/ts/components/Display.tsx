@@ -181,38 +181,46 @@ function TweetDisplay({ title, results, emptyMsg }: TweetDisplayProps) {
   );
 }
 //
-function IdleDisplay() {
-  // const auth = useContext(AuthContext);
-  const [stgLatestTweets, setStgLatestTweets] = useStorage('latest_tweets', []);
 
-  const [idleMode, setIdleMode] = useOption('idleMode');
+function GenericIdleDisplay({ stgName, title }) {
+  // const auth = useContext(AuthContext);
+  const [stgIdleTweets, setStgIdleTweets] = useStorage(stgName, []);
+
   const [res, setRes] = useState([]);
   const auth = useContext(AuthContext);
-  // const [res, setRes] = useState(results);
-  const [searchMode, setSearchMode] = useOption('searchMode');
 
   useEffect(() => {
-    return getApiMetrics(auth, prepTweets(stgLatestTweets), setRes);
-  }, [auth, stgLatestTweets]);
+    return getApiMetrics(auth, prepTweets(stgIdleTweets), setRes);
+  }, [auth, stgIdleTweets]);
 
   useEffect(() => {
+    console.log('GenericIdleDisplay', { res, auth, stgIdleTweets, stgName });
     setRes([]);
-    // setRes(prepTweets(stgLatestTweets));
-  }, [stgLatestTweets]);
+  }, [stgIdleTweets]);
 
   return (
     <TweetDisplay
-      title={
-        idleMode == 'timeline'
-          ? 'Latest tweets:'
-          : idleMode == 'random'
-          ? 'Random tweets:'
-          : ''
-      }
-      results={isEmpty(res) ? prepTweets(stgLatestTweets) : prepTweets(res)}
+      title={title}
+      results={isEmpty(res) ? prepTweets(stgIdleTweets) : prepTweets(res)}
       emptyMsg={'No tweets yet!'}
     />
   );
+}
+function IdleDisplayLatest() {
+  return (
+    <GenericIdleDisplay stgName={'latest_tweets'} title={'Latest tweets:'} />
+  );
+}
+
+function IdleDisplayRandom() {
+  return (
+    <GenericIdleDisplay stgName={'random_tweets'} title={'Random tweets:'} />
+  );
+}
+function IdleDisplay() {
+  const [idleMode, setIdleMode] = useOption('idleMode');
+
+  return idleMode == 'random' ? <IdleDisplayRandom /> : <IdleDisplayLatest />;
 }
 
 function QtDisplay() {

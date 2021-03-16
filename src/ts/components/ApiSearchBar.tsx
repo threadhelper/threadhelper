@@ -1,7 +1,7 @@
 import { h } from 'preact';
 import { useContext, useEffect, useRef, useState } from 'preact/hooks';
 import { defaultTo, isEmpty, path } from 'ramda';
-import { msgBG } from '../utils/dutils';
+import { msgBG, rpcBg } from '../utils/dutils';
 import { FeedDisplayMode } from './ThreadHelper';
 import { SettingsButton } from './Settings';
 import { SyncIcon } from './Sync';
@@ -23,7 +23,14 @@ export function ApiSearchBar() {
       tweets: [],
     });
     const timeOutId = setTimeout(() => {
-      msgBG({ type: 'apiQuery', query: value });
+      // msgBG({ type: 'apiQuery', query: value });
+      rpcBg('doSearchApi', { query: value });
+      if (
+        (q) =>
+          !(isEmpty(q) || (q.match(/^\/(?!from|to)/) && !q.match(/(from|to)/)))
+      ) {
+        rpcBg('doUserSearch', { query: value });
+      }
     }, 500);
     return timeOutId;
   };

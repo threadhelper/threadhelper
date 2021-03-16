@@ -15,7 +15,6 @@ const SERVE = process.env.DEV_MODE == 'serve';
 var counter = {};
 var renderCount = 0;
 
-const setStgItem = setStg(name);
 export function useStorage(name, default_val) {
   const storageChangeObs = useContext(StorageChangeObs);
   const storageChangeObsState = useState(() => storageChangeObs);
@@ -23,6 +22,7 @@ export function useStorage(name, default_val) {
   //   console.log('recomputing stg item observer ' + name);
   //   return makeStgItemObs(name);
   // }, [name]);
+  const setStgItem = setStg(name);
   const [storageItem, setStorageItem] = _useStream(
     stgPathObs(storageChangeObs, [name]),
     default_val
