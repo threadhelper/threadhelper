@@ -1,4 +1,5 @@
 /* For interacting with Twitter API */
+import '@babel/polyfill';
 import delay from 'delay';
 import * as R from 'ramda';
 import {
