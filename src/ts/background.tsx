@@ -158,9 +158,13 @@ const createSearchWorker = createWorkerFactory(
 const createIdbWorker = createWorkerFactory(
   () => import('./dev/workers/idbWorker')
 );
-// const createScrapeWorker = createWorkerFactory(() => import('../dev/workers/scrapeWorker.tsx'));
+const createScrapeWorker = createWorkerFactory(
+  () => import('./bg/twitterScout')
+  // () => import('./dev/workers/scrapeWorker')
+);
 const searchWorker = createSearchWorker();
 const idbWorker = createIdbWorker();
+const scrapeWorker = createScrapeWorker();
 
 // Analytics //IMPORTANT: this block must come before setting the currentValue for Kefir. Property and I have no idea why
 (function initAnalytics() {
@@ -249,7 +253,7 @@ const assocUser = (userInfo) => assoc('account', prop('id_str', userInfo));
 const doBookmarkScrape = async (auth, userInfo) => {
   const toTh = saferTweetMap(pipe(bookmarkToTweet, assocUser(userInfo)));
   try {
-    const bookmarks = await getBookmarks(auth);
+    const bookmarks = await scrapeWorker.getBookmarks(auth);
     const thBookmarks = toTh(bookmarks);
     return thBookmarks;
   } catch (e) {
@@ -260,7 +264,7 @@ const doBookmarkScrape = async (auth, userInfo) => {
 const doTimelineScrape = async (auth, userInfo) => {
   // try {
   const toTh = saferTweetMap(pipe(apiToTweet, assocUser(userInfo)));
-  const timelineTweets = await timelineQuery(auth, userInfo);
+  const timelineTweets = await scrapeWorker.timelineQuery(auth, userInfo);
   const thTimelineTweets = toTh(timelineTweets);
   return thTimelineTweets;
   // } catch (e) {
@@ -271,7 +275,11 @@ const doTimelineScrape = async (auth, userInfo) => {
 const doTimelineUpdateScrape = async (auth, userInfo) => {
   const toTh = saferTweetMap(pipe(apiToTweet, assocUser(userInfo)));
   try {
-    const updateTweets = await updateQuery(auth, userInfo, update_size);
+    const updateTweets = await scrapeWorker.updateQuery(
+      auth,
+      userInfo,
+      update_size
+    );
     const thUpdateTweets = toTh(updateTweets);
     return thUpdateTweets;
   } catch (e) {
@@ -318,7 +326,7 @@ const genericLookupAPI = curry(
     ]);
     const toTweetAndAcc = pipe(toTweet, assocUser(userInfo));
     const toTh = saferTweetMap(toTweetAndAcc);
-    const lookupTweets = await tweetLookupQuery(auth, ids);
+    const lookupTweets = await scrapeWorker.tweetLookupQuery(auth, ids);
     const thLookupTweets = toTh(lookupTweets);
     enqueueTweetStg('queue_addTweets', thLookupTweets);
   }
@@ -334,24 +342,23 @@ const importArchive = async (queue) => {
     getStg('auth'),
     getStg('userInfo'),
   ]);
-  const patchedArchive = await patchArchive(auth, userInfo, queue);
+  const patchedArchive = await scrapeWorker.patchArchive(auth, userInfo, queue);
   const toTh = saferTweetMap(archToTweet);
   const thArchiveTweets = toTh(patchedArchive);
   enqueueTweetStg('queue_addTweets', thArchiveTweets);
 };
 
 const importTweetQueue = async (queue) => {
-  const db = await dbOpen();
-  await importTweets(db, (x) => x, queue);
-  db.close();
+  // await importTweets(db, (x) => x, queue);
+  console.log('importTweetQueue', { queue, idbWorker });
+  await idbWorker.workerImportTweets(queue);
   setStg('doIndexUpdate', true);
   // dequeueWorkQueueStg('queue_addTweets', R.length(queue)); // need to empty the working queue after using it
 };
 // remove tweets in the remove queue
 const removeTweetQueue = async (queue) => {
-  const db = await dbOpen();
-  await removeTweets(db, queue);
-  db.close();
+  // await removeTweets(db, queue);
+  await idbWorker.workerRemoveTweets(queue);
   setStg('doIndexUpdate', true);
   // dequeueWorkQueueStg('queue_removeTweets', R.length(queue)); // need to empty the working queue after using it
 };
@@ -408,7 +415,7 @@ const webReqPermission = async ({}) => {
 };
 // Playground proxy functions
 const fetchBg = async ({ url, options }) => {
-  return await thFetch(url, options);
+  return await scrapeWorker.thFetch(url, options);
 };
 const getAuth = async (_) => {
   return await getData('auth');
