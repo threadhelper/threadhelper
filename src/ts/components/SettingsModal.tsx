@@ -38,7 +38,7 @@ const Checkbox = ({ get, set, label }) => {
           set(!get);
         }}
       />
-      <span class="ml-4 text-lsm font-medium text-neutral">{label}</span>
+      <span class="ml-4 text-lsm font-medium text-twitterGray">{label}</span>
     </label>
   );
 };
@@ -119,16 +119,13 @@ const SettingsModal = ({ setOpen, setSecretOpen }) => {
         class="bg-mainBg text-mainTxt max-w-full p-7 rounded-4xl text-lg shadow-lg"
       >
         {/* modal header */}
-        <div class="flex justify-end">
-          <SyncIcon />
-        </div>
-        <div class="inline-flex justify-between">
+        <div class="mb-7 flex justify-between items-center">
           <ArchiveUploader />
-          {/* <ArchiveExporter /> */}
+          <SyncIcon />
         </div>
         {/* checkmark section */}
         <div class="w-full mb-5">
-          <div class="font-medium text-lsm text-neutral">Let magic search include:</div>
+          <div class="font-medium text-lsm text-twitterGray">Let magic search include:</div>
           <div class="flex">
             <Checkbox get={getRTs} set={setGetRTs} label="Retweets" />
             <Checkbox
@@ -141,7 +138,7 @@ const SettingsModal = ({ setOpen, setSecretOpen }) => {
         </div>
         {/* idle mode */}
         <div class="w-full mb-5">
-          <div class="font-medium text-lsm text-neutral">Shuffle tweets when idle:</div>
+          <div class="font-medium text-lsm text-twitterGray">Shuffle tweets when idle:</div>
           <div class="flex">
             <Checkbox
               get={idle2Bool(idleMode)}
@@ -156,7 +153,7 @@ const SettingsModal = ({ setOpen, setSecretOpen }) => {
           // length(keys(activeAccounts)) > 1 &&
           <div class="mb-5 mt-4">
             {/* header */}
-            <div class="font-medium text-lsm text-neutral">Search the following accounts:</div>
+            <div class="font-medium text-lsm text-twitterGray">Search the following accounts:</div>
             <div class="flex flex-row flex-wrap justify-evenly">
               {values(activeAccounts).map((x) => {
                 return isNil(x.id_str) ? null : <AccountCheckbox account={x} />;
@@ -275,10 +272,10 @@ export const SecretModal = ({ setOpen }) => {
       >
         {/* header */}
         <div class="text-sm  w-full mb-5">
-          <div class="text-gray-400 font-semibold">
+          <div class="text-twitterGray font-semibold">
             You don’t follow rules. We like that.
           </div>
-          <div class="text-gray-400 font-semibold">
+          <div class="text-twitterGray font-semibold">
             We made ThreadHelper for you.
           </div>
         </div>
