@@ -23,7 +23,7 @@ export const importTweets = curry(
   async (
     db: IDBPDatabase<thTwitterDB>,
     prepFn: (x: any) => thTweet,
-    tweets: Status[]
+    tweets: thTweet[]
   ) => {
     const thTweets: thTweet[] = map(prepFn, tweets);
     return await dbPutMany(db, StoreName.tweets, thTweets);

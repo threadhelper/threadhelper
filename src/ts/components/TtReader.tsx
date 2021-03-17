@@ -26,6 +26,7 @@ import { apiSearchToTweet } from '../bg/tweetImporter';
 import { asyncTimeFn, inspect, timeFn } from '../utils/putils';
 import { QueryObs } from '../hooks/BrowserEventObs';
 import { _useStream } from '../hooks/useStream';
+import { useMsg } from '../hooks/useMsg';
 
 export function TtReader() {
   return (
@@ -124,20 +125,32 @@ var useCurrentTwitterPage = function () {
   var [currentPage, setCurrentPage] = useState(function () {
     return getMetadataForPage(window.location.href);
   });
-  useEffect(function () {
-    const urlChange$ = makeGotMsgObs()
-      .map(prop('m'))
-      .filter(propEq('type', 'tab-change-url'))
-      .map(inspect('useCurrentTwitterPage'))
-      .map(prop('url'))
-      .skipDuplicates()
-      .map(getMetadataForPage);
+  const tabChange = useMsg('tab-change-url');
+  useEffect(
+    function () {
+      console.log('tabChange', { tabChange });
+      if (isNil(tabChange)) return () => {};
+      setCurrentPage(getMetadataForPage(prop('url', tabChange)));
+      return () => {};
+    },
+    [tabChange]
+  );
+  // useEffect(function () {
+  //   const urlChange$ = makeGotMsgObs()
+  //     .map(prop('m'))
+  //     .filter(propEq('type', 'tab-change-url'))
+  //     .map(inspect('useCurrentTwitterPage'))
+  //     .map(prop('url'))
+  //     .skipDuplicates()
+  //     .map(getMetadataForPage);
 
-    urlChange$.onValue(setCurrentPage);
-    return () => {
-      urlChange$.offValue(setCurrentPage);
-    };
-  }, []);
+  //   setSubscription(urlChange$.observe({ value: setCurrentPage }));
+  //   // urlChange$.onValue(setCurrentPage);
+  //   return () => {
+  //     subscription.unsubscribe();
+  //     // urlChange$.offValue(setCurrentPage);
+  //   };
+  // }, []);
   return currentPage;
 };
 

@@ -179,7 +179,6 @@ function main() {
 async function onLoad(thBarHome: Element, thBarComp: Element) {
   console.log('[DEBUG] onLoad', { thBarHome, thBarComp });
   initCsStg();
-  msgBG({ type: 'cs-created' });
   // Define streams
   //      messages
   const msgObs$ = makeGotMsgObs();

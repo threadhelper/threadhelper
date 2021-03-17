@@ -2,7 +2,11 @@ import { FullUser, User } from 'twitter-d';
 import { thTweet, TweetId } from './tweetTypes';
 import { Credentials } from './types';
 
-export type activeAccsType = { [id: TweetId]: FullUser };
+export interface ActiveAccType extends FullUser {
+  lastGotTimeline: number;
+  showTweets: boolean;
+}
+export type ActiveAccsType = { [id: TweetId]: ActiveAccType };
 export interface StorageInterface {
   options: Options;
   hasArchive: boolean;
@@ -25,11 +29,14 @@ export interface StorageInterface {
   showPatchNotes: boolean;
 }
 
-export interface SearchResult {
+export interface StorageInterface extends DevStorageInterface {}
+
+export interface TweetResult {
   tweet: thTweet;
-  score?: number;
 }
-[];
+export interface SearchResult extends TweetResult {
+  score: number;
+}
 
 export interface StorageChange {
   itemName: string;

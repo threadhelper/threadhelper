@@ -45,9 +45,6 @@ export const makeInit = (auth: Credentials) : RequestInit => {
 export const compareAuths = (a: Credentials, b: Credentials)=>{return a.authorization == b.authorization && a["x-csrf-token"] == b.["x-csrf-token"]}
 export const validateAuth = (x: Credentials)=>(prop('authorization', x) != null && prop("x-csrf-token", x) != null)
 
-  // worker
-export const msgSomeWorker = curry( async (worker, msg): Promise<any> => worker.postMessage(msg)) // msgWorker :: worker -> msg -> Promise
-
   //chrome storage
 export const isOptionSame = curry ((name: string | number, x: { oldVal: any; newVal: any })=> (isNil(x.oldVal) && isNil(x.newVal)) || (!isNil(x.oldVal) && !isNil(x.newVal) && (path(['oldVal', name, 'value'],x) === path(['newVal', name, 'value'],x))) )
 // makeOptionsObs :: String -> a
@@ -69,27 +66,3 @@ export const makeInitStgObs = (itemName) => {
 }
 
 export const combineOptions = (...args: Option[]): SearchFilters => pipe(reduce((a,b)=>assoc(b.name, b.value, a),{}))(args)
-
-export const makeReqDefaultTweetsMsg = (filters:SearchFilters, idleMode: IdleMode, accsShown:User[]): ReqDefaultTweetsMsg => {return{
-  type:'getDefaultTweets',
-  n_tweets: n_tweets_results, 
-  filters: filters, 
-  idle_mode: idleMode,
-  accsShown: accsShown,
-}}
-// export const makeReqSearchMsg = (getSearchMode: () => any, filters: () => any, getAccsShown: ()=> any, query: string): object=>{return { // MakeReqSearchMsg :: String -> msg
-export const makeReqSearchMsg = (searchMode: SearchMode, filters: SearchFilters, accsShown:User[], query: string): ReqSearchMsg => {return {
-  type:'searchIndex', 
-  filters:filters,
-  searchMode: searchMode,
-  accsShown: accsShown,
-  n_results: n_tweets_results,
-  query: query,
-}}
-
-
-  // Worker requests
-export const dbClear =  async (pWorker: PromiseWorker) => msgSomeWorker(pWorker, {type:'dbClear'}) // dbClear :: IMPURE () -> Promise ()
-export const resetIndex =  async (pWorker: PromiseWorker) => msgSomeWorker(pWorker, {type:'resetIndex'}) // resetIndex :: IMPURE () -> Promise ()
-
-export const resetData = (pWorker: PromiseWorker): Promise<any> => {console.log('[INFO] Resetting storage'); return Promise.all([resetStorage(), dbClear(pWorker)]) }

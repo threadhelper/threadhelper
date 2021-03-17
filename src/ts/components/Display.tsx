@@ -1,47 +1,26 @@
 import { Fragment, h } from 'preact';
-import { useThrottle, useThrottleCallback } from '@react-hook/throttle';
-import { memo } from 'preact/compat';
-import {
-  useContext,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from 'preact/hooks';
+import { useContext, useEffect, useRef, useState } from 'preact/hooks';
 // flattenModule(global,R)
 import {
-  andThen,
   defaultTo,
   filter,
-  find,
-  innerJoin,
   isEmpty,
   isNil,
-  lensProp,
   map,
   not,
   path,
   pipe,
   prop,
-  propEq,
-  set,
   slice,
-  zipWith,
-  __,
 } from 'ramda'; // Function
-import { apiSearchToTweet } from '../bg/tweetImporter';
-import { apiMetricsFetch, tweetLookupQuery } from '../bg/twitterScout';
-import { useMsg } from '../hooks/useMsg';
+import { User } from 'twitter-d';
+import { apiMetricsFetch } from '../bg/twitterScout';
 // import { useAsync } from '../hooks/useAsync';
 import { useOption, useStorage } from '../hooks/useStorage';
 import { DisplayMode } from '../types/interfaceTypes';
 import { SearchResult, TweetResult } from '../types/msgTypes';
-import { thTweet } from '../types/tweetTypes';
-import { inspect } from '../utils/putils';
 import { AuthContext, FeedDisplayMode } from './ThreadHelper';
 import { Tweet as TweetCard } from './Tweet';
-import { User } from 'twitter-d';
-import CrossIcon from '../../images/x-red.svg';
 
 const prepTweets = (list: TweetResult[] | null): SearchResult[] =>
   filter(pipe(prop('tweet'), isNil, not), defaultTo([], list));
@@ -65,9 +44,8 @@ function getApiMetrics(auth, results, setResults) {
 
 export function DisplayController(props: any) {
   const auth = useContext(AuthContext);
-  const { feedDisplayMode, dispatchFeedDisplayMode } = useContext(
-    FeedDisplayMode
-  );
+  const { feedDisplayMode, dispatchFeedDisplayMode } =
+    useContext(FeedDisplayMode);
   const myRef = useRef(null);
   const [apiUsers, setApiUsers] = useStorage('api_users', []);
 
@@ -116,23 +94,19 @@ function UserCard({ user }) {
         <div class="w-full h-full rounded-full absolute inset-0 transition-colors duration-200 hover:bg-black hover:bg-opacity-15 -z-1"></div>
         <a href={`https://twitter.com/${user.screen_name}`}>
           <div class="w-full h-full absolute rounded-full inset-0 transition-colors duration-200 hover:bg-black hover:bg-opacity-15"></div>
-          <img
-            class="rounded-full"
-            src={user.profile_image_url_https}
-          />
+          <img class="rounded-full" src={user.profile_image_url_https} />
         </a>
       </div>
       <div class="flex-initial text-lsm font-bold overflow-ellipsis overflow-hidden whitespace-nowrap leading-none hover:underline">
-        <a href={`https://twitter.com/${user.screen_name}`}>
-          {user.name}
-        </a>
+        <a href={`https://twitter.com/${user.screen_name}`}>{user.name}</a>
       </div>
       <div class="flex-initial flex-shrink-0 ml-1 text-neutral leading-none">
         <a href={`https://twitter.com/${user.screen_name}`}>
           @{user.screen_name}
         </a>
       </div>
-    </div>);
+    </div>
+  );
 }
 //
 
@@ -175,7 +149,11 @@ function TweetDisplay({ title, results, emptyMsg }: TweetDisplayProps) {
         <span class="hover:text-mainTxt hover:underline">{title}</span>
       </div>
       <div class="searchTweets">
-        {isEmpty(results) ? <span class="px-3">{emptyMsg}</span> : map(buildTweetComponent, results)}
+        {isEmpty(results) ? (
+          <span class="px-3">{emptyMsg}</span>
+        ) : (
+          map(buildTweetComponent, results)
+        )}
       </div>
     </>
   );

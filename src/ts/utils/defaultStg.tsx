@@ -29,22 +29,28 @@ export const defaultStorage = (): StorageInterface => {
     queue_tempArchive: [],
     sync: false,
     nTweets: 0,
-    lastUpdated: '',
+    lastUpdated: 'never',
     query: '',
     auth: { authorization: null, 'x-csrf-token': null, name: 'empty_auth' },
     userInfo: {},
     doRefreshIdb: false,
     showPatchNotes: false,
-    webRequestPermission: false,
+    webRequestPermission: true,
     doBigTweetScrape: true,
     doSmallTweetScrape: false,
     doIndexUpdate: false,
     doIndexLoad: false,
     queue_lookupTweets: [],
+    queue_lookupRefresh: [],
     queue_lookupBookmarks: [],
     queue_addTweets: [],
+    queue_refreshTweets: [], //the same as addTweets, but for when we're refreshing tweets that are already in the idb
     queue_removeTweets: [],
     isMidSearch: false,
+    isMidScrape: false,
+    isMidStore: false,
+    isMidRefresh: false,
+    archiveQueueN: 0,
     random_tweets: [],
     lastClickedId: null,
   };
@@ -52,7 +58,7 @@ export const defaultStorage = (): StorageInterface => {
 
 import accounts from '../dev/data/accounts.js';
 import results from '../dev/data/results.js';
-export const devStorage = (): StorageInterface => {
+export const devStorage = (): DevStorageInterface => {
   return {
     options: defaultOptions(),
     hasArchive: false,

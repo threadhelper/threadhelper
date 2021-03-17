@@ -1,156 +1,81 @@
 // only for development with `npm run serve`, to take advantage of HMR
 import '@babel/polyfill';
-// import "core-js/stable";
-// import "regenerator-runtime/runtime";
-import { createContext, h, options, render } from 'preact';
-import 'preact/debug';
-import * as css from '././style/cs.css';
-import * as pcss from '././styles.css';
-import { MsgObs, StorageChangeObs } from './hooks/BrowserEventObs';
-import { updateTheme } from './utils/wutils';
-import { dbFilter, dbOpen } from './worker/idb_wrapper';
-import Scraper from './bgModules/Scraper';
-import Search from './bgModules/Search';
-import Storage from './bgModules/Storage';
-import TtReader from './bgModules/TtReader';
-import {
-  WranggleRpc,
-  PostMessageTransport,
-  BrowserExtensionTransport,
-} from '@wranggle/rpc';
-import Kefir, { Observable } from 'kefir';
 import { createWorkerFactory } from '@shopify/web-worker';
+import 'chrome-extension-async';
+import Kefir, { Observable } from 'kefir';
+import 'preact/debug';
 import * as R from 'ramda';
 import {
-  and,
   andThen,
   assoc,
   curry,
   defaultTo,
   either,
-  equals,
-  F,
   filter,
   head,
-  ifElse,
   isEmpty,
   isNil,
   keys,
-  last,
   map,
   not,
   pipe,
   prop,
   propEq,
-  propSatisfies,
-  reduce,
-  trim,
-  tryCatch,
   values,
-  when,
 } from 'ramda'; // Function
 import { FullUser, User } from 'twitter-d';
-import { makeAuthObs, makePermissionsObs } from './bg/auth';
+import { genericLoopRetry } from './bg/twitterScout';
+import { makeAuthObs } from './bg/auth';
 import {
   apiSearchToTweet,
   apiToTweet,
   archToTweet,
   bookmarkToTweet,
 } from './bg/tweetImporter';
-import {
-  fetchUserInfo,
-  getBookmarks,
-  patchArchive,
-  searchAPI,
-  searchUsers,
-  thFetch,
-  timelineQuery,
-  tweetLookupQuery,
-  updateQuery,
-} from './bg/twitterScout';
-import { initWorker } from './bg/workerBoss';
+import { loadIndexFromIdb, updateIdxFromIdb } from './dev/storage/devStgUtils';
 import window from './global';
-import {
-  GaException,
-  GaMsg,
-  Msg,
-  ReqDefaultTweetsMsg,
-  ReqSearchMsg,
-  TweetResult,
-  TweetResWorkerMsg,
-  WorkerMsg,
-} from './types/msgTypes';
+import { StoreName } from './types/dbTypes';
 import { IdleMode, SearchFilters } from './types/stgTypes';
-import { Credentials, curProp } from './types/types';
+import { thTweet } from './types/tweetTypes';
+import { Credentials } from './types/types';
 import {
-  apiBookmarkToTweet,
-  combineOptions,
   compareAuths,
   getDateFormatted,
-  makeReqDefaultTweetsMsg,
-  makeReqSearchMsg,
-  msgSomeWorker,
-  resetData,
+  makeInitOptionsObs,
+  makeInitStgObs,
   saferTweetMap,
   twitter_url,
-  _makeOptionObs,
-  _makeStgObs,
-  extractTweetPropIfNeeded,
-  makeInitStgObs,
-  makeInitOptionsObs,
 } from './utils/bgUtils';
 import {
   cleanOldStorage,
   dequeue4WorkStg,
-  dequeueStg,
   dequeueWorkQueueStg,
-  enqueueStg,
+  enqueueStgNoDups,
   enqueueTweetStg,
   getData,
   getOption,
   getStg,
-  makeGotMsgObs,
-  makeStgItemObs,
+  getStgPath,
   makeStorageChangeObs as makeStorageChangeObs,
   modStg,
   msgCS,
-  removeData,
   setStg,
+  setStgFlag,
   setStgPath,
-  updateStorage,
+  softUpdateStorage,
 } from './utils/dutils';
-import { Event, Exception, initGA, PageView } from './utils/ga';
-import { update_size, n_tweets_results } from './utils/params';
+import { initGA, PageView } from './utils/ga';
+import { n_tweets_results, update_size, queue_load } from './utils/params';
 import {
   currentValue,
-  curVal,
   errorFilter,
   inspect,
   isExist,
-  list2Obj,
-  makeMsgStream,
-  nullFn,
   promiseStream,
-  streamAnd,
   toggleDebug,
-  toVal,
-  waitFor,
 } from './utils/putils';
-import {
-  getLatestTweets,
-  getRandomSampleTweets,
-  makeValidateTweet,
-} from './worker/search';
-import 'chrome-extension-async';
-import { permissions } from '../../baseManifest';
-import {
-  importTweets,
-  loadIndexFromIdb,
-  removeTweets,
-  updateIdxFromIdb,
-} from './dev/storage/devStgUtils';
-import { thTweet } from './types/tweetTypes';
-import { StoreName } from './types/dbTypes';
+import { dbFilter, dbOpen } from './worker/idb_wrapper';
+import { getLatestTweets, getRandomSampleTweets } from './worker/search';
 
 const createSearchWorker = createWorkerFactory(
   () => import('./dev/workers/searchWorker')
@@ -192,35 +117,48 @@ const subObs = (
   rememberSub(obs.observe({ value: effect }));
 };
 
-const queue_load = 2000;
 const isQueueBusy = async (name) => {
   const wQ = await getStg(name + '_work_queue');
   console.log('isQueueBusy', { wQ });
   return isExist(wQ);
 };
 
-const maybeDq = curry(async (name) => {
+const maybeDq = async (name) => {
   const busy = await isQueueBusy(name);
   if (!busy) {
     console.log('[DEBUG] dq', { name });
     dequeue4WorkStg(name, queue_load);
+    return true;
   } else {
     console.log('[DEBUG] dq: queue busy ', { name });
+    return false;
   }
   // dequeue4WorkStg(name, R.length(defaultTo([], queue)));
-});
+};
 const subWorkQueue = (name, workFn) => {
   const queue$ = makeInitStgObs(name).filter(isExist);
   queue$.log(name + '$');
-  subObs({ [name + '$']: queue$ }, (_) => maybeDq(name));
+  subObs({ [name + '$']: queue$ }, async (q) => {
+    const didDq = await maybeDq(name);
+    const qLen = R.length(q);
+    const newQLen = didDq ? (queue_load > qLen ? 0 : qLen - queue_load) : qLen;
+    setStg(name + '_length', newQLen);
+  });
   const workQueue$ = makeInitStgObs(name + '_work_queue').filter(
     pipe(isNil, not)
   );
   workQueue$.log(name + '_work_queue' + '$');
   const _workFn = async (queue) => {
     if (isExist(queue)) {
-      await workFn(queue);
-      dequeueWorkQueueStg(name, R.length(queue));
+      try {
+        await workFn(queue);
+        dequeueWorkQueueStg(name, R.length(queue));
+      } catch (e) {
+        console.error(
+          `couldn't consume ${name + '_work_queue'} with ${workFn.name}`,
+          e
+        );
+      }
     } else {
       maybeDq(name);
     }
@@ -228,28 +166,32 @@ const subWorkQueue = (name, workFn) => {
   subObs({ [name + '_work_queue' + '$']: workQueue$ }, _workFn);
 };
 
-const emitIndexUpdated = () => {
-  window.dispatchEvent(new CustomEvent('indexUpdated'));
+const emitEvent = (name) => {
+  window.dispatchEvent(new CustomEvent(name));
 };
+const emitIndexUpdated = () => emitEvent('indexUpdated');
+const emitDoBigScrape = () => emitEvent('doBigTweetScrape');
+const emitDoSmallScrape = () => emitEvent('doSmallTweetScrape');
 
 /* TODO: Functions to move out of this file */
 // Scraping functions
-const checkGotTimeline = async (
-  userInfo: FullUser,
-  timeline: string | any[]
-) => {
-  // const userInfo = await getStg('userInfo');
-  return (
-    timeline.length > 3000 || timeline.length >= userInfo.statuses_count - 1
-  );
-};
+
 var usernameFilterRegex = /(from|to):([a-zA-Z0-9_]*\s?[a-zA-Z0-9_]*)$/;
 const makeUserQuery = (userQuery) => {
   var usernameMatch = userQuery.match(usernameFilterRegex);
   return usernameMatch ? usernameMatch[2] : userQuery;
 };
-const assocUser = (userInfo) => assoc('account', prop('id_str', userInfo));
 
+const doRefreshIdb = async () => {
+  console.log('[DEBUG] doRefreshIdb');
+  await idbWorker.resetIndex();
+  const ids = await idbWorker.getAllIds('tweets');
+  enqueueStgNoDups('queue_lookupRefresh', ids);
+  // setStg('doIndexUpdate', true);
+};
+
+const loopRetryScrape = genericLoopRetry(3, 1000);
+const assocUser = (userInfo) => assoc('account', prop('id_str', userInfo));
 const doBookmarkScrape = async (auth, userInfo) => {
   const toTh = saferTweetMap(pipe(bookmarkToTweet, assocUser(userInfo)));
   try {
@@ -274,92 +216,166 @@ const doTimelineScrape = async (auth, userInfo) => {
 };
 const doTimelineUpdateScrape = async (auth, userInfo) => {
   const toTh = saferTweetMap(pipe(apiToTweet, assocUser(userInfo)));
-  try {
-    const updateTweets = await scrapeWorker.updateQuery(
-      auth,
-      userInfo,
-      update_size
-    );
-    const thUpdateTweets = toTh(updateTweets);
-    return thUpdateTweets;
-  } catch (e) {
-    console.error("couldn't doTimelineUpdateScrape");
-    return [];
-  }
+  const updateTweets = await scrapeWorker.updateQuery(
+    auth,
+    userInfo,
+    update_size
+  );
+  const thUpdateTweets = toTh(updateTweets);
+  return thUpdateTweets;
 };
 
+const credsAndRetry = (fn, userInfo) =>
+  loopRetryScrape(async () => {
+    const auth = await getStg('auth');
+    return fn(auth, userInfo);
+  });
+
 const doBigTweetScrape = async (_) => {
-  const [auth, userInfo] = await Promise.all([
-    getStg('auth'),
-    getStg('userInfo'),
-  ]);
   try {
-    const timeline = await doTimelineScrape(auth, userInfo);
-    const bookmarks = await doBookmarkScrape(auth, userInfo);
+    const [auth, userInfo] = await Promise.all([
+      getStg('auth'),
+      getStg('userInfo'),
+    ]);
+    setStg('isMidScrape', true);
+    const [timeline, bookmarks] = await Promise.all([
+      credsAndRetry(doTimelineScrape, userInfo),
+      credsAndRetry(doBookmarkScrape, userInfo),
+    ]);
+    // const timeline = await doTimelineScrape(auth, userInfo);
+    // const bookmarks = await doBookmarkScrape(auth, userInfo);
     const toAdd = R.concat(timeline, bookmarks);
     enqueueTweetStg('queue_addTweets', toAdd);
-    setStg('doBigTweetScrape', false);
+    // setStg('doBigTweetScrape', false);
+    await setStgPath(
+      ['activeAccounts', userInfo.id_str, 'lastGotTimeline'],
+      Date.now()
+    );
+    await setStgPath(
+      ['activeAccounts', userInfo.id_str, 'lastGotTimelineCount'],
+      R.length(timeline)
+    );
+    setStg('isMidScrape', false);
   } catch (e) {
     console.error('doBigTweetScrape failed', { e });
+    setStg('isMidScrape', false);
   }
 };
 
 const doSmallTweetScrape = async (_) => {
-  const [auth, userInfo] = await Promise.all([
-    getStg('auth'),
-    getStg('userInfo'),
-  ]);
-  console.log('[DEBUG] doSmallTweetScrape', { auth, userInfo });
-  const timeline = await doTimelineUpdateScrape(auth, userInfo);
-  const bookmarks = await doBookmarkScrape(auth, userInfo);
-  const toAdd = R.concat(timeline, bookmarks);
-  enqueueTweetStg('queue_addTweets', toAdd);
-  setStg('doSmallTweetScrape', false);
+  try {
+    const [auth, userInfo] = await Promise.all([
+      getStg('auth'),
+      getStg('userInfo'),
+    ]);
+    setStg('isMidScrape', true);
+    console.log('[DEBUG] doSmallTweetScrape', { auth, userInfo });
+
+    const [timeline, bookmarks] = await Promise.all([
+      credsAndRetry(doTimelineUpdateScrape, userInfo),
+      credsAndRetry(doBookmarkScrape, userInfo),
+    ]);
+    // const timeline = await doTimelineUpdateScrape(auth, userInfo);
+    // const bookmarks = await doBookmarkScrape(auth, userInfo);
+    const toAdd = R.concat(timeline, bookmarks);
+    enqueueTweetStg('queue_addTweets', toAdd);
+    // setStg('doSmallTweetScrape', false);
+    setStg('isMidScrape', false);
+  } catch (e) {
+    console.error('doSmallTweetScrape failed', { e });
+    setStg('isMidScrape', false);
+  }
 };
 
 // TODO: mind the associated account in full lookup: should be the original one, not the one doing the lookup
 const genericLookupAPI = curry(
-  async (toTweet: (ts: Status) => thTweet, ids) => {
+  async (toTweet: (ts: Status) => thTweet, queueName, ids) => {
+    try {
+      const [auth, userInfo] = await Promise.all<Credentials, User>([
+        getStg('auth'),
+        getStg('userInfo'),
+      ]);
+      setStg('isMidScrape', true);
+      const toTweetAndAcc = pipe(toTweet, assocUser(userInfo));
+      const toTh = saferTweetMap(toTweetAndAcc);
+      const lookupTweets = await scrapeWorker.tweetLookupQuery(auth, ids);
+      const thLookupTweets = toTh(lookupTweets);
+      enqueueTweetStg(queueName, thLookupTweets);
+      setStg('isMidScrape', false);
+    } catch (e) {
+      console.error('lookupAPI failed', { e, queueName, fnName: toTweet.name });
+      setStg('isMidScrape', false);
+    }
+  }
+);
+
+const doLookupAPI = genericLookupAPI(apiToTweet, 'queue_addTweets');
+const doLookupBookmarkAPI = genericLookupAPI(
+  bookmarkToTweet,
+  'queue_addTweets'
+);
+const doLookupRefreshAPI = genericLookupAPI(apiToTweet, 'queue_refreshTweets');
+// IDB functions
+
+const importArchive = async (queue) => {
+  try {
     const [auth, userInfo] = await Promise.all<Credentials, User>([
       getStg('auth'),
       getStg('userInfo'),
     ]);
-    const toTweetAndAcc = pipe(toTweet, assocUser(userInfo));
-    const toTh = saferTweetMap(toTweetAndAcc);
-    const lookupTweets = await scrapeWorker.tweetLookupQuery(auth, ids);
-    const thLookupTweets = toTh(lookupTweets);
-    enqueueTweetStg('queue_addTweets', thLookupTweets);
+    setStg('isMidScrape', true);
+    const patchedArchive = await scrapeWorker.patchArchive(
+      auth,
+      userInfo,
+      queue
+    );
+    const toTh = saferTweetMap(archToTweet);
+    const thArchiveTweets = toTh(patchedArchive);
+    enqueueTweetStg('queue_addTweets', thArchiveTweets);
+    setStg('isMidScrape', false);
+  } catch (e) {
+    console.error("couldn't importArchive ", e);
+    setStg('isMidScrape', false);
   }
-);
-
-const doLookupAPI = genericLookupAPI(apiToTweet);
-const doLookupBookmarkAPI = genericLookupAPI(bookmarkToTweet);
-
-// IDB functions
-
-const importArchive = async (queue) => {
-  const [auth, userInfo] = await Promise.all<Credentials, User>([
-    getStg('auth'),
-    getStg('userInfo'),
-  ]);
-  const patchedArchive = await scrapeWorker.patchArchive(auth, userInfo, queue);
-  const toTh = saferTweetMap(archToTweet);
-  const thArchiveTweets = toTh(patchedArchive);
-  enqueueTweetStg('queue_addTweets', thArchiveTweets);
 };
 
 const importTweetQueue = async (queue) => {
-  // await importTweets(db, (x) => x, queue);
-  console.log('importTweetQueue', { queue, idbWorker });
-  await idbWorker.workerImportTweets(queue);
-  setStg('doIndexUpdate', true);
-  // dequeueWorkQueueStg('queue_addTweets', R.length(queue)); // need to empty the working queue after using it
+  try {
+    setStg('isMidStore', true);
+    await idbWorker.workerImportTweets(queue);
+    setStg('isMidStore', false);
+    setStg('doIndexUpdate', true);
+  } catch (e) {
+    console.error("couldn't importTweetQueue ", e);
+    setStg('isMidStore', false);
+  }
 };
+
+const refreshTweetQueue = async (queue) => {
+  try {
+    setStg('isMidRefresh', true);
+    await idbWorker.workerRefreshTweets(queue);
+    setStg('isMidRefresh', false);
+  } catch (e) {
+    console.error("couldn't refreshTweetQueue ", e);
+    setStg('isMidRefresh', false);
+  }
+  setStg('doIndexUpdate', true);
+  setStg('doRefreshIdb', false);
+};
+
 // remove tweets in the remove queue
 const removeTweetQueue = async (queue) => {
   // await removeTweets(db, queue);
-  await idbWorker.workerRemoveTweets(queue);
-  setStg('doIndexUpdate', true);
+  try {
+    setStg('isMidStore', true);
+    await idbWorker.workerRemoveTweets(queue);
+    setStg('isMidStore', false);
+    setStg('doIndexUpdate', true);
+  } catch (e) {
+    console.error("couldn't removeTweetQueue ", e);
+    setStg('isMidStore', false);
+  }
   // dequeueWorkQueueStg('queue_removeTweets', R.length(queue)); // need to empty the working queue after using it
 };
 
@@ -518,10 +534,11 @@ const doUserSearch = async ({ query }) => {
     return [];
   }
   const auth = await getStg('auth');
-  const usersRes = await searchUsers(auth, query);
+  const usersRes = await scrapeWorker.searchUsers(auth, query);
   const users = prop('users', usersRes);
   console.log('doUserSearch', { usersRes, users });
   setStg('api_users', users);
+  return users;
 };
 
 const doSearchApi = async ({ query }) => {
@@ -530,7 +547,7 @@ const doSearchApi = async ({ query }) => {
     return [];
   }
   const auth = await getStg('auth');
-  const apiResults = await searchAPI(auth, query);
+  const apiResults = await scrapeWorker.searchAPI(auth, query);
   const toTh = pipe(
     saferTweetMap(apiSearchToTweet),
     map((tweet) => {
@@ -543,13 +560,13 @@ const doSearchApi = async ({ query }) => {
 };
 
 const addBookmark = ({ ids }) => {
-  enqueueTweetStg('queue_lookupBookmark', ids);
+  enqueueStgNoDups('queue_lookupBookmark', ids);
 };
 const removeBookmark = ({ ids }) => {
-  enqueueTweetStg('queue_removeTweets', ids);
+  enqueueStgNoDups('queue_removeTweets', ids);
 };
 const deleteTweet = ({ ids }) => {
-  enqueueTweetStg('queue_removeTweets', ids);
+  enqueueStgNoDups('queue_removeTweets', ids);
 };
 
 const removeAccount = async ({ id }) => {
@@ -565,15 +582,15 @@ const removeAccount = async ({ id }) => {
   await pipe(
     () => filterByAccount(id),
     andThen(map(prop('id'))),
-    andThen((ids) => enqueueTweetStg('queue_removeTweets', ids))
+    andThen((ids) => enqueueTweetStg('queue_removeTweets', ids)) //uses the enque tweet function bc they both have id_str
   )();
 
   db.close();
   return remainingAccounts;
 };
 
-const updateTimeline = ({}) => setStg('doSmallTweetScrape', true);
-
+// const updateTimeline = ({}) => setStgFlag('doSmallTweetScrape', true);
+const updateTimeline = ({}) => emitDoSmallScrape();
 /* BG flow */
 // Listen for auth and store it. simple.
 //const webRequestPermitted$ = permissions$.thru(
@@ -590,7 +607,7 @@ const auth$ = webRequestPermission$
 subObs({ auth$ }, setStg('auth'));
 const _userInfo$ = auth$
   .thru<Observable<User, any>>(
-    promiseStream((auth: Credentials) => fetchUserInfo(auth))
+    promiseStream((auth: Credentials) => scrapeWorker.fetchUserInfo(auth))
   )
   .filter(pipe(isNil, not))
   .filter(pipe(prop('id'), isNil, not))
@@ -600,42 +617,78 @@ const userInfo$ = Kefir.merge([
   // _userInfo$.sampledBy(dataReset$),
 ]);
 subObs({ userInfo$ }, setStg('userInfo'));
-subObs({ userInfo$ }, (_) => setStg('doSmallTweetScrape', true));
+// subObs({ userInfo$ }, (_) => setStgFlag('doSmallTweetScrape', true));
+subObs({ userInfo$ }, (_) => emitDoSmallScrape());
+subObs({ userInfo$ }, async (userInfo) => {
+  if (await shouldDoBigTweetScrape(userInfo)) emitDoBigScrape();
+});
 
-const incomingAccount$ = userInfo$.map(assoc('showTweets', true)).toProperty();
+// a big scrape should be done if it's been more than a week
+const shouldDoBigTweetScrape = async (acc: FullUser) => {
+  const _lastGotTimeline: number = await getStgPath([
+    'activeAccounts',
+    acc.id_str,
+    'lastGotTimeline',
+  ]);
+  const lastGotTimeline = defaultTo(0, _lastGotTimeline);
+  const timeSince = Date.now() - lastGotTimeline;
+  const aWeek = 1000 * 60 * 60 * 24 * 7;
+  console.log('shouldDoBigTweetScrape', {
+    acc,
+    timeSince,
+    aWeek,
+    lastGotTimeline,
+    should: timeSince > aWeek,
+  });
+  return timeSince > aWeek;
+};
+const dressActiveAccount = pipe(
+  assoc('lastGotTimeline', 0),
+  assoc('showTweets', true)
+);
+const incomingAccount$ = userInfo$.map(dressActiveAccount).toProperty();
 // Add to a list with no duplicates of the key (so no duplicates)
 
 const onIncomingAccount = async (acc: User) => {
-  if (!R.has('id_str', acc)) return; // it needs to have at least an id_str to be valid
+  // if (!R.has('id_str', acc)) return; // it needs to have at least an id_str to be valid
   const oldAccs = await getStg('activeAccounts');
-  const isNew = !R.has(prop('id_str', acc), oldAccs); // check
-  if (isNew) setStg('doBigTweetScrape', true);
-  console.log('[DEBUG] onIncomingAccount', { acc, oldAccs, isNew });
-  modStg('activeAccounts', (olds) =>
+  console.log('[DEBUG] onIncomingAccount', { acc, oldAccs });
+  await modStg('activeAccounts', (olds) =>
     R.set(R.lensProp(prop('id_str', acc)), acc, olds)
   );
+  // if (await shouldDoBigTweetScrape(acc)) setStgFlag('doBigTweetScrape', true);
 };
 subObs({ incomingAccount$ }, onIncomingAccount);
 
 // we need userinfo and auth to do these
-const doBigTweetScrape$ = userInfo$
+const doRefreshIdb$ = userInfo$
   .take(1)
-  .flatMapLatest((_) => makeInitStgObs('doBigTweetScrape'))
-  .map(inspect('[DEBUG] doBigTweetScrape change'))
-  .filter((x) => x)
-  .throttle(2500);
+  .flatMapLatest((_) => makeInitStgObs('doRefreshIdb'))
+  .filter((x) => x);
+doRefreshIdb$.log('doRefreshIdb$');
+subObs({ doRefreshIdb$ }, doRefreshIdb);
+
+// const doBigTweetScrape$ = userInfo$
+//   .take(1)
+//   .flatMapLatest((_) => makeInitStgObs('doBigTweetScrape'))
+//   .filter((x) => x)
+//   .throttle(500);
+const doBigTweetScrape$ = Kefir.fromEvents(window, 'doBigTweetScrape');
 subObs({ doBigTweetScrape$ }, doBigTweetScrape);
 
-const doSmallTweetScrape$ = userInfo$
-  .take(1)
-  .flatMapLatest((_) => makeInitStgObs('doSmallTweetScrape'))
-  .filter((x) => x)
-  .throttle(2500);
+// const doSmallTweetScrape$ = userInfo$
+// .take(1)
+// .flatMapLatest((_) => makeInitStgObs('doSmallTweetScrape'))
+// .filter((x) => x)
+// .throttle(500);
+const doSmallTweetScrape$ = Kefir.fromEvents(window, 'doSmallTweetScrape');
 subObs({ doSmallTweetScrape$ }, doSmallTweetScrape);
 
+subWorkQueue('queue_lookupRefresh', doLookupRefreshAPI);
 subWorkQueue('queue_lookupBookmark', doLookupBookmarkAPI);
 subWorkQueue('queue_lookupTweets', doLookupAPI);
 subWorkQueue('queue_addTweets', importTweetQueue);
+subWorkQueue('queue_refreshTweets', refreshTweetQueue);
 subWorkQueue('queue_removeTweets', removeTweetQueue);
 subWorkQueue('queue_tempArchive', importArchive);
 
@@ -738,7 +791,8 @@ chrome.runtime.onMessage.addListener(async function (
   //   { sender, request }
   // );
 
-  if (request.type != 'rpcBg' || R.has('fname', request)) {
+  if (request.type != 'rpcBg' || !R.has('fnName', request)) {
+    console.log('BG RPC: ignoring request', { request });
     sendResponse('not RPC');
     return;
   }
@@ -774,13 +828,13 @@ chrome.runtime.onMessage.addListener(async function (
     } catch (error) {
       response = 'RPC call failed';
       console.error(error);
+      sendResponse(response);
     }
   } else {
     response = 'not RPC';
     console.error(`bgRpc no function ${request.fnName}`);
+    sendResponse(response);
   }
-  sendResponse(response);
-
   return true;
 });
 
@@ -794,7 +848,7 @@ function disconnected(p: chrome.runtime.Port) {
 }
 
 function connected(p: chrome.runtime.Port) {
-  if (R.length(ports) <= 0 && !DEBUG) setStg('doBigTweetScrape', true);
+  // if (R.length(ports) <= 0 && !DEBUG) setStgFlag('doSmallTweetScrape', true);
   ports = R.append(p, ports);
   p.onDisconnect.addListener(disconnected);
   console.log('[DEBUG] Port connected', { p, ports });
@@ -831,12 +885,13 @@ async function onTabActivated(activeInfo: { tabId: number }) {
   }
 }
 
-function onTabUpdated(
+async function onTabUpdated(
   tabId,
   change: chrome.tabs.TabChangeInfo,
   tab: chrome.tabs.Tab
 ) {
   try {
+    // console.log(`[DEBUG] onTabUpdated, urls=`, {change, tab})
     if (change.status === 'complete' && tab.url && tab.url.match(twitter_url)) {
       chrome.browserAction.enable(tabId);
     } else {
@@ -849,7 +904,12 @@ function onTabUpdated(
   if (change.status === 'complete' && tab.active && tab.url) {
     if (tab.url.match(twitter_url)) {
       addTtTab(tab.id);
-      msgCS(tab.id, { type: 'tab-change-url', url: tab.url, cs_id: tab.id });
+      const msgCsRes = msgCS(tab.id, {
+        type: 'tab-change-url',
+        url: tab.url,
+        cs_id: tab.id,
+      });
+      console.log('onTabUpdated msgCsRes', { msgCsRes });
     } else {
       remTtTab(tab.id);
     }
@@ -883,7 +943,6 @@ const onInstalled = ({ reason, previousVersion, id }) => {
 
 const onFirstInstalled = async (previousVersion, id) => {
   console.log(`[INFO] first install. Welcome to TH! ${previousVersion}`);
-  if (DEBUG) setStg('doBigTweetScrape', true);
   if (!DEBUG) {
     const welcomeUrl =
       'https://www.notion.so/Welcome-e7c1b2b8d8064a80bdf5600c329b370d';
@@ -896,16 +955,19 @@ const onUpdated = async (previousVersion) => {
   console.log(`[INFO] updated from version ${previousVersion}`);
   // add new stg fields from defaults
   if (!DEBUG) {
-    // chrome.tabs.create({
-    //   url: 'https://www.notion.so/Patch-Notes-afab29148a0c49358df0e55131978d48',
-    // });
+    chrome.tabs.create({
+      url: 'https://www.notion.so/Patch-Notes-afab29148a0c49358df0e55131978d48',
+    });
   }
-  // updateStorage();
-  // // delete old stg fields that are not in default
-  // cleanOldStorage();
-  // // refresh idb tweets (lookup)
-  // setStg('doRefreshIdb', true);
-  // setStg('showPatchNotes', true);
+  // fill in empty spots in local storage with default values
+  softUpdateStorage();
+  // delete old stg fields that are not in default
+  const newStg = await cleanOldStorage();
+  console.log('[INFO] onUpdated chrome.storage', newStg);
+  // refresh idb tweets (lookup)
+  if (!DEBUG) setStg('doRefreshIdb', true);
+  // triggers patch notes
+  setStg('showPatchNotes', true);
   // remake index
 };
 

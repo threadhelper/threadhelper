@@ -22,7 +22,7 @@ export interface thTweet {
   account?: string;
   has_media?: boolean;
   has_quote?: boolean;
-  orig_id?: TweetId;
+  orig_id?: TweetId; // in retweets, orig id is the id of the retweet, and id is the id of the tweet retweeted
   is_bookmark?: boolean;
   is_quote_up?: boolean;
   profile_image?: string;

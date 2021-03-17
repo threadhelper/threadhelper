@@ -183,7 +183,7 @@
 /* Dropdown Menu */
 @import './dropdown.scss';
 
-/*make modal visible*/
+/*bring twitter timeline down in z index to make modal visible*/
 main > div > div > div > div:first-child {
   z-index: 0;
 }

@@ -18,7 +18,9 @@ export function useMsg(name) {
   useEffect(() => {
     // msg$.log(name);
     msg$.onValue(nullFn);
-    return () => {};
+    return () => {
+      msg$.offValue(nullFn);
+    };
   }, []);
 
   useEffect(() => {
