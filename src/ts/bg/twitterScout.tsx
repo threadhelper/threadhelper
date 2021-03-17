@@ -1,4 +1,5 @@
 /* For interacting with Twitter API */
+import '@babel/polyfill';
 import delay from 'delay';
 import * as R from 'ramda';
 import {
@@ -23,9 +24,7 @@ import { Credentials } from '../types/types';
 import { ArchTweet, thTweet, TweetId } from '../types/tweetTypes';
 import {
   apiSearchToTweet,
-  archPatchQtId,
   getArchUserId,
-  getRTOwner,
   patchArchivePrep,
 } from './tweetImporter';
 import { TweetResult } from '../types/msgTypes';
@@ -50,7 +49,7 @@ const retryLimit = 3;
 /*  URLS */
 const URLVerifyCredentials = `https://api.twitter.com/1.1/account/verify_credentials.json`;
 const URLGetBookmarks =
-  'https://api.twitter.com/2/timeline/bookmark.json?include_profile_interstitial_type=1&include_blocking=1&include_blocked_by=1&include_followed_by=1&include_want_retweets=1&include_mute_edge=1&include_can_dm=1&include_can_media_tag=1&skip_status=1&cards_platform=Web-12&include_cards=1&include_composer_source=true&include_ext_alt_text=true&include_reply_count=1&tweet_mode=extended&include_entities=true&include_user_entities=true&include_ext_media_color=true&include_ext_media_availability=true&send_error_codes=true&simple_quoted_tweets=true&count=10000&ext=mediaStats%2CcameraMoment';
+  'https://api.twitter.com/2/timeline/bookmark.json?include_profile_interstitial_type=1&include_blocking=1&include_blocked_by=1&include_followed_by=1&include_want_retweets=1&include_mute_edge=1&include_can_dm=1&include_can_media_tag=1&skip_status=1&cards_platform=Web-12&include_cards=1&include_composer_source=true&include_ext_alt_text=true&include_reply_count=1&tweet_mode=extended&include_entities=true&include_user_entities=true&include_ext_media_color=true&include_ext_media_availability=true&send_error_codes=true&simple_quoted_tweets=false&count=10000&ext=mediaStats%2CcameraMoment';
 const URLCreateFav = 'https://twitter.com/i/api/1.1/favorites/create.json';
 const URLDestroyFav = 'https://twitter.com/i/api/1.1/favorites/destroy.json';
 const URLRetweet = 'https://twitter.com/i/api/1.1/statuses/retweet.json';
@@ -69,13 +68,28 @@ const makeUserLookupUrl = (ids, names = []) =>
       : 'user_id=$' + R.join(',', ids) + (isEmpty(names) ? '' : '&')
   }${isEmpty(names) ? '' : 'screen_name=' + R.join(',', names)}`;
 
-const makeTimelineQueryUrl = curry(
+const makeTimelineQueryUrlv1 = curry(
   (max_id: number, screen_name: string, count: number) => {
     const max_param = max_id > 0 ? `&max_id=${max_id}` : '';
     return `https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=${screen_name}&count=${count}${max_param}&include_rts=1&tweet_mode=extended`;
   }
 );
-const makeUpdateQueryUrl = makeTimelineQueryUrl(-1);
+
+const makeTimelineQueryUrl = curry(
+  (cursor: string, user_id: string, count: number) => {
+    const cursor_param = !isNil(cursor)
+      ? `&cursor=${encodeURIComponent(cursor)}`
+      : '';
+    return `https://twitter.com/i/api/2/timeline/profile/${user_id}.json?include_profile_interstitial_type=1&include_blocking=0&include_blocked_by=1&include_followed_by=0&include_want_retweets=1&include_mute_edge=0&include_can_dm=0&include_can_media_tag=1&skip_status=1&include_cards=0&include_ext_alt_text=false&include_quote_count=true&include_reply_count=1&tweet_mode=extended&include_entities=true&include_user_entities=true&include_ext_media_color=false&include_ext_media_availability=true&send_error_codes=true&simple_quoted_tweet=true&include_tweet_replies=false&count=${count}${cursor_param}&userId=${user_id}`;
+    // return `https://twitter.com/i/api/2/timeline/profile/${user_id}.json?include_profile_interstitial_type=1&include_blocking=0&include_blocked_by=1&include_followed_by=0&include_want_retweets=1&include_mute_edge=0&include_can_dm=0&include_can_media_tag=1&skip_status=1&include_cards=0&include_ext_alt_text=false&include_quote_count=true&include_reply_count=1&tweet_mode=extended&include_entities=true&include_user_entities=true&include_ext_media_color=false&include_ext_media_availability=true&send_error_codes=true&simple_quoted_tweet=false&include_tweet_replies=false&count=${count}${cursor_param}&userId=${user_id}`;
+  }
+);
+
+const makeUpdateQueryUrlv1 = makeTimelineQueryUrlv1(-1);
+const makeUpdateQueryUrl = (user_id: string, count: number) => {
+  return `https://twitter.com/i/api/2/timeline/profile/${user_id}.json?include_profile_interstitial_type=1&include_blocking=0&include_blocked_by=1&include_followed_by=0&include_want_retweets=1&include_mute_edge=0&include_can_dm=0&include_can_media_tag=1&skip_status=1&include_cards=0&include_ext_alt_text=false&include_quote_count=true&include_reply_count=1&tweet_mode=extended&include_entities=true&include_user_entities=true&include_ext_media_color=false&include_ext_media_availability=true&send_error_codes=true&simple_quoted_tweet=true&include_tweet_replies=false&count=${count}&userId=${user_id}`;
+  // return `https://twitter.com/i/api/2/timeline/profile/${user_id}.json?include_profile_interstitial_type=1&include_blocking=0&include_blocked_by=1&include_followed_by=0&include_want_retweets=1&include_mute_edge=0&include_can_dm=0&include_can_media_tag=1&skip_status=1&include_cards=0&include_ext_alt_text=false&include_quote_count=true&include_reply_count=1&tweet_mode=extended&include_entities=true&include_user_entities=true&include_ext_media_color=false&include_ext_media_availability=true&send_error_codes=true&simple_quoted_tweet=false&include_tweet_replies=false&count=${count}&userId=${user_id}`;
+};
 const makeApiSearchUrl = (q) =>
   `https://api.twitter.com/2/search/adaptive.json?q=${encodeURIComponent(
     q
@@ -89,30 +103,34 @@ const makeFetchStatusUrl = (tid) =>
   `https://api.twitter.com/1.1/statuses/show.json?id=${tid}&tweet_mode=extended`;
 const shouldRetryError = (error) => ![403, 429].includes(error.status);
 
-const loopRetry = async <T,>(fn: () => Promise<T>): Promise<T> => {
-  let retryCount = 0;
-  let success = false;
-  let output = null;
-  let stop = false;
-  while (!success && !stop && retryCount < retryLimit) {
-    try {
-      output = await fn();
-      success = true;
-      console.log(`[DEBUG] [${fn.name}] Loop succeeded`);
-    } catch (e) {
-      retryCount += 1;
-      if (shouldRetryError(e) && retryCount < retryLimit) {
-        console.log(`[ERROR] [${fn.name}] failed. Retrying...`, e);
-        await delay(500);
-      } else {
-        stop = true;
-        console.error(`[ERROR] failed. Stopped retrying...`, e);
-        throw e;
+export const genericLoopRetry = curry(
+  async <T,>(retryLimit, delayMs, fn: () => Promise<T>): Promise<T> => {
+    let retryCount = 0;
+    let success = false;
+    let output = null;
+    let stop = false;
+    while (!success && !stop && retryCount < retryLimit) {
+      try {
+        output = await fn();
+        success = true;
+        console.log(`[DEBUG] [${fn.name}] Loop succeeded`);
+      } catch (e) {
+        retryCount += 1;
+        if (shouldRetryError(e) && retryCount < retryLimit) {
+          console.log(`[ERROR] [${fn.name}] failed. Retrying...`, e);
+          await delay(delayMs);
+        } else {
+          stop = true;
+          console.error(`[ERROR] failed. Stopped retrying...`, e);
+          throw e;
+        }
       }
     }
+    return output;
   }
-  return output;
-};
+);
+
+const loopRetry = genericLoopRetry(retryLimit, 500);
 
 const errorRefusal = (response) => {
   if (!response.ok) {
@@ -133,6 +151,11 @@ const handleFetchError = (error) => {
         error,
       });
       break; // Forbidden, server understood but refuses to authorize. re-auth will make no difference.
+    case 404:
+      console.error(`[ERROR] thFetch ${error.status}, Not found.`, {
+        error,
+      });
+      break; // The URI requested is invalid or the resource requested, such as a user, does not exist.
     case 429:
       console.error(`[ERROR] thFetch ${error.status}, Too Many Requests`, {
         error,
@@ -242,11 +265,6 @@ const fetchTweets = async (
 
 export const fetchUserInfo = async (authHeaders: Credentials): Promise<User> =>
   await loopRetry(() => twitterFetch(URLVerifyCredentials, { authHeaders }));
-export const updateQuery = async (
-  auth: Credentials,
-  username: string,
-  count: number
-) => await fetchTweets(makeUpdateQueryUrl(username, count), auth);
 
 //https//twitter.com/i/api/1.1/users/lookup.json?include_profile_interstitial_type=1&include_blocking=1&include_blocked_by=1&include_followed_by=1&include_want_retweets=1&include_mute_edge=1&include_can_dm=1&include_can_media_tag=1&skip_status=1&user_id=115074076%2C1325778441392717824%2C22525974
 
@@ -296,18 +314,18 @@ export const userLookupQuery = curry(
 );
 
 // fetch as many tweets as possible from the timeline
-export const timelineQuery = async (auth: Credentials, user_info: FullUser) =>
-  await query(
+export const timelineQuery = async (auth: Credentials, userInfo: FullUser) => {
+  console.log('timelineQuery', { auth, userInfo });
+  return await query(
     auth,
-    prop('screen_name', user_info),
-    prop('statuses_count', user_info),
-    -1,
+    prop('id_str', userInfo),
+    prop('statuses_count', userInfo),
+    null,
     []
   );
-const stop_condition = (res: Tweet[], count: number, max_id: number) =>
-  res.length >= count || isNil(max_id); //stop if got enough tweets or if max_id is null (twitter not giving any more)
+};
 // res is the accumulator, should be called as [], max_id initialized as -1
-const query = curry(
+const queryV1 = curry(
   async (
     auth: Credentials,
     username: string,
@@ -315,11 +333,11 @@ const query = curry(
     max_id: number,
     res: Tweet[]
   ): Promise<Tweet[]> => {
-    if (stop_condition(res, count, max_id)) return res;
     const req_res = await fetchTweets(
-      makeTimelineQueryUrl(max_id, username, count),
+      makeTimelineQueryUrlv1(max_id, username, count),
       auth
     );
+    if (stop_condition(req_res, count, max_id)) return res;
     return await query(
       auth,
       username,
@@ -327,6 +345,62 @@ const query = curry(
       getMaxId(req_res),
       res.concat(req_res)
     );
+  }
+);
+const getCursor = (cursorType: string) =>
+  pipe(
+    path(['timeline', 'instructions', 0, 'addEntries', 'entries']),
+    R.find(R.propSatisfies(R.includes('cursor-' + cursorType), 'entryId')),
+    path(['content', 'operation', 'cursor', 'value'])
+  );
+const getBottomCursor = getCursor('bottom');
+const getTopCursor = getCursor('top');
+//stop if got enough tweets or if max_id is null (twitter not giving any more)
+const stop_condition = (_res, res: Tweet[], count) => {
+  const updateSize = R.length(unpackApiTweets(_res));
+  const totalSize = R.length(res);
+  console.log('stop_condition', {
+    updateSize,
+    totalSize,
+    botCursor: getBottomCursor(_res),
+    topCursor: getTopCursor(_res),
+    cursorsEqual: getBottomCursor(_res) == getTopCursor(_res),
+    res,
+    _res,
+    count,
+  });
+  return (
+    updateSize <= 2 ||
+    totalSize >= count ||
+    getBottomCursor(_res) == getTopCursor(_res)
+  );
+};
+// 20 maximizes how many tweets we get. Bigger steps: less tweets.
+const timelineStepSize = 20;
+const query = curry(
+  async (
+    auth: Credentials,
+    user_id: string,
+    count: number,
+    cursor: string,
+    res: Tweet[]
+  ): Promise<Tweet[]> => {
+    const url = makeTimelineQueryUrl(cursor, user_id, timelineStepSize);
+    const authFetchUpdate = () => fetchTweets(url, auth);
+    const _res = await loopRetry(authFetchUpdate);
+    const formattedRes = await formatApiRes(auth, _res);
+    const concatRes = R.unionWith(R.eqBy(prop('id_str')), formattedRes, res);
+    if (stop_condition(_res, concatRes, count)) return res;
+    console.log('timelineQuery recursion 1', {
+      formattedRes,
+      user_id,
+      res,
+      _res,
+      auth,
+      url,
+      cursor: getBottomCursor(_res),
+    });
+    return await query(auth, user_id, count, getBottomCursor(_res), concatRes);
   }
 );
 
@@ -348,9 +422,8 @@ export const getThreadAbove = curry(
     return [...thread_above, cur];
   }
 );
-const unpackApiTweets = pipe(path(['globalObjects', 'tweets']), (x) =>
-  Object.values(x)
-);
+
+const unpackApiTweets = pipe(path(['globalObjects', 'tweets']), values);
 const unpackApiUsers = pipe(path(['globalObjects', 'users']));
 // const assocUserToTweet = (users, tweet) => ({ ...tweet, user: users[tweet.user_id_str] })
 const assocUser = curry(
@@ -390,16 +463,27 @@ const assocQT = curry((qts: { [x: string]: Tweet }, tweet: Tweet | ArchTweet):
   )()
 );
 const getQTs = curry(
-  (auth: Credentials, tweets: (Tweet | ArchTweet)[]): Promise<Tweet[]> =>
-    pipe(
+  async (auth: Credentials, res): Promise<Tweet[]> => {
+    const tweets = path(['globalObjects', 'tweets'], res); //dict
+    const qt_ids: string[] = pipe(
       () => tweets,
-      // unpackApiTweets,
+      values,
       map(prop('quoted_status_id_str')),
       filter(pipe(isNil, not)),
-      R.uniq,
-      tweetLookupQuery(auth),
-      andThen(indexBy(prop('id_str')))
-    )()
+      R.uniq
+    )();
+    console.log('[DEBUG] getQTs', { qt_ids, tweets });
+    const local_qts = values(R.pick(qt_ids, tweets));
+    console.log('[DEBUG] getQTs', { local_qts, qt_ids, tweets });
+    const outside_qts: Tweet[] = await pipe(
+      () => local_qts,
+      R.keys,
+      R.difference(qt_ids),
+      tweetLookupQuery(auth)
+    )();
+    console.log('[DEBUG] getQTs', { local_qts, outside_qts, qt_ids, tweets });
+    return indexBy(prop('id_str'), R.concat(local_qts, outside_qts));
+  }
 );
 
 const getUsers = curry(
@@ -441,6 +525,7 @@ const getArchiveOwner = async (auth, archive: ArchTweet[]): Promise<User> => {
   }
   return null;
 };
+
 // Most of the tweets are gotten when archive uploaded, this is to get users and QTs
 export async function patchArchive(
   auth: Credentials,
@@ -451,43 +536,98 @@ export async function patchArchive(
   const archOwner = _archOwner ?? userInfo;
   console.log('patchArchive', { _archOwner, archOwner });
   const patchedArch = map((t) => patchArchivePrep(archOwner, t), archive);
-  const authGetQTs = () => getQTs(auth, patchedArch);
+  const authGetQTs = () => getQTs(auth, indexBy(prop('id_str'), patchedArch));
   const authGetUsers = () => getUsers(auth, patchedArch);
   const qts = await loopRetry(authGetQTs);
   const users = await loopRetry(authGetUsers);
   const _users = assoc(prop('id_str', archOwner), archOwner, users);
   const res = await map(pipe(assocQT(qts), assocUserArch(_users)), patchedArch);
   console.log('patchArchive', { res, users, prep: patchedArch });
-  return await res;
+  return res;
 }
+
+// API v2 requests come in a specific format: {globalObjects:{tweets, users, ...}, timeline}, format these into tweets with users and quoted statuses
+const formatApiRes = async (auth: Credentials, _res) => {
+  let apiTweets: Tweet[] = unpackApiTweets(_res);
+  const users: FullUser[] = unpackApiUsers(_res);
+  const authGetQTs = () => getQTs(auth, _res);
+  const qts: Tweet[] = await loopRetry(authGetQTs);
+  const makeRes = (apiTweets: any[]): {} =>
+    map(pipe(assocUser(users), assocQT(qts)), apiTweets);
+  const res = await makeRes(apiTweets);
+  return values(res);
+};
+
+export const updateQuery = async (
+  auth: Credentials,
+  userInfo: User,
+  count: number
+) => {
+  const authFetchUpdate = () =>
+    fetchTweets(makeUpdateQueryUrl(prop('id_str', userInfo), count), auth);
+  const _res = await loopRetry(authFetchUpdate);
+  return formatApiRes(auth, _res);
+};
 
 export async function getBookmarks(auth: Credentials): Promise<Tweet[]> {
   const authFetchBookmarks = () => fetchTweets(URLGetBookmarks, auth);
   const _res = await loopRetry(authFetchBookmarks);
-  let bookmarks: Tweet[] = unpackApiTweets(_res);
-  const users = unpackApiUsers(_res);
-  const authGetQTs = () => getQTs(auth, bookmarks);
-  const qts = await loopRetry(authGetQTs);
-  const makeRes = (bookmarks: any[]): {} =>
-    map(pipe(assocUser(users), assocQT(qts)), bookmarks);
-  const res = await makeRes(bookmarks);
-  return values(res);
+  return formatApiRes(auth, _res);
 }
 
 export const searchAPI = curry(
   async (auth: Credentials, query: string): Promise<Tweet[]> => {
     const fetchQ = () => fetchTweets(makeApiSearchUrl(query), auth);
     const _res = await loopRetry(fetchQ);
-    const tweets = unpackApiTweets(_res);
-    const users = unpackApiUsers(_res);
-    const authGetQTs = () => getQTs(auth, tweets);
-    const qts = await loopRetry(authGetQTs);
-    const makeRes = (tweets: Tweet[]): Tweet[] =>
-      pipe(() => tweets, map(assocUser(users)), map(assocQT(qts)))();
-    const res = await makeRes(tweets);
-    return res;
+    return formatApiRes(auth, _res);
   }
 );
+// export const updateQuery = async (
+//   auth: Credentials,
+//   userInfo: User,
+//   count: number
+// ) => {
+// const authFetchUpdate = () =>
+//   fetchTweets(makeUpdateQueryUrl(prop('id_str', userInfo), count), auth);
+//   const _res = await loopRetry(authFetchUpdate);
+//   let update: Tweet[] = unpackApiTweets(_res);
+//   const users: FullUser[] = unpackApiUsers(_res);
+//   const authGetQTs = () => getQTs(auth, _res);
+//   const qts: Tweet[] = await loopRetry(authGetQTs);
+//   console.log('updateQuery', { _res, update, qts });
+//   const makeRes = (update: any[]): {} =>
+//     map(pipe(assocUser(users), assocQT(qts)), update);
+//   const res = await makeRes(update);
+//   return values(res);
+// };
+
+// export async function getBookmarks(auth: Credentials): Promise<Tweet[]> {
+//   const authFetchBookmarks = () => fetchTweets(URLGetBookmarks, auth);
+//   const _res = await loopRetry(authFetchBookmarks);
+//   let bookmarks: Tweet[] = unpackApiTweets(_res);
+//   const users = unpackApiUsers(_res);
+//   const authGetQTs = () => getQTs(auth, _res);
+//   const qts = await loopRetry(authGetQTs);
+//   const makeRes = (bookmarks: any[]): {} =>
+//     map(pipe(assocUser(users), assocQT(qts)), bookmarks);
+//   const res = await makeRes(bookmarks);
+//   return values(res);
+// }
+
+// export const searchAPI = curry(
+//   async (auth: Credentials, query: string): Promise<Tweet[]> => {
+//     const fetchQ = () => fetchTweets(makeApiSearchUrl(query), auth);
+//     const _res = await loopRetry(fetchQ);
+//     const tweets = unpackApiTweets(_res);
+//     const users = unpackApiUsers(_res);
+//     const authGetQTs = () => getQTs(auth, _res);
+//     const qts = await loopRetry(authGetQTs);
+//     const makeRes = (tweets: Tweet[]): Tweet[] =>
+//       pipe(() => tweets, map(assocUser(users)), map(assocQT(qts)))();
+//     const res = await makeRes(tweets);
+//     return res;
+//   }
+// );
 // order b by pathB according to a's pathA
 const orderBy = curry(
   (pathA: string[], as: any[], pathB: string[], bs: any[]): any[] => {

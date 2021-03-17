@@ -156,11 +156,11 @@ export const getTopNResults = curry(
 
 export const search = curry(
   async (
-    filters,
-    accsShown,
-    n_tweets,
-    index,
-    query
+    filters: SearchFilters,
+    accsShown: User[],
+    n_tweets: number,
+    index: elasticlunr.Index<IndexTweet>,
+    query: string
   ): Promise<IndexSearchResult[]> => {
     return await pipe(
       () => query,

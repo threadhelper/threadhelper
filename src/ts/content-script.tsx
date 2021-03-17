@@ -14,7 +14,7 @@ import Kefir, { Observable, Property, Subscription } from 'kefir';
 import { h, render } from 'preact';
 import 'preact/debug';
 import 'preact/devtools';
-import { MsgObs, StorageChangeObs } from './hooks/BrowserEventObs';
+import { MsgObs, QueryObs, StorageChangeObs } from './hooks/BrowserEventObs';
 import * as R from 'ramda';
 import {
   and,
@@ -64,10 +64,12 @@ import * as window from './global';
 import { UrlMsg } from './types/msgTypes';
 import { curProp } from './types/types';
 import {
+  getStg,
   makeGotMsgObs,
   makeStorageChangeObs,
   msgBG,
   resetStorageField,
+  rpcBg,
   setStg,
 } from './utils/dutils';
 import { currentValue, inspect, nullFn, toggleDebug } from './utils/putils';
@@ -78,6 +80,8 @@ import {
   PostMessageTransport,
   BrowserExtensionTransport,
 } from '@wranggle/rpc';
+import 'chrome-extension-async';
+
 console.log('hi pcss', pcss);
 console.log('hi css', css);
 
@@ -100,17 +104,30 @@ console.log('chrome.storage', { chrome });
 var DEBUG = process.env.NODE_ENV != 'production';
 toggleDebug(window, DEBUG);
 (Kefir.Property.prototype as any).currentValue = currentValue;
+
+// Connection to BG
+// for knowing when to unload BG
+let myPort = chrome.runtime.connect({ name: 'port-from-cs' });
+
 // Sidebar functions
 let thBarHome = makeSidebarHome();
 let thBarComp = makeSidebarCompose();
 const activateSidebar = curry(
-  (inject: (arg0: Element) => any, bar: Element, storageChange$, msgObs$) => {
+  (
+    inject: (arg0: Element) => any,
+    bar: Element,
+    storageChange$,
+    msgObs$,
+    composeQuery$
+  ) => {
     console.log('[DEBUG] activating sidebar', { storageChange$ });
     inject(bar);
     render(
       <StorageChangeObs.Provider value={storageChange$}>
         <MsgObs.Provider value={msgObs$}>
-          <ThreadHelper />
+          <QueryObs.Provider value={composeQuery$}>
+            <ThreadHelper />
+          </QueryObs.Provider>
         </MsgObs.Provider>
       </StorageChangeObs.Provider>,
       bar
@@ -136,7 +153,7 @@ const handlePosting = () => {
 const reqSearch = R.pipe<any, string, void>(defaultTo(''), (query) => {
   // console.log('reqSearch', { query });
   // msgBG({ type: 'search', query });
-  setStg('query', query);
+  // setStg('query', query);
 });
 // Stream clean up
 const subscriptions: Subscription[] = [];
@@ -162,7 +179,6 @@ function main() {
 async function onLoad(thBarHome: Element, thBarComp: Element) {
   console.log('[DEBUG] onLoad', { thBarHome, thBarComp });
   initCsStg();
-  msgBG({ type: 'cs-created' });
   // Define streams
   //      messages
   const msgObs$ = makeGotMsgObs();
@@ -199,24 +215,37 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
     .map(getTargetId)
     .filter((x) => !isNil(x))
     .toProperty() as unknown) as curProp<string>;
+  subObs(lastClickedId$, setStg('lastClickedId'));
   const makeIdMsg = makeIdObsMsg(lastClickedId$); // function
   //          actions
   const actions$ = makeActionStream(); // post, rt, unrt
   actions$.log('actions$');
   const post$ = actions$.filter((x) => x == 'tweet');
   post$.log('post$');
+  subObs(post$.delay(1000), async (_) =>
+    rpcBg('post', rpcBg('updateTimeline'))
+  );
   const replyTo$ = makeReplyObs(mode$)
     .map(getTargetId)
     .toProperty(() => null) as curProp<string>;
   const addBookmark$ = makeAddBookmarkStream()
     .map(inspect('add bookmark'))
     .map((_) => 'add-bookmark');
+  subObs(addBookmark$, async (_) =>
+    rpcBg('addBookmark', { ids: [await getStg('lastClickedId')] })
+  );
   const removeBookmark$ = makeRemoveBookmarkStream()
     .map(inspect('remove bookmark'))
     .map((_) => 'remove-bookmark');
+  subObs(removeBookmark$, async (_) =>
+    rpcBg('removeBookmark', { ids: [await getStg('lastClickedId')] })
+  );
   const delete$ = makeDeleteEventStream()
     .map(inspect('delete'))
     .map((_) => 'delete-tweet');
+  subObs(delete$, async (_) =>
+    rpcBg('deleteTweet', { ids: [await getStg('lastClickedId')] })
+  );
   const targetedTweetActions$ = Kefir.merge([
     addBookmark$,
     removeBookmark$,
@@ -243,11 +272,11 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
   // Sidebar control
   const updateFloat = (value: any) =>
     value
-      ? activateFloatSidebar(storageChange$, msgObs$)
+      ? activateFloatSidebar(storageChange$, msgObs$, composeQuery$)
       : deactivateSidebar(thBarComp); //function
   const updateHome = (value: any) =>
     value
-      ? activateHomeSidebar(storageChange$, msgObs$)
+      ? activateHomeSidebar(storageChange$, msgObs$, composeQuery$)
       : deactivateSidebar(thBarHome); //function
   // const ttSidebar$ = ttSidebarObserver().flatten();
   // ttSidebar$.log('ttSidebar$');
@@ -284,6 +313,8 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
   subObs(searchBar$, removeSearchBar);
   // subObs(ttSidebar$, resizeSidebar);
 }
+
+// Destructor if another CS comes to the same page(is this possible?)
 function destructor(destructionEvent: any) {
   // Destruction is needed only once
   document.removeEventListener(destructionEvent, destructor);
@@ -307,5 +338,13 @@ function setDestruction(destructor: {
   //port.onDisconnect.addListener(destructor)
 }
 setDestruction(destructor); // destroys previous content script
+
+// Destructor for when tab (and thus CS)
+window.addEventListener('unload', () => {
+  msgBG({ type: 'window is closing!' });
+  subscriptions.forEach((x: { unsubscribe: () => void }) => x.unsubscribe());
+  render(null, thBarHome);
+  render(null, thBarComp);
+});
 main(); // Let's go
 //

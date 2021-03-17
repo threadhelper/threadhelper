@@ -15,10 +15,26 @@ module.exports = {
     default_title: 'ThreadHelper',
     default_popup: 'popup.html',
   },
+
+  // "declarative_net_request" : {
+  //   "rule_resources" : [{
+  //     "id": "ruleset_1",
+  //     "enabled": true,
+  //     "path": "rules_1.json"
+  //   }, {
+  //     "id": "ruleset_2",
+  //     "enabled": false,
+  //     "path": "rules_2.json"
+  //   }]
+  // },
+  // optional_permissions: ['webRequest'],
+
   permissions: [
     'storage',
     'unlimitedStorage',
     'webRequest',
+    // "declarativeNetRequest",
+    // "declarativeNetRequestFeedback",
     'https://api.twitter.com/',
     'https://*.twitter.com/*',
     ...(isServe || isDevelopment
@@ -26,8 +42,8 @@ module.exports = {
           'ws://localhost/*',
           'http://localhost/*',
           'http://127.0.0.1/*',
-          'webRequest',
-          'webRequestBlocking',
+          // 'webRequest',
+          // 'webRequestBlocking',
         ]
       : []),
   ],
@@ -49,6 +65,8 @@ module.exports = {
   ],
   background: {
     scripts: ['background.bundle.js'],
+    persistent: true,
+    // persistent: false,
   },
   icons: {
     16: 'public/extension/thread_16.png',

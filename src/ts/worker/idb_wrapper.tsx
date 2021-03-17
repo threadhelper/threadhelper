@@ -82,7 +82,7 @@ export const dbDelMany = curry(
       promises.push(tx.done);
       return await Promise.all(promises);
     } catch (e) {
-      console.log({ promises, key_list });
+      console.error({ promises, key_list });
     }
   }
 );
@@ -105,7 +105,7 @@ export const dbPutMany = curry(
       promises.push(tx.done);
       return await Promise.all(promises);
     } catch (e) {
-      console.trace('[ERROR] putMany', { e, storeName, item_list });
+      console.error('[ERROR] putMany', { e, storeName, item_list });
       throw e;
     }
   }

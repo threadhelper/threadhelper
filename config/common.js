@@ -16,7 +16,6 @@ module.exports = function (configDirs) {
       popup: configDirs.APP_DIR + '/popup.tsx',
       'content-script': configDirs.APP_DIR + '/content-script.tsx',
       background: configDirs.APP_DIR + '/background.tsx',
-      worker: configDirs.APP_DIR + '/worker.ts',
     },
     output: {
       filename: '[name].bundle.js',

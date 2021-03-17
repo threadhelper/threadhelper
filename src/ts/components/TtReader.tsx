@@ -18,15 +18,17 @@ import {
 import { useStorage } from '../hooks/useStorage';
 import SearchIcon from '../../images/search.svg';
 import Kefir from 'kefir';
-import { makeGotMsgObs, msgBG, setStg } from '../utils/dutils';
+import { makeGotMsgObs, msgBG, rpcBg, setStg } from '../utils/dutils';
 import { AuthContext, FeedDisplayMode } from './ThreadHelper';
 import { DisplayMode } from '../types/interfaceTypes';
 import { searchAPI, tweetLookupQuery } from '../bg/twitterScout';
 import { apiSearchToTweet } from '../bg/tweetImporter';
-import { inspect } from '../utils/putils';
+import { asyncTimeFn, inspect, timeFn } from '../utils/putils';
+import { QueryObs } from '../hooks/BrowserEventObs';
+import { _useStream } from '../hooks/useStream';
+import { useMsg } from '../hooks/useMsg';
 
 export function TtReader() {
-  console.log('TtReader render');
   return (
     <>
       <Page />
@@ -123,24 +125,36 @@ var useCurrentTwitterPage = function () {
   var [currentPage, setCurrentPage] = useState(function () {
     return getMetadataForPage(window.location.href);
   });
-  useEffect(function () {
-    const urlChange$ = makeGotMsgObs()
-      .map(prop('m'))
-      .filter(propEq('type', 'tab-change-url'))
-      .map(prop('url'))
-      .skipDuplicates()
-      .map(getMetadataForPage);
+  const tabChange = useMsg('tab-change-url');
+  useEffect(
+    function () {
+      console.log('tabChange', { tabChange });
+      if (isNil(tabChange)) return () => {};
+      setCurrentPage(getMetadataForPage(prop('url', tabChange)));
+      return () => {};
+    },
+    [tabChange]
+  );
+  // useEffect(function () {
+  //   const urlChange$ = makeGotMsgObs()
+  //     .map(prop('m'))
+  //     .filter(propEq('type', 'tab-change-url'))
+  //     .map(inspect('useCurrentTwitterPage'))
+  //     .map(prop('url'))
+  //     .skipDuplicates()
+  //     .map(getMetadataForPage);
 
-    urlChange$.onValue(setCurrentPage);
-    return () => {
-      urlChange$.offValue(setCurrentPage);
-    };
-  }, []);
+  //   setSubscription(urlChange$.observe({ value: setCurrentPage }));
+  //   // urlChange$.onValue(setCurrentPage);
+  //   return () => {
+  //     subscription.unsubscribe();
+  //     // urlChange$.offValue(setCurrentPage);
+  //   };
+  // }, []);
   return currentPage;
 };
 
 export function Page() {
-  console.log('render page');
   const auth = useContext(AuthContext);
   const currentPage = useCurrentTwitterPage();
   const { feedDisplayMode, dispatchFeedDisplayMode } = useContext(
@@ -192,6 +206,7 @@ export function Page() {
   }
 
   useEffect(() => {
+    console.log('[DEBUG] TtReader > Page', { currentPage, auth });
     async function handleShowTweet(tweetId) {
       console.log('show Tweet', { id: tweetId });
       const hasQt = await QtApiSearch(tweetId);
@@ -222,30 +237,41 @@ export function Page() {
 
 const trimNewlines = (str) =>
   trim(str).replace(/(^\s*(?!.+)\n+)|(\n+\s+(?!.+)$)/g, '');
-const reqSearch = (query) => {
-  msgBG({ type: 'search', query });
+
+const reqSearch = async (query) => {
+  // msgBG({ type: 'search', query });
+  setStg('query', query);
+  // console.time(`[TIME] reqSearch`);
+  // const searchResults = await rpcBg('seek', { query });
+  // console.timeEnd(`[TIME] reqSearch`);
+  // return searchResults;
 };
 
 export function SearchBar({ show }) {
   const inputObj = useRef(null);
-  const [query, setQuery] = useStorage('query', '');
+  // const [query, setQuery] = useStorage('query', '');
   const { feedDisplayMode, dispatchFeedDisplayMode } = useContext(
     FeedDisplayMode
   );
+  const query$ = useContext(QueryObs);
+  const [query, setQuery] = _useStream(query$, '');
+  const [midSearch, setMidSearch] = useState(false);
+  const [nextQuery, setNextQuery] = useState(null);
 
-  const submitSearch = (query: string) => {
+  const submitSearch = async (query: string) => {
     const q = defaultTo('', query);
     if (isEmpty(trimNewlines(q))) {
       dispatchFeedDisplayMode({
         action: 'emptySearch',
         tweets: [],
       });
+      return [];
     } else {
       dispatchFeedDisplayMode({
         action: 'submitSearch',
         tweets: [],
       });
-      reqSearch(q);
+      return reqSearch(q);
     }
   };
 
@@ -259,6 +285,30 @@ export function SearchBar({ show }) {
     submitSearch(query);
     return () => {};
   }, [query]);
+
+  // useEffect(() => {
+  //   if (!midSearch) {
+  //     console.log('[INFO] making query', { query });
+  //     setMidSearch(true);
+  //     submitSearch(query).then((_) => setMidSearch(false));
+  //   } else {
+  //     // console.log('[INFO] queueing query', { query });
+  //     setNextQuery(query);
+  //   }
+  //   return () => {};
+  // }, [query]);
+
+  // useEffect(() => {
+  //   if (!midSearch && !isNil(nextQuery)) {
+  //     console.log('[INFO] making queued query', { midSearch, nextQuery });
+  //     setMidSearch(true);
+  //     submitSearch(nextQuery).then((_) => {
+  //       setMidSearch(false);
+  //       setNextQuery(null);
+  //     });
+  //   }
+  //   return () => {};
+  // }, [midSearch]);
 
   return (
     <>

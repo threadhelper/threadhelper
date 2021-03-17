@@ -25,7 +25,10 @@ import {
   toPairs,
   when,
   zipObj,
+  unionWith,
+  eqBy,
   __,
+  union,
 } from 'ramda'; // Function
 import { Msg, MsgWrapper } from '../types/msgTypes';
 import {
@@ -202,16 +205,18 @@ export async function removeDataChrome(keys: string[]): Promise<any> {
   });
 }
 
+// returns the whole stg
 export const cleanOldStorage = async () => {
   if (SERVE) {
   } else {
     const newKeys: string[] = keys(defaultStorage());
     const oldKeys: string[] = keys(await getData(null));
     removeData(difference(oldKeys, newKeys));
+    return await getData(null);
   }
 };
 
-export const updateStorage = async () => {
+export const softUpdateStorage = async () => {
   if (SERVE) {
   } else {
     const oldStg: object = await getData(null);
@@ -219,8 +224,15 @@ export const updateStorage = async () => {
   }
 };
 
+export const forceUpdateStorage = async () => {
+  if (SERVE) {
+  } else {
+    setData(defaultStorage());
+  }
+};
+
 export const resetStorage = () => setData(defaultStorage());
-export const resetStorageField = (key) =>
+export const resetStorageField = (key: string) =>
   setData({ [key]: defaultStorage()[key] });
 
 export const getStg = (key: string) =>
@@ -231,18 +243,75 @@ export const getStg = (key: string) =>
 //   pipe(prop(key), defaultTo(defaultStorage()[key])  , addNewDefault(key))
 // );
 
-export const setStg = curry(async (key, val) => {
+export const setStg = curry(async (key: string, val: any) => {
   console.log('setStg', { key, val });
   return setData({ [key]: val });
 });
 
-export const getStgPath = curry((_path: string) =>
+export const getStgPath = curry((_path: string[]) =>
   getStg(head(_path)).then(path(tail(_path)))
 );
-export const setStgPath = curry(async (_path: string, val) =>
+export const setStgPath = curry(async (_path: string[], val) =>
   getStg(head(_path)).then(
     pipe(set(lensPath(tail(_path)), val), tap(setStg(head(_path))))
   )
+);
+
+// Modify storage with a function fn
+export const modStg = curry(async (key: string, fn) => {
+  const oldVal = await getStg(key);
+  const newVal = fn(oldVal);
+  console.log('modStg', { key, fn, oldVal, newVal });
+  return setStg(key, newVal);
+  // return setData({ [key]: newVal });
+});
+
+// needs to go to the opposite or else doesn't throw a stgchange
+export const setStgFlag = async (name: string, active: boolean) => {
+  await setStg(name, !active);
+  await setStg(name, active);
+};
+
+const enqueue = curry(<T,>(incoming: T[], old: T[]): T[] => {
+  return defaultTo([], old).concat(incoming);
+});
+
+export const enqueueStg = curry(async (key: string, vals: any[]) => {
+  console.log('enqueueStg', { key, vals });
+  modStg(key, enqueue(vals));
+});
+
+export const enqueueStgNoDups = curry(async (key: string, vals: any[]) => {
+  console.log('enqueueStg', { key, vals });
+  modStg(key, union(vals));
+});
+
+export const enqueueTweetStg = curry(async (key: string, vals: any[]) => {
+  console.log('enqueueTweetStg', { key, vals });
+  const enqueueNoDupIds = (olds) =>
+    unionWith(eqBy(prop('id')), vals, defaultTo([], olds));
+  modStg(key, enqueueNoDupIds);
+});
+
+//
+export const dequeueStg = curry(async (key: string, N: number) => {
+  const curVal: any[] = defaultTo([], await getStg(key));
+  const workLoad = slice(0, N, curVal);
+  console.log('dequeueStg', { key, N, workLoad });
+  const dequeueMod = pipe(defaultTo([]), slice(N, Infinity));
+  modStg(key, dequeueMod);
+  return workLoad;
+});
+
+// Dequeues and places in a work queue called {key}+"_work_queue". Need to clean that queue with `dequeueStg` after using
+export const dequeue4WorkStg = curry(async (key: string, N: number) => {
+  const workLoad: any[] = await dequeueStg(key, N);
+  enqueueStg(key + '_work_queue', workLoad);
+  return workLoad;
+});
+
+export const dequeueWorkQueueStg = curry((key, N) =>
+  dequeueStg(key + '_work_queue', N)
 );
 
 /* Options API */
@@ -253,7 +322,7 @@ export const getOptions = async (): Promise<Options> =>
   );
 
 export const getOption = async (name: string): Promise<Option> =>
-  getOptions().then(prop(name));
+  getStgPath(['options', name]);
 
 export const setOption = (name: string) =>
   setStgPath(['options', name, 'value']);
@@ -278,6 +347,21 @@ export function postMsg(_msg: Msg) {
   }
 }
 
+export const rpcBg = async (fnName, args?) => {
+  try {
+    const returnValue = await chrome.runtime.sendMessage({
+      type: 'rpcBg',
+      fnName,
+      args: defaultTo({}, args),
+    });
+    console.log('rpcBg', { returnValue });
+    return returnValue;
+  } catch (error) {
+    console.error(`rpcBg ${fnName} failed`, { error, args });
+    return [];
+  }
+};
+
 export function msgBG(msg: Msg) {
   if (SERVE) {
     window.postMessage(msg, '*');
@@ -285,7 +369,7 @@ export function msgBG(msg: Msg) {
     chrome.runtime.sendMessage(msg);
   }
 }
-export function msgCS(tabId: number, msg: Msg) {
+export function msgCS(tabId: number, msg: CsMsg) {
   chrome.tabs.sendMessage(tabId, msg);
 }
 
@@ -420,10 +504,12 @@ export const makeStgItemObs = (itemName) =>
 export const makeGotMsgObs = (): Observable<MsgWrapper, Error> => {
   const makeEmitMsg = (emitter: Emitter<MsgWrapper, Error>) => (
     message,
-    sender
+    sender,
+    sendResponse
   ) => {
-    // console.log('emitting msg', { message });
-    return emitter.emit({ m: message, s: sender });
+    console.log('emitting msg', { message });
+    emitter.emit({ m: message, s: sender });
+    sendResponse({ type: 'ok' });
   };
   return SERVE
     ? makeCustomEventObs('message', makeEmitMsg)

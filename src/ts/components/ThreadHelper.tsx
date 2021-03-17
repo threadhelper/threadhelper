@@ -1,23 +1,13 @@
 import { createContext, h } from 'preact';
-import {
-  StateUpdater,
-  useEffect,
-  useReducer,
-  useRef,
-  useState,
-} from 'preact/hooks';
-import { ApiSearchBar } from './ApiSearchBar';
-import { Header } from './Header';
-import { TtReader } from './TtReader';
-import { DisplayController } from './Display';
-import { DisplayMode } from '../types/interfaceTypes';
-import { isEmpty } from 'ramda';
+import { useReducer, useRef, useState } from 'preact/hooks';
 import { useStorage } from '../hooks/useStorage';
-import Kefir, { Observable } from 'kefir';
+import { DisplayMode } from '../types/interfaceTypes';
 import { TweetResult } from '../types/msgTypes';
-import { makeStorageChangeObs } from '../utils/dutils';
-import { StorageChangeObs } from '../hooks/BrowserEventObs';
+import { rpcBg } from '../utils/dutils';
+import { ApiSearchBar } from './ApiSearchBar';
 import { Banner } from './Banner';
+import { DisplayController } from './Display';
+import { TtReader } from './TtReader';
 
 export const AuthContext = createContext<Credentials>({
   authorization: null,
@@ -66,6 +56,29 @@ const updateFeedDisplay = (
   }
 };
 //
+
+async function askPermission() {
+  // The callback argument will be true if the user granted the permissions.
+  const grantedP = rpcBg('webReqPermission');
+  const granted = await grantedP;
+  console.log('askPermission', { granted, grantedP });
+}
+
+function PermissionAsker() {
+  return (
+    <div
+      onClick={() => {
+        askPermission();
+      }}
+    >
+      <Banner
+        text="Click to let TH see your tweets!"
+        redirect="/#"
+        onDismiss={() => {}}
+      />
+    </div>
+  );
+}
 export default function ThreadHelper(props: any) {
   const [active, setActive] = useState(true);
   const myRef = useRef(null);
@@ -73,9 +86,14 @@ export default function ThreadHelper(props: any) {
     'showPatchNotes',
     false
   );
+  const [webRequestPermission, setWebRequestPermission] = useStorage(
+    'webRequestPermission',
+    true
+  );
 
   return (
     <div class="ThreadHelper" ref={myRef}>
+      {!webRequestPermission && <PermissionAsker />}
       {showPatchNotes && (
         <Banner
           text="New TH update!"
