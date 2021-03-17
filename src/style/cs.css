@@ -870,31 +870,6 @@ input[type='checkbox'] + label {
           transform: translate(-50%);
 }
 
-/*make modal visible*/
-main > div > div > div > div:first-child {
-  z-index: 0;
-}
-
-/* width */
-.searchTweets::-webkit-scrollbar {
-  width: 10px;
-}
-
-/* Track */
-.searchTweets::-webkit-scrollbar-track {
-  background: var(--main-bg-color);
-}
-
-/* Handle */
-.searchTweets::-webkit-scrollbar-thumb {
-  background: var(--neutral-color);
-}
-
-/* Handle on hover */
-.searchTweets::-webkit-scrollbar-thumb:hover {
-  background: var(--main-txt-color);
-}
-
 .dummyContainer {
   position: fixed;
   top: 0;
