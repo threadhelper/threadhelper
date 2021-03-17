@@ -348,7 +348,7 @@ export function msgBG(msg: Msg) {
     chrome.runtime.sendMessage(msg);
   }
 }
-export function msgCS(tabId: number, msg: Msg) {
+export function msgCS(tabId: number, msg: CsMsg) {
   chrome.tabs.sendMessage(tabId, msg);
 }
 

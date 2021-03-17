@@ -28,7 +28,6 @@ import { QueryObs } from '../hooks/BrowserEventObs';
 import { _useStream } from '../hooks/useStream';
 
 export function TtReader() {
-  console.log('TtReader render');
   return (
     <>
       <Page />
@@ -129,6 +128,7 @@ var useCurrentTwitterPage = function () {
     const urlChange$ = makeGotMsgObs()
       .map(prop('m'))
       .filter(propEq('type', 'tab-change-url'))
+      .map(inspect('useCurrentTwitterPage'))
       .map(prop('url'))
       .skipDuplicates()
       .map(getMetadataForPage);
@@ -142,7 +142,6 @@ var useCurrentTwitterPage = function () {
 };
 
 export function Page() {
-  console.log('render page');
   const auth = useContext(AuthContext);
   const currentPage = useCurrentTwitterPage();
   const { feedDisplayMode, dispatchFeedDisplayMode } = useContext(
@@ -194,6 +193,7 @@ export function Page() {
   }
 
   useEffect(() => {
+    console.log('[DEBUG] TtReader > Page', { currentPage, auth });
     async function handleShowTweet(tweetId) {
       console.log('show Tweet', { id: tweetId });
       const hasQt = await QtApiSearch(tweetId);
