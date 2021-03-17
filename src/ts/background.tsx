@@ -837,12 +837,9 @@ function onTabUpdated(
   tab: chrome.tabs.Tab
 ) {
   try {
-    // console.log(`[DEBUG] onTabUpdated, urls=`, {change, tab})
     if (change.status === 'complete' && tab.url && tab.url.match(twitter_url)) {
-      console.log('[DEBUG] Browser action: enabling');
       chrome.browserAction.enable(tabId);
     } else {
-      console.log('[DEBUG] Browser action: disabling');
       // chrome.browserAction.disable(tabId);
     }
   } catch (e) {
@@ -852,18 +849,9 @@ function onTabUpdated(
   if (change.status === 'complete' && tab.active && tab.url) {
     if (tab.url.match(twitter_url)) {
       addTtTab(tab.id);
-      console.log('[DEBUG] Tab changed: Twitter', {
-        tab: tab.id,
-        openTwitterTabs,
-      });
-
-      msgCS(tab.id, { type: 'tab-change-url', url: change.url, cs_id: tab.id });
+      msgCS(tab.id, { type: 'tab-change-url', url: tab.url, cs_id: tab.id });
     } else {
       remTtTab(tab.id);
-      console.log('[DEBUG] Tab changed: Twitter', {
-        tab: tab.id,
-        openTwitterTabs,
-      });
     }
   }
 }
@@ -933,7 +921,9 @@ chrome.runtime.onSuspend.addListener(function () {
 });
 
 chrome.runtime.onInstalled.addListener(onInstalled);
-
+chrome.tabs.onActivated.addListener(onTabActivated);
+chrome.tabs.onUpdated.addListener(onTabUpdated);
+chrome.tabs.onRemoved.addListener(onTabRemoved);
 /* modular bg */
 
 // const db = dbOpen();

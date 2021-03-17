@@ -18,6 +18,10 @@ export interface Msg {
   id?: TweetId;
 }
 
+export interface CsMsg extends Msg {
+  cs_id: string;
+}
+
 export interface GaMsg extends Msg {
   event: Event;
 }
