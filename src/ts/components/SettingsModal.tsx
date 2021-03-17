@@ -24,6 +24,7 @@ import { SyncIcon } from './Sync';
 import { AuthContext } from './ThreadHelper';
 import Tooltip from './Tooltip';
 import defaultProfilePic from '../../images/defaultProfilePic.png';
+import CrossIcon from '../../images/x-red.svg';
 import { ArchiveExporter } from './ArchiveExporter';
 
 const Checkbox = ({ get, set, label }) => {
@@ -31,7 +32,9 @@ const Checkbox = ({ get, set, label }) => {
     <label class="flex items-center mt-4 flex-grow">
       <input
         type="checkbox"
-        class={`h-5 w-5 rounded-md border-2 ${get ? 'bg-accent border-borderBg' : 'bg-mainBg border-borderBg'}`}
+        class={`h-5 w-5 rounded-md border-2 ${
+          get ? 'bg-accent border-borderBg' : 'bg-mainBg border-borderBg'
+        }`}
         checked={get}
         onClick={() => {
           set(!get);
@@ -105,7 +108,7 @@ const SettingsModal = ({ setOpen, setSecretOpen }) => {
   return (
     // background shim
     <div
-      class="fixed z-40 overflow-auto bg-gray-100 bg-opacity-50 flex bottom-0 top-0 left-0 right-0  items-center justify-center"
+      class="fixed z-40 overflow-auto bg-gray-800 bg-opacity-50 flex bottom-0 top-0 left-0 right-0  items-center justify-center"
       onClick={(e) => {
         if (e.target === e.currentTarget) setOpen(false);
       }}
@@ -127,7 +130,9 @@ const SettingsModal = ({ setOpen, setSecretOpen }) => {
         </div>
         {/* checkmark section */}
         <div class="w-full mb-5">
-          <div class="font-medium text-lsm text-neutral">Let magic search include:</div>
+          <div class="font-medium text-lsm text-neutral">
+            Let magic search include:
+          </div>
           <div class="flex">
             <Checkbox get={getRTs} set={setGetRTs} label="Retweets" />
             <Checkbox
@@ -140,7 +145,9 @@ const SettingsModal = ({ setOpen, setSecretOpen }) => {
         </div>
         {/* idle mode */}
         <div class="w-full mb-5">
-          <div class="font-medium text-lsm text-neutral">Shuffle tweets when idle:</div>
+          <div class="font-medium text-lsm text-neutral">
+            Shuffle tweets when idle:
+          </div>
           <div class="flex">
             <Checkbox
               get={idle2Bool(idleMode)}
@@ -155,7 +162,9 @@ const SettingsModal = ({ setOpen, setSecretOpen }) => {
           // length(keys(activeAccounts)) > 1 &&
           <div class="mb-5 mt-4">
             {/* header */}
-            <div class="font-medium text-lsm text-neutral">Search the following accounts:</div>
+            <div class="font-medium text-lsm text-neutral">
+              Search the following accounts:
+            </div>
             <div class="flex flex-row flex-wrap justify-evenly">
               {values(activeAccounts).map((x) => {
                 return isNil(x.id_str) ? null : <AccountCheckbox account={x} />;
@@ -170,7 +179,7 @@ const SettingsModal = ({ setOpen, setSecretOpen }) => {
             // class="w-full border text-blue-500 border-blue-500 hover:border-blue-700 hover:text-blue-700 font-bold py-2 px-4 rounded-3xl text-center"
             onClick={() => setSecretOpen(true)}
           >
-            Extremely Secret Button
+            Extremely Secret Button - DO NOT CLICK!
           </button>
         </div>
       </div>
@@ -187,17 +196,22 @@ export const AvatarTrophy = ({
   return (
     <div class="flex flex-col items-center px-4 text-xs leading-none mt-6">
       {link ? (
-        <a href={`https://twitter.com/${screen_name}`}>
+        <a href={`https://twitter.com/${screen_name}`} class="relative mb-2">
+          <div class="w-full h-full absolute rounded-full inset-0 transition-colors duration-200 hover:bg-black hover:bg-opacity-15"></div>
           <img
-            class="rounded-full h-16 w-16 mb-2"
+            class="rounded-full h-16 w-16"
             src={profile_image_url_https.replace('_normal', '')}
           />
         </a>
       ) : (
-        <img
-          class="rounded-full h-16 w-16 mb-3"
-          src={profile_image_url_https}
-        />
+        <div class="relative">
+          <CrossIcon
+            class="top-0 absolute w-3 h-3 cursor-pointer"
+            style={{ right: '-5px' }}
+          />
+          <div class="w-full h-full absolute rounded-full inset-0 transition-colors duration-200 hover:bg-black hover:bg-opacity-15 mb-3"></div>
+          <img class="rounded-full h-16 w-16" src={profile_image_url_https} />
+        </div>
       )}
       <div class="font-black text-base">{name}</div>
       <div class="font-medium underline text-lsm text-neutral mt-1">
@@ -253,7 +267,7 @@ export const SecretModal = ({ setOpen }) => {
   return (
     // background shim
     <div
-      class="fixed z-40 overflow-auto bg-gray-100 bg-opacity-50 flex bottom-0 top-0 left-0 right-0 whitespace-nowrap items-center justify-center"
+      class="fixed z-50 overflow-auto bg-gray-800 bg-opacity-50 flex bottom-0 top-0 left-0 right-0 whitespace-nowrap items-center justify-center"
       onClick={(e) => {
         if (e.target === e.currentTarget) setOpen(false);
       }}
@@ -261,9 +275,11 @@ export const SecretModal = ({ setOpen }) => {
     >
       <div
         style={{
-          width: '560px',
+          'background-color': 'var(--main-bg-color)',
+          color: 'var(--main-txt-color)',
+          borderRadius: '30px',
         }}
-        class="bg-white text-mainTxt max-w-full p-6 rounded-lg text-lg shadow-lg"
+        class="bg-white max-w-full px-8 py-5 text-lg shadow-lg"
       >
         {/* header */}
         <div class="text-sm  w-full mb-5">
@@ -290,7 +306,7 @@ export const SecretModal = ({ setOpen }) => {
                 target="_blank"
               >
                 <button
-                  class="w-full border font-bold py-1 px-4 rounded-3xl text-accent border-accent text-center hover:opacity-80"
+                  class="w-full border-2 font-black py-1 px-4 rounded-3xl text-accent border-accent text-center hover:opacity-80 text-lg"
                   // class="w-full border text-blue-500 border-blue-500 hover:border-blue-700 hover:text-blue-700 font-bold py-1 px-4 rounded-3xl text-center"
                 >
                   Help us
@@ -300,7 +316,7 @@ export const SecretModal = ({ setOpen }) => {
             <div class="px-5">
               <a href="https://twitter.com/messages/compose?recipient_id=1329161144817377283">
                 <button
-                  class="w-full border font-bold py-1 px-4 rounded-3xl text-accent border-accent text-center hover:opacity-80"
+                  class="w-full border-2 font-black py-1 px-4 rounded-3xl text-accent border-accent text-center hover:opacity-80 text-lg"
                   // class="w-full border text-blue-500 border-blue-500 hover:border-blue-700 hover:text-blue-700 font-bold py-1 px-4 rounded-3xl text-center"
                 >
                   Chat with us

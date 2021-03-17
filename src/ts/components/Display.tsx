@@ -21,6 +21,8 @@ import { DisplayMode } from '../types/interfaceTypes';
 import { SearchResult, TweetResult } from '../types/msgTypes';
 import { AuthContext, FeedDisplayMode } from './ThreadHelper';
 import { Tweet as TweetCard } from './Tweet';
+import { User } from 'twitter-d';
+import CrossIcon from '../../images/x-red.svg';
 
 const prepTweets = (list: TweetResult[] | null): SearchResult[] =>
   filter(pipe(prop('tweet'), isNil, not), defaultTo([], list));
@@ -90,23 +92,21 @@ const showUserSearch = (apiUsers, displayMode) => {
 
 function UserCard({ user }) {
   return (
-    <div class="items-center flex flex-row mb-2">
-      <div class="th-gutter">
+    <div class="flex font-normal text-lsm items-center px-4 py-2 transition-colors duration-200 hover:bg-hoverBg cursor:pointer">
+      <div class="flex-auto flex-grow-0 flex-shrink-0 relative w-9 h-9 mr-2 flex items-center justify-center rounded-full">
+        <div class="w-full h-full rounded-full absolute inset-0 transition-colors duration-200 hover:bg-black hover:bg-opacity-15 -z-1"></div>
         <a href={`https://twitter.com/${user.screen_name}`}>
-          <img class="th-profile" src={user.profile_image_url_https} />
+          <div class="w-full h-full absolute rounded-full inset-0 transition-colors duration-200 hover:bg-black hover:bg-opacity-15"></div>
+          <img class="rounded-full" src={user.profile_image_url_https} />
         </a>
       </div>
-      <div class="th-body">
-        <div class="th-header">
-          <div class="th-header-name hover:underline">
-            <a href={`https://twitter.com/${user.screen_name}`}>{user.name}</a>
-          </div>
-          <div class="th-header-username">
-            <a href={`https://twitter.com/${user.screen_name}`}>
-              @{user.screen_name}
-            </a>
-          </div>
-        </div>
+      <div class="flex-initial text-lsm font-bold overflow-ellipsis overflow-hidden whitespace-nowrap leading-none hover:underline">
+        <a href={`https://twitter.com/${user.screen_name}`}>{user.name}</a>
+      </div>
+      <div class="flex-initial flex-shrink-0 ml-1 text-neutral leading-none">
+        <a href={`https://twitter.com/${user.screen_name}`}>
+          @{user.screen_name}
+        </a>
       </div>
     </div>
   );
@@ -117,8 +117,8 @@ function UserDisplay({ results }: { results: User[] }) {
   return (
     <>
       <div class="text-right text-gray-500 ">
-        <span class="hover:text-mainTxt hover:underline">
-          User search results
+        <span class="hover:text-mainTxt hover:underline p-3">
+          User search results:
         </span>
       </div>
       <div class="flex-1 searchUsers">
@@ -148,11 +148,15 @@ type TweetDisplayProps = {
 function TweetDisplay({ title, results, emptyMsg }: TweetDisplayProps) {
   return (
     <>
-      <div class="text-right text-gray-500 mb-1 ">
+      <div class="text-right text-gray-500 my-1 px-3">
         <span class="hover:text-mainTxt hover:underline">{title}</span>
       </div>
       <div class="searchTweets">
-        {isEmpty(results) ? emptyMsg : map(buildTweetComponent, results)}
+        {isEmpty(results) ? (
+          <span class="px-3">{emptyMsg}</span>
+        ) : (
+          map(buildTweetComponent, results)
+        )}
       </div>
     </>
   );
