@@ -55,11 +55,6 @@ module.exports = function (configDirs) {
       chunks: ['dev'],
     }),
     new HtmlPlugin({
-      filename: 'worker.html',
-      template: configDirs.HTML_DIR + '/worker.html',
-      chunks: ['worker'],
-    }),
-    new HtmlPlugin({
       filename: 'index.html',
       template: configDirs.HTML_DIR + '/dev.html',
       chunks: ['dev'],

@@ -318,17 +318,32 @@ export const bookmarkToTweet = pipe(apiToTweet, R.assoc('is_bookmark', true));
 //no qt
 const toTweetCommon = (thTweet: thTweet, t: Status) => {
   thTweet.retweeted = t.retweeted ?? false;
+  // orig_id is the id of the RT, rather than the tweet retweeted itself
   if (thTweet.retweeted) {
-    thTweet.orig_id = t.retweeted_status?.id_str ?? t.id_str;
-    thTweet.id = prop('id_str', t);
+    thTweet.id =
+      t.retweeted_status_id_str ?? t.retweeted_status?.id_str ?? t.id_str;
+    thTweet.orig_id = prop('id_str', t);
     t = t.retweeted_status ?? t;
   } else if (t.retweeted_status) {
-    thTweet.orig_id = t.retweeted_status.id_str ?? t.id_str;
-    thTweet.id = prop('id_str', t);
+    thTweet.id = t.retweeted_status.id_str ?? t.id_str;
+    thTweet.orig_id = prop('id_str', t);
     t = t.retweeted_status ?? t;
   } else {
     thTweet.id = prop('id_str', t);
   }
+  // Not: orig_id is the id of the original tweet, rather than the retweet itself
+  // if (thTweet.retweeted) {
+  //   thTweet.orig_id =
+  //     t.retweeted_status_id_str ?? t.retweeted_status?.id_str ?? t.id_str;
+  //   thTweet.id = prop('id_str', t);
+  //   t = t.retweeted_status ?? t;
+  // } else if (t.retweeted_status) {
+  //   thTweet.orig_id = t.retweeted_status.id_str ?? t.id_str;
+  //   thTweet.id = prop('id_str', t);
+  //   t = t.retweeted_status ?? t;
+  // } else {
+  //   thTweet.id = prop('id_str', t);
+  // }
   // Basic info, same for everyone
   thTweet.time = new Date(prop('created_at', t)).getTime() ?? 0;
   // thTweet.human_time = new Date(prop('created_at', t)).toLocaleString()

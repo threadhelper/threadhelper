@@ -80,13 +80,15 @@ const makeTimelineQueryUrl = curry(
     const cursor_param = !isNil(cursor)
       ? `&cursor=${encodeURIComponent(cursor)}`
       : '';
-    return `https://twitter.com/i/api/2/timeline/profile/${user_id}.json?include_profile_interstitial_type=1&include_blocking=0&include_blocked_by=1&include_followed_by=0&include_want_retweets=1&include_mute_edge=0&include_can_dm=0&include_can_media_tag=1&skip_status=1&include_cards=0&include_ext_alt_text=false&include_quote_count=true&include_reply_count=1&tweet_mode=extended&include_entities=true&include_user_entities=true&include_ext_media_color=false&include_ext_media_availability=true&send_error_codes=true&simple_quoted_tweet=false&include_tweet_replies=false&count=${count}${cursor_param}&userId=${user_id}`;
+    return `https://twitter.com/i/api/2/timeline/profile/${user_id}.json?include_profile_interstitial_type=1&include_blocking=0&include_blocked_by=1&include_followed_by=0&include_want_retweets=1&include_mute_edge=0&include_can_dm=0&include_can_media_tag=1&skip_status=1&include_cards=0&include_ext_alt_text=false&include_quote_count=true&include_reply_count=1&tweet_mode=extended&include_entities=true&include_user_entities=true&include_ext_media_color=false&include_ext_media_availability=true&send_error_codes=true&simple_quoted_tweet=true&include_tweet_replies=false&count=${count}${cursor_param}&userId=${user_id}`;
+    // return `https://twitter.com/i/api/2/timeline/profile/${user_id}.json?include_profile_interstitial_type=1&include_blocking=0&include_blocked_by=1&include_followed_by=0&include_want_retweets=1&include_mute_edge=0&include_can_dm=0&include_can_media_tag=1&skip_status=1&include_cards=0&include_ext_alt_text=false&include_quote_count=true&include_reply_count=1&tweet_mode=extended&include_entities=true&include_user_entities=true&include_ext_media_color=false&include_ext_media_availability=true&send_error_codes=true&simple_quoted_tweet=false&include_tweet_replies=false&count=${count}${cursor_param}&userId=${user_id}`;
   }
 );
 
 const makeUpdateQueryUrlv1 = makeTimelineQueryUrlv1(-1);
 const makeUpdateQueryUrl = (user_id: string, count: number) => {
-  return `https://twitter.com/i/api/2/timeline/profile/${user_id}.json?include_profile_interstitial_type=1&include_blocking=0&include_blocked_by=1&include_followed_by=0&include_want_retweets=1&include_mute_edge=0&include_can_dm=0&include_can_media_tag=1&skip_status=1&include_cards=0&include_ext_alt_text=false&include_quote_count=true&include_reply_count=1&tweet_mode=extended&include_entities=true&include_user_entities=true&include_ext_media_color=false&include_ext_media_availability=true&send_error_codes=true&simple_quoted_tweet=false&include_tweet_replies=false&count=${count}&userId=${user_id}`;
+  return `https://twitter.com/i/api/2/timeline/profile/${user_id}.json?include_profile_interstitial_type=1&include_blocking=0&include_blocked_by=1&include_followed_by=0&include_want_retweets=1&include_mute_edge=0&include_can_dm=0&include_can_media_tag=1&skip_status=1&include_cards=0&include_ext_alt_text=false&include_quote_count=true&include_reply_count=1&tweet_mode=extended&include_entities=true&include_user_entities=true&include_ext_media_color=false&include_ext_media_availability=true&send_error_codes=true&simple_quoted_tweet=true&include_tweet_replies=false&count=${count}&userId=${user_id}`;
+  // return `https://twitter.com/i/api/2/timeline/profile/${user_id}.json?include_profile_interstitial_type=1&include_blocking=0&include_blocked_by=1&include_followed_by=0&include_want_retweets=1&include_mute_edge=0&include_can_dm=0&include_can_media_tag=1&skip_status=1&include_cards=0&include_ext_alt_text=false&include_quote_count=true&include_reply_count=1&tweet_mode=extended&include_entities=true&include_user_entities=true&include_ext_media_color=false&include_ext_media_availability=true&send_error_codes=true&simple_quoted_tweet=false&include_tweet_replies=false&count=${count}&userId=${user_id}`;
 };
 const makeApiSearchUrl = (q) =>
   `https://api.twitter.com/2/search/adaptive.json?q=${encodeURIComponent(
@@ -101,30 +103,34 @@ const makeFetchStatusUrl = (tid) =>
   `https://api.twitter.com/1.1/statuses/show.json?id=${tid}&tweet_mode=extended`;
 const shouldRetryError = (error) => ![403, 429].includes(error.status);
 
-const loopRetry = async <T,>(fn: () => Promise<T>): Promise<T> => {
-  let retryCount = 0;
-  let success = false;
-  let output = null;
-  let stop = false;
-  while (!success && !stop && retryCount < retryLimit) {
-    try {
-      output = await fn();
-      success = true;
-      console.log(`[DEBUG] [${fn.name}] Loop succeeded`);
-    } catch (e) {
-      retryCount += 1;
-      if (shouldRetryError(e) && retryCount < retryLimit) {
-        console.log(`[ERROR] [${fn.name}] failed. Retrying...`, e);
-        await delay(500);
-      } else {
-        stop = true;
-        console.error(`[ERROR] failed. Stopped retrying...`, e);
-        throw e;
+export const genericLoopRetry = curry(
+  async <T,>(retryLimit, delayMs, fn: () => Promise<T>): Promise<T> => {
+    let retryCount = 0;
+    let success = false;
+    let output = null;
+    let stop = false;
+    while (!success && !stop && retryCount < retryLimit) {
+      try {
+        output = await fn();
+        success = true;
+        console.log(`[DEBUG] [${fn.name}] Loop succeeded`);
+      } catch (e) {
+        retryCount += 1;
+        if (shouldRetryError(e) && retryCount < retryLimit) {
+          console.log(`[ERROR] [${fn.name}] failed. Retrying...`, e);
+          await delay(delayMs);
+        } else {
+          stop = true;
+          console.error(`[ERROR] failed. Stopped retrying...`, e);
+          throw e;
+        }
       }
     }
+    return output;
   }
-  return output;
-};
+);
+
+const loopRetry = genericLoopRetry(retryLimit, 500);
 
 const errorRefusal = (response) => {
   if (!response.ok) {

@@ -28,6 +28,7 @@ import {
   unionWith,
   eqBy,
   __,
+  union,
 } from 'ramda'; // Function
 import { Msg, MsgWrapper } from '../types/msgTypes';
 import {
@@ -204,20 +205,29 @@ export async function removeDataChrome(keys: string[]): Promise<any> {
   });
 }
 
+// returns the whole stg
 export const cleanOldStorage = async () => {
   if (SERVE) {
   } else {
     const newKeys: string[] = keys(defaultStorage());
     const oldKeys: string[] = keys(await getData(null));
     removeData(difference(oldKeys, newKeys));
+    return await getData(null);
   }
 };
 
-export const updateStorage = async () => {
+export const softUpdateStorage = async () => {
   if (SERVE) {
   } else {
     const oldStg: object = await getData(null);
     setData(mergeDeepLeft(oldStg, defaultStorage()));
+  }
+};
+
+export const forceUpdateStorage = async () => {
+  if (SERVE) {
+  } else {
+    setData(defaultStorage());
   }
 };
 
@@ -238,10 +248,10 @@ export const setStg = curry(async (key: string, val: any) => {
   return setData({ [key]: val });
 });
 
-export const getStgPath = curry((_path: string) =>
+export const getStgPath = curry((_path: string[]) =>
   getStg(head(_path)).then(path(tail(_path)))
 );
-export const setStgPath = curry(async (_path: string, val) =>
+export const setStgPath = curry(async (_path: string[], val) =>
   getStg(head(_path)).then(
     pipe(set(lensPath(tail(_path)), val), tap(setStg(head(_path))))
   )
@@ -256,6 +266,12 @@ export const modStg = curry(async (key: string, fn) => {
   // return setData({ [key]: newVal });
 });
 
+// needs to go to the opposite or else doesn't throw a stgchange
+export const setStgFlag = async (name: string, active: boolean) => {
+  await setStg(name, !active);
+  await setStg(name, active);
+};
+
 const enqueue = curry(<T,>(incoming: T[], old: T[]): T[] => {
   return defaultTo([], old).concat(incoming);
 });
@@ -265,11 +281,16 @@ export const enqueueStg = curry(async (key: string, vals: any[]) => {
   modStg(key, enqueue(vals));
 });
 
+export const enqueueStgNoDups = curry(async (key: string, vals: any[]) => {
+  console.log('enqueueStg', { key, vals });
+  modStg(key, union(vals));
+});
+
 export const enqueueTweetStg = curry(async (key: string, vals: any[]) => {
   console.log('enqueueTweetStg', { key, vals });
-  const enqueueNoDups = (olds) =>
+  const enqueueNoDupIds = (olds) =>
     unionWith(eqBy(prop('id')), vals, defaultTo([], olds));
-  modStg(key, enqueueNoDups);
+  modStg(key, enqueueNoDupIds);
 });
 
 //
@@ -336,7 +357,7 @@ export const rpcBg = async (fnName, args?) => {
     console.log('rpcBg', { returnValue });
     return returnValue;
   } catch (error) {
-    console.error(error);
+    console.error(`rpcBg ${fnName} failed`, { error, args });
     return [];
   }
 };
@@ -483,10 +504,12 @@ export const makeStgItemObs = (itemName) =>
 export const makeGotMsgObs = (): Observable<MsgWrapper, Error> => {
   const makeEmitMsg = (emitter: Emitter<MsgWrapper, Error>) => (
     message,
-    sender
+    sender,
+    sendResponse
   ) => {
-    // console.log('emitting msg', { message });
-    return emitter.emit({ m: message, s: sender });
+    console.log('emitting msg', { message });
+    emitter.emit({ m: message, s: sender });
+    sendResponse({ type: 'ok' });
   };
   return SERVE
     ? makeCustomEventObs('message', makeEmitMsg)

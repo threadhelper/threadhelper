@@ -1,46 +1,26 @@
 import { Fragment, h } from 'preact';
-import { useThrottle, useThrottleCallback } from '@react-hook/throttle';
-import { memo } from 'preact/compat';
-import {
-  useContext,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from 'preact/hooks';
+import { useContext, useEffect, useRef, useState } from 'preact/hooks';
 // flattenModule(global,R)
 import {
-  andThen,
   defaultTo,
   filter,
-  find,
-  innerJoin,
   isEmpty,
   isNil,
-  lensProp,
   map,
   not,
   path,
   pipe,
   prop,
-  propEq,
-  set,
   slice,
-  zipWith,
-  __,
 } from 'ramda'; // Function
-import { apiSearchToTweet } from '../bg/tweetImporter';
-import { apiMetricsFetch, tweetLookupQuery } from '../bg/twitterScout';
-import { useMsg } from '../hooks/useMsg';
+import { User } from 'twitter-d';
+import { apiMetricsFetch } from '../bg/twitterScout';
 // import { useAsync } from '../hooks/useAsync';
 import { useOption, useStorage } from '../hooks/useStorage';
 import { DisplayMode } from '../types/interfaceTypes';
 import { SearchResult, TweetResult } from '../types/msgTypes';
-import { thTweet } from '../types/tweetTypes';
-import { inspect } from '../utils/putils';
 import { AuthContext, FeedDisplayMode } from './ThreadHelper';
 import { Tweet as TweetCard } from './Tweet';
-import { User } from 'twitter-d';
 
 const prepTweets = (list: TweetResult[] | null): SearchResult[] =>
   filter(pipe(prop('tweet'), isNil, not), defaultTo([], list));
