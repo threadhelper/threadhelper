@@ -62,12 +62,25 @@ export const ReplyAction = ({ tweet }) => {
   }, []);
 
   return (
-    <div class="flex cursor-pointer" onMouseOver={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+    <div
+      class="flex cursor-pointer"
+      onMouseOver={() => setHover(true)}
+      onMouseOut={() => setHover(false)}
+    >
       <div class="relative w-5 h-5 inline-flex items-center justify-center">
-        <div class={`absolute inset-0 rounded-full -m-2 transition-colors duration-200 ${hover ? "bg-twitterBlue bg-opacity-10 " : ""}`}></div>
-        <ReplyIcon class={`fill-current ${hover ? "text-twitterBlue" : ""}`} />
+        <div
+          class={`absolute inset-0 rounded-full -m-2 transition-colors duration-200 ${
+            hover ? 'bg-twitterBlue bg-opacity-10 ' : ''
+          }`}
+        ></div>
+        <ReplyIcon class={`fill-current ${hover ? 'text-twitterBlue' : ''}`} />
       </div>
-      <span class="px-3 h-5 items-center inline-flex" style={{minWidth: 'calc(1em + 24px)'}}>{count > 0 ? formatNumber(count) : ''}</span>
+      <span
+        class="px-3 h-5 items-center inline-flex"
+        style={{ minWidth: 'calc(1em + 24px)' }}
+      >
+        {count > 0 ? formatNumber(count) : ''}
+      </span>
     </div>
   );
 };
@@ -115,21 +128,25 @@ const RetweetAction = ({ tweet }: { tweet: thTweet }) => {
       // {id: 'Load Archive', leftIcon: <GearIcon />, effect: ()=>{}},
       {
         id: active ? 'Undo Retweet' : 'Retweet',
-        leftIcon: <RetweetIcon />,
+        leftIcon: <RetweetIcon class="mr-3 w-4 h-4 fill-current" />,
         effect: active ? offFunc : onFunc,
       },
-      { id: 'Quote Tweet', leftIcon: <PencilIcon />, effect: quoteTweet },
+      {
+        id: 'Quote Tweet',
+        leftIcon: <PencilIcon class="mr-3 w-4 h-4 fill-current" />,
+        effect: quoteTweet,
+      },
     ];
   };
 
   return (
     <div
-      class="flex cursor-pointer"
+      class="flex cursor-pointer relative"
       onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
+      onMouseOut={() => setHover(false)}
     >
       <div
-        class={`relative w-5 inline-flex items-center ${
+        class={`relative w-5 h-5 inline-flex items-center ${
           active || hover ? 'text-green-600 ' : ''
         }`}
         // onClick={active ? offFunc : onFunc}
@@ -138,16 +155,20 @@ const RetweetAction = ({ tweet }: { tweet: thTweet }) => {
         }}
       >
         <div
-          class={`relative w-5 h-5 inline-flex items-center ${((active || hover) ? 'text-green-600 ' : '')}`}
-          // onClick={active ? offFunc : onFunc}
-          onClick={() => {
-            setOpen(!open);
-          }}
-        > 
-          <div class={`absolute inset-0 rounded-full -m-2 transition-colors duration-200 ${hover ? "bg-green-600 bg-opacity-10 " : ""}`}></div>
-          <RetweetIcon class="fill-current" />
-        </div>
-        <span class={`px-3 h-5 items-center inline-flex ${((active || hover) ? 'text-green-600 ' : '')}`} style={{minWidth: 'calc(1em + 24px)'}}>{count > 0 ? formatNumber(count) : ''}</span>
+          class={`absolute inset-0 rounded-full -m-2 transition-colors duration-200 ${
+            hover ? 'bg-green-600 bg-opacity-10 ' : ''
+          }`}
+        ></div>
+        <RetweetIcon class="fill-current" />
+      </div>
+      <span
+        class={`px-3 h-5 items-center inline-flex ${
+          active || hover ? 'text-green-600 ' : ''
+        }`}
+        style={{ minWidth: 'calc(1em + 24px)' }}
+      >
+        {count > 0 ? formatNumber(count) : ''}
+      </span>
       {open && (
         <DropdownMenu
           name={'rt-button'}
@@ -192,8 +213,8 @@ const LikeAction = ({ tweet }) => {
   return (
     <div
       class="flex cursor-pointer"
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
+      onMouseOver={() => setHover(true)}
+      onMouseOut={() => setHover(false)}
     >
       <div
         class={
@@ -209,11 +230,18 @@ const LikeAction = ({ tweet }) => {
         ></div>
         {active ? (
           <FullLikeIcon class="fill-current" />
-        ) : 
-          <LikeIcon class={`fill-current ${hover ? "text-red-700" : ""}`}/>
-        }
+        ) : (
+          <LikeIcon class={`fill-current ${hover ? 'text-red-700' : ''}`} />
+        )}
       </div>
-      <span class={`px-3 h-5 items-center inline-flex ${active || hover ? `text-red-700 ` : ``}`} style={{minWidth: 'calc(1em + 24px)'}}>{count > 0 ? formatNumber(count) : ''}</span>
+      <span
+        class={`px-3 h-5 items-center inline-flex ${
+          active || hover ? `text-red-700 ` : ``
+        }`}
+        style={{ minWidth: 'calc(1em + 24px)' }}
+      >
+        {count > 0 ? formatNumber(count) : ''}
+      </span>
     </div>
   );
 };
@@ -247,28 +275,41 @@ export const CopyAction = ({
     return;
   };
 
-  return(
-    <div class="flex cursor-pointer relative" onMouseOver={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+  return (
+    <div
+      class="flex cursor-pointer relative"
+      onMouseOver={() => setHover(true)}
+      onMouseOut={() => setHover(false)}
+    >
       <textarea class="th-link hidden" ref={linkField}>
         {url}
       </textarea>
-      
+
       <Tooltip content={'Copy URL'} direction="bottom">
-        <div class="relative w-5 h-5 inline-flex items-center justify-center" onClick={copyUrl}>
-            <div class={
-              "absolute inset-0 rounded-full -m-2 transition-colors duration-2000 " +
-              (hover && !isNil(url) ? "bg-blue-500 bg-opacity-10 " : "") +
-              (isNil(url) ? "text-red-200 " : "")
-              }></div>
-            <LinkIcon />
-        </div> 
+        <div
+          class="relative w-5 h-5 inline-flex items-center justify-center"
+          onClick={copyUrl}
+        >
+          <div
+            class={
+              'absolute inset-0 rounded-full -m-2 transition-colors duration-2000 ' +
+              (hover && !isNil(url) ? 'bg-blue-500 bg-opacity-10 ' : '') +
+              (isNil(url) ? 'text-red-200 ' : '')
+            }
+          ></div>
+          <LinkIcon />
+        </div>
       </Tooltip>
-      {copied && <span 
-        style={{bottom: '8%'}}
-        class="fixed left-1/2 px-8 py-4 text-white rounded-lg bg-accent text-bold">Copied!</span>
-      }
+      {cpied && (
+        <span
+          style={{ bottom: '3.5%', left: '46%' }}
+          class="fixed px-8 py-3 text-white rounded-md bg-accent text-bold text-base"
+        >
+          Copied!
+        </span>
+      )}
     </div>
-  )
+  );
 };
 
 export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
@@ -316,11 +357,9 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
     tweet.has_media ? renderMedia(tweet.media) : '';
   const maybeQuote = (tweet) =>
     tweet.has_quote ? renderQuote(tweet.quote, tweet.has_media) : '';
-  
 
   return (
-    <div
-      class="px-4 py-3 border-b border-borderBg transition-colors duration-200 cursor-pointer hover:bg-hoverBg">
+    <div class="px-4 py-3 border-b border-borderBg transition-colors duration-200 cursor-pointer hover:bg-hoverBg">
       <div class="flex">
         <div class="mr-3">
           <div class="relative w-9 h-9 rounded-full transition-colors duration-200">
@@ -334,32 +373,34 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
           </div>
         </div>
         <div class="min-w-0 pr-2 w-full">
-            <div class="flex font-normal text-lsm">
-              <div class="text-lsm font-bold overflow-ellipsis whitespace-nowrap overflow-hidden hover:underline">
-                <a href={getUserUrl(tweet.username)}>
-                  {tweet.name}
-                </a>
-              </div>
-              <div class="ml-1 text-neutral overflow-ellipsis whitespace-nowrap overflow-hidden">
-                <a href={getUserUrl(tweet.username)}>@{tweet.username}</a>
-              </div>
-              <div class="px-1 text-neutral flex-shrink-0">·</div>
-              <div class="text-neutral hover:underline flex-shrink-0">
-                <a href={getTweetUrl(tweet)}>
-                  {getTimeDiff(tweet.time)}
-                </a>
-              </div>
+          <div class="flex font-normal text-lsm">
+            <div class="text-lsm font-bold overflow-ellipsis whitespace-nowrap overflow-hidden hover:underline">
+              <a href={getUserUrl(tweet.username)}>{tweet.name}</a>
             </div>
-            <div class="flex-none">
-              <div class="text-neutral">{reply_text}</div>
-              {reformattedText(tweet)}
+            <div class="ml-1 text-neutral overflow-ellipsis whitespace-nowrap overflow-hidden">
+              <a href={getUserUrl(tweet.username)}>@{tweet.username}</a>
             </div>
-            {maybeMedia(tweet)}
-            {maybeQuote(tweet)}
+            <div class="px-1 text-neutral flex-shrink-0">·</div>
+            <div class="text-neutral hover:underline flex-shrink-0">
+              <a href={getTweetUrl(tweet)}>{getTimeDiff(tweet.time)}</a>
+            </div>
+          </div>
+          <div class="flex-none">
+            <div class="text-neutral">{reply_text}</div>
+            {reformattedText(tweet)}
+          </div>
+          {maybeMedia(tweet)}
+          {maybeQuote(tweet)}
           <div class="mt-3 flex justify-between text-neutral z-50">
-            <div style="flex-basis: 28.33%"><ReplyAction tweet={_tweet} /></div>
-            <div style="flex-basis: 28.33%"><RetweetAction tweet={_tweet} /></div>
-            <div style="flex-basis: 28.33%"><LikeAction tweet={_tweet} /></div>
+            <div style="flex-basis: 28.33%">
+              <ReplyAction tweet={_tweet} />
+            </div>
+            <div style="flex-basis: 28.33%">
+              <RetweetAction tweet={_tweet} />
+            </div>
+            <div style="flex-basis: 28.33%">
+              <LikeAction tweet={_tweet} />
+            </div>
             <div>
               <CopyAction
                 url={
@@ -369,7 +410,7 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
               />
             </div>
           </div>
-          </div>
+        </div>
       </div>
     </div>
   );
@@ -552,10 +593,9 @@ function renderQuote(quote: thTweet, parent_has_media) {
     const media = quote.has_media ? renderMedia(quote.media, true) : null;
 
     const template = (
-      <div
-      class="mt-3 border rounded-2xl border-borderBg transition-colors duration-200 cursor-pointer hover:bg-hoverBg">
-      <div class="flex flex-col">
-        <div class="min-w-0 w-full p-3 pb-0">
+      <div class="mt-3 border rounded-2xl border-borderBg transition-colors duration-200 cursor-pointer hover:bg-hoverBg">
+        <div class="flex flex-col">
+          <div class="min-w-0 w-full p-3 pb-0">
             <div class="flex font-normal text-lsm items-center mb-2">
               <div class="relative w-6 h-6 rounded-full transition-colors duration-200 mr-2 flex-shrink-0">
                 <a href={getUserUrl(quote.username)}>
@@ -567,31 +607,25 @@ function renderQuote(quote: thTweet, parent_has_media) {
                 </a>
               </div>
               <div class="text-lsm font-bold overflow-ellipsis whitespace-nowrap overflow-hidden hover:underline">
-                <a href={getUserUrl(quote.username)}>
-                  {quote.name}
-                </a>
+                <a href={getUserUrl(quote.username)}>{quote.name}</a>
               </div>
               <div class="ml-1 text-neutral overflow-ellipsis whitespace-nowrap overflow-hidden">
                 <a href={getUserUrl(quote.username)}>@{quote.username}</a>
               </div>
               <div class="px-1 text-neutral flex-shrink-0">·</div>
               <div class="text-neutral hover:underline flex-shrink-0">
-                <a href={getTweetUrl(quote)}>
-                  {timeDiff}
-                </a>
+                <a href={getTweetUrl(quote)}>{timeDiff}</a>
               </div>
             </div>
             <div class="flex-none">
               <div class="text-neutral">{replyText}</div>
               {text}
             </div>
-        </div>
-        <div class="w-full">
-          {media}
+          </div>
+          <div class="w-full">{media}</div>
         </div>
       </div>
-    </div>
-  );
+    );
 
     return template;
   } else {

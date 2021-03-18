@@ -337,6 +337,7 @@ input[type='checkbox'] + label {
 .searchTweets {
   overflow-y: scroll;
   overflow-x: hidden;
+  height: 100%;
 }
 
 .th-text {
