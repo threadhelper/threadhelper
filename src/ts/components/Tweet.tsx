@@ -63,13 +63,10 @@ export const ReplyAction = ({ tweet }) => {
 
   var replyTweet = useCallback(
     function () {
-      window.location.replace(
-        `https://twitter.com/intent/tweet?in_reply_to=${tweet.id}`
+      window.open(
+        `https://twitter.com/intent/tweet?in_reply_to=${tweet.id}`,
+        '_blank'
       );
-      // window.open(
-      //   `https://twitter.com/intent/tweet?in_reply_to=${tweet.id}`
-      //   // ,'_blank'
-      // );
     },
     [tweet]
   );
@@ -131,13 +128,10 @@ const RetweetAction = ({ tweet }: { tweet: thTweet }) => {
 
   var quoteTweet = useCallback(
     function () {
-      window.location.replace(
-        `https://twitter.com/intent/tweet?url=https://twitter.com/${tweet.username}/status/${tweet.id}`
+      window.open(
+        `https://twitter.com/intent/tweet?url=https://twitter.com/${tweet.username}/status/${tweet.id}`,
+        '_blank'
       );
-      // window.open(
-      //   `https://twitter.com/intent/tweet?url=https://twitter.com/${tweet.username}/status/${tweet.id}`
-      //   // ,'_blank'
-      // );
     },
     [tweet]
   );
