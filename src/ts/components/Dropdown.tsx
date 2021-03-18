@@ -26,10 +26,10 @@ export function DropdownMenu({
       defaultTo(true, itemClickClose) ? closeMenu() : null;
     };
     return (
-      <a href="#" className="p-3 hover:bg-hoverBg flex items-center" onClick={onClickItem}>
-        <span className="icon-button">{props.leftIcon}</span>
+      <a href="#" className="menu-item hover:bg-hoverBg" onClick={onClickItem}>
+        <span className="icon-button fill-current">{props.leftIcon}</span>
         {props.id}
-        <span className="icon-right">{props.rightIcon}</span>
+        <span className="icon-right fill-current">{props.rightIcon}</span>
       </a>
     );
   }
@@ -67,10 +67,11 @@ export function DropdownMenu({
   }
   return (
     <div>
-      <div 
-        className="bg-mainBg z-30 rounded-md shadow-highlighted absolute top-full left-0" 
-        style={{width: '150px'}}
-        ref={dropdownRef}>
+      <div
+        className="bg-mainBg z-30 rounded-md shadow-highlighted absolute top-full left-0"
+        style={{ width: '150px' }}
+        ref={dropdownRef}
+      >
         {defaultTo([], componentItems).map((Item) => (
           <Item />
         ))}
@@ -104,7 +105,10 @@ export function DropdownMenu({
           )
         )}
       </div>
-      <div class="fixed inset-0 z-10 cursor-default" onClick={() => closeMenu()}/>
+      <div
+        class="fixed inset-0 z-10 cursor-default"
+        onClick={() => closeMenu()}
+      />
     </div>
   );
 }

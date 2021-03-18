@@ -141,7 +141,7 @@ const RetweetAction = ({ tweet }: { tweet: thTweet }) => {
 
   return (
     <div
-      class="flex cursor-pointer"
+      class="flex cursor-pointer absolute"
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >

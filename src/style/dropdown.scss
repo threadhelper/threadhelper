@@ -40,14 +40,6 @@
     margin-right: 0.5rem;
   }
 
-  .menu-item .icon-button:hover {
-    filter: none;
-  }
-
-  .menu-item:hover {
-    background-color: rgba(0, 0, 0, 0.1);
-  }
-
   .menu-item .x-icon {
     text-align: center;
     height: calc(17px);
@@ -57,10 +49,7 @@
     font-weight: 800;
     color: #ff000088;
   }
-  .menu-item .x-icon:hover {
-    border-radius: 50%;
-    background-color: var(--neutral-color);
-  }
+
 
   .icon-right {
     margin-left: auto;

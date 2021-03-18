@@ -2,15 +2,19 @@ import '@babel/polyfill';
 import { isNil, path } from 'ramda';
 import { SearchResult } from '../../types/stgTypes';
 import { thTweet } from '../../types/tweetTypes';
+import { toggleDebug } from '../../utils/putils';
 import { dbOpen } from '../../worker/idb_wrapper';
 import { search } from '../../worker/nlp';
 import { makeSearchResponse } from '../../worker/stgOps';
 import { ThIndexMetadata } from '../components/Search';
 import { loadIndexFromIdb } from '../storage/devStgUtils';
 
+// var DEBUG = process.env.NODE_ENV != 'production';
+// toggleDebug(window, DEBUG);
+
 const db_promise = dbOpen();
-var idx_promise = loadIndexFromIdb(db_promise);
-// var idx_promise = new Promise(() => {});
+// var idx_promise = loadIndexFromIdb(db_promise);
+var idx_promise = new Promise(() => {});
 
 export async function seek(
   filters,

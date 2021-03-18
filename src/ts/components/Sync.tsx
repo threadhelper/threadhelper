@@ -38,7 +38,7 @@ function makeSyncMsg(
   const jobs = {
     scrape: `Getting tweets from the Twitter API...`,
     store: `Storing your tweets...`,
-    refresh: `Refreshing your tweets...`,
+    refresh: `Refreshing your old tweets...`,
     arch: `Archive: ${archQueueLength} left to store.`,
   };
   const jobsMsg = join(
@@ -57,7 +57,10 @@ function makeSyncMsg(
     isMidRefresh,
     archQueueLength
   );
-  const syncedMsg = lastUpdated =='never' ? 'Haven\'t gathered tweets yet.' : `Last synced: ${getTimeDiff(lastUpdated)} ago.`;
+  const syncedMsg =
+    lastUpdated == 'never'
+      ? "Haven't gathered tweets yet."
+      : `Last synced: ${getTimeDiff(lastUpdated)} ago.`;
   return greet + (sync ? syncedMsg : jobsMsg);
 }
 

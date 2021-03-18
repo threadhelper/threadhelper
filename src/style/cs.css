@@ -795,15 +795,6 @@ input[type='checkbox'] + label {
   margin-right: 0.5rem;
 }
 
-.dropdown .menu-item .icon-button:hover {
-  -webkit-filter: none;
-  filter: none;
-}
-
-.dropdown .menu-item:hover {
-  background-color: rgba(0, 0, 0, 0.1);
-}
-
 .dropdown .menu-item .x-icon {
   text-align: center;
   height: calc(17px);
@@ -812,11 +803,6 @@ input[type='checkbox'] + label {
   cursor: pointer;
   font-weight: 800;
   color: #ff000088;
-}
-
-.dropdown .menu-item .x-icon:hover {
-  border-radius: 50%;
-  background-color: var(--neutral-color);
 }
 
 .dropdown .icon-right {
@@ -849,6 +835,31 @@ input[type='checkbox'] + label {
   top: 100%;
   -webkit-transform: translate(-50%);
   transform: translate(-50%);
+}
+
+/*bring twitter timeline down in z index to make modal visible*/
+main > div > div > div > div:first-child {
+  z-index: 0;
+}
+
+/* width */
+.searchTweets::-webkit-scrollbar {
+  width: 10px;
+}
+
+/* Track */
+.searchTweets::-webkit-scrollbar-track {
+  background: var(--main-bg-color);
+}
+
+/* Handle */
+.searchTweets::-webkit-scrollbar-thumb {
+  background: var(--neutral-color);
+}
+
+/* Handle on hover */
+.searchTweets::-webkit-scrollbar-thumb:hover {
+  background: var(--main-txt-color);
 }
 
 .dummyContainer {

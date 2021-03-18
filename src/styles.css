@@ -3,15 +3,7 @@
 @tailwind utilities;
 
 :root {
-  /* --color-primary: theme('colors.teal.100');
-  --color-secondary: theme('colors.yellow.500'); */
-  --custom-orange: rgb(255, 128, 0);
 }
-
-/* .funky-theme {
---color-primary: theme("colors.red.800");
---color-secondary: theme("colors.green.500");
-} */
 
 /*bring twitter timeline down in z index to make modal visible*/
 main > div > div > div > div:first-child {
