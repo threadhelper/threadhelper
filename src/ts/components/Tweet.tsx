@@ -62,7 +62,7 @@ export const ReplyAction = ({ tweet }) => {
   }, []);
 
   return (
-    <div class="flex cursor-pointer" onMouseOver={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+    <div class="flex cursor-pointer" onMouseOver={() => setHover(true)} onMouseOut={() => setHover(false)}>
       <div class="relative w-5 h-5 inline-flex items-center justify-center">
         <div class={`absolute inset-0 rounded-full -m-2 transition-colors duration-200 ${hover ? "bg-twitterBlue bg-opacity-10 " : ""}`}></div>
         <ReplyIcon class={`fill-current ${hover ? "text-twitterBlue" : ""}`} />
@@ -115,15 +115,15 @@ const RetweetAction = ({ tweet }: { tweet: thTweet }) => {
       // {id: 'Load Archive', leftIcon: <GearIcon />, effect: ()=>{}},
       {
         id: active ? 'Undo Retweet' : 'Retweet',
-        leftIcon: <RetweetIcon />,
+        leftIcon: <RetweetIcon class="mr-3 w-4 h-4 fill-current"/>,
         effect: active ? offFunc : onFunc,
       },
-      { id: 'Quote Tweet', leftIcon: <PencilIcon />, effect: quoteTweet },
+      { id: 'Quote Tweet', leftIcon: <PencilIcon class="mr-3 w-4 h-4 fill-current"/>, effect: quoteTweet },
     ];
   };
 
   return (
-    <div class="flex cursor-pointer" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+    <div class="flex cursor-pointer relative" onMouseEnter={() => setHover(true)} onMouseOut={() => setHover(false)}>
         <div
           class={`relative w-5 h-5 inline-flex items-center ${((active || hover) ? 'text-green-600 ' : '')}`}
           // onClick={active ? offFunc : onFunc}
@@ -177,7 +177,7 @@ const LikeAction = ({ tweet }) => {
   };
 
   return (
-    <div class="flex cursor-pointer" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+    <div class="flex cursor-pointer" onMouseOver={() => setHover(true)} onMouseOut={() => setHover(false)}>
       <div
         class={
           (active ? `text-red-700 ` : ``) +
@@ -227,7 +227,7 @@ export const CopyAction = ({
   };
 
   return(
-    <div class="flex cursor-pointer relative" onMouseOver={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+    <div class="flex cursor-pointer relative" onMouseOver={() => setHover(true)} onMouseOut={() => setHover(false)}>
       <textarea class="th-link hidden" ref={linkField}>
         {url}
       </textarea>
@@ -242,9 +242,9 @@ export const CopyAction = ({
             <LinkIcon />
         </div> 
       </Tooltip>
-      {copied && <span 
-        style={{bottom: '8%'}}
-        class="fixed left-1/2 px-8 py-4 text-white rounded-lg bg-accent text-bold">Copied!</span>
+      {cpied && <span 
+        style={{bottom: '3.5%', left: '46%'}}
+        class="fixed px-8 py-3 text-white rounded-md bg-accent text-bold text-base">Copied!</span>
       }
     </div>
   )
