@@ -458,7 +458,7 @@ const getSearchParams = async () => {
   };
   return { accsShown, filters };
 };
-const seek = async ({ query }) => {
+const genericSeek = async (query) => {
   // const isMidSearch = getStg('isMidSearch')
   // console.trace(`seek ${query}`);
   if (await getStg('isMidSearch')) return;
@@ -472,7 +472,20 @@ const seek = async ({ query }) => {
   );
   console.timeEnd(`${query} seek`);
   setStg('isMidSearch', false);
+  return searchResults;
+};
+
+const seek = async ({ query }) => {
+  // const isMidSearch = getStg('isMidSearch')
+  // console.trace(`seek ${query}`);
+  const searchResults = await genericSeek(query);
   await setStg('search_results', searchResults);
+  return map(prop('id'), searchResults);
+};
+
+const contextualSeek = async ({ query }) => {
+  const searchResults = await genericSeek(query);
+  await setStg('context_results', searchResults);
   return map(prop('id'), searchResults);
 };
 const getLatest = async () => {
@@ -712,8 +725,12 @@ const indexUpdated$ = Kefir.fromEvents(window, 'indexUpdated');
 subObs({ indexUpdated$ }, (_) => onIndexUpdated());
 
 const query$ = makeInitStgObs('query');
+const contextQuery$ = makeInitStgObs('contextQuery');
 query$.log('query$');
+contextQuery$.log('contextQuery$');
 subObs({ query$ }, (query) => seek({ query }));
+subObs({ contextQuery$ }, (query) => contextualSeek({ query }));
+
 const isMidSearch$ = makeInitStgObs('isMidSearch');
 // just to make sure isMidSearch$ never gets stuck
 subObs(
@@ -745,7 +762,9 @@ accounts$.log('accounts$');
 const accsShown$ = (accounts$.map(
   filter(either(pipe(prop('showTweets'), isNil), propEq('showTweets', true)))
 ) as unknown) as Observable<User[], any>;
-subObs({ accsShown$ }, (_) => getDefault());
+subObs({ accsShown$ }, async (_) => {
+  getDefault(await getStg('idleMode'));
+});
 accsShown$.log('accsShown$');
 /* Display options and Search filters */
 const idleMode$ = _makeInitOptionsObs('idleMode') as Observable<IdleMode, any>;

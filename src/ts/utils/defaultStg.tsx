@@ -23,6 +23,7 @@ export const defaultStorage = (): StorageInterface => {
     currentScreenName: '',
     latest_tweets: [],
     search_results: [],
+    context_results: [],
     api_results: [],
     api_users: [],
     // temp_archive: [],
@@ -53,6 +54,7 @@ export const defaultStorage = (): StorageInterface => {
     archiveQueueN: 0,
     random_tweets: [],
     lastClickedId: null,
+    pageMetadata: {}, //
   };
 };
 

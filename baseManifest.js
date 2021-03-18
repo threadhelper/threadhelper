@@ -13,7 +13,7 @@ module.exports = {
       128: 'public/extension/thread_128.png',
     },
     default_title: 'ThreadHelper',
-    default_popup: 'popup.html',
+    // default_popup: 'popup.html',
   },
 
   // "declarative_net_request" : {
