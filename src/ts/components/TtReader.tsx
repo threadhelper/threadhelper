@@ -65,6 +65,9 @@ const getMetadataForPage = function (url) {
   var list = url.match(
     /(?:twitter.com|mobile.twitter.com)\/i\/lists\/([0-9]*)(?:\/)?(?:\?.*)?$/
   );
+  var intentReply = url.match(
+    /(?:twitter.com|mobile.twitter.com)\/intent\/tweet\?in_reply_to\=([0-9]*)?$/
+  );
   if (showTweet) {
     return {
       pageType: 'showTweet',
@@ -81,6 +84,12 @@ const getMetadataForPage = function (url) {
     return {
       pageType: 'compose',
       url: url,
+    };
+  } else if (intentReply) {
+    return {
+      pageType: 'intentReply',
+      url: url,
+      tweetId: intentReply[1],
     };
   } else if (explore) {
     return {
@@ -225,6 +234,8 @@ export function Page() {
     if (isNil(currentPage) || isNil(auth)) return;
     if (propEq('pageType', 'showTweet', currentPage)) {
       handleShowTweet(currentPage.tweetId);
+      // } else if (propEq('pageType', 'intentReply', currentPage)) {
+      //   handleShowTweet(currentPage.tweetId);
     } else {
       dispatchFeedDisplayMode({
         action: 'emptySearch',
