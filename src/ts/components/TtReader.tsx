@@ -72,9 +72,6 @@ export const getMetadataForPage = function (url) {
   var intentReply = url.match(
     /(?:twitter.com|mobile.twitter.com)\/intent\/tweet\?in_reply_to\=([0-9]*)?$/
   );
-  var intent = url.match(
-    /(?:twitter.com|mobile.twitter.com)\/intent\/tweet(?:\?.*)?$/
-  );
   if (showTweet) {
     return {
       pageType: 'showTweet',
@@ -97,11 +94,6 @@ export const getMetadataForPage = function (url) {
       pageType: 'intentReply',
       url: url,
       tweetId: intentReply[1],
-    };
-  } else if (intentReply) {
-    return {
-      pageType: 'intent',
-      url: url,
     };
   } else if (explore) {
     return {
@@ -324,8 +316,16 @@ export function Page() {
   useEffect(() => {
     console.log('[DEBUG] TtReader > Page', { currentPage, auth });
     if (isNil(currentPage) || isNil(auth)) return;
-
-    handleContext(dispatchFeedDisplayMode, currentPage, auth);
+    if (propEq('pageType', 'showTweet', currentPage)) {
+      handleShowTweet(currentPage.tweetId);
+      // } else if (propEq('pageType', 'intentReply', currentPage)) {
+      //   handleShowTweet(currentPage.tweetId);
+    } else {
+      dispatchFeedDisplayMode({
+        action: 'emptySearch',
+        tweets: [],
+      });
+    }
   }, [currentPage, auth]);
   return <></>;
 }
