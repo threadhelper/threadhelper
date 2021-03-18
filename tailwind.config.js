@@ -37,7 +37,9 @@ module.exports = {
       neutral: 'var(--neutral-color)',
       tooltipBg: 'var(--tooltip-color)',
       twitterBlue: 'rgb(29, 161, 224)',
+      twitterGray: 'rgb(110, 118, 125)',
       hoverBg: 'var(--bg-hover-color)',
+      searchBarBg: 'var(--search-bg-color)',
       //default colors
       transparent: 'transparent',
       current: 'currentColor',
