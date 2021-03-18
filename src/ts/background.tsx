@@ -771,9 +771,7 @@ accounts$.log('accounts$');
 const accsShown$ = accounts$.map(
   filter(either(pipe(prop('showTweets'), isNil), propEq('showTweets', true)))
 ) as unknown) as Observable<User[], any>;
-subObs({ accsShown$ }, async (_) => {
-  getDefault(await getStg('idleMode'));
-});
+subObs({ accsShown$ }, (_) => getDefault());
 accsShown$.log('accsShown$');
 /* Display options and Search filters */
 const idleMode$ = _makeInitOptionsObs('idleMode') as Observable<IdleMode, any>;

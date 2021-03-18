@@ -72,9 +72,8 @@ export function ApiSearchBar() {
   const inputObj = useRef(null);
   const [value, setValue] = useState('');
   const [showSearchBar, setShowSearchBar] = useState(false);
-  const { feedDisplayMode, dispatchFeedDisplayMode } = useContext(
-    FeedDisplayMode
-  );
+  const { feedDisplayMode, dispatchFeedDisplayMode } =
+    useContext(FeedDisplayMode);
 
   const submitApiSearch = (value) => {
     dispatchFeedDisplayMode({
@@ -141,7 +140,7 @@ export function ApiSearchBar() {
         ) : null}
         {showSearchBar ? (
           <div
-            class="inline-flex items-center h-8 pl-3 pr-5 ml-2 mr-3 rounded-full text-sm focus-within:ring-2 ring-current w-full text-accent bg-mainBg"
+            class="inline-flex items-center h-8 pl-3 pr-5 ml-2 rounded-full text-sm focus-within:ring-2 ring-current w-full text-accent bg-mainBg"
             // style={{
             //   // backgroundColor: 'var(--main-bg-color)',
             //   // borderColor: 'var(--accent-color)',
@@ -151,8 +150,8 @@ export function ApiSearchBar() {
           >
             {' '}
             <SearchIcon
-              // class="h-6 w-6 text-accent fill-current stroke-current"
-              class="h-6 w-6 mr-4 text-accent fill-current stroke-current"
+              class="h-6 w-6 text-accent fill-current stroke-current"
+              // class="h-6 w-6 mr-4 text-accent fill-current stroke-current"
               // style="fill:var(--accent-color); stroke:var(--accent-color)"
             />{' '}
             <input
