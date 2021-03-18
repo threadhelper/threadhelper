@@ -134,27 +134,6 @@ export const getMetadataForPage = function (url) {
   }
 };
 
-const isComposing = () => {
-  const composeTypes = ['compose', 'intent', 'intentReply'];
-  // Fast
-  const pageType = prop('pageType', getMetadataForPage(window.location.href));
-  console.log('shouldNewTab', {
-    metadata: getMetadataForPage(window.location.href),
-    pageType,
-  });
-  return includes(pageType, composeTypes);
-};
-
-export const goToTwitterSearchPage = (query) => {
-  const fullResultsLink =
-    'https://twitter.com/search?q=' +
-    encodeURIComponent(query) +
-    '&src=typed_query';
-  const newTab = isComposing();
-  console.log('goToTwitterSearchPage', { newTab, query, fullResultsLink });
-  window.open(fullResultsLink, newTab ? '_blank' : '_self');
-};
-
 var useCurrentTwitterPage = function () {
   // var [currentPage, setCurrentPage] = useState(function () {
   //   return getMetadataForPage(window.location.href);
@@ -310,22 +289,17 @@ const handleContext = (dispatch, currentPage, auth) => {
 export function Page() {
   const auth = useContext(AuthContext);
   const currentPage = useCurrentTwitterPage();
-  const { feedDisplayMode, dispatchFeedDisplayMode } =
-    useContext(FeedDisplayMode);
+  const { feedDisplayMode, dispatchFeedDisplayMode } = useContext(
+    FeedDisplayMode
+  );
+  return hasQt;
+});
 
   useEffect(() => {
     console.log('[DEBUG] TtReader > Page', { currentPage, auth });
     if (isNil(currentPage) || isNil(auth)) return;
-    if (propEq('pageType', 'showTweet', currentPage)) {
-      handleShowTweet(currentPage.tweetId);
-      // } else if (propEq('pageType', 'intentReply', currentPage)) {
-      //   handleShowTweet(currentPage.tweetId);
-    } else {
-      dispatchFeedDisplayMode({
-        action: 'emptySearch',
-        tweets: [],
-      });
-    }
+
+    handleContext(dispatchFeedDisplayMode, currentPage, auth);
   }, [currentPage, auth]);
   return <></>;
 }
