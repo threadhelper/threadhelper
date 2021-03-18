@@ -206,7 +206,7 @@ export const AvatarTrophy = ({
       ) : (
         <div class="relative">
           <CrossIcon
-            class="top-0 absolute w-3 h-3 cursor-pointer"
+            class="top-0 absolute w-3 h-3 cursor-pointer hover:bg-hoverBg"
             style={{ right: '-5px' }}
           />
           <div class="w-full h-full absolute rounded-full inset-0 transition-colors duration-200 hover:bg-black hover:bg-opacity-15 mb-3"></div>

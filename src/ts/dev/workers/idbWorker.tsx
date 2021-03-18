@@ -12,6 +12,10 @@ import {
   removeTweets,
   loadIndexFromIdb,
 } from '../storage/devStgUtils';
+import { toggleDebug } from '../../utils/putils';
+
+// var DEBUG = process.env.NODE_ENV != 'production';
+// toggleDebug(window, DEBUG);
 
 export const workerImportTweets = async (tweets) => {
   console.log('workerImportTweets', { tweets });

@@ -31,8 +31,7 @@
 
 .sug_home {
   border-radius: 10px;
-  background-color: var(--main-bg-color);
-  padding-bottom: 10px;
+  padding: 0px 10px 10px 10px;
   margin-bottom: 20px;
   overflow-x: visible;
 }
@@ -793,15 +792,6 @@ input[type='checkbox'] + label {
   margin-right: 0.5rem;
 }
 
-.dropdown .menu-item .icon-button:hover {
-  -webkit-filter: none;
-          filter: none;
-}
-
-.dropdown .menu-item:hover {
-  background-color: rgba(0, 0, 0, 0.1);
-}
-
 .dropdown .menu-item .x-icon {
   text-align: center;
   height: calc(17px);
@@ -810,11 +800,6 @@ input[type='checkbox'] + label {
   cursor: pointer;
   font-weight: 800;
   color: #ff000088;
-}
-
-.dropdown .menu-item .x-icon:hover {
-  border-radius: 50%;
-  background-color: var(--neutral-color);
 }
 
 .dropdown .icon-right {
@@ -849,7 +834,7 @@ input[type='checkbox'] + label {
           transform: translate(-50%);
 }
 
-/*make modal visible*/
+/*bring twitter timeline down in z index to make modal visible*/
 main > div > div > div > div:first-child {
   z-index: 0;
 }

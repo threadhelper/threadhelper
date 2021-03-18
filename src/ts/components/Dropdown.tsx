@@ -26,10 +26,10 @@ export function DropdownMenu({
       defaultTo(true, itemClickClose) ? closeMenu() : null;
     };
     return (
-      <a href="#" className="menu-item" onClick={onClickItem}>
-        <span className="icon-button">{props.leftIcon}</span>
+      <a href="#" className="menu-item hover:bg-hoverBg" onClick={onClickItem}>
+        <span className="icon-button fill-current">{props.leftIcon}</span>
         {props.id}
-        <span className="icon-right">{props.rightIcon}</span>
+        <span className="icon-right fill-current">{props.rightIcon}</span>
       </a>
     );
   }

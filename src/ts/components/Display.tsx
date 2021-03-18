@@ -21,7 +21,6 @@ import { DisplayMode } from '../types/interfaceTypes';
 import { SearchResult, TweetResult } from '../types/msgTypes';
 import { AuthContext, FeedDisplayMode } from './ThreadHelper';
 import { Tweet as TweetCard } from './Tweet';
-import { User } from 'twitter-d';
 import CrossIcon from '../../images/x-red.svg';
 
 const prepTweets = (list: TweetResult[] | null): SearchResult[] =>
@@ -118,7 +117,7 @@ function UserDisplay({ results }: { results: User[] }) {
     <>
       <div class="text-right text-gray-500 ">
         <span class="hover:text-mainTxt hover:underline p-3">
-          User search results:
+          {'User search results:'}
         </span>
       </div>
       <div class="flex-1 searchUsers">
