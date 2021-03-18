@@ -1,6 +1,7 @@
 import { h, Fragment } from 'preact';
 import { useContext, useEffect, useRef, useState } from 'preact/hooks';
 import {
+  curry,
   defaultTo,
   filter,
   isEmpty,
@@ -14,6 +15,7 @@ import {
   reverse,
   sortBy,
   trim,
+  __,
 } from 'ramda';
 import { useStorage } from '../hooks/useStorage';
 import SearchIcon from '../../images/search.svg';
@@ -23,10 +25,11 @@ import { AuthContext, FeedDisplayMode } from './ThreadHelper';
 import { DisplayMode } from '../types/interfaceTypes';
 import { searchAPI, tweetLookupQuery } from '../bg/twitterScout';
 import { apiSearchToTweet } from '../bg/tweetImporter';
-import { asyncTimeFn, inspect, timeFn } from '../utils/putils';
+import { asyncTimeFn, inspect, isExist, timeFn } from '../utils/putils';
 import { QueryObs } from '../hooks/BrowserEventObs';
 import { _useStream } from '../hooks/useStream';
 import { useMsg } from '../hooks/useMsg';
+import { getRepliedToText, repliedTimeSelector } from '../utils/wutils';
 
 export function TtReader() {
   return (
@@ -37,7 +40,7 @@ export function TtReader() {
   );
 }
 
-const getMetadataForPage = function (url) {
+export const getMetadataForPage = function (url) {
   var showTweet = url.match(
     /(?:twitter.com|mobile.twitter.com)\/(.*)\/status\/([0-9]*)(?:\/)?(?:\?.*)?$/
   );
@@ -131,15 +134,22 @@ const getMetadataForPage = function (url) {
 };
 
 var useCurrentTwitterPage = function () {
-  var [currentPage, setCurrentPage] = useState(function () {
-    return getMetadataForPage(window.location.href);
-  });
+  // var [currentPage, setCurrentPage] = useState(function () {
+  //   return getMetadataForPage(window.location.href);
+  // });
+  const [currentPage, setCurrentPage] = useStorage(
+    'pageMetadata',
+    getMetadataForPage(window.location.href)
+  );
+
   const tabChange = useMsg('tab-change-url');
   useEffect(
     function () {
+      const url = defaultTo(window.location.href, prop('url', tabChange));
       console.log('tabChange', { tabChange });
-      if (isNil(tabChange)) return () => {};
-      setCurrentPage(getMetadataForPage(prop('url', tabChange)));
+      if (isNil(url)) return () => {};
+      // setCurrentPage(getMetadataForPage(prop('url', tabChange)));
+      setStg('pageMetadata', getMetadataForPage(url));
       return () => {};
     },
     [tabChange]
@@ -163,6 +173,118 @@ var useCurrentTwitterPage = function () {
   return currentPage;
 };
 
+const _submitSearch = curry((dispatch, query: string) => {
+  const q = defaultTo('', query);
+  if (isEmpty(trimNewlines(q))) {
+    dispatch({
+      action: 'emptySearch',
+      tweets: [],
+    });
+  } else {
+    dispatch({
+      action: 'submitSearch',
+      tweets: [],
+    });
+    reqSearch(q);
+  }
+});
+
+const _submitContextSearch = curry((dispatch, query: string) => {
+  const q = defaultTo('', query);
+  if (isEmpty(trimNewlines(q))) {
+    dispatch({
+      action: 'emptyContextSearch',
+      tweets: [],
+    });
+  } else {
+    dispatch({
+      action: 'submitContextSearch',
+      tweets: [],
+    });
+    reqContextSearch(q);
+  }
+});
+
+const _QtApiSearch = curry(async (dispatch, auth, tweetId) => {
+  var hasQt = false;
+  await searchAPI(auth, 'quoted_tweet_id:' + tweetId).then(
+    pipe(
+      filter(propEq('quoted_status_id_str', tweetId)),
+      sortBy(prop('favorite_count')),
+      reverse,
+      inspect('qt req'),
+      map(apiSearchToTweet),
+      map((tweet) => {
+        return { tweet };
+      }),
+      defaultTo([]),
+      (qts) => {
+        if (!isEmpty(qts)) {
+          hasQt = true;
+          setStg('qts', qts);
+          dispatch({
+            action: 'gotQts',
+            tweets: [],
+          });
+        }
+      }
+    )
+  );
+  return hasQt;
+});
+
+const _searchLookupTweet = curry(async (submitSearch, auth, id) => {
+  return tweetLookupQuery(auth, [id]).then(
+    pipe(
+      inspect('showTweet tweetLookupQuery'),
+      nth(0),
+      prop('full_text'),
+      defaultTo(''),
+      submitSearch
+    )
+  );
+});
+
+const _showTweetContext = curry(async (dispatch, tweetId, auth) => {
+  console.log('show Tweet', { id: tweetId });
+  const QtApiSearch = _QtApiSearch(dispatch);
+  const submitContextSearch = _submitContextSearch(dispatch);
+  const searchLookupTweet = _searchLookupTweet(submitContextSearch);
+  const hasQt = await QtApiSearch(auth, tweetId);
+  if (!hasQt) searchLookupTweet(auth, tweetId);
+});
+
+const handleContext = (dispatch, currentPage, auth) => {
+  const showTweetContext = _showTweetContext(dispatch);
+  const submitContextSearch = _submitContextSearch(dispatch);
+  if (propEq('pageType', 'showTweet', currentPage)) {
+    showTweetContext(currentPage.tweetId, auth);
+  } else if (propEq('pageType', 'compose', currentPage)) {
+    const textRepliedTo = getRepliedToText();
+    const isReply = !isNil(textRepliedTo);
+    console.log('Ttreader page: Compose' + ` ${defaultTo('', textRepliedTo)}`);
+    if (isReply) submitContextSearch(textRepliedTo);
+  } else if (propEq('pageType', 'intentReply', currentPage)) {
+    const textRepliedTo = getRepliedToText();
+    const hasText = isExist(textRepliedTo);
+    console.log('Ttreader page: Compose' + ` ${defaultTo('', textRepliedTo)}`);
+    if (hasText) {
+      submitContextSearch(textRepliedTo);
+    } else {
+      showTweetContext(currentPage.tweetId, auth);
+    }
+  } else {
+    // if no contextual information#
+    console.log('TtReader handleContext', { currentPage });
+    setStg('context_results', []);
+    setStg('contextQuery', '');
+    dispatch({
+      action: 'emptySearch',
+      tweets: [],
+    });
+  }
+};
+
 export function Page() {
   const auth = useContext(AuthContext);
   const currentPage = useCurrentTwitterPage();
@@ -170,78 +292,11 @@ export function Page() {
     FeedDisplayMode
   );
 
-  const submitSearch = (query: string) => {
-    const q = defaultTo('', query);
-    if (isEmpty(trimNewlines(q))) {
-      dispatchFeedDisplayMode({
-        action: 'emptySearch',
-        tweets: [],
-      });
-    } else {
-      dispatchFeedDisplayMode({
-        action: 'submitSearch',
-        tweets: [],
-      });
-      reqSearch(q);
-    }
-  };
-
-  async function QtApiSearch(tweetId) {
-    var hasQt = false;
-    await searchAPI(auth, 'quoted_tweet_id:' + tweetId).then(
-      pipe(
-        filter(propEq('quoted_status_id_str', tweetId)),
-        sortBy(prop('favorite_count')),
-        reverse,
-        inspect('qt req'),
-        map(apiSearchToTweet),
-        map((tweet) => {
-          return { tweet };
-        }),
-        defaultTo([]),
-        (qts) => {
-          if (!isEmpty(qts)) {
-            hasQt = true;
-            setStg('qts', qts);
-            dispatchFeedDisplayMode({
-              action: 'gotQts',
-              tweets: [],
-            });
-          }
-        }
-      )
-    );
-    return hasQt;
-  }
-
   useEffect(() => {
     console.log('[DEBUG] TtReader > Page', { currentPage, auth });
-    async function handleShowTweet(tweetId) {
-      console.log('show Tweet', { id: tweetId });
-      const hasQt = await QtApiSearch(tweetId);
-      if (!hasQt) {
-        tweetLookupQuery(auth, [tweetId]).then(
-          pipe(
-            inspect('showTweet tweetLookupQuery'),
-            nth(0),
-            prop('full_text'),
-            defaultTo(''),
-            submitSearch
-          )
-        );
-      }
-    }
     if (isNil(currentPage) || isNil(auth)) return;
-    if (propEq('pageType', 'showTweet', currentPage)) {
-      handleShowTweet(currentPage.tweetId);
-      // } else if (propEq('pageType', 'intentReply', currentPage)) {
-      //   handleShowTweet(currentPage.tweetId);
-    } else {
-      dispatchFeedDisplayMode({
-        action: 'emptySearch',
-        tweets: [],
-      });
-    }
+
+    handleContext(dispatchFeedDisplayMode, currentPage, auth);
   }, [currentPage, auth]);
   return <></>;
 }
@@ -252,6 +307,15 @@ const trimNewlines = (str) =>
 const reqSearch = async (query) => {
   // msgBG({ type: 'search', query });
   setStg('query', query);
+  // console.time(`[TIME] reqSearch`);
+  // const searchResults = await rpcBg('seek', { query });
+  // console.timeEnd(`[TIME] reqSearch`);
+  // return searchResults;
+};
+
+const reqContextSearch = async (query) => {
+  // msgBG({ type: 'search', query });
+  setStg('contextQuery', query);
   // console.time(`[TIME] reqSearch`);
   // const searchResults = await rpcBg('seek', { query });
   // console.timeEnd(`[TIME] reqSearch`);
