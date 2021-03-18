@@ -251,23 +251,22 @@ export const AvatarTrophy = ({
               />
             </Tooltip>
           )} */}
-          <div class="w-full h-full absolute rounded-full inset-0 transition-colors duration-200 mb-3"></div>
-          <img
+          <div
             class={
-              'rounded-full h-16 w-16' +
-              (isHover ? 'hover:bg-black hover:bg-opacity-15' : '')
+              'w-full h-full absolute rounded-full inset-0 transition-colors duration-200 mb-3' +
+              (isHover ? ' hover:bg-black hover:bg-opacity-15' : '')
             }
-            src={profile_image_url_https}
-          />
+          ></div>
+          <img class={'rounded-full h-16 w-16'} src={profile_image_url_https} />
         </div>
       )}
-      <div class={'font-black text-base' + (isHover ? 'opacity-70' : '')}>
+      <div class={'font-black text-base' + (isHover ? ' opacity-50' : '')}>
         {name}
       </div>
       <div
         class={
           'font-medium underline text-lsm text-neutral mt-1' +
-          (isHover ? 'opacity-70' : '')
+          (isHover ? ' opacity-50' : '')
         }
       >
         {link ? (
