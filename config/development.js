@@ -39,7 +39,7 @@ module.exports = function (configDirs) {
           devCs: 'devCs',
           'content-script': 'content-script',
           background: 'background',
-          popup: 'popup',
+          // popup: 'popup',
         },
         port: 9080,
       }),
