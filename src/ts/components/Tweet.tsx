@@ -61,13 +61,29 @@ export const ReplyAction = ({ tweet }) => {
     return () => {};
   }, []);
 
+  var replyTweet = useCallback(
+    function () {
+      window.location.replace(
+        `https://twitter.com/intent/tweet?in_reply_to=${tweet.id}`
+      );
+      // window.open(
+      //   `https://twitter.com/intent/tweet?in_reply_to=${tweet.id}`
+      //   // ,'_blank'
+      // );
+    },
+    [tweet]
+  );
+
   return (
     <div
       class="flex cursor-pointer"
       onMouseOver={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
-      <div class="relative w-5 h-5 inline-flex items-center justify-center">
+      <div
+        class="relative w-5 h-5 inline-flex items-center justify-center"
+        onClick={replyTweet}
+      >
         <div
           class={`absolute inset-0 rounded-full -m-2 transition-colors duration-200 ${
             hover ? 'bg-twitterBlue bg-opacity-10 ' : ''
@@ -115,10 +131,13 @@ const RetweetAction = ({ tweet }: { tweet: thTweet }) => {
 
   var quoteTweet = useCallback(
     function () {
-      window.open(
-        `https://twitter.com/intent/tweet?url=https://twitter.com/${tweet.username}/status/${tweet.id}`,
-        '_blank'
+      window.location.replace(
+        `https://twitter.com/intent/tweet?url=https://twitter.com/${tweet.username}/status/${tweet.id}`
       );
+      // window.open(
+      //   `https://twitter.com/intent/tweet?url=https://twitter.com/${tweet.username}/status/${tweet.id}`
+      //   // ,'_blank'
+      // );
     },
     [tweet]
   );
@@ -302,12 +321,14 @@ export const CopyAction = ({
           <LinkIcon />
         </div>
       </Tooltip>
-      <span
-        class="px-3 h-5 inline-flex"
-        style={{ minWidth: 'calc(1em + 24px)' }}
-      >
-        {copied ? 'copied!' : null}
-      </span>
+      {copied && (
+        <span
+          style={{ bottom: '8%' }}
+          class="fixed left-1/2 px-8 py-4 text-white rounded-lg bg-accent text-bold"
+        >
+          Copied to clipboard
+        </span>
+      )}
     </div>
   );
 };
@@ -317,6 +338,7 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
   // const [auth, setAuth] = useStorage('auth', null);
   const [copyText, setCopyText] = useState('copy');
   const [_tweet, setTweet] = useState(tweet);
+  const [showActions, setShowActions] = useState(true);
   const [profilePicSrc, setProfilePicSrc] = useState(() => {
     return prop('profile_image', tweet) ?? defaultProfilePic;
   });
@@ -362,7 +384,11 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
     tweet.has_quote ? renderQuote(tweet.quote, tweet.has_media) : '';
 
   return (
-    <div class="px-4 py-3 border-b border-borderBg transition-colors duration-200 cursor-pointer hover:bg-white hover:bg-opacity-5">
+    <div
+      class="px-4 py-3 border-b border-borderBg transition-colors duration-200 cursor-pointer hover:bg-hoverBg"
+      // onMouseEnter={(_) => setShowActions(true)}
+      // onMouseLeave={(_) => setShowActions(false)}
+    >
       <div class="flex">
         <div class="mr-3">
           <div class="relative w-9 h-9 rounded-full transition-colors duration-200">
@@ -400,25 +426,35 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
               <a href={getTweetUrl(tweet)}>{getTimeDiff(tweet.time)}</a>
             </div>
           </div>
-          <div class="mt-3 max-w-md	flex justify-between text-neutral">
-            <div class="flex">
-              <ReplyAction tweet={_tweet} />
-            </div>
-            <div class="flex">
-              <RetweetAction tweet={_tweet} />
-            </div>
-            <div class="flex">
-              <LikeAction tweet={_tweet} />
-            </div>
-            <div class="flex">
-              <CopyAction
-                url={
-                  isNil(prop('unavailable', tweet)) ? getTweetUrl(tweet) : null
-                }
-                setCopyText={setCopyText}
-              />
-            </div>
+          <div class="flex-none">
+            <div class="text-neutral">{reply_text}</div>
+            {reformattedText(tweet)}
           </div>
+          {maybeMedia(tweet)}
+          {maybeQuote(tweet)}
+          {showActions && (
+            <div class="mt-3 flex justify-between text-neutral z-50">
+              <div style="flex-basis: 28.33%">
+                <ReplyAction tweet={_tweet} />
+              </div>
+              <div style="flex-basis: 28.33%">
+                <RetweetAction tweet={_tweet} />
+              </div>
+              <div style="flex-basis: 28.33%">
+                <LikeAction tweet={_tweet} />
+              </div>
+              <div>
+                <CopyAction
+                  url={
+                    isNil(prop('unavailable', tweet))
+                      ? getTweetUrl(tweet)
+                      : null
+                  }
+                  setCopyText={setCopyText}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -82,7 +82,7 @@ export function ApiSearchBar() {
         ) : null}
         {showSearchBar ? (
           <div
-            class="inline-flex items-center h-8 pl-2 pr-5 ml-2 rounded-full text-sm focus-within:ring-2 ring-current w-full text-accent bg-searchBarBg"
+            class="inline-flex items-center h-8 pl-3 pr-5 ml-2 rounded-full text-sm focus-within:ring-2 ring-current w-full text-accent bg-mainBg"
             // style={{
             //   // backgroundColor: 'var(--main-bg-color)',
             //   // borderColor: 'var(--accent-color)',
@@ -91,10 +91,19 @@ export function ApiSearchBar() {
             // }}
           >
             {' '}
-            <SearchIcon class="h-4 w-4 mr-4 text-accent fill-default stroke-default" />{' '}
+            <SearchIcon
+              class="h-6 w-6 text-accent fill-current stroke-current"
+              // class="h-6 w-6 mr-4 text-accent fill-current stroke-current"
+              // style="fill:var(--accent-color); stroke:var(--accent-color)"
+            />{' '}
             <input
               ref={inputObj}
-              class="outline-none text-mainTxt bg-mainBg"
+              class="outline-none text-mainTxt bg-mainBg w-full"
+              // style={{
+              //   backgroundColor: 'var(--main-bg-color)',
+              //   // border: '0px',
+              //   color: 'var(--main-txt-color)',
+              // }}
               value={value}
               onInput={(e) =>
                 setValue(defaultTo('', path(['target', 'value'], e)))

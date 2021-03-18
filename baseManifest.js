@@ -74,7 +74,8 @@ module.exports = {
     48: 'public/extension/thread_48.png',
     128: 'public/extension/thread_128.png',
   },
-  content_security_policy: "script-src 'self'; object-src 'self';",
+  content_security_policy: "script-src 'self' blob:; object-src 'self' blob:;",
+  // "content_security_policy": "default-src 'self' data: 'unsafe-eval' 'unsafe-inline' blob; script-src 'self'; object-src 'self'",
   // browser_specific_settings: {
   //   gecko: {
   //     id: '{5e51829e-7295-4747-bcaf-585510eb379c}',
