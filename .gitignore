@@ -1,6 +1,5 @@
 node_modules
 build
-buildServe
 dist
-.vscode
+buildServe
 store
