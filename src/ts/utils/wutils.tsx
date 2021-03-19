@@ -49,15 +49,16 @@ export const getCurrentUrl = () => window.location.href;
 
 export function getMode(url: string | null = null) {
   var pageURL = url == null ? getCurrentUrl() : url;
-  var home = 'https://twitter.com/home';
-  var compose = 'https://twitter.com/compose/tweet';
-  var notifications = 'https://twitter.com/notifications';
-  var explore = 'https://twitter.com/explore';
-  var bookmarks = 'https://twitter.com/i/bookmarks';
+  var home = 'twitter.com/home';
+  var compose = 'twitter.com/compose/tweet';
+  var intent = 'twitter.com/intent/tweet';
+  var notifications = 'twitter.com/notifications';
+  var explore = 'twitter.com/explore';
+  var bookmarks = 'twitter.com/i/bookmarks';
   var status = '/status/';
   if (pageURL.indexOf(home) > -1) {
     return UrlModes.home;
-  } else if (pageURL.indexOf(compose) > -1) {
+  } else if (pageURL.indexOf(compose) > -1 || pageURL.indexOf(intent) > -1) {
     return UrlModes.compose;
   } else if (pageURL.indexOf(notifications) > -1) {
     return UrlModes.notifications;
@@ -157,7 +158,7 @@ function setTheme(
   accent_color: string,
   tooltip_color: string,
   bg_hover_color: string,
-  search_bg_color: string,
+  search_bg_color: string
 ) {
   let root = document.documentElement;
   root.style.setProperty('--main-bg-color', bg_color);
@@ -190,24 +191,48 @@ export function updateTheme(theme = null) {
 
   switch (theme.bgColor) {
     case light_theme:
-      setTheme('#f5f8fa', 'black', '#e1e8ed', 
-        theme.accentColor, '#666666', 'rgba(0,0,0,0.05)',
-        'rgb(235, 238, 240)');
+      setTheme(
+        '#f5f8fa',
+        'black',
+        '#e1e8ed',
+        theme.accentColor,
+        '#666666',
+        'rgba(0,0,0,0.05)',
+        'rgb(235, 238, 240)'
+      );
       break;
     case dim_theme:
-      setTheme('#192734', 'white', '#38444d', 
-        theme.accentColor, '#4d6072', 'rgba(255,255,255,0.05)',
-        'rgb(21, 32, 43)');
+      setTheme(
+        '#192734',
+        'white',
+        '#38444d',
+        theme.accentColor,
+        '#4d6072',
+        'rgba(255,255,255,0.05)',
+        'rgb(21, 32, 43)'
+      );
       break;
     case black_theme:
-      setTheme('black', 'white', '#2f3336',
-        theme.accentColor, '#495a69', 'rgba(255,255,255,0.05)',
-        'rgb(32, 35, 39)');
+      setTheme(
+        'black',
+        'white',
+        '#2f3336',
+        theme.accentColor,
+        '#495a69',
+        'rgba(255,255,255,0.05)',
+        'rgb(32, 35, 39)'
+      );
       break;
     default:
-      setTheme('#f5f8fa', 'black', '#e1e8ed', 
-        theme.accentColor, '#666666', 'rgba(0,0,0,0.05)',
-        'rgb(235, 238, 240)');
+      setTheme(
+        '#f5f8fa',
+        'black',
+        '#e1e8ed',
+        theme.accentColor,
+        '#666666',
+        'rgba(0,0,0,0.05)',
+        'rgb(235, 238, 240)'
+      );
       break;
   }
 }

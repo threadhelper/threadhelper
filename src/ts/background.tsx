@@ -569,23 +569,36 @@ const deleteTweet = ({ ids }) => {
   enqueueStgNoDups('queue_removeTweets', ids);
 };
 
-const removeAccount = async ({ id }) => {
+const removeActiveAccount = async (id) => {
+  const activeAccsStg = await modStg(
+    'activeAccounts',
+    R.pickBy(pipe(propEq('id_str', id), not))
+  );
+  const activeAccs = prop('activeAccounts', activeAccsStg);
+  return activeAccs;
+};
+const removeAccountTweets = async (id) => {
   const db = await dbOpen();
-  const removeAccount = async (id_str: string): Promise<any> => {
-    db.delete('accounts', id_str);
-    return db.getAll('accounts');
-  };
   const filterByAccount = (id) => {
-    dbFilter<thTweet>(db, StoreName.tweets, propEq('account', id));
+    return dbFilter<thTweet>(db, StoreName.tweets, propEq('account', id));
   };
-  const remainingAccounts = removeAccount(id);
   await pipe(
     () => filterByAccount(id),
     andThen(map(prop('id'))),
     andThen((ids) => enqueueTweetStg('queue_removeTweets', ids)) //uses the enque tweet function bc they both have id_str
   )();
-
   db.close();
+  return;
+};
+
+const removeAccount = async ({ id }) => {
+  // const removeAccount = async (id_str: string): Promise<any> => {
+  //   db.delete('accounts', id_str);
+  //   return db.getAll('accounts');
+  // };
+  const remainingAccounts = await removeActiveAccount(id);
+  removeAccountTweets(id);
+  console.log('removeAccount', { id, remainingAccounts });
   return remainingAccounts;
 };
 
@@ -732,7 +745,7 @@ accounts$.log('accounts$');
 const accsShown$ = (accounts$.map(
   filter(either(pipe(prop('showTweets'), isNil), propEq('showTweets', true)))
 ) as unknown) as Observable<User[], any>;
-subObs({ accsShown$ }, (_) => getLatest());
+subObs({ accsShown$ }, (_) => getDefault());
 accsShown$.log('accsShown$');
 /* Display options and Search filters */
 const idleMode$ = _makeInitOptionsObs('idleMode') as Observable<IdleMode, any>;
@@ -956,7 +969,8 @@ const onUpdated = async (previousVersion) => {
   // add new stg fields from defaults
   if (!DEBUG) {
     chrome.tabs.create({
-      url: 'https://www.notion.so/Patch-Notes-afab29148a0c49358df0e55131978d48',
+      url:
+        'https://www.notion.so/v0-3-Patch-Notes-ThreadHelper-afab29148a0c49358df0e55131978d48',
     });
   }
   // fill in empty spots in local storage with default values
@@ -977,10 +991,10 @@ if (!DEBUG) {
   );
 }
 
-chrome.runtime.onSuspend.addListener(function () {
-  console.log('[DEBUG] Unloading, suspending.');
-  chrome.browserAction.setBadgeText({ text: '' });
-});
+// chrome.runtime.onSuspend.addListener(function () {
+//   console.log('[DEBUG] Unloading, suspending.');
+//   chrome.browserAction.setBadgeText({ text: '' });
+// });
 
 chrome.runtime.onInstalled.addListener(onInstalled);
 chrome.tabs.onActivated.addListener(onTabActivated);

@@ -4,7 +4,7 @@ import { useStorage } from '../hooks/useStorage';
 import Tooltip from './Tooltip';
 import { msgBG } from '../utils/dutils';
 import { getTimeDiff } from './Tweet';
-import { join, filter } from 'ramda';
+import { join, filter, isNil } from 'ramda';
 
 function isSync(
   isMidSearch,
@@ -58,7 +58,7 @@ function makeSyncMsg(
     archQueueLength
   );
   const syncedMsg =
-    lastUpdated == 'never'
+    lastUpdated == 'never' || isNil(lastUpdated)
       ? "Haven't gathered tweets yet."
       : `Last synced: ${getTimeDiff(lastUpdated)} ago.`;
   return greet + (sync ? syncedMsg : jobsMsg);

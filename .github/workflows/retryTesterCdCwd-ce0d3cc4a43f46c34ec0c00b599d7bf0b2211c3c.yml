@@ -7,10 +7,10 @@ jobs:
     env:
       DEV_EXTENSION_ID: dkclpenpaealjpjmgjfgcbjejobimjnj
       CLIENT_ID: 990187593175-iurgn499pfh1urue4smreg0ato5fftee.apps.googleusercontent.com
-      DELAYED_JOB_CHECKOUT_REF: 26171d977be97d2f0693eb62c904df32bd2829d9
+      DELAYED_JOB_CHECKOUT_REF: ce0d3cc4a43f46c34ec0c00b599d7bf0b2211c3c
       DELAYED_JOB_CHECKOUT_REF_IS_TAG: 'false'
       DELAYED_JOB_WORKFLOW_FILE_PATH: >-
-        .github/workflows/retryTesterCdCwd-26171d977be97d2f0693eb62c904df32bd2829d9.yml
+        .github/workflows/retryTesterCdCwd-ce0d3cc4a43f46c34ec0c00b599d7bf0b2211c3c.yml
       DELAYED_JOB_WORKFLOW_UNSCHEDULE_TARGET_BRANCH: release/0.3.0
     runs-on: ubuntu-latest
     steps:
