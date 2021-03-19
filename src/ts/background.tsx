@@ -458,7 +458,7 @@ const getSearchParams = async () => {
   };
   return { accsShown, filters };
 };
-const seek = async ({ query }) => {
+const genericSeek = async (query) => {
   // const isMidSearch = getStg('isMidSearch')
   // console.trace(`seek ${query}`);
   if (await getStg('isMidSearch')) return;
@@ -472,7 +472,20 @@ const seek = async ({ query }) => {
   );
   console.timeEnd(`${query} seek`);
   setStg('isMidSearch', false);
+  return searchResults;
+};
+
+const seek = async ({ query }) => {
+  // const isMidSearch = getStg('isMidSearch')
+  // console.trace(`seek ${query}`);
+  const searchResults = await genericSeek(query);
   await setStg('search_results', searchResults);
+  return map(prop('id'), searchResults);
+};
+
+const contextualSeek = async ({ query }) => {
+  const searchResults = await genericSeek(query);
+  await setStg('context_results', searchResults);
   return map(prop('id'), searchResults);
 };
 const getLatest = async () => {
@@ -569,23 +582,36 @@ const deleteTweet = ({ ids }) => {
   enqueueStgNoDups('queue_removeTweets', ids);
 };
 
-const removeAccount = async ({ id }) => {
+const removeActiveAccount = async (id) => {
+  const activeAccsStg = await modStg(
+    'activeAccounts',
+    R.pickBy(pipe(propEq('id_str', id), not))
+  );
+  const activeAccs = prop('activeAccounts', activeAccsStg);
+  return activeAccs;
+};
+const removeAccountTweets = async (id) => {
   const db = await dbOpen();
-  const removeAccount = async (id_str: string): Promise<any> => {
-    db.delete('accounts', id_str);
-    return db.getAll('accounts');
-  };
   const filterByAccount = (id) => {
-    dbFilter<thTweet>(db, StoreName.tweets, propEq('account', id));
+    return dbFilter<thTweet>(db, StoreName.tweets, propEq('account', id));
   };
-  const remainingAccounts = removeAccount(id);
   await pipe(
     () => filterByAccount(id),
     andThen(map(prop('id'))),
     andThen((ids) => enqueueTweetStg('queue_removeTweets', ids)) //uses the enque tweet function bc they both have id_str
   )();
-
   db.close();
+  return;
+};
+
+const removeAccount = async ({ id }) => {
+  // const removeAccount = async (id_str: string): Promise<any> => {
+  //   db.delete('accounts', id_str);
+  //   return db.getAll('accounts');
+  // };
+  const remainingAccounts = await removeActiveAccount(id);
+  removeAccountTweets(id);
+  console.log('removeAccount', { id, remainingAccounts });
   return remainingAccounts;
 };
 
@@ -699,8 +725,12 @@ const indexUpdated$ = Kefir.fromEvents(window, 'indexUpdated');
 subObs({ indexUpdated$ }, (_) => onIndexUpdated());
 
 const query$ = makeInitStgObs('query');
+const contextQuery$ = makeInitStgObs('contextQuery');
 query$.log('query$');
+contextQuery$.log('contextQuery$');
 subObs({ query$ }, (query) => seek({ query }));
+subObs({ contextQuery$ }, (query) => contextualSeek({ query }));
+
 const isMidSearch$ = makeInitStgObs('isMidSearch');
 // just to make sure isMidSearch$ never gets stuck
 subObs(
@@ -732,7 +762,9 @@ accounts$.log('accounts$');
 const accsShown$ = (accounts$.map(
   filter(either(pipe(prop('showTweets'), isNil), propEq('showTweets', true)))
 ) as unknown) as Observable<User[], any>;
-subObs({ accsShown$ }, (_) => getLatest());
+subObs({ accsShown$ }, async (_) => {
+  getDefault(await getStg('idleMode'));
+});
 accsShown$.log('accsShown$');
 /* Display options and Search filters */
 const idleMode$ = _makeInitOptionsObs('idleMode') as Observable<IdleMode, any>;
@@ -956,7 +988,8 @@ const onUpdated = async (previousVersion) => {
   // add new stg fields from defaults
   if (!DEBUG) {
     chrome.tabs.create({
-      url: 'https://www.notion.so/Patch-Notes-afab29148a0c49358df0e55131978d48',
+      url:
+        'https://www.notion.so/v0-3-Patch-Notes-ThreadHelper-afab29148a0c49358df0e55131978d48',
     });
   }
   // fill in empty spots in local storage with default values
@@ -977,10 +1010,10 @@ if (!DEBUG) {
   );
 }
 
-chrome.runtime.onSuspend.addListener(function () {
-  console.log('[DEBUG] Unloading, suspending.');
-  chrome.browserAction.setBadgeText({ text: '' });
-});
+// chrome.runtime.onSuspend.addListener(function () {
+//   console.log('[DEBUG] Unloading, suspending.');
+//   chrome.browserAction.setBadgeText({ text: '' });
+// });
 
 chrome.runtime.onInstalled.addListener(onInstalled);
 chrome.tabs.onActivated.addListener(onTabActivated);

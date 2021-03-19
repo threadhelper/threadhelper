@@ -519,7 +519,6 @@ const quoted2Rt = curry(
       );
     };
     const isqtd = isJustQuoted(tweet);
-    console.log('quoted2Rt', { qts, tweet, id: tweet.id_str, user_id, isqtd });
     return isqtd ? R.set(R.lensProp('retweeted'), true, tweet) : tweet;
   }
 );

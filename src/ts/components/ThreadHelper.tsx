@@ -39,6 +39,10 @@ const updateFeedDisplay = (
     //     ? DisplayMode.Search
     //     : DisplayMode.Idle;
     // return DisplayMode.Search;
+    case 'emptyContextSearch':
+      return DisplayMode.Idle;
+    case 'submitContextSearch':
+      return DisplayMode.Context;
     case 'emptyApiSearch':
       return DisplayMode.Idle;
     case 'submitApiSearch':

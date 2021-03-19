@@ -4,6 +4,7 @@ import { useContext, useEffect, useRef, useState } from 'preact/hooks';
 import {
   defaultTo,
   filter,
+  includes,
   isEmpty,
   isNil,
   map,
@@ -20,6 +21,8 @@ import { useOption, useStorage } from '../hooks/useStorage';
 import { DisplayMode } from '../types/interfaceTypes';
 import { SearchResult, TweetResult } from '../types/msgTypes';
 import { AuthContext, FeedDisplayMode } from './ThreadHelper';
+import { getMetadataForPage } from './TtReader';
+
 import { Tweet as TweetCard } from './Tweet';
 import CrossIcon from '../../images/x-red.svg';
 
@@ -43,6 +46,15 @@ function getApiMetrics(auth, results, setResults) {
   };
 }
 
+const calcIdleDisplay = (currentPage) => {
+  const inCompose = includes(prop('pageType', currentPage), [
+    'compose',
+    'intentReply',
+  ]);
+  console.log('calcIdleDisplay', { inCompose });
+  return inCompose ? <ContextResults /> : <IdleDisplay />;
+};
+
 export function DisplayController(props: any) {
   const auth = useContext(AuthContext);
   const { feedDisplayMode, dispatchFeedDisplayMode } = useContext(
@@ -50,12 +62,19 @@ export function DisplayController(props: any) {
   );
   const myRef = useRef(null);
   const [apiUsers, setApiUsers] = useStorage('api_users', []);
+  const [currentPage, setCurrentPage] = useStorage(
+    'pageMetadata',
+    getMetadataForPage(window.location.href)
+  );
 
   const makeFeedDisplay = (displayMode: DisplayMode) => {
     // console.log({ searchResults });
     switch (displayMode) {
       case 'Idle':
-        return <IdleDisplay />;
+        // return <IdleDisplay />;
+        return calcIdleDisplay(currentPage);
+      case 'Context':
+        return <ContextResults />;
       case 'Api':
         return <ApiSearchResults />;
       case 'ApiWaiting':
@@ -222,11 +241,8 @@ const SearchResMsg = () => {
   return <span>{`No search results for ${defaultTo(query, '')}. Yet!`} </span>;
 };
 
-function SearchResults() {
-  const [stgSearchResults, setStgSearchResults] = useStorage(
-    'search_results',
-    []
-  );
+function GenericSearchResults({ stgName }) {
+  const [stgSearchResults, setStgSearchResults] = useStorage(stgName, []);
   const [res, setRes] = useState([]);
   const auth = useContext(AuthContext);
   // const [res, setRes] = useState(results);
@@ -238,13 +254,8 @@ function SearchResults() {
 
   useEffect(() => {
     setRes([]);
-    console.log('got stg search', { stgSearchResults });
     // setRes(prepTweets(stgSearchResults));
   }, [stgSearchResults]);
-
-  useEffect(() => {
-    console.log('got api metrics', { res });
-  }, [res]);
 
   return (
     <TweetDisplay
@@ -261,6 +272,14 @@ function SearchResults() {
       emptyMsg={<SearchResMsg />}
     />
   );
+}
+
+function SearchResults() {
+  return <GenericSearchResults stgName="search_results" />;
+}
+
+function ContextResults() {
+  return <GenericSearchResults stgName="context_results" />;
 }
 
 function ApiSearchResults() {
