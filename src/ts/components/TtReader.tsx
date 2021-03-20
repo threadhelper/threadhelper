@@ -1,8 +1,10 @@
 import { h, Fragment } from 'preact';
 import { useContext, useEffect, useRef, useState } from 'preact/hooks';
 import {
+  compose,
   defaultTo,
   filter,
+  includes,
   isEmpty,
   isNil,
   map,
@@ -18,7 +20,7 @@ import {
 import { useStorage } from '../hooks/useStorage';
 import SearchIcon from '../../images/search.svg';
 import Kefir from 'kefir';
-import { makeGotMsgObs, msgBG, rpcBg, setStg } from '../utils/dutils';
+import { getStg, makeGotMsgObs, msgBG, rpcBg, setStg } from '../utils/dutils';
 import { AuthContext, FeedDisplayMode } from './ThreadHelper';
 import { DisplayMode } from '../types/interfaceTypes';
 import { searchAPI, tweetLookupQuery } from '../bg/twitterScout';
@@ -68,6 +70,9 @@ const getMetadataForPage = function (url) {
   var intentReply = url.match(
     /(?:twitter.com|mobile.twitter.com)\/intent\/tweet\?in_reply_to\=([0-9]*)?$/
   );
+  var intent = url.match(
+    /(?:twitter.com|mobile.twitter.com)\/intent\/tweet(?:\?.*)?$/
+  );
   if (showTweet) {
     return {
       pageType: 'showTweet',
@@ -90,6 +95,11 @@ const getMetadataForPage = function (url) {
       pageType: 'intentReply',
       url: url,
       tweetId: intentReply[1],
+    };
+  } else if (intentReply) {
+    return {
+      pageType: 'intent',
+      url: url,
     };
   } else if (explore) {
     return {
@@ -128,6 +138,27 @@ const getMetadataForPage = function (url) {
   } else {
     return null;
   }
+};
+
+const isComposing = () => {
+  const composeTypes = ['compose', 'intent', 'intentReply'];
+  // Fast
+  const pageType = prop('pageType', getMetadataForPage(window.location.href));
+  console.log('shouldNewTab', {
+    metadata: getMetadataForPage(window.location.href),
+    pageType,
+  });
+  return includes(pageType, composeTypes);
+};
+
+export const goToTwitterSearchPage = (query) => {
+  const fullResultsLink =
+    'https://twitter.com/search?q=' +
+    encodeURIComponent(query) +
+    '&src=typed_query';
+  const newTab = isComposing();
+  console.log('goToTwitterSearchPage', { newTab, query, fullResultsLink });
+  window.open(fullResultsLink, newTab ? '_blank' : '_self');
 };
 
 var useCurrentTwitterPage = function () {
