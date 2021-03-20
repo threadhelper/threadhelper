@@ -115,6 +115,7 @@ export const genericLoopRetry = curry(
     let stop = false;
     while (!success && !stop && retryCount < retryLimit) {
       try {
+        console.log(`[DEBUG] [${fn.name}] Looping`);
         output = await fn();
         success = true;
         console.log(`[DEBUG] [${fn.name}] Loop succeeded`);
@@ -211,6 +212,7 @@ function twitterFetch(url: string, options) {
   if (options.method === 'POST') {
     fullOptions.headers['content-type'] = 'application/x-www-form-urlencoded';
   }
+  console.log('thFetching', { url, fullOptions });
   return thFetch(url, fullOptions);
 }
 
@@ -267,9 +269,19 @@ const fetchTweets = async (
     body: null,
   });
 
-export const fetchUserInfo = async (authHeaders: Credentials): Promise<User> =>
-  await loopRetry(() => twitterFetch(URLVerifyCredentials, { authHeaders }));
-
+export const fetchUserInfo = async (
+  authHeaders: Credentials
+): Promise<User> => {
+  console.log('fetchUserInfo', { authHeaders });
+  try {
+    return await loopRetry(() =>
+      twitterFetch(URLVerifyCredentials, { authHeaders })
+    );
+  } catch (e) {
+    console.error('fetchUserInfo failed');
+    throw e;
+  }
+};
 //https//twitter.com/i/api/1.1/users/lookup.json?include_profile_interstitial_type=1&include_blocking=1&include_blocked_by=1&include_followed_by=1&include_want_retweets=1&include_mute_edge=1&include_can_dm=1&include_can_media_tag=1&skip_status=1&user_id=115074076%2C1325778441392717824%2C22525974
 
 export const tweetLookupQuery = curry(
