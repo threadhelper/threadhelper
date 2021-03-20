@@ -68,4 +68,4 @@ jobs:
         with:
           ghToken: ${{ secrets.WORKFLOWS_TOKEN }}
           templateYmlFile: '.github-scheduled-workflows/retryTesterCdCwd.yml'
-          targetBranch: 'release/0.3.0'
+          targetBranch: 'main'
