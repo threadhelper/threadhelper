@@ -22,7 +22,7 @@ export interface StorageInterface {
   sync: boolean;
   query: string;
   nTweets: number;
-  lastUpdated: string;
+  lastUpdated: number;
   auth: Credentials;
   userInfo: User;
   doRefreshIdb: boolean;

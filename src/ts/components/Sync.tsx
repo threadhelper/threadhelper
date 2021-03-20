@@ -58,7 +58,7 @@ function makeSyncMsg(
     archQueueLength
   );
   const syncedMsg =
-    lastUpdated == 'never' || isNil(lastUpdated)
+    lastUpdated <= 0 || isNil(lastUpdated)
       ? "Haven't gathered tweets yet."
       : `Last synced: ${getTimeDiff(lastUpdated)} ago.`;
   return greet + (sync ? syncedMsg : jobsMsg);
@@ -67,7 +67,7 @@ function makeSyncMsg(
 export function GenericSyncIcon({ vanish }) {
   const [synced, setSynced] = useState(false);
   const [nTweets, setNTweets] = useStorage('nTweets', 0);
-  const [lastUpdated, setLastUpdated] = useStorage('lastUpdated', 'never');
+  const [lastUpdated, setLastUpdated] = useStorage('lastUpdated', 0);
   const [userInfo, setUserInfo] = useStorage('userInfo', 'user');
   const [isMidSearch, setIsMidSearch] = useStorage('isMidSearch', false);
   const [isMidScrape, setIsMidScrape] = useStorage('isMidScrape', false);
