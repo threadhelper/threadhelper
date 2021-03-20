@@ -121,7 +121,7 @@
   left: -10rem;
 }
 
-#accounts-menu .dropdown {
+#accounts-menu .th-dropdown {
   top: 30px;
 }
 
@@ -738,7 +738,7 @@ input[type='checkbox'] + label {
 }
 
 /* Dropdown Menu */
-.dropdown {
+.th-dropdown {
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;
@@ -761,15 +761,15 @@ input[type='checkbox'] + label {
   /*overflow: hidden;*/
 }
 
-.dropdown a {
+.th-dropdown a {
   color: var(--main-txt-color);
 }
 
-.dropdown .menu {
+.th-dropdown .menu {
   width: 100%;
 }
 
-.dropdown .menu-item {
+.th-dropdown .menu-item {
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;
@@ -791,11 +791,11 @@ input[type='checkbox'] + label {
   cursor: default;
 }
 
-.dropdown .menu-item .icon-button {
+.th-dropdown .menu-item .icon-button {
   margin-right: 0.5rem;
 }
 
-.dropdown .menu-item .x-icon {
+.th-dropdown .menu-item .x-icon {
   text-align: center;
   height: calc(17px);
   width: calc(17px);
@@ -805,11 +805,11 @@ input[type='checkbox'] + label {
   color: #ff000088;
 }
 
-.dropdown .icon-right {
+.th-dropdown .icon-right {
   margin-left: auto;
 }
 
-.dropdown .icon-img {
+.th-dropdown .icon-img {
   -webkit-box-flex: 0;
   -ms-flex-positive: 0;
   flex-grow: 0;
@@ -822,7 +822,7 @@ input[type='checkbox'] + label {
   position: relative;
 }
 
-#settings-menu .dropdown {
+#settings-menu .th-dropdown {
   right: 0%;
   /*transform: translateX(-75%);*/
 }
@@ -831,35 +831,10 @@ input[type='checkbox'] + label {
   position: relative;
 }
 
-#accounts-menu .dropdown {
+#accounts-menu .th-dropdown {
   top: 100%;
   -webkit-transform: translate(-50%);
   transform: translate(-50%);
-}
-
-/*bring twitter timeline down in z index to make modal visible*/
-main > div > div > div > div:first-child {
-  z-index: 0;
-}
-
-/* width */
-.searchTweets::-webkit-scrollbar {
-  width: 10px;
-}
-
-/* Track */
-.searchTweets::-webkit-scrollbar-track {
-  background: var(--main-bg-color);
-}
-
-/* Handle */
-.searchTweets::-webkit-scrollbar-thumb {
-  background: var(--neutral-color);
-}
-
-/* Handle on hover */
-.searchTweets::-webkit-scrollbar-thumb:hover {
-  background: var(--main-txt-color);
 }
 
 .dummyContainer {

@@ -21,7 +21,7 @@ export function DropdownMenu({
 
   function DropdownItem(props) {
     const onClickItem = (e) => {
-      csEvent('User', `${name} dropdown click`, props.id);
+      csEvent('User', `${name} th-dropdown click`, props.id);
       props.effect();
       defaultTo(true, itemClickClose) ? closeMenu() : null;
     };
@@ -41,7 +41,7 @@ export function DropdownMenu({
   function FilterItem(props) {
     const [filterItem, setFilterItem] = useStgPath(props.path, true);
     const onClickItem = (e) => {
-      csEvent('User', `${name} dropdown click`, props.screen_name);
+      csEvent('User', `${name} th-dropdown click`, props.screen_name);
       props.effect();
       defaultTo(true, itemClickClose) ? closeMenu() : null;
     };
@@ -66,49 +66,39 @@ export function DropdownMenu({
     );
   }
   return (
-    <div>
-      <div
-        className="bg-mainBg z-30 rounded-md shadow-highlighted absolute top-full left-0"
-        style={{ width: '150px' }}
-        ref={dropdownRef}
-      >
-        {defaultTo([], componentItems).map((Item) => (
-          <Item />
-        ))}
-        {defaultTo([], filterItems).map(
-          (item: { id: any; screen_name: any; leftIcon: any; effect: any }) => (
-            <FilterItem
-              path={['activeAccounts', item.id, 'showTweets']}
-              id={item.id}
-              screen_name={item.screen_name}
-              leftIcon={item.leftIcon}
-              effect={item.effect}
-            />
-          )
-        )}
-        {defaultTo([], items).map(
-          (item: { id: any; leftIcon: any; effect: any }) => (
-            <DropdownItem
-              id={item.id}
-              leftIcon={item.leftIcon}
-              effect={item.effect}
-            />
-          )
-        )}
-        {defaultTo([], debugItems).map(
-          (item: { id: any; leftIcon: any; effect: any }) => (
-            <DebugItem
-              id={item.id}
-              leftIcon={item.leftIcon}
-              effect={item.effect}
-            />
-          )
-        )}
-      </div>
-      <div
-        class="fixed inset-0 z-10 cursor-default"
-        onClick={() => closeMenu()}
-      />
+    <div className="th-dropdown z-30" ref={dropdownRef}>
+      {defaultTo([], componentItems).map((Item) => (
+        <Item />
+      ))}
+      {defaultTo([], filterItems).map(
+        (item: { id: any; screen_name: any; leftIcon: any; effect: any }) => (
+          <FilterItem
+            path={['activeAccounts', item.id, 'showTweets']}
+            id={item.id}
+            screen_name={item.screen_name}
+            leftIcon={item.leftIcon}
+            effect={item.effect}
+          />
+        )
+      )}
+      {defaultTo([], items).map(
+        (item: { id: any; leftIcon: any; effect: any }) => (
+          <DropdownItem
+            id={item.id}
+            leftIcon={item.leftIcon}
+            effect={item.effect}
+          />
+        )
+      )}
+      {defaultTo([], debugItems).map(
+        (item: { id: any; leftIcon: any; effect: any }) => (
+          <DebugItem
+            id={item.id}
+            leftIcon={item.leftIcon}
+            effect={item.effect}
+          />
+        )
+      )}
     </div>
   );
 }
