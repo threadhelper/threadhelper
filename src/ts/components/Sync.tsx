@@ -1,5 +1,5 @@
 import { h } from 'preact';
-import { useEffect } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { useStorage } from '../hooks/useStorage';
 import Tooltip from './Tooltip';
 import { msgBG } from '../utils/dutils';
@@ -64,7 +64,8 @@ function makeSyncMsg(
   return greet + (sync ? syncedMsg : jobsMsg);
 }
 
-export function SyncIcon() {
+export function GenericSyncIcon({ vanish }) {
+  const [synced, setSynced] = useState(false);
   const [nTweets, setNTweets] = useStorage('nTweets', 0);
   const [lastUpdated, setLastUpdated] = useStorage('lastUpdated', 'never');
   const [userInfo, setUserInfo] = useStorage('userInfo', 'user');
@@ -77,7 +78,19 @@ export function SyncIcon() {
     0
   );
 
-  return (
+  useEffect(() => {
+    setSynced(
+      isSync(
+        isMidSearch,
+        isMidScrape,
+        isMidStore,
+        isMidRefresh,
+        archQueueLength
+      )
+    );
+  }, [isMidSearch, isMidScrape, isMidStore, isMidRefresh, archQueueLength]);
+
+  return !vanish || !synced ? (
     <Tooltip
       content={makeSyncMsg(
         nTweets,
@@ -95,17 +108,17 @@ export function SyncIcon() {
       <div
         class={
           `rounded-full h-3 w-3 mr-2 ` +
-          (isSync(
-            isMidSearch,
-            isMidScrape,
-            isMidStore,
-            isMidRefresh,
-            archQueueLength
-          )
-            ? 'bg-green-400'
-            : 'bg-yellow-400')
+          (synced ? 'bg-green-400' : 'bg-yellow-400')
         }
       ></div>
     </Tooltip>
-  );
+  ) : null;
+}
+
+// Vanishes if all is well
+export function NinjaSyncIcon() {
+  return <GenericSyncIcon vanish={true} />;
+}
+export function SyncIcon() {
+  return <GenericSyncIcon vanish={false} />;
 }

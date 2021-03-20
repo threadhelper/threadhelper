@@ -118,16 +118,16 @@ const subObs = (
 };
 
 const isQueueBusy = async (name) => {
-  const wQ = await getStg(name + '_work_queue');
-  console.log('isQueueBusy', { wQ });
-  return isExist(wQ);
+  const qLen = await getStg(name + '_work_queue_length');
+  console.log('isQueueBusy', { qLen });
+  return !isNil(qLen) && qLen > 0;
 };
 
 const maybeDq = async (name) => {
   const busy = await isQueueBusy(name);
   if (!busy) {
-    console.log('[DEBUG] dq', { name });
-    dequeue4WorkStg(name, queue_load);
+    const workload = dequeue4WorkStg(name, queue_load);
+    console.log('[DEBUG] dq', { name, workload });
     return true;
   } else {
     console.log('[DEBUG] dq: queue busy ', { name });
@@ -136,19 +136,22 @@ const maybeDq = async (name) => {
   // dequeue4WorkStg(name, R.length(defaultTo([], queue)));
 };
 const subWorkQueue = (name, workFn) => {
-  const queue$ = makeInitStgObs(name).filter(isExist);
-  queue$.log(name + '$');
-  subObs({ [name + '$']: queue$ }, async (q) => {
-    const didDq = await maybeDq(name);
+  // Waiting queue
+  const queueFn = async (q) => {
     const qLen = R.length(q);
-    const newQLen = didDq ? (queue_load > qLen ? 0 : qLen - queue_load) : qLen;
-    setStg(name + '_length', newQLen);
-  });
-  const workQueue$ = makeInitStgObs(name + '_work_queue').filter(
-    pipe(isNil, not)
-  );
-  workQueue$.log(name + '_work_queue' + '$');
-  const _workFn = async (queue) => {
+    setStg(name + '_length', qLen);
+    console.log('subWorkQueue ' + name, { qLen, q });
+    const didDq = await maybeDq(name);
+  };
+  const queue$ = makeInitStgObs(name).filter(pipe(isNil, not));
+  queue$.log(name + '$');
+  subObs({ [name + '$']: queue$ }, queueFn);
+
+  // Work queue (being worked on right now)
+  const workQueueFn = async (queue) => {
+    // keep track of the size of the queue because we check it sometimes
+    setStg(name + '_work_queue' + '_length', R.length(queue));
+    // If there's a queue, work it!
     if (isExist(queue)) {
       try {
         await workFn(queue);
@@ -160,10 +163,16 @@ const subWorkQueue = (name, workFn) => {
         );
       }
     } else {
+      //if the work queue is empty, maybe it shouldn't be! Dequeue any queued workload!
       maybeDq(name);
     }
   };
-  subObs({ [name + '_work_queue' + '$']: workQueue$ }, _workFn);
+  const workQueue$ = makeInitStgObs(name + '_work_queue').filter(
+    pipe(isNil, not)
+  );
+  workQueue$.log(name + '_work_queue' + '$');
+
+  subObs({ [name + '_work_queue' + '$']: workQueue$ }, workQueueFn);
 };
 
 const emitEvent = (name) => {

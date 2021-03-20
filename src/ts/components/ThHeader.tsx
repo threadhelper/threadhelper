@@ -5,7 +5,7 @@ import { msgBG, rpcBg } from '../utils/dutils';
 import { FeedDisplayMode } from './ThreadHelper';
 import { goToTwitterSearchPage } from './TtReader';
 import { SettingsButton } from './Settings';
-import { SyncIcon } from './Sync';
+import { NinjaSyncIcon, SyncIcon } from './Sync';
 import SearchIcon from '../../images/search.svg';
 import cx from 'classnames';
 
@@ -190,7 +190,11 @@ export function ApiSearchBar() {
           </div>
         )}
       </div>
+
       <div class="flex items-center relative ml-8 top-0.5">
+        <div class="flex items-center">
+          <NinjaSyncIcon />
+        </div>
         <SettingsButton />
       </div>
     </div>
