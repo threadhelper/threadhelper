@@ -673,35 +673,3 @@ export async function apiMetricsFetch(
     return tweets;
   }
 }
-
-// export async function apiMetricsFetch(
-//   auth: Credentials,
-//   results: TweetResult[]
-// ) {
-//   if (!isNil(auth)) {
-//     const tweets = await pipe(
-//       () => results,
-//       map(path(['tweet', 'id'])),
-//       tweetLookupQuery(auth),
-//       andThen(inspect('apiMetricsFetch lookup')),
-//       andThen(map(apiSearchToTweet)),
-//       andThen(inspect('apiMetricsFetch to thTweet')),
-//       andThen((apiRes) =>
-//         map(
-//           (r) =>
-//             R.set(
-//               R.lensProp('tweet'),
-//               defaultTo(
-//                 r['tweet'],
-//                 R.find(R.propEq('id', path(['tweet', 'id'], r)))(apiRes)
-//               ),
-//               r
-//             ),
-//           results
-//         )
-//       ),
-//       andThen(filter(pipe(prop('tweet'), isNil, not)))
-//     )();
-//     return tweets;
-//   }
-// }
