@@ -4,7 +4,7 @@ import { useStorage } from '../hooks/useStorage';
 import { DisplayMode } from '../types/interfaceTypes';
 import { TweetResult } from '../types/msgTypes';
 import { rpcBg } from '../utils/dutils';
-import { ApiSearchBar } from './ApiSearchBar';
+import { ApiSearchBar } from './ThHeader';
 import { Banner } from './Banner';
 import { DisplayController } from './Display';
 import { TtReader } from './TtReader';
