@@ -36,7 +36,7 @@ module.exports = {
     // "declarativeNetRequest",
     // "declarativeNetRequestFeedback",
     'https://api.twitter.com/',
-    'https://*.twitter.com/*',
+    '*://*.twitter.com/*',
     ...(isServe || isDevelopment
       ? [
           'ws://localhost/*',
@@ -50,7 +50,12 @@ module.exports = {
   manifest_version: 2,
   content_scripts: [
     {
-      matches: ['https://*.twitter.com/*'],
+      matches: ['*://*.twitter.com/*'],
+      exclude_matches: [
+        '*://tweetdeck.twitter.com/*',
+        '*://analytics.twitter.com/*',
+      ],
+
       js: ['content-script.bundle.js'],
     },
     ...(isServe || isDevelopment

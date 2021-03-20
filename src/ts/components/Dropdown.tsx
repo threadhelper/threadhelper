@@ -21,7 +21,7 @@ export function DropdownMenu({
 
   function DropdownItem(props) {
     const onClickItem = (e) => {
-      csEvent('User', `${name} dropdown click`, props.id);
+      csEvent('User', `${name} th-dropdown click`, props.id);
       props.effect();
       defaultTo(true, itemClickClose) ? closeMenu() : null;
     };
@@ -41,7 +41,7 @@ export function DropdownMenu({
   function FilterItem(props) {
     const [filterItem, setFilterItem] = useStgPath(props.path, true);
     const onClickItem = (e) => {
-      csEvent('User', `${name} dropdown click`, props.screen_name);
+      csEvent('User', `${name} th-dropdown click`, props.screen_name);
       props.effect();
       defaultTo(true, itemClickClose) ? closeMenu() : null;
     };
@@ -66,7 +66,7 @@ export function DropdownMenu({
     );
   }
   return (
-    <div className="dropdown z-30" ref={dropdownRef}>
+    <div className="th-dropdown z-30" ref={dropdownRef}>
       {defaultTo([], componentItems).map((Item) => (
         <Item />
       ))}

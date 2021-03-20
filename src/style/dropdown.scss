@@ -1,4 +1,4 @@
-.dropdown {
+.th-dropdown {
   display: flex;
   flex-direction: column;
   --border-radius: 3px;
@@ -50,7 +50,6 @@
     color: #ff000088;
   }
 
-
   .icon-right {
     margin-left: auto;
   }
@@ -65,14 +64,14 @@
 #settings-menu {
   position: relative;
 }
-#settings-menu .dropdown {
+#settings-menu .th-dropdown {
   right: 0%;
   /*transform: translateX(-75%);*/
 }
 #accounts-menu {
   position: relative;
 }
-#accounts-menu .dropdown {
+#accounts-menu .th-dropdown {
   top: 100%;
   transform: translate(-50%);
 }

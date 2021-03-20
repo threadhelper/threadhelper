@@ -51,7 +51,7 @@ export const defaultStorage = (): StorageInterface => {
     isMidScrape: false,
     isMidStore: false,
     isMidRefresh: false,
-    archiveQueueN: 0,
+    // archiveQueueN: 0,
     random_tweets: [],
     lastClickedId: null,
     pageMetadata: {}, //
