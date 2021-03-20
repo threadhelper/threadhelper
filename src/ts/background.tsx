@@ -24,7 +24,18 @@ import {
   values,
 } from 'ramda'; // Function
 import { FullUser, User } from 'twitter-d';
-import { genericLoopRetry } from './bg/twitterScout';
+import {
+  fetchUserInfo,
+  genericLoopRetry,
+  getBookmarks,
+  patchArchive,
+  searchAPI,
+  searchUsers,
+  thFetch,
+  timelineQuery,
+  tweetLookupQuery,
+  updateQuery,
+} from './bg/twitterScout';
 import { makeAuthObs } from './bg/auth';
 import {
   apiSearchToTweet,
@@ -91,6 +102,17 @@ const searchWorker = createSearchWorker();
 const idbWorker = createIdbWorker();
 const scrapeWorker = createScrapeWorker();
 
+// Scrape worker can't make requests for some people (TODO: find cause)
+// tries one function with the arguments and if it doesn't work tries the other one
+const tryFnsAsync = async (fn1, fn2, ...args) => {
+  try {
+    return await fn1(...args);
+  } catch (e) {
+    console.log(`[ERROR] ${fn1.name} failed, trying ${fn2.name}`);
+    return await fn2(...args);
+  }
+};
+
 // Analytics //IMPORTANT: this block must come before setting the currentValue for Kefir. Property and I have no idea why
 (function initAnalytics() {
   initGA();
@@ -141,7 +163,9 @@ const subWorkQueue = (name, workFn) => {
     const qLen = R.length(q);
     setStg(name + '_length', qLen);
     console.log('subWorkQueue ' + name, { qLen, q });
-    const didDq = await maybeDq(name);
+    if (qLen > 0) {
+      await maybeDq(name);
+    }
   };
   const queue$ = makeInitStgObs(name).filter(pipe(isNil, not));
   queue$.log(name + '$');
@@ -204,7 +228,11 @@ const assocUser = (userInfo) => assoc('account', prop('id_str', userInfo));
 const doBookmarkScrape = async (auth, userInfo) => {
   const toTh = saferTweetMap(pipe(bookmarkToTweet, assocUser(userInfo)));
   try {
-    const bookmarks = await scrapeWorker.getBookmarks(auth);
+    const bookmarks = await tryFnsAsync(
+      scrapeWorker.getBookmarks,
+      getBookmarks,
+      auth
+    );
     const thBookmarks = toTh(bookmarks);
     return thBookmarks;
   } catch (e) {
@@ -215,7 +243,12 @@ const doBookmarkScrape = async (auth, userInfo) => {
 const doTimelineScrape = async (auth, userInfo) => {
   // try {
   const toTh = saferTweetMap(pipe(apiToTweet, assocUser(userInfo)));
-  const timelineTweets = await scrapeWorker.timelineQuery(auth, userInfo);
+  const timelineTweets = await tryFnsAsync(
+    scrapeWorker.timelineQuery,
+    timelineQuery,
+    auth,
+    userInfo
+  );
   const thTimelineTweets = toTh(timelineTweets);
   return thTimelineTweets;
   // } catch (e) {
@@ -225,7 +258,9 @@ const doTimelineScrape = async (auth, userInfo) => {
 };
 const doTimelineUpdateScrape = async (auth, userInfo) => {
   const toTh = saferTweetMap(pipe(apiToTweet, assocUser(userInfo)));
-  const updateTweets = await scrapeWorker.updateQuery(
+  const updateTweets = await tryFnsAsync(
+    scrapeWorker.updateQuery,
+    updateQuery,
     auth,
     userInfo,
     update_size
@@ -307,7 +342,12 @@ const genericLookupAPI = curry(
       setStg('isMidScrape', true);
       const toTweetAndAcc = pipe(toTweet, assocUser(userInfo));
       const toTh = saferTweetMap(toTweetAndAcc);
-      const lookupTweets = await scrapeWorker.tweetLookupQuery(auth, ids);
+      const lookupTweets = await tryFnsAsync(
+        scrapeWorker.tweetLookupQuery,
+        tweetLookupQuery,
+        auth,
+        ids
+      );
       const thLookupTweets = toTh(lookupTweets);
       enqueueTweetStg(queueName, thLookupTweets);
       setStg('isMidScrape', false);
@@ -333,7 +373,9 @@ const importArchive = async (queue) => {
       getStg('userInfo'),
     ]);
     setStg('isMidScrape', true);
-    const patchedArchive = await scrapeWorker.patchArchive(
+    const patchedArchive = await tryFnsAsync(
+      scrapeWorker.patchArchive,
+      patchArchive,
       auth,
       userInfo,
       queue
@@ -440,7 +482,7 @@ const webReqPermission = async ({}) => {
 };
 // Playground proxy functions
 const fetchBg = async ({ url, options }) => {
-  return await scrapeWorker.thFetch(url, options);
+  return await tryFnsAsync(scrapeWorker.thFetch, thFetch, url, options);
 };
 const getAuth = async (_) => {
   return await getData('auth');
@@ -556,7 +598,12 @@ const doUserSearch = async ({ query }) => {
     return [];
   }
   const auth = await getStg('auth');
-  const usersRes = await scrapeWorker.searchUsers(auth, query);
+  const usersRes = await tryFnsAsync(
+    scrapeWorker.searchUsers,
+    searchUsers,
+    auth,
+    query
+  );
   const users = prop('users', usersRes);
   console.log('doUserSearch', { usersRes, users });
   setStg('api_users', users);
@@ -569,7 +616,12 @@ const doSearchApi = async ({ query }) => {
     return [];
   }
   const auth = await getStg('auth');
-  const apiResults = await scrapeWorker.searchAPI(auth, query);
+  const apiResults = await tryFnsAsync(
+    scrapeWorker.searchAPI,
+    searchAPI,
+    auth,
+    query
+  );
   const toTh = pipe(
     saferTweetMap(apiSearchToTweet),
     map((tweet) => {
@@ -641,10 +693,17 @@ const auth$ = webRequestPermission$
   .skipDuplicates(compareAuths);
 subObs({ auth$ }, setStg('auth'));
 const _userInfo$ = auth$
+  .map(inspect('_userInfo$ 0'))
   .thru<Observable<User, any>>(
-    promiseStream((auth: Credentials) => scrapeWorker.fetchUserInfo(auth))
+    promiseStream(async (auth: Credentials) => {
+      console.log('calling scrapeWorker.fetchUserInfo(auth)');
+      let userInfo;
+      return await tryFnsAsync(scrapeWorker.fetchUserInfo, fetchUserInfo, auth);
+    })
   )
+  .map(inspect('_userInfo$ 1'))
   .filter(pipe(isNil, not))
+  .map(inspect('_userInfo$ 2'))
   .filter(pipe(prop('id'), isNil, not))
   .thru(errorFilter('_userInfo$'));
 const userInfo$ = Kefir.merge([
