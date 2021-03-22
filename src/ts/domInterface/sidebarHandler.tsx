@@ -5,6 +5,7 @@ import { inspect } from '../utils/putils';
 import { isSidebar } from '../utils/wutils';
 const photoSelector = '[data-testid="tweetPhoto"]'; // can't use this bc sidebar doesn't start with photos loaded
 const photoHrefSelector = '[href*="/photo"]';
+const advancedSearchSelector = '[href*="/search-advanced"]';
 const trendText = '[aria-label="Timeline: Trending now"]';
 const searchBarSelector = '[data-testid="SearchBox_Search_Input"] ';
 const sideBarSelector = '[data-testid="sidebarColumn"]';
@@ -116,12 +117,14 @@ export function removeSearchBar(_?) {
   const sidebarElement = document.querySelector(sideBarSelector);
   const istTh = (el) => el.className.includes('sug_home');
   const isUserPhotos = (el) => !isNil(el.querySelector(photoHrefSelector));
+  const isAdvancedSearch = (el) =>
+    !isNil(el.querySelector(advancedSearchSelector));
   const slot =
     sidebarElement.firstElementChild.lastElementChild.firstElementChild
       .firstElementChild.firstElementChild;
   // console.log('deleting sidebar children', { children: slot.children });
   Array.from(slot.children).forEach((el: Element) => {
-    if (istTh(el) || isUserPhotos(el)) {
+    if (istTh(el) || isUserPhotos(el) || isAdvancedSearch(el)) {
       // console.log('skipped', el);
       return;
     }

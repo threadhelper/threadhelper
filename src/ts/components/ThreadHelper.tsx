@@ -8,6 +8,7 @@ import { ApiSearchBar } from './ThHeader';
 import { Banner } from './Banner';
 import { DisplayController } from './Display';
 import { TtReader } from './TtReader';
+import { isNil } from 'ramda';
 
 export const AuthContext = createContext<Credentials>({
   authorization: null,
@@ -86,10 +87,7 @@ function PermissionAsker() {
 export default function ThreadHelper(props: any) {
   const [active, setActive] = useState(true);
   const myRef = useRef(null);
-  const [showPatchNotes, setShowPatchNotes] = useStorage(
-    'showPatchNotes',
-    false
-  );
+  const [patchUrl, setPatchUrl] = useStorage('patchUrl', null);
   const [webRequestPermission, setWebRequestPermission] = useStorage(
     'webRequestPermission',
     true
@@ -98,11 +96,11 @@ export default function ThreadHelper(props: any) {
   return (
     <div class="ThreadHelper" ref={myRef}>
       {!webRequestPermission && <PermissionAsker />}
-      {showPatchNotes && (
+      {!isNil(patchUrl) && (
         <Banner
           text="New TH update!"
-          redirect="https://www.notion.so/Patch-Notes-afab29148a0c49358df0e55131978d48"
-          onDismiss={() => setShowPatchNotes(false)}
+          redirect="patchUrl"
+          onDismiss={() => setWebRequestPermission(null)}
         />
       )}
       <Sidebar active={active} />
