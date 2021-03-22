@@ -75,7 +75,7 @@ export const ReplyAction = ({ tweet }) => {
     <div
       class="flex cursor-pointer"
       onMouseOver={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
+      onMouseOut={() => setHover(false)}
     >
       <div
         class="relative w-5 h-5 inline-flex items-center justify-center"
@@ -154,9 +154,9 @@ const RetweetAction = ({ tweet }: { tweet: thTweet }) => {
 
   return (
     <div
-      class="flex cursor-pointer"
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
+      class="flex cursor-pointer relative"
+      onMouseOver={() => setHover(true)}
+      onMouseOut={() => setHover(false)}
     >
       <div
         class={`relative w-5 h-5 inline-flex items-center ${
@@ -172,19 +172,7 @@ const RetweetAction = ({ tweet }: { tweet: thTweet }) => {
           class={`absolute inset-0 rounded-full -m-2 transition-colors duration-200 ${
             hover ? 'bg-green-600 bg-opacity-10 ' : ''
           }`}
-        >
-          {open && (
-            <DropdownMenu
-              name={'rt-button'}
-              componentItems={[]}
-              filterItems={[]}
-              items={makeRtItems()}
-              debugItems={[]}
-              closeMenu={() => setOpen(false)}
-              itemClickClose={true}
-            />
-          )}
-        </div>
+        ></div>
         <RetweetIcon class="fill-current" />
       </div>
       <span
@@ -195,6 +183,20 @@ const RetweetAction = ({ tweet }: { tweet: thTweet }) => {
       >
         {count > 0 ? formatNumber(count) : ''}
       </span>
+      {open && (
+        <DropdownMenu
+          name={'rt-button'}
+          componentItems={[]}
+          filterItems={[]}
+          items={makeRtItems()}
+          debugItems={[]}
+          closeMenu={() => {
+            setOpen(false);
+            setHover(false);
+          }}
+          itemClickClose={true}
+        />
+      )}
     </div>
   );
 };
