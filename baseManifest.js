@@ -50,12 +50,11 @@ module.exports = {
   manifest_version: 2,
   content_scripts: [
     {
-      matches: ['*://*.twitter.com/*'],
-      exclude_matches: [
-        '*://tweetdeck.twitter.com/*',
-        '*://analytics.twitter.com/*',
+      matches: [
+        '*://www.twitter.com/*',
+        '*://mobile.twitter.com/*',
+        '*://twitter.com/*',
       ],
-
       js: ['content-script.bundle.js'],
     },
     ...(isServe || isDevelopment
