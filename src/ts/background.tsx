@@ -1,5 +1,7 @@
 // only for development with `npm run serve`, to take advantage of HMR
+
 import '@babel/polyfill';
+import compareVersions from 'compare-versions';
 import { createWorkerFactory } from '@shopify/web-worker';
 import 'chrome-extension-async';
 import Kefir, { Observable } from 'kefir';
@@ -37,6 +39,7 @@ import {
   updateQuery,
 } from './bg/twitterScout';
 import { makeAuthObs } from './bg/auth';
+import { choosePatchUrl } from './bg/updateManager';
 import {
   apiSearchToTweet,
   apiToTweet,
@@ -1054,21 +1057,17 @@ const onFirstInstalled = async (previousVersion, id) => {
 const onUpdated = async (previousVersion) => {
   console.log(`[INFO] updated from version ${previousVersion}`);
   // add new stg fields from defaults
-  if (!DEBUG) {
-    chrome.tabs.create({
-      url:
-        'https://www.notion.so/v0-3-Patch-Notes-ThreadHelper-afab29148a0c49358df0e55131978d48',
-    });
-  }
   // fill in empty spots in local storage with default values
   softUpdateStorage();
   // delete old stg fields that are not in default
   const newStg = await cleanOldStorage();
   console.log('[INFO] onUpdated chrome.storage', newStg);
   // refresh idb tweets (lookup)
-  if (!DEBUG) setStg('doRefreshIdb', true);
+  if (!DEBUG && compareVersions.compare(previousVersion, '0.3', '<'))
+    setStg('doRefreshIdb', true);
+
   // triggers patch notes
-  setStg('showPatchNotes', true);
+  setStg('patchUrl', choosePatchUrl(previousVersion));
   // remake index
 };
 

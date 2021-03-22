@@ -35,7 +35,6 @@ export const defaultStorage = (): StorageInterface => {
     auth: { authorization: null, 'x-csrf-token': null, name: 'empty_auth' },
     userInfo: {},
     doRefreshIdb: false,
-    showPatchNotes: false,
     webRequestPermission: true,
     doBigTweetScrape: true,
     doSmallTweetScrape: false,
@@ -55,6 +54,7 @@ export const defaultStorage = (): StorageInterface => {
     random_tweets: [],
     lastClickedId: null,
     pageMetadata: {}, //
+    patchUrl: null,
   };
 };
 
@@ -80,6 +80,5 @@ export const devStorage = (): DevStorageInterface => {
     auth: { authorization: null, 'x-csrf-token': null, name: 'devEmptyAuth' },
     userInfo: {},
     doRefreshIdb: false,
-    showPatchNotes: false,
   };
 };

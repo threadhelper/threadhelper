@@ -26,7 +26,7 @@ export interface StorageInterface {
   auth: Credentials;
   userInfo: User;
   doRefreshIdb: boolean;
-  showPatchNotes: boolean;
+  patchUrl: string;
 }
 
 export interface StorageInterface extends DevStorageInterface {}

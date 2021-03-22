@@ -7,6 +7,8 @@ import { goToTwitterSearchPage } from './TtReader';
 import { SettingsButton } from './Settings';
 import { NinjaSyncIcon, SyncIcon } from './Sync';
 import SearchIcon from '../../images/search.svg';
+import Tooltip from './Tooltip';
+
 import cx from 'classnames';
 
 var DEBUG = process.env.NODE_ENV != 'production';
@@ -124,19 +126,21 @@ export function ApiSearchBar() {
         // style={{ borderColor: 'var(--accent-color)' }}
       >
         {!showSearchBar ? (
-          <button
-            onClick={() => {
-              setShowSearchBar(!showSearchBar);
-              if (showSearchBar) inputObj.current?.focus();
-            }}
-            class="mr-3 ml-5 text-mainTxt hover:text-accent"
-            // style={{
-            //   fill: 'var(--main-txt-color)',
-            //   stroke: 'var(--main-txt-color)',
-            // }}
-          >
-            <SearchIcon class="h-6 w-6 fill-current stroke-current" />
-          </button>
+          <Tooltip content={'Search Twitter'} direction="bottom">
+            <button
+              onClick={() => {
+                setShowSearchBar(!showSearchBar);
+                if (showSearchBar) inputObj.current?.focus();
+              }}
+              class="mr-3 ml-5 text-mainTxt hover:text-accent"
+              // style={{
+              //   fill: 'var(--main-txt-color)',
+              //   stroke: 'var(--main-txt-color)',
+              // }}
+            >
+              <SearchIcon class="h-6 w-6 fill-current stroke-current" />
+            </button>
+          </Tooltip>
         ) : null}
         {showSearchBar ? (
           <div
