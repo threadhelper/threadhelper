@@ -13,28 +13,48 @@ module.exports = {
       128: 'public/extension/thread_128.png',
     },
     default_title: 'ThreadHelper',
-    default_popup: 'popup.html',
+    // default_popup: 'popup.html',
   },
+
+  // "declarative_net_request" : {
+  //   "rule_resources" : [{
+  //     "id": "ruleset_1",
+  //     "enabled": true,
+  //     "path": "rules_1.json"
+  //   }, {
+  //     "id": "ruleset_2",
+  //     "enabled": false,
+  //     "path": "rules_2.json"
+  //   }]
+  // },
+  // optional_permissions: ['webRequest'],
+
   permissions: [
     'storage',
     'unlimitedStorage',
     'webRequest',
+    // "declarativeNetRequest",
+    // "declarativeNetRequestFeedback",
     'https://api.twitter.com/',
-    'https://*.twitter.com/*',
+    '*://*.twitter.com/*',
     ...(isServe || isDevelopment
       ? [
           'ws://localhost/*',
           'http://localhost/*',
           'http://127.0.0.1/*',
-          'webRequest',
-          'webRequestBlocking',
+          // 'webRequest',
+          // 'webRequestBlocking',
         ]
       : []),
   ],
   manifest_version: 2,
   content_scripts: [
     {
-      matches: ['https://*.twitter.com/*'],
+      matches: [
+        '*://www.twitter.com/*',
+        '*://mobile.twitter.com/*',
+        '*://twitter.com/*',
+      ],
       js: ['content-script.bundle.js'],
     },
     ...(isServe || isDevelopment
@@ -49,6 +69,8 @@ module.exports = {
   ],
   background: {
     scripts: ['background.bundle.js'],
+    persistent: true,
+    // persistent: false,
   },
   icons: {
     16: 'public/extension/thread_16.png',
@@ -56,7 +78,8 @@ module.exports = {
     48: 'public/extension/thread_48.png',
     128: 'public/extension/thread_128.png',
   },
-  content_security_policy: "script-src 'self'; object-src 'self';",
+  content_security_policy: "script-src 'self' blob:; object-src 'self' blob:;",
+  // "content_security_policy": "default-src 'self' data: 'unsafe-eval' 'unsafe-inline' blob; script-src 'self'; object-src 'self'",
   // browser_specific_settings: {
   //   gecko: {
   //     id: '{5e51829e-7295-4747-bcaf-585510eb379c}',

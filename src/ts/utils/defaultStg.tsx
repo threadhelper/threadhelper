@@ -1,4 +1,5 @@
 import { Options, StorageInterface } from '../types/stgTypes';
+import { TweetId } from '../types/tweetTypes';
 
 // DEFAULT OPTIONS V IMPORTANT
 export const defaultOptions = (): Options => {
@@ -18,28 +19,48 @@ export const defaultStorage = (): StorageInterface => {
     options: defaultOptions(),
     hasArchive: false,
     hasTimeline: {}, // {id_str: Bool}
-    activeAccounts: [], //{screen_name: String, id_str: String, showTweets: Bool, ...}
+    activeAccounts: {}, //{id:FullUser}
     currentScreenName: '',
     latest_tweets: [],
     search_results: [],
+    context_results: [],
     api_results: [],
     api_users: [],
-    temp_archive: [],
-    stgTweetQueue: [],
+    // temp_archive: [],
+    queue_tempArchive: [],
     sync: false,
     nTweets: 0,
-    lastUpdated: '',
+    lastUpdated: 0,
     query: '',
     auth: { authorization: null, 'x-csrf-token': null, name: 'empty_auth' },
     userInfo: {},
     doRefreshIdb: false,
-    showPatchNotes: false,
+    webRequestPermission: true,
+    doBigTweetScrape: true,
+    doSmallTweetScrape: false,
+    doIndexUpdate: false,
+    doIndexLoad: false,
+    queue_lookupTweets: [],
+    queue_lookupRefresh: [],
+    queue_lookupBookmarks: [],
+    queue_addTweets: [],
+    queue_refreshTweets: [], //the same as addTweets, but for when we're refreshing tweets that are already in the idb
+    queue_removeTweets: [],
+    isMidSearch: false,
+    isMidScrape: false,
+    isMidStore: false,
+    isMidRefresh: false,
+    // archiveQueueN: 0,
+    random_tweets: [],
+    lastClickedId: null,
+    pageMetadata: {}, //
+    patchUrl: null,
   };
 };
 
 import accounts from '../dev/data/accounts.js';
 import results from '../dev/data/results.js';
-export const devStorage = (): StorageInterface => {
+export const devStorage = (): DevStorageInterface => {
   return {
     options: defaultOptions(),
     hasArchive: false,
@@ -54,11 +75,10 @@ export const devStorage = (): StorageInterface => {
     stgTweetQueue: [],
     sync: true,
     nTweets: results.length,
-    lastUpdated: 'never',
+    lastUpdated: 0,
     query: '',
     auth: { authorization: null, 'x-csrf-token': null, name: 'devEmptyAuth' },
     userInfo: {},
     doRefreshIdb: false,
-    showPatchNotes: false,
   };
 };

@@ -2,6 +2,7 @@ import { h, Fragment } from 'preact';
 import { useContext, useEffect, useState } from 'preact/hooks';
 import {
   flatten,
+  has,
   indexBy,
   isEmpty,
   isNil,
@@ -17,7 +18,7 @@ import {
   values,
 } from 'ramda';
 import { userLookupQuery } from '../bg/twitterScout';
-import { useOption, useStgPath, useStorage } from '../hooks/useStorage';
+import { useOption, useStorage, useStgPath } from '../hooks/useStorage';
 import { isExist } from '../utils/putils';
 import { ArchiveUploader } from './LoadArchive';
 import { SyncIcon } from './Sync';
@@ -26,19 +27,24 @@ import Tooltip from './Tooltip';
 import defaultProfilePic from '../../images/defaultProfilePic.png';
 import CrossIcon from '../../images/x-red.svg';
 import { ArchiveExporter } from './ArchiveExporter';
+import { rpcBg } from '../utils/dutils';
 
 const Checkbox = ({ get, set, label }) => {
   return (
     <label class="flex items-center mt-4 flex-grow">
       <input
         type="checkbox"
-        class={`h-5 w-5 rounded-md border-2 ${get ? 'bg-accent border-borderBg' : 'bg-mainBg border-borderBg'}`}
+        class={`h-5 w-5 rounded-md border-2 ${
+          get ? 'bg-accent border-borderBg' : 'bg-mainBg border-borderBg'
+        }`}
         checked={get}
         onClick={() => {
           set(!get);
         }}
       />
-      <span class="ml-4 text-lsm font-medium text-twitterGray">{label}</span>
+      <span class="ml-4 text-lsm font-medium text-twitterGray hover:text-mainTxt">
+        {label}
+      </span>
     </label>
   );
 };
@@ -66,10 +72,15 @@ const ListCheckbox = ({ get, set, label, keyVal }) => {
   );
 };
 
-const accountProps = ['name', 'screen_name', 'profile_image_url_https'];
+const accountProps = [
+  'name',
+  'screen_name',
+  'profile_image_url_https',
+  'id_str',
+];
 
 // const AccountCheckbox = ({ id_str, screen_name }) => {
-const AccountCheckbox = ({ account }) => {
+const AccountCheckbox = ({ account, isUserInfo }) => {
   const [filterItem, setFilterItem] = useStgPath(
     ['activeAccounts', account.id_str, 'showTweets'],
     true
@@ -86,7 +97,7 @@ const AccountCheckbox = ({ account }) => {
         onClick={() => setFilterItem(!filterItem)}
         class={filterItem ? '' : 'opacity-50'}
       >
-        <AvatarTrophy {...accProp} link={false} />
+        <AvatarTrophy {...accProp} showCross={!isUserInfo} link={false} />
       </div>
     </>
   );
@@ -102,6 +113,7 @@ const SettingsModal = ({ setOpen, setSecretOpen }) => {
   const [idleMode, setIdleMode] = useOption('idleMode');
   // const [searchMode, setSearchMode] = useOption('searchMode');
   const [activeAccounts, setActiveAccounts] = useStorage('activeAccounts', []);
+  const [userInfo, setUserInfo] = useStorage('userInfo', null);
 
   return (
     // background shim
@@ -125,7 +137,9 @@ const SettingsModal = ({ setOpen, setSecretOpen }) => {
         </div>
         {/* checkmark section */}
         <div class="w-full mb-5">
-          <div class="font-medium text-lsm text-twitterGray">Let magic search include:</div>
+          <div class="font-medium text-lsm text-twitterGray">
+            Let magic search include:
+          </div>
           <div class="flex">
             <Checkbox get={getRTs} set={setGetRTs} label="Retweets" />
             <Checkbox
@@ -138,7 +152,9 @@ const SettingsModal = ({ setOpen, setSecretOpen }) => {
         </div>
         {/* idle mode */}
         <div class="w-full mb-5">
-          <div class="font-medium text-lsm text-twitterGray">Shuffle tweets when idle:</div>
+          <div class="font-medium text-lsm text-twitterGray">
+            Shuffle tweets when idle:
+          </div>
           <div class="flex">
             <Checkbox
               get={idle2Bool(idleMode)}
@@ -153,10 +169,21 @@ const SettingsModal = ({ setOpen, setSecretOpen }) => {
           // length(keys(activeAccounts)) > 1 &&
           <div class="mb-5 mt-4">
             {/* header */}
-            <div class="font-medium text-lsm text-twitterGray">Search the following accounts:</div>
+            <div class="font-medium text-lsm text-twitterGray">
+              Search the following accounts:
+            </div>
             <div class="flex flex-row flex-wrap justify-evenly">
               {values(activeAccounts).map((x) => {
-                return isNil(x.id_str) ? null : <AccountCheckbox account={x} />;
+                return isNil(x.id_str) ? null : (
+                  <AccountCheckbox
+                    account={x}
+                    isUserInfo={
+                      has('id_str', userInfo) && has('id_str', x)
+                        ? userInfo.id_str == x.id_str
+                        : true
+                    }
+                  />
+                );
               })}
             </div>
           </div>
@@ -181,9 +208,16 @@ export const AvatarTrophy = ({
   name,
   screen_name,
   link,
+  id_str,
+  showCross,
 }) => {
+  const [isHover, setIsHover] = useState(false);
   return (
-    <div class="flex flex-col items-center px-4 text-xs leading-none mt-6">
+    <div
+      class="flex flex-col items-center px-4 text-xs leading-none mt-6"
+      onMouseOver={() => setIsHover(!link && true)}
+      onMouseLeave={() => setIsHover(false)}
+    >
       {link ? (
         <a href={`https://twitter.com/${screen_name}`} class="relative mb-2">
           <div class="w-full h-full absolute rounded-full inset-0 transition-colors duration-200 hover:bg-black hover:bg-opacity-15"></div>
@@ -194,16 +228,47 @@ export const AvatarTrophy = ({
         </a>
       ) : (
         <div class="relative">
-          <CrossIcon class="top-0 absolute w-3 h-3 cursor-pointer" style={{right: '-5px'}}/>
-          <div class="w-full h-full absolute rounded-full inset-0 transition-colors duration-200 hover:bg-black hover:bg-opacity-15 mb-3"></div>
-          <img
-            class="rounded-full h-16 w-16"
-            src={profile_image_url_https}
-          />
+          {/* {showCross ? (
+            <Tooltip
+              content={'DANGER: delete tweets from this account.'}
+              direction="top"
+              delay={100}
+            >
+              <CrossIcon
+                class="top-0 absolute w-3 h-3 cursor-pointer hover:bg-hoverBg"
+                style={{ right: '-5px' }}
+              />
+            </Tooltip>
+          ) : (
+            <Tooltip
+              content={'Active account, switch to another before deleting.'}
+              direction="top"
+              delay={100}
+            >
+              <CrossIcon
+                class="top-0 absolute w-3 h-3 cursor-pointer hover:bg-hoverBg text-twitterGray stroke-current"
+                style={{ right: '-5px' }}
+              />
+            </Tooltip>
+          )} */}
+          <div
+            class={
+              'w-full h-full absolute rounded-full inset-0 transition-colors duration-200 mb-3' +
+              (isHover ? ' hover:bg-black hover:bg-opacity-15' : '')
+            }
+          ></div>
+          <img class={'rounded-full h-16 w-16'} src={profile_image_url_https} />
         </div>
       )}
-      <div class="font-black text-base">{name}</div>
-      <div class="font-medium underline text-lsm text-neutral mt-1">
+      <div class={'font-black text-base' + (isHover ? ' opacity-50' : '')}>
+        {name}
+      </div>
+      <div
+        class={
+          'font-medium underline text-lsm text-neutral mt-1' +
+          (isHover ? ' opacity-50' : '')
+        }
+      >
         {link ? (
           <a href={`https://twitter.com/${screen_name}`}>@{screen_name}</a>
         ) : (
@@ -266,7 +331,7 @@ export const SecretModal = ({ setOpen }) => {
         style={{
           'background-color': 'var(--main-bg-color)',
           color: 'var(--main-txt-color)',
-          borderRadius: '30px'
+          borderRadius: '30px',
         }}
         class="bg-white max-w-full px-8 py-5 text-lg shadow-lg"
       >
@@ -284,7 +349,7 @@ export const SecretModal = ({ setOpen }) => {
           {/* us */}
           <div class="flex flex-row">
             {accounts.map((acc) => (
-              <AvatarTrophy {...acc} link={true} />
+              <AvatarTrophy {...acc} showCross={false} link={true} />
             ))}
           </div>
           {/* buttons */}

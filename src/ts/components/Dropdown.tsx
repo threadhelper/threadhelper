@@ -21,7 +21,7 @@ export function DropdownMenu({
 
   function DropdownItem(props) {
     const onClickItem = (e) => {
-      csEvent('User', `${name} dropdown click`, props.id);
+      csEvent('User', `${name} th-dropdown click`, props.id);
       props.effect();
       defaultTo(true, itemClickClose) ? closeMenu() : null;
     };
@@ -29,7 +29,7 @@ export function DropdownMenu({
       <a href="#" className="p-3 hover:bg-hoverBg flex items-center" onClick={onClickItem}>
         <span className="icon-button">{props.leftIcon}</span>
         {props.id}
-        <span className="icon-right">{props.rightIcon}</span>
+        <span className="icon-right fill-current">{props.rightIcon}</span>
       </a>
     );
   }
@@ -41,7 +41,7 @@ export function DropdownMenu({
   function FilterItem(props) {
     const [filterItem, setFilterItem] = useStgPath(props.path, true);
     const onClickItem = (e) => {
-      csEvent('User', `${name} dropdown click`, props.screen_name);
+      csEvent('User', `${name} th-dropdown click`, props.screen_name);
       props.effect();
       defaultTo(true, itemClickClose) ? closeMenu() : null;
     };

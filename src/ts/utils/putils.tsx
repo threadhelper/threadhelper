@@ -30,7 +30,7 @@ export const toggleDebug = (window: { console: {} }, debug) => {
   if (!debug) {
     console.log('CANCELING CONSOLE');
     if (!isNil(window)) if (!window.console) window.console = {};
-    var methods = ['log', 'debug', 'warn', 'trace', 'time', 'info'];
+    var methods = ['log', 'debug', 'warn', 'trace', 'time', 'timeEnd', 'info'];
     for (var i = 0; i < methods.length; i++) {
       console[methods[i]] = function () {};
     }
@@ -100,7 +100,6 @@ export const makeMsgStream = curry(
   (msg$: Observable<Msg, any>, name: string): Observable<Msg, any> =>
     msg$.filter(propEq('type', name))
 );
-// export const makeMsgStreamSafe = (msg$, name) => makeSafe(makeMsgStream(msg$, name)) // makeMsgStreamSafe :: String -> Stream msg
 export const errorFilter = curry(
   <T,>(name: string, stream: Observable<T, any>): Observable<T, any> =>
     stream.filterErrors((e) => {

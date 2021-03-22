@@ -1,11 +1,11 @@
-.dropdown {
+.th-dropdown {
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;
   -webkit-box-orient: vertical;
   -webkit-box-direction: normal;
-      -ms-flex-direction: column;
-          flex-direction: column;
+  -ms-flex-direction: column;
+  flex-direction: column;
   --border-radius: 3px;
   --border: 1px solid #474a4d;
   --speed: 200ms;
@@ -21,29 +21,29 @@
   /*overflow: hidden;*/
 }
 
-.dropdown a {
+.th-dropdown a {
   color: var(--main-txt-color);
 }
 
-.dropdown .menu {
+.th-dropdown .menu {
   width: 100%;
 }
 
-.dropdown .menu-item {
+.th-dropdown .menu-item {
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;
   -webkit-box-orient: horizontal;
   -webkit-box-direction: normal;
-      -ms-flex-direction: row;
-          flex-direction: row;
+  -ms-flex-direction: row;
+  flex-direction: row;
   -webkit-box-pack: justify;
-      -ms-flex-pack: justify;
-          justify-content: space-between;
+  -ms-flex-pack: justify;
+  justify-content: space-between;
   height: 30px;
   -webkit-box-align: center;
-      -ms-flex-align: center;
-          align-items: center;
+  -ms-flex-align: center;
+  align-items: center;
   border-radius: var(--border-radius);
   /*transition: background var(--speed);*/
   padding: 0.5rem;
@@ -51,20 +51,11 @@
   cursor: default;
 }
 
-.dropdown .menu-item .icon-button {
+.th-dropdown .menu-item .icon-button {
   margin-right: 0.5rem;
 }
 
-.dropdown .menu-item .icon-button:hover {
-  -webkit-filter: none;
-          filter: none;
-}
-
-.dropdown .menu-item:hover {
-  background-color: rgba(0, 0, 0, 0.1);
-}
-
-.dropdown .menu-item .x-icon {
+.th-dropdown .menu-item .x-icon {
   text-align: center;
   height: calc(17px);
   width: calc(17px);
@@ -74,19 +65,14 @@
   color: #ff000088;
 }
 
-.dropdown .menu-item .x-icon:hover {
-  border-radius: 50%;
-  background-color: var(--neutral-color);
-}
-
-.dropdown .icon-right {
+.th-dropdown .icon-right {
   margin-left: auto;
 }
 
-.dropdown .icon-img {
+.th-dropdown .icon-img {
   -webkit-box-flex: 0;
-      -ms-flex-positive: 0;
-          flex-grow: 0;
+  -ms-flex-positive: 0;
+  flex-grow: 0;
   height: 30px;
   border-radius: 50%;
   cursor: pointer;
@@ -96,7 +82,7 @@
   position: relative;
 }
 
-#settings-menu .dropdown {
+#settings-menu .th-dropdown {
   right: 0%;
   /*transform: translateX(-75%);*/
 }
@@ -105,9 +91,9 @@
   position: relative;
 }
 
-#accounts-menu .dropdown {
+#accounts-menu .th-dropdown {
   top: 100%;
   -webkit-transform: translate(-50%);
-          transform: translate(-50%);
+  transform: translate(-50%);
 }
 /*# sourceMappingURL=dropdown.css.map */

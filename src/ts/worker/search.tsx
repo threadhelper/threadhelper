@@ -28,9 +28,11 @@ const isFull = curry(
   (n_tweets: number, latest: string | any[]) => latest.length >= n_tweets
 );
 const isBookmark = prop('is_bookmark');
+// Idk why i was doing it like the commented way, but changed it to check the .retweeted property and do the old way if the property isn't there
 const isRT = curry(
   (activeAccNames: string | readonly string[], t): boolean =>
-    !includes(t.username, activeAccNames) && !t.is_bookmark
+    t.retweeted ?? (!includes(t.username, activeAccNames) && !t.is_bookmark)
+  // (!includes(t.username, activeAccNames) && !t.is_bookmark)
 );
 const isReply = (t: { reply_to: any; username: any }) =>
   !isNil(t.reply_to) && t.reply_to != t.username;
@@ -66,7 +68,6 @@ export const genRandomSample: SampleGen = function* (keys) {
       Math.floor,
       // tap(() => console.log('genRandomSample', { keys })),
       (x) => {
-        console.log('genRandomSample', { x });
         return nth(x, keys);
       }
     )(keys);

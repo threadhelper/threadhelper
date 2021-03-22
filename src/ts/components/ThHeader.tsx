@@ -1,14 +1,74 @@
 import { h } from 'preact';
 import { useContext, useEffect, useRef, useState } from 'preact/hooks';
 import { defaultTo, isEmpty, path } from 'ramda';
-import { msgBG } from '../utils/dutils';
+import { msgBG, rpcBg } from '../utils/dutils';
 import { FeedDisplayMode } from './ThreadHelper';
+import { goToTwitterSearchPage } from './TtReader';
 import { SettingsButton } from './Settings';
-import { SyncIcon } from './Sync';
+import { NinjaSyncIcon, SyncIcon } from './Sync';
 import SearchIcon from '../../images/search.svg';
+import Tooltip from './Tooltip';
+
 import cx from 'classnames';
 
 var DEBUG = process.env.NODE_ENV != 'production';
+
+// TODO adapt to our search commands
+function transformQuery(query, context) {
+  var matches = query.match(/(\/me|\/follows|\/user|\/list)/g);
+  if (!matches || matches.length === 0) {
+    return [null, query];
+  }
+  if (matches.length > 1) {
+    return [
+      "Error: can't use multiple commands together: " + matches.join(', '),
+      query,
+    ];
+  }
+  var searchMode = matches[0];
+  switch (searchMode) {
+    case '/me': {
+      return [null, query.replace(/\/me/g, 'from:' + context.currentUser)];
+    }
+    case '/follows': {
+      return [null, query.replace(/\/follows/g, 'filter:follows')];
+    }
+    case '/user': {
+      if (
+        !(
+          context.pageMetadata.pageType === 'showTweet' ||
+          context.pageMetadata.pageType === 'profile'
+        )
+      ) {
+        return [
+          "Error: /user can't be used on this page. Try it on a profile or tweet page.",
+          query,
+        ];
+      } else {
+        return [
+          null,
+          query.replace(/\/user/g, 'from:' + context.pageMetadata.username),
+        ];
+      }
+    }
+    case '/list': {
+      if (context.pageMetadata.pageType !== 'list') {
+        return [
+          "Error: /list can't be used on this page. Try it on a list page.",
+          query,
+        ];
+      } else {
+        return [
+          null,
+          query.replace(/\/list/g, 'list:' + context.pageMetadata.listId),
+        ];
+      }
+    }
+    default: {
+      return [null, query];
+    }
+  }
+}
 
 export function ApiSearchBar() {
   const inputObj = useRef(null);
@@ -24,7 +84,14 @@ export function ApiSearchBar() {
       tweets: [],
     });
     const timeOutId = setTimeout(() => {
-      msgBG({ type: 'apiQuery', query: value });
+      // msgBG({ type: 'apiQuery', query: value });
+      rpcBg('doSearchApi', { query: value });
+      if (
+        (q) =>
+          !(isEmpty(q) || (q.match(/^\/(?!from|to)/) && !q.match(/(from|to)/)))
+      ) {
+        rpcBg('doUserSearch', { query: value });
+      }
     }, 500);
     return timeOutId;
   };
@@ -60,19 +127,21 @@ export function ApiSearchBar() {
         // style={{ borderColor: 'var(--accent-color)' }}
       >
         {!showSearchBar ? (
-          <button
-            onClick={() => {
-              setShowSearchBar(!showSearchBar);
-              if (showSearchBar) inputObj.current?.focus();
-            }}
-            class="mr-3 ml-5 text-mainTxt hover:text-accent"
-            // style={{
-            //   fill: 'var(--main-txt-color)',
-            //   stroke: 'var(--main-txt-color)',
-            // }}
-          >
-            <SearchIcon class="h-6 w-6 fill-current stroke-current" />
-          </button>
+          <Tooltip content={'Search Twitter'} direction="bottom">
+            <button
+              onClick={() => {
+                setShowSearchBar(!showSearchBar);
+                if (showSearchBar) inputObj.current?.focus();
+              }}
+              class="mr-3 ml-5 text-mainTxt hover:text-accent"
+              // style={{
+              //   fill: 'var(--main-txt-color)',
+              //   stroke: 'var(--main-txt-color)',
+              // }}
+            >
+              <SearchIcon class="h-6 w-6 fill-current stroke-current" />
+            </button>
+          </Tooltip>
         ) : null}
         {showSearchBar ? (
           <div
@@ -101,9 +170,11 @@ export function ApiSearchBar() {
               onInput={(e) =>
                 setValue(defaultTo('', path(['target', 'value'], e)))
               }
-              onKeyUp={(e) =>
-                e.key === 'Enter' ? submitApiSearch(value) : null
-              }
+              onKeyUp={async (e) => {
+                if (e.key === 'Enter') {
+                  goToTwitterSearchPage(value);
+                }
+              }}
               onFocus={(e) => e.target?.select()}
               onBlur={() => setShowSearchBar(false)}
               type="text"
@@ -122,7 +193,11 @@ export function ApiSearchBar() {
           </div>
         )}
       </div>
+
       <div class="flex items-center relative ml-8 top-0.5">
+        <div class="flex items-center">
+          <NinjaSyncIcon />
+        </div>
         <SettingsButton />
       </div>
     </div>

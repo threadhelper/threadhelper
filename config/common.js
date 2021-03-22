@@ -13,10 +13,9 @@ const isDevelopment = process.env.NODE_ENV !== 'production';
 module.exports = function (configDirs) {
   return {
     entry: {
-      popup: configDirs.APP_DIR + '/popup.tsx',
+      // popup: configDirs.APP_DIR + '/popup.tsx',
       'content-script': configDirs.APP_DIR + '/content-script.tsx',
       background: configDirs.APP_DIR + '/background.tsx',
-      worker: configDirs.APP_DIR + '/worker.ts',
     },
     output: {
       filename: '[name].bundle.js',
@@ -114,11 +113,11 @@ module.exports = function (configDirs) {
           VERSION: JSON.stringify(pkg.version),
         },
       }),
-      new HtmlPlugin({
-        filename: 'popup.html',
-        template: configDirs.HTML_DIR + '/popup.html',
-        chunks: ['popup'],
-      }),
+      // new HtmlPlugin({
+      //   filename: 'popup.html',
+      //   template: configDirs.HTML_DIR + '/popup.html',
+      //   chunks: ['popup'],
+      // }),
       new CopyWebpackPlugin({
         patterns: [
           // { from: 'manifest.json', to: '[name].[ext]' },

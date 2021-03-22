@@ -28,7 +28,6 @@ console.log('hi css', css);
 
 const db = dbOpen();
 const stgObs$ = makeStorageChangeObs();
-// stgObs$.log('stgObs$');
 stgObs$.onValue(nullFn);
 
 // const extensionId = 'caagnlhofaohggbecamlnnnflghgeeip'; // th dev build

@@ -1,46 +1,29 @@
 import { Fragment, h } from 'preact';
-import { useThrottle, useThrottleCallback } from '@react-hook/throttle';
-import { memo } from 'preact/compat';
-import {
-  useContext,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from 'preact/hooks';
+import { useContext, useEffect, useRef, useState } from 'preact/hooks';
 // flattenModule(global,R)
 import {
-  andThen,
   defaultTo,
   filter,
-  find,
-  innerJoin,
+  includes,
   isEmpty,
   isNil,
-  lensProp,
   map,
   not,
   path,
   pipe,
   prop,
-  propEq,
-  set,
   slice,
-  zipWith,
-  __,
 } from 'ramda'; // Function
-import { apiSearchToTweet } from '../bg/tweetImporter';
-import { apiMetricsFetch, tweetLookupQuery } from '../bg/twitterScout';
-import { useMsg } from '../hooks/useMsg';
+import { User } from 'twitter-d';
+import { apiMetricsFetch } from '../bg/twitterScout';
 // import { useAsync } from '../hooks/useAsync';
 import { useOption, useStorage } from '../hooks/useStorage';
 import { DisplayMode } from '../types/interfaceTypes';
 import { SearchResult, TweetResult } from '../types/msgTypes';
-import { thTweet } from '../types/tweetTypes';
-import { inspect } from '../utils/putils';
 import { AuthContext, FeedDisplayMode } from './ThreadHelper';
+import { getMetadataForPage } from './TtReader';
+
 import { Tweet as TweetCard } from './Tweet';
-import { User } from 'twitter-d';
 import CrossIcon from '../../images/x-red.svg';
 
 const prepTweets = (list: TweetResult[] | null): SearchResult[] =>
@@ -63,6 +46,15 @@ function getApiMetrics(auth, results, setResults) {
   };
 }
 
+const calcIdleDisplay = (currentPage) => {
+  const inCompose = includes(prop('pageType', currentPage), [
+    'compose',
+    'intentReply',
+  ]);
+  console.log('calcIdleDisplay', { inCompose });
+  return inCompose ? <ContextResults /> : <IdleDisplay />;
+};
+
 export function DisplayController(props: any) {
   const auth = useContext(AuthContext);
   const { feedDisplayMode, dispatchFeedDisplayMode } = useContext(
@@ -70,12 +62,19 @@ export function DisplayController(props: any) {
   );
   const myRef = useRef(null);
   const [apiUsers, setApiUsers] = useStorage('api_users', []);
+  const [currentPage, setCurrentPage] = useStorage(
+    'pageMetadata',
+    getMetadataForPage(window.location.href)
+  );
 
   const makeFeedDisplay = (displayMode: DisplayMode) => {
     // console.log({ searchResults });
     switch (displayMode) {
       case 'Idle':
-        return <IdleDisplay />;
+        // return <IdleDisplay />;
+        return calcIdleDisplay(currentPage);
+      case 'Context':
+        return <ContextResults />;
       case 'Api':
         return <ApiSearchResults />;
       case 'ApiWaiting':
@@ -116,23 +115,19 @@ function UserCard({ user }) {
         <div class="w-full h-full rounded-full absolute inset-0 transition-colors duration-200 hover:bg-black hover:bg-opacity-15 -z-1"></div>
         <a href={`https://twitter.com/${user.screen_name}`}>
           <div class="w-full h-full absolute rounded-full inset-0 transition-colors duration-200 hover:bg-black hover:bg-opacity-15"></div>
-          <img
-            class="rounded-full"
-            src={user.profile_image_url_https}
-          />
+          <img class="rounded-full" src={user.profile_image_url_https} />
         </a>
       </div>
       <div class="flex-initial text-lsm font-bold overflow-ellipsis overflow-hidden whitespace-nowrap leading-none hover:underline">
-        <a href={`https://twitter.com/${user.screen_name}`}>
-          {user.name}
-        </a>
+        <a href={`https://twitter.com/${user.screen_name}`}>{user.name}</a>
       </div>
       <div class="flex-initial flex-shrink-0 ml-1 text-neutral leading-none">
         <a href={`https://twitter.com/${user.screen_name}`}>
           @{user.screen_name}
         </a>
       </div>
-    </div>);
+    </div>
+  );
 }
 //
 
@@ -141,7 +136,7 @@ function UserDisplay({ results }: { results: User[] }) {
     <>
       <div class="text-right text-gray-500 ">
         <span class="hover:text-mainTxt hover:underline p-3">
-          User search results:
+          {'User search results:'}
         </span>
       </div>
       <div class="flex-1 searchUsers">
@@ -175,44 +170,56 @@ function TweetDisplay({ title, results, emptyMsg }: TweetDisplayProps) {
         <span class="hover:text-mainTxt hover:underline">{title}</span>
       </div>
       <div class="searchTweets">
-        {isEmpty(results) ? <span class="px-3">{emptyMsg}</span> : map(buildTweetComponent, results)}
+        {isEmpty(results) ? (
+          <span class="px-3">{emptyMsg}</span>
+        ) : (
+          map(buildTweetComponent, results)
+        )}
       </div>
     </>
   );
 }
 //
-function IdleDisplay() {
-  // const auth = useContext(AuthContext);
-  const [stgLatestTweets, setStgLatestTweets] = useStorage('latest_tweets', []);
 
-  const [idleMode, setIdleMode] = useOption('idleMode');
+function GenericIdleDisplay({ stgName, title }) {
+  // const auth = useContext(AuthContext);
+  const [stgIdleTweets, setStgIdleTweets] = useStorage(stgName, []);
+
   const [res, setRes] = useState([]);
   const auth = useContext(AuthContext);
-  // const [res, setRes] = useState(results);
-  const [searchMode, setSearchMode] = useOption('searchMode');
 
   useEffect(() => {
-    return getApiMetrics(auth, prepTweets(stgLatestTweets), setRes);
-  }, [auth, stgLatestTweets]);
+    return getApiMetrics(auth, prepTweets(stgIdleTweets), setRes);
+  }, [auth, stgIdleTweets]);
 
   useEffect(() => {
+    console.log('GenericIdleDisplay', { res, auth, stgIdleTweets, stgName });
     setRes([]);
-    // setRes(prepTweets(stgLatestTweets));
-  }, [stgLatestTweets]);
+  }, [stgIdleTweets]);
 
   return (
     <TweetDisplay
-      title={
-        idleMode == 'timeline'
-          ? 'Latest tweets:'
-          : idleMode == 'random'
-          ? 'Random tweets:'
-          : ''
-      }
-      results={isEmpty(res) ? prepTweets(stgLatestTweets) : prepTweets(res)}
+      title={title}
+      results={isEmpty(res) ? prepTweets(stgIdleTweets) : prepTweets(res)}
       emptyMsg={'No tweets yet!'}
     />
   );
+}
+function IdleDisplayLatest() {
+  return (
+    <GenericIdleDisplay stgName={'latest_tweets'} title={'Latest tweets:'} />
+  );
+}
+
+function IdleDisplayRandom() {
+  return (
+    <GenericIdleDisplay stgName={'random_tweets'} title={'Random tweets:'} />
+  );
+}
+function IdleDisplay() {
+  const [idleMode, setIdleMode] = useOption('idleMode');
+
+  return idleMode == 'random' ? <IdleDisplayRandom /> : <IdleDisplayLatest />;
 }
 
 function QtDisplay() {
@@ -234,11 +241,8 @@ const SearchResMsg = () => {
   return <span>{`No search results for ${defaultTo(query, '')}. Yet!`} </span>;
 };
 
-function SearchResults() {
-  const [stgSearchResults, setStgSearchResults] = useStorage(
-    'search_results',
-    []
-  );
+function GenericSearchResults({ stgName }) {
+  const [stgSearchResults, setStgSearchResults] = useStorage(stgName, []);
   const [res, setRes] = useState([]);
   const auth = useContext(AuthContext);
   // const [res, setRes] = useState(results);
@@ -250,13 +254,8 @@ function SearchResults() {
 
   useEffect(() => {
     setRes([]);
-    console.log('got stg search', { stgSearchResults });
     // setRes(prepTweets(stgSearchResults));
   }, [stgSearchResults]);
-
-  useEffect(() => {
-    console.log('got api metrics', { res });
-  }, [res]);
 
   return (
     <TweetDisplay
@@ -273,6 +272,14 @@ function SearchResults() {
       emptyMsg={<SearchResMsg />}
     />
   );
+}
+
+function SearchResults() {
+  return <GenericSearchResults stgName="search_results" />;
+}
+
+function ContextResults() {
+  return <GenericSearchResults stgName="context_results" />;
 }
 
 function ApiSearchResults() {

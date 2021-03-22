@@ -1,4 +1,4 @@
-.dropdown {
+.th-dropdown {
   display: flex;
   flex-direction: column;
   --border-radius: 3px;
@@ -40,14 +40,6 @@
     margin-right: 0.5rem;
   }
 
-  .menu-item .icon-button:hover {
-    filter: none;
-  }
-
-  .menu-item:hover {
-    background-color: rgba(0, 0, 0, 0.1);
-  }
-
   .menu-item .x-icon {
     text-align: center;
     height: calc(17px);
@@ -56,10 +48,6 @@
     cursor: pointer;
     font-weight: 800;
     color: #ff000088;
-  }
-  .menu-item .x-icon:hover {
-    border-radius: 50%;
-    background-color: var(--neutral-color);
   }
 
   .icon-right {
@@ -76,14 +64,14 @@
 #settings-menu {
   position: relative;
 }
-#settings-menu .dropdown {
+#settings-menu .th-dropdown {
   right: 0%;
   /*transform: translateX(-75%);*/
 }
 #accounts-menu {
   position: relative;
 }
-#accounts-menu .dropdown {
+#accounts-menu .th-dropdown {
   top: 100%;
   transform: translate(-50%);
 }

@@ -51,7 +51,7 @@ const statusMsg = {
 
 export const ArchiveUploader = (props) => {
   const [hasArchive, setHasArchive] = useStorage('hasArchive', false);
-  const [tempArchive, setTempArchive] = useStorage('temp_archive', []);
+  const [tempArchive, setTempArchive] = useStorage('queue_tempArchive', []);
   // Create a reference to the hidden file input element
   const hiddenFileInput = useRef<HTMLInputElement>(null);
   const [status, dispatchMsg] = useReducer(statusReducer, 'idle');
@@ -60,7 +60,9 @@ export const ArchiveUploader = (props) => {
     return (
       <div class="inline-flex">
         <Tooltip content={archiveTooltip} direction="bottom">
-          <button class="underline text-lsm font-bold text-neutral">Upload Twiter archive</button>
+          <button class="underline text-lsm font-bold text-twitterGray hover:text-mainTxt">
+            Upload Twiter archive
+          </button>
         </Tooltip>
         <div class="ml-8">{statusMsg[status]}</div>
       </div>

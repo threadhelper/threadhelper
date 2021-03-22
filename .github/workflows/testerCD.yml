@@ -48,20 +48,20 @@ jobs:
           client-secret: ${{secrets.CWS_CLIENT_SECRET}} # optional
           # Google OAuth2 refresh token
           refresh-token: ${{secrets.CWS_REFRESH_TOKEN}} # optional
-      - name: Build and sign WebExtension
-        continue-on-error: true
-        # You may pin to the exact commit or the version.
-        # uses: Saphareas/sign-web-extension-action@0758a01886e70b7d1e151ed391701e048bd4999d
-        uses: Saphareas/sign-web-extension-action@v0.1
-        with:
-          # Your key for Mozilla's API
-          amo-api-key: ${{env.WEB_EXT_API_KEY}}
-          # Your secret for Mozilla's API
-          amo-api-secret: ${{secrets.WEB_EXT_API_SECRET}}
-          # UUID of your existing extension. Signing new extensions is not supported.
-          web-ext-id: ${{env.DEV_ADDON_ID}}
-          # Set to 'true' to list the extension on AMO. Defaults to 'false' for unlisted signing.
-          sign-listed: true
+      # - name: Build and sign WebExtension
+      #   continue-on-error: true
+      #   # You may pin to the exact commit or the version.
+      #   # uses: Saphareas/sign-web-extension-action@0758a01886e70b7d1e151ed391701e048bd4999d
+      #   uses: Saphareas/sign-web-extension-action@v0.1
+      #   with:
+      #     # Your key for Mozilla's API
+      #     amo-api-key: ${{env.WEB_EXT_API_KEY}}
+      #     # Your secret for Mozilla's API
+      #     amo-api-secret: ${{secrets.WEB_EXT_API_SECRET}}
+      #     # UUID of your existing extension. Signing new extensions is not supported.
+      #     web-ext-id: ${{env.DEV_ADDON_ID}}
+      #     # Set to 'true' to list the extension on AMO. Defaults to 'false' for unlisted signing.
+      #     sign-listed: true
       - name: Check on failures
         if: steps.cws.outcome != 'success'
         uses: cardinalby/schedule-job-action@v1

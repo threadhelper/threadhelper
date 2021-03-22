@@ -1,12 +1,17 @@
-import { User } from 'twitter-d';
-import { thTweet } from './tweetTypes';
+import { FullUser, User } from 'twitter-d';
+import { thTweet, TweetId } from './tweetTypes';
 import { Credentials } from './types';
 
+export interface ActiveAccType extends FullUser {
+  lastGotTimeline: number;
+  showTweets: boolean;
+}
+export type ActiveAccsType = { [id: TweetId]: ActiveAccType };
 export interface StorageInterface {
   options: Options;
   hasArchive: boolean;
   hasTimeline: object; // {id_str: Bool}
-  activeAccounts: object; //{screen_name: String, id_str: String, showTweets: Bool, ...}
+  activeAccounts: activeAccsType; //{screen_name: String, id_str: String, showTweets: Bool, ...}
   currentScreenName: string;
   latest_tweets: SearchResult[];
   search_results: SearchResult[];
@@ -17,18 +22,21 @@ export interface StorageInterface {
   sync: boolean;
   query: string;
   nTweets: number;
-  lastUpdated: string;
+  lastUpdated: number;
   auth: Credentials;
-  userInfo: User | null;
+  userInfo: User;
   doRefreshIdb: boolean;
-  showPatchNotes: boolean;
+  patchUrl: string;
 }
 
-export interface SearchResult {
+export interface StorageInterface extends DevStorageInterface {}
+
+export interface TweetResult {
   tweet: thTweet;
-  score?: number;
 }
-[];
+export interface SearchResult extends TweetResult {
+  score: number;
+}
 
 export interface StorageChange {
   itemName: string;

@@ -15,9 +15,9 @@
   pointer-events: auto;
   margin: 20px 10px 20px 10px;
   border-radius: 10px;
-  padding: 0px 10px 10px 10px;
+  // padding: 0px 10px 10px 10px;
   flex-grow: 1;
-  background-color: var(--main-bg-color);
+  // background-color: var(--main-bg-color);
   overflow-x: visible;
 }
 /* Maximum width applies to stuff with width lower than this*/
@@ -29,8 +29,8 @@
 
 .sug_home {
   border-radius: 10px;
-  background-color: var(--main-bg-color);
-  padding: 0px 10px 10px 10px;
+  // background-color: var(--main-bg-color);
+  // padding: 0px 10px 10px 10px;
   margin-bottom: 20px;
   overflow-x: visible;
 }
@@ -183,7 +183,7 @@
 /* Dropdown Menu */
 @import './dropdown.scss';
 
-/*make modal visible*/
+/*bring twitter timeline down in z index to make modal visible*/
 main > div > div > div > div:first-child {
   z-index: 0;
 }

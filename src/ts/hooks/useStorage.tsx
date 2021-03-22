@@ -22,12 +22,11 @@ export function useStorage(name, default_val) {
   //   console.log('recomputing stg item observer ' + name);
   //   return makeStgItemObs(name);
   // }, [name]);
+  const setStgItem = setStg(name);
   const [storageItem, setStorageItem] = _useStream(
     stgPathObs(storageChangeObs, [name]),
     default_val
   );
-
-  const setStgItem = setStg(name);
 
   // ATTENTION: this is commented out bc it might be needed in chrome. The observer use below needs to be the path one, not the whole stg
   useEffect(() => {
