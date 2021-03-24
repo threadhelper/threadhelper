@@ -20,7 +20,10 @@ module.exports = {
       },
       zIndex: {
         '-1': '-1',
-       }
+       },
+       boxShadow: {
+        highlighted: 'rgba(255, 255, 255, 0.2) 0px 0px 15px, rgba(255, 255, 255, 0.15) 0px 0px 3px 1px',
+      },
     },
     colors: {
       accent: 'var(--accent-color)', // exists

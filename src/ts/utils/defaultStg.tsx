@@ -55,6 +55,7 @@ export const defaultStorage = (): StorageInterface => {
     lastClickedId: null,
     pageMetadata: {}, //
     patchUrl: null,
+    showApiSearchTooltip: false,
   };
 };
 
