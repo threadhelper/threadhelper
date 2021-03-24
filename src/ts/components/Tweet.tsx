@@ -141,10 +141,14 @@ const RetweetAction = ({ tweet }: { tweet: thTweet }) => {
       // {id: 'Load Archive', leftIcon: <GearIcon />, effect: ()=>{}},
       {
         id: active ? 'Undo Retweet' : 'Retweet',
-        leftIcon: <RetweetIcon class="mr-3 w-4 h-4 fill-current"/>,
+        leftIcon: <RetweetIcon class="mr-3 w-4 h-4 fill-current" />,
         effect: active ? offFunc : onFunc,
       },
-      { id: 'Quote Tweet', leftIcon: <PencilIcon class="mr-3 w-4 h-4 fill-current"/>, effect: quoteTweet },
+      {
+        id: 'Quote Tweet',
+        leftIcon: <PencilIcon class="mr-3 w-4 h-4 fill-current" />,
+        effect: quoteTweet,
+      },
     ];
   };
 
@@ -168,8 +172,7 @@ const RetweetAction = ({ tweet }: { tweet: thTweet }) => {
           class={`absolute inset-0 rounded-full -m-2 transition-colors duration-200 ${
             hover ? 'bg-green-600 bg-opacity-10 ' : ''
           }`}
-        >
-        </div>
+        ></div>
         <RetweetIcon class="fill-current" />
       </div>
       <span
@@ -192,8 +195,8 @@ const RetweetAction = ({ tweet }: { tweet: thTweet }) => {
             setHover(false);
           }}
           itemClickClose={true}
-        />)
-      }
+        />
+      )}
     </div>
   );
 };
@@ -404,9 +407,15 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
               <a href={getUserUrl(tweet.username)}>@{tweet.username}</a>
             </div>
             <div class="px-1 text-neutral flex-shrink-0">·</div>
-            <div class="text-neutral hover:underline flex-shrink-0">
-              <a href={getTweetUrl(tweet)}>{getTimeDiff(tweet.time)}</a>
-            </div>
+            <Tooltip
+              content={'Open tweet'}
+              direction="bottom"
+              className="flex-shrink-0"
+            >
+              <div class="text-neutral hover:underline flex-shrink-0">
+                <a href={getTweetUrl(tweet)}>{getTimeDiff(tweet.time)}</a>
+              </div>
+            </Tooltip>
           </div>
           <div class="flex-none">
             <div class="text-neutral">{reply_text}</div>
@@ -640,9 +649,15 @@ function renderQuote(quote: thTweet, parent_has_media) {
                 <a href={getUserUrl(quote.username)}>@{quote.username}</a>
               </div>
               <div class="px-1 text-neutral flex-shrink-0">·</div>
-              <div class="text-neutral hover:underline flex-shrink-0">
-                <a href={getTweetUrl(quote)}>{timeDiff}</a>
-              </div>
+              <Tooltip
+                content={'Open tweet'}
+                direction="bottom"
+                className="flex-shrink-0"
+              >
+                <div class="text-neutral hover:underline flex-shrink-0">
+                  <a href={getTweetUrl(quote)}>{timeDiff}</a>
+                </div>
+              </Tooltip>
             </div>
             <div class="flex-none">
               <div class="text-neutral">{replyText}</div>

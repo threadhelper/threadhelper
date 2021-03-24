@@ -7,7 +7,7 @@ import { goToTwitterSearchPage } from './TtReader';
 import { SettingsButton } from './Settings';
 import { NinjaSyncIcon, SyncIcon } from './Sync';
 import SearchIcon from '../../images/search.svg';
-import Tooltip from './Tooltip';
+import Tooltip, { StgFlagTooltip } from './Tooltip';
 
 import cx from 'classnames';
 
@@ -127,7 +127,14 @@ export function ApiSearchBar() {
         // style={{ borderColor: 'var(--accent-color)' }}
       >
         {!showSearchBar ? (
-          <Tooltip content={'Search Twitter'} direction="bottom">
+          <StgFlagTooltip
+            content={
+              'Click to search Twitter.\n Press Enter for results page. \n Shortcut: Ctrl+/'
+            }
+            direction="bottom"
+            flagName="showApiSearchTooltip"
+            className=" flex items-end"
+          >
             <button
               onClick={() => {
                 setShowSearchBar(!showSearchBar);
@@ -141,7 +148,7 @@ export function ApiSearchBar() {
             >
               <SearchIcon class="h-6 w-6 fill-current stroke-current" />
             </button>
-          </Tooltip>
+          </StgFlagTooltip>
         ) : null}
         {showSearchBar ? (
           <div
