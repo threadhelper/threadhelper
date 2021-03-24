@@ -1,6 +1,44 @@
 import { h } from 'preact';
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import '../../style/Tooltip.css';
+import { useStorage } from '../hooks/useStorage';
+import { getStg, setStg } from '../utils/dutils';
+
+const GenericTooltip = ({
+  children,
+  direction,
+  content,
+  delay,
+  className,
+  active,
+  showTip,
+  hideTip,
+}) => {
+  let timeout;
+
+  return (
+    <div
+      class={'Tooltip-Wrapper ' + (className ?? '')}
+      // When to show the tooltip
+      onMouseOver={showTip}
+      onMouseOut={hideTip}
+    >
+      {/* Wrapping */}
+      {children}
+      {active && (
+        <div
+          style="font-size: 10px"
+          class={`Tooltip-Tip max-w-32 min-w-max p-1 bg-opacity-90 rounded-md text-center tt-${
+            direction || 'top'
+          }`}
+        >
+          {/* Content */}
+          {content}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const Tooltip = (props) => {
   let timeout;
@@ -18,27 +56,51 @@ const Tooltip = (props) => {
     setActive(false);
   };
 
+  return <GenericTooltip {...{ ...props, active, showTip, hideTip }} />;
+};
+
+export const StgFlagTooltip = ({
+  children,
+  direction,
+  content,
+  delay,
+  flagName,
+  className,
+}) => {
+  let timeout;
+  const [active, setActive] = useState(false);
+
+  useEffect(() => {
+    getStg(flagName).then((x) => setActive(x ?? false));
+  }, []);
+
+  const showTip = () => {
+    timeout = setTimeout(() => {
+      setActive(true);
+    }, delay || 800);
+  };
+
+  const hideTip = () => {
+    clearInterval(timeout);
+    setActive(false);
+    setStg(flagName, false);
+    setStg();
+  };
+
   return (
-    <div
-      class="Tooltip-Wrapper"
-      // When to show the tooltip
-      onMouseEnter={showTip}
-      onMouseLeave={hideTip}
-    >
-      {/* Wrapping */}
-      {props.children}
-      {active && (
-        <div
-          style="font-size: 10px"
-          class={`Tooltip-Tip max-w-32 min-w-max p-1 bg-opacity-90 rounded-md text-center tt-${
-            props.direction || 'top'
-          }`}
-        >
-          {/* Content */}
-          {props.content}
-        </div>
-      )}
-    </div>
+    <GenericTooltip
+      {...{
+        children,
+        direction,
+        content,
+        delay,
+        flagName,
+        className,
+        active,
+        showTip,
+        hideTip,
+      }}
+    />
   );
 };
 

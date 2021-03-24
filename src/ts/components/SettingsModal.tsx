@@ -336,12 +336,34 @@ export const SecretModal = ({ setOpen }) => {
         class="bg-white max-w-full px-8 py-5 text-lg shadow-lg"
       >
         {/* header */}
-        <div class="text-sm  w-full mb-5">
-          <div class="text-twitterGray font-semibold">
-            You don’t follow rules. We like that.
+        <div class="flex flex-row justify-between">
+          {/* banter */}
+          <div class="text-sm  w-full mb-5">
+            <div class="text-twitterGray font-semibold">
+              You don’t follow rules. We like that.
+            </div>
+            <div class="text-twitterGray font-semibold">
+              We made ThreadHelper for you.
+            </div>
           </div>
-          <div class="text-twitterGray font-semibold">
-            We made ThreadHelper for you.
+          {/* helpful links */}
+          <div class="flex flex-col text-sm text-twitterGray w-full mb-5 underline text-right ">
+            <div>
+              <a
+                class="hover:text-white"
+                href="https://www.notion.so/Patch-Notes-afab29148a0c49358df0e55131978d48"
+              >
+                {'Threadhelper v' + process.env.VERSION}
+              </a>
+            </div>
+            <div>
+              <a
+                class="hover:text-white"
+                href="https://www.notion.so/Welcome-e7c1b2b8d8064a80bdf5600c329b370d"
+              >
+                Tutorial
+              </a>
+            </div>
           </div>
         </div>
         {/* downer */}
@@ -354,7 +376,7 @@ export const SecretModal = ({ setOpen }) => {
           </div>
           {/* buttons */}
           <div class="flex flex-col justify-evenly text-base">
-            <div class="px-5">
+            <div class="pl-5">
               <a
                 href="https://www.notion.so/Help-us-3b7734d28c514412aab56d51e9886d25"
                 target="_blank"
@@ -367,7 +389,7 @@ export const SecretModal = ({ setOpen }) => {
                 </button>
               </a>
             </div>
-            <div class="px-5">
+            <div class="pl-5">
               <a href="https://twitter.com/messages/compose?recipient_id=1329161144817377283">
                 <button
                   class="w-full border-2 font-black py-1 px-4 rounded-3xl text-accent border-accent text-center hover:opacity-80 text-lg"

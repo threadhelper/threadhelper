@@ -75,7 +75,7 @@ export const ReplyAction = ({ tweet }) => {
     <div
       class="flex cursor-pointer"
       onMouseOver={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
+      onMouseOut={() => setHover(false)}
     >
       <div
         class="relative w-5 h-5 inline-flex items-center justify-center"
@@ -141,18 +141,22 @@ const RetweetAction = ({ tweet }: { tweet: thTweet }) => {
       // {id: 'Load Archive', leftIcon: <GearIcon />, effect: ()=>{}},
       {
         id: active ? 'Undo Retweet' : 'Retweet',
-        leftIcon: <RetweetIcon />,
+        leftIcon: <RetweetIcon class="mr-3 w-4 h-4 fill-current" />,
         effect: active ? offFunc : onFunc,
       },
-      { id: 'Quote Tweet', leftIcon: <PencilIcon />, effect: quoteTweet },
+      {
+        id: 'Quote Tweet',
+        leftIcon: <PencilIcon class="mr-3 w-4 h-4 fill-current" />,
+        effect: quoteTweet,
+      },
     ];
   };
 
   return (
     <div
-      class="flex cursor-pointer"
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
+      class="flex cursor-pointer relative"
+      onMouseOver={() => setHover(true)}
+      onMouseOut={() => setHover(false)}
     >
       <div
         class={`relative w-5 h-5 inline-flex items-center ${
@@ -168,19 +172,7 @@ const RetweetAction = ({ tweet }: { tweet: thTweet }) => {
           class={`absolute inset-0 rounded-full -m-2 transition-colors duration-200 ${
             hover ? 'bg-green-600 bg-opacity-10 ' : ''
           }`}
-        >
-          {open && (
-            <DropdownMenu
-              name={'rt-button'}
-              componentItems={[]}
-              filterItems={[]}
-              items={makeRtItems()}
-              debugItems={[]}
-              closeMenu={() => setOpen(false)}
-              itemClickClose={true}
-            />
-          )}
-        </div>
+        ></div>
         <RetweetIcon class="fill-current" />
       </div>
       <span
@@ -191,6 +183,20 @@ const RetweetAction = ({ tweet }: { tweet: thTweet }) => {
       >
         {count > 0 ? formatNumber(count) : ''}
       </span>
+      {open && (
+        <DropdownMenu
+          name={'rt-button'}
+          componentItems={[]}
+          filterItems={[]}
+          items={makeRtItems()}
+          debugItems={[]}
+          closeMenu={() => {
+            setOpen(false);
+            setHover(false);
+          }}
+          itemClickClose={true}
+        />
+      )}
     </div>
   );
 };
@@ -224,8 +230,8 @@ const LikeAction = ({ tweet }) => {
   return (
     <div
       class="flex cursor-pointer"
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
+      onMouseOver={() => setHover(true)}
+      onMouseOut={() => setHover(false)}
     >
       <div
         class={
@@ -290,7 +296,7 @@ export const CopyAction = ({
     <div
       class="flex cursor-pointer relative"
       onMouseOver={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
+      onMouseOut={() => setHover(false)}
     >
       <textarea class="th-link hidden" ref={linkField}>
         {url}
@@ -401,9 +407,15 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
               <a href={getUserUrl(tweet.username)}>@{tweet.username}</a>
             </div>
             <div class="px-1 text-neutral flex-shrink-0">·</div>
-            <div class="text-neutral hover:underline flex-shrink-0">
-              <a href={getTweetUrl(tweet)}>{getTimeDiff(tweet.time)}</a>
-            </div>
+            <Tooltip
+              content={'Open tweet'}
+              direction="bottom"
+              className="flex-shrink-0"
+            >
+              <div class="text-neutral hover:underline flex-shrink-0">
+                <a href={getTweetUrl(tweet)}>{getTimeDiff(tweet.time)}</a>
+              </div>
+            </Tooltip>
           </div>
           <div class="flex-none">
             <div class="text-neutral">{reply_text}</div>
@@ -637,9 +649,15 @@ function renderQuote(quote: thTweet, parent_has_media) {
                 <a href={getUserUrl(quote.username)}>@{quote.username}</a>
               </div>
               <div class="px-1 text-neutral flex-shrink-0">·</div>
-              <div class="text-neutral hover:underline flex-shrink-0">
-                <a href={getTweetUrl(quote)}>{timeDiff}</a>
-              </div>
+              <Tooltip
+                content={'Open tweet'}
+                direction="bottom"
+                className="flex-shrink-0"
+              >
+                <div class="text-neutral hover:underline flex-shrink-0">
+                  <a href={getTweetUrl(quote)}>{timeDiff}</a>
+                </div>
+              </Tooltip>
             </div>
             <div class="flex-none">
               <div class="text-neutral">{replyText}</div>
