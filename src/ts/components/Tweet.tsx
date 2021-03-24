@@ -418,9 +418,15 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
               <a href={getUserUrl(tweet.username)}>@{tweet.username}</a>
             </div>
             <div class="px-1 text-neutral flex-shrink-0">·</div>
-            <div class="text-neutral hover:underline flex-shrink-0">
-              <a href={getTweetUrl(tweet)}>{getTimeDiff(tweet.time)}</a>
-            </div>
+            <Tooltip
+              content={'Open tweet'}
+              direction="bottom"
+              className="flex-shrink-0"
+            >
+              <div class="text-neutral hover:underline flex-shrink-0">
+                <a href={getTweetUrl(tweet)}>{getTimeDiff(tweet.time)}</a>
+              </div>
+            </Tooltip>
           </div>
           <div class="flex-none">
             <div class="text-neutral">{reply_text}</div>
@@ -652,12 +658,16 @@ function renderQuote(quote: thTweet, parent_has_media) {
               <div class="flex-initial ml-1 text-neutral overflow-ellipsis whitespace-nowrap overflow-hidden leading-none">
                 <a href={getUserUrl(quote.username)}>@{quote.username}</a>
               </div>
-              <div class="px-1 text-neutral leading-none">·</div>
-              <div class="flex-none text-neutral leading-none">
-                <a class="hover:underline" href={getTweetUrl(quote)}>
-                  {timeDiff}
-                </a>
-              </div>
+              <div class="px-1 text-neutral flex-shrink-0">·</div>
+              <Tooltip
+                content={'Open tweet'}
+                direction="bottom"
+                className="flex-shrink-0"
+              >
+                <div class="text-neutral hover:underline flex-shrink-0">
+                  <a href={getTweetUrl(quote)}>{timeDiff}</a>
+                </div>
+              </Tooltip>
             </div>
           </div>
           <div>

@@ -8,7 +8,7 @@
 
 /* Wrapping */
 .Tooltip-Wrapper {
-  display: inline-block;
+  /* display: inline-block; */
   position: relative;
 }
 

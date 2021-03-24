@@ -1063,9 +1063,10 @@ const onUpdated = async (previousVersion) => {
   const newStg = await cleanOldStorage();
   console.log('[INFO] onUpdated chrome.storage', newStg);
   // refresh idb tweets (lookup)
-  if (!DEBUG && compareVersions.compare(previousVersion, '0.3', '<'))
+  if (!DEBUG && compareVersions.compare(previousVersion, '0.3', '<')) {
     setStg('doRefreshIdb', true);
-
+    setStg('showApiSearchTooltip', true);
+  }
   // triggers patch notes
   setStg('patchUrl', choosePatchUrl(previousVersion));
   // remake index
