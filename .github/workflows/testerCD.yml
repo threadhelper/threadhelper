@@ -1,71 +1,71 @@
-# This is a basic workflow to help you get started with Actions
+# # This is a basic workflow to help you get started with Actions
 
-name: Tester CD
+# name: Tester CD
 
-# Controls when the action will run.
-on:
-  # Triggers the workflow on push or pull request events but only for the main branch
-  push:
-    branches: [release/**]
+# # Controls when the action will run.
+# on:
+#   # Triggers the workflow on push or pull request events but only for the main branch
+#   push:
+#     branches: [release/**]
 
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+#   # Allows you to run this workflow manually from the Actions tab
+#   workflow_dispatch:
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
-jobs:
-  # This workflow contains 2 jobs build and deploy
-  build:
-    env:
-      DEV_EXTENSION_ID: 'dkclpenpaealjpjmgjfgcbjejobimjnj' # Chrome test page id
-      CLIENT_ID: '990187593175-iurgn499pfh1urue4smreg0ato5fftee.apps.googleusercontent.com'
-      DEV_ADDON_ID: '{5e51829e-7295-4747-bcaf-585510eb379c}' # Firefox test page id
-      WEB_EXT_API_KEY: 'user:16542531:891'
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2.3.4
-      - uses: actions/setup-node@v1
-        with:
-          node-version: 15.4
-      - run: npm ci
-      - run: npm run build-prod
-      - name: Chrome Addon Action
-        id: cws
-        continue-on-error: true
-        # You may pin to the exact commit or the version.
-        # uses: trmcnvn/chrome-addon@7fc5a5ad3ff597dc64d6a13de7dcaa8515328be7
-        uses: trmcnvn/chrome-addon@v2
-        with:
-          # ID of the extension that you are updating
-          extension: ${{env.DEV_EXTENSION_ID}} # optional
-          # Path to a .zip of your addon
-          zip: dist/threadhelper.zip # optional
-          # Google OAuth2 client id
-          client-id: ${{env.CLIENT_ID}} # optional
-          # Google OAuth2 client secret
-          client-secret: ${{secrets.CWS_CLIENT_SECRET}} # optional
-          # Google OAuth2 refresh token
-          refresh-token: ${{secrets.CWS_REFRESH_TOKEN}} # optional
-      # - name: Build and sign WebExtension
-      #   continue-on-error: true
-      #   # You may pin to the exact commit or the version.
-      #   # uses: Saphareas/sign-web-extension-action@0758a01886e70b7d1e151ed391701e048bd4999d
-      #   uses: Saphareas/sign-web-extension-action@v0.1
-      #   with:
-      #     # Your key for Mozilla's API
-      #     amo-api-key: ${{env.WEB_EXT_API_KEY}}
-      #     # Your secret for Mozilla's API
-      #     amo-api-secret: ${{secrets.WEB_EXT_API_SECRET}}
-      #     # UUID of your existing extension. Signing new extensions is not supported.
-      #     web-ext-id: ${{env.DEV_ADDON_ID}}
-      #     # Set to 'true' to list the extension on AMO. Defaults to 'false' for unlisted signing.
-      #     sign-listed: true
-      - name: Check on failures
-        if: steps.cws.outcome != 'success'
-        uses: cardinalby/schedule-job-action@v1
-        with:
-          ghToken: ${{ secrets.WORKFLOWS_TOKEN }}
-          templateYmlFile: '.github-scheduled-workflows/retryTesterCdCwd.yml'
-          targetBranch: 'release/0.3.0'
+# # A workflow run is made up of one or more jobs that can run sequentially or in parallel
+# jobs:
+#   # This workflow contains 2 jobs build and deploy
+#   build:
+#     env:
+#       DEV_EXTENSION_ID: 'dkclpenpaealjpjmgjfgcbjejobimjnj' # Chrome test page id
+#       CLIENT_ID: '990187593175-iurgn499pfh1urue4smreg0ato5fftee.apps.googleusercontent.com'
+#       DEV_ADDON_ID: '{5e51829e-7295-4747-bcaf-585510eb379c}' # Firefox test page id
+#       WEB_EXT_API_KEY: 'user:16542531:891'
+#     # The type of runner that the job will run on
+#     runs-on: ubuntu-latest
+#     # Steps represent a sequence of tasks that will be executed as part of the job
+#     steps:
+#       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+#       - uses: actions/checkout@v2.3.4
+#       - uses: actions/setup-node@v1
+#         with:
+#           node-version: 15.4
+#       - run: npm ci
+#       - run: npm run build-prod
+#       - name: Chrome Addon Action
+#         id: cws
+#         continue-on-error: true
+#         # You may pin to the exact commit or the version.
+#         # uses: trmcnvn/chrome-addon@7fc5a5ad3ff597dc64d6a13de7dcaa8515328be7
+#         uses: trmcnvn/chrome-addon@v2
+#         with:
+#           # ID of the extension that you are updating
+#           extension: ${{env.DEV_EXTENSION_ID}} # optional
+#           # Path to a .zip of your addon
+#           zip: dist/threadhelper.zip # optional
+#           # Google OAuth2 client id
+#           client-id: ${{env.CLIENT_ID}} # optional
+#           # Google OAuth2 client secret
+#           client-secret: ${{secrets.CWS_CLIENT_SECRET}} # optional
+#           # Google OAuth2 refresh token
+#           refresh-token: ${{secrets.CWS_REFRESH_TOKEN}} # optional
+#       # - name: Build and sign WebExtension
+#       #   continue-on-error: true
+#       #   # You may pin to the exact commit or the version.
+#       #   # uses: Saphareas/sign-web-extension-action@0758a01886e70b7d1e151ed391701e048bd4999d
+#       #   uses: Saphareas/sign-web-extension-action@v0.1
+#       #   with:
+#       #     # Your key for Mozilla's API
+#       #     amo-api-key: ${{env.WEB_EXT_API_KEY}}
+#       #     # Your secret for Mozilla's API
+#       #     amo-api-secret: ${{secrets.WEB_EXT_API_SECRET}}
+#       #     # UUID of your existing extension. Signing new extensions is not supported.
+#       #     web-ext-id: ${{env.DEV_ADDON_ID}}
+#       #     # Set to 'true' to list the extension on AMO. Defaults to 'false' for unlisted signing.
+#       #     sign-listed: true
+#       - name: Check on failures
+#         if: steps.cws.outcome != 'success'
+#         uses: cardinalby/schedule-job-action@v1
+#         with:
+#           ghToken: ${{ secrets.WORKFLOWS_TOKEN }}
+#           templateYmlFile: '.github-scheduled-workflows/retryTesterCdCwd.yml'
+#           targetBranch: 'release/0.3.0'

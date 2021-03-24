@@ -1,0 +1,57 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Chrome Production CD
+
+# Controls when the action will run.
+on:
+  # Triggers the workflow on push or pull request events but only for the main branch
+  push:
+    branches: [main]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains 2 jobs build and deploy
+  build:
+    env:
+      PROD_EXTENSION_ID: 'nfadnflafdfmekapgcgddbccooagpndk' # Chrome production page id
+      CLIENT_ID: '990187593175-iurgn499pfh1urue4smreg0ato5fftee.apps.googleusercontent.com'
+      PROD_ADDON_ID: '{4ab270d0-d033-4cee-8d72-a88fd8bc44f7}' # Firefox production page id
+      WEB_EXT_API_KEY: 'user:16542531:891'
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2.3.4
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 15.4
+      - run: npm ci
+      - run: npm run build-prod
+      - name: Chrome Addon Action
+        id: cws
+        continue-on-error: true
+        # You may pin to the exact commit or the version.
+        # uses: trmcnvn/chrome-addon@7fc5a5ad3ff597dc64d6a13de7dcaa8515328be7
+        uses: trmcnvn/chrome-addon@v2
+        with:
+          # ID of the extension that you are updating
+          extension: ${{env.PROD_EXTENSION_ID}} # optional
+          # Path to a .zip of your addon
+          zip: dist/threadhelper.zip # optional
+          # Google OAuth2 client id
+          client-id: ${{env.CLIENT_ID}} # optional
+          # Google OAuth2 client secret
+          client-secret: ${{secrets.CWS_CLIENT_SECRET}} # optional
+          # Google OAuth2 refresh token
+          refresh-token: ${{secrets.CWS_REFRESH_TOKEN}} # optional
+      - name: Check on failures
+        if: steps.cws.outcome != 'success'
+        uses: cardinalby/schedule-job-action@v1
+        with:
+          ghToken: ${{ secrets.WORKFLOWS_TOKEN }}
+          templateYmlFile: '.github-scheduled-workflows/retryTesterCdCwd.yml'
+          targetBranch: 'main'
