@@ -160,7 +160,7 @@ const maybeDq = async (name) => {
   }
   // dequeue4WorkStg(name, R.length(defaultTo([], queue)));
 };
-const subWorkQueue = (name, workFn) => {
+const subWorkQueueStg = curry((storageChange$, name, workFn) => {
   // Waiting queue
   const queueFn = async (q) => {
     const qLen = R.length(q);
@@ -170,7 +170,7 @@ const subWorkQueue = (name, workFn) => {
       await maybeDq(name);
     }
   };
-  const queue$ = makeInitStgObs(name).filter(pipe(isNil, not));
+  const queue$ = makeInitStgObs(storageChange$, name).filter(pipe(isNil, not));
   queue$.log(name + '$');
   subObs({ [name + '$']: queue$ }, queueFn);
 
@@ -194,13 +194,14 @@ const subWorkQueue = (name, workFn) => {
       maybeDq(name);
     }
   };
-  const workQueue$ = makeInitStgObs(name + '_work_queue').filter(
-    pipe(isNil, not)
-  );
+  const workQueue$ = makeInitStgObs(
+    storageChange$,
+    name + '_work_queue'
+  ).filter(pipe(isNil, not));
   workQueue$.log(name + '_work_queue' + '$');
 
   subObs({ [name + '_work_queue' + '$']: workQueue$ }, workQueueFn);
-};
+});
 
 const emitEvent = (name) => {
   window.dispatchEvent(new CustomEvent(name));
@@ -515,26 +516,34 @@ const getSearchParams = async () => {
 const genericSeek = async (query) => {
   // const isMidSearch = getStg('isMidSearch')
   // console.trace(`seek ${query}`);
-  if (await getStg('isMidSearch')) return;
   const { accsShown, filters } = await getSearchParams();
-  console.time(`${query} seek`);
+  console.time(`${query} genericSeek`);
   const searchResults = await searchWorker.seek(
     filters,
     accsShown,
     n_tweets_results,
     query
   );
-  console.timeEnd(`${query} seek`);
-  setStg('isMidSearch', false);
+  console.timeEnd(`${query} genericSeek`);
   return searchResults;
 };
-
+let isMidSearch = false;
 const seek = async ({ query }) => {
-  // const isMidSearch = getStg('isMidSearch')
-  // console.trace(`seek ${query}`);
+  // if (await getStg('isMidSearch')) return [];
+  // await setStg('isMidSearch', true);
+  console.log('isMidSearch', { isMidSearch });
+  if (isMidSearch) {
+    return;
+  }
+  isMidSearch = true;
+  setTimeout(() => (isMidSearch = false), 3000);
   const searchResults = await genericSeek(query);
-  await setStg('search_results', searchResults);
-  return map(prop('id'), searchResults);
+  await setStg('search_results', searchResults).then((x) => {
+    isMidSearch = false;
+  });
+  isMidSearch = false;
+  // await setStg('isMidSearch', false);
+  // return map(prop('id'), searchResults);
 };
 
 const contextualSeek = async ({ query }) => {
@@ -684,9 +693,14 @@ const updateTimeline = ({}) => emitDoSmallScrape();
 /* BG flow */
 // Listen for auth and store it. simple.
 //const webRequestPermitted$ = permissions$.thru(
+const storageChange$ = makeStorageChangeObs();
+const subWorkQueue = subWorkQueueStg(storageChange$);
 
-const webRequestPermission$ = makeInitStgObs('webRequestPermission');
-// const webRequestPermission$ = makeInitStgObs('webRequestPermission');
+const webRequestPermission$ = makeInitStgObs(
+  storageChange$,
+  'webRequestPermission'
+);
+// const webRequestPermission$ = makeInitStgObs(storageChange$, 'webRequestPermission');
 webRequestPermission$.log('webRequestPermission$');
 const auth$ = webRequestPermission$
   .filter((x) => x)
@@ -760,14 +774,14 @@ subObs({ incomingAccount$ }, onIncomingAccount);
 // we need userinfo and auth to do these
 const doRefreshIdb$ = userInfo$
   .take(1)
-  .flatMapLatest((_) => makeInitStgObs('doRefreshIdb'))
+  .flatMapLatest((_) => makeInitStgObs(storageChange$, 'doRefreshIdb'))
   .filter((x) => x);
 doRefreshIdb$.log('doRefreshIdb$');
 subObs({ doRefreshIdb$ }, doRefreshIdb);
 
 // const doBigTweetScrape$ = userInfo$
 //   .take(1)
-//   .flatMapLatest((_) => makeInitStgObs('doBigTweetScrape'))
+//   .flatMapLatest((_) => makeInitStgObs(storageChange$, 'doBigTweetScrape'))
 //   .filter((x) => x)
 //   .throttle(500);
 const doBigTweetScrape$ = Kefir.fromEvents(window, 'doBigTweetScrape');
@@ -775,7 +789,7 @@ subObs({ doBigTweetScrape$ }, doBigTweetScrape);
 
 // const doSmallTweetScrape$ = userInfo$
 // .take(1)
-// .flatMapLatest((_) => makeInitStgObs('doSmallTweetScrape'))
+// .flatMapLatest((_) => makeInitStgObs(storageChange$, 'doSmallTweetScrape'))
 // .filter((x) => x)
 // .throttle(500);
 const doSmallTweetScrape$ = Kefir.fromEvents(window, 'doSmallTweetScrape');
@@ -789,25 +803,26 @@ subWorkQueue('queue_refreshTweets', refreshTweetQueue);
 subWorkQueue('queue_removeTweets', removeTweetQueue);
 subWorkQueue('queue_tempArchive', importArchive);
 
-const doIndexUpdate$ = makeInitStgObs('doIndexUpdate').filter((x) => x);
+const doIndexUpdate$ = makeInitStgObs(storageChange$, 'doIndexUpdate').filter(
+  (x) => x
+);
 subObs({ doIndexUpdate$ }, doIndexUpdate);
 
 const indexUpdated$ = Kefir.fromEvents(window, 'indexUpdated');
 subObs({ indexUpdated$ }, (_) => onIndexUpdated());
 
-const query$ = makeInitStgObs('query');
-const contextQuery$ = makeInitStgObs('contextQuery');
+const query$ = makeInitStgObs(storageChange$, 'query');
+const contextQuery$ = makeInitStgObs(storageChange$, 'contextQuery');
 query$.log('query$');
 contextQuery$.log('contextQuery$');
 subObs({ query$ }, (query) => seek({ query }));
 subObs({ contextQuery$ }, (query) => contextualSeek({ query }));
 
-const isMidSearch$ = makeInitStgObs('isMidSearch');
+const isMidSearchTrue$ = makeInitStgObs(storageChange$, 'isMidSearch')
+  .filter((x) => x)
+  .delay(2000 * 5);
 // just to make sure isMidSearch$ never gets stuck
-subObs(
-  { isMidSearch$: isMidSearch$.filter((x) => x).delay(2000 * 5) },
-  setStg('isMidSearch', false)
-);
+subObs({ isMidSearchTrue$ }, () => setStg('isMidSearch', false));
 // const msg$ = makeGotMsgObs().map(prop('m'));
 // const msgStream = makeMsgStream(msg$);
 // const apiQuery$ = msgStream('apiQuery').map(prop('query'));
@@ -823,12 +838,12 @@ subObs(
 // const accountsUpdate$ = Kefir.merge([incomingAccounts$])
 // // const accountsUpdate$ = Kefir.merge([removeAccount$, incomingAccounts$])
 // subObs({ accountsUpdate$ }, setStg('activeAccounts'));
-const optionsChange$ = makeStorageChangeObs().filter(
-  propEq('itemName', 'options')
-);
+const optionsChange$ = storageChange$.filter(propEq('itemName', 'options'));
 
 const _makeInitOptionsObs = makeInitOptionsObs(optionsChange$);
-const accounts$ = makeInitStgObs('activeAccounts').map(defaultTo([]));
+const accounts$ = makeInitStgObs(storageChange$, 'activeAccounts').map(
+  defaultTo([])
+);
 accounts$.log('accounts$');
 const accsShown$ = (accounts$.map(
   filter(either(pipe(prop('showTweets'), isNil), propEq('showTweets', true)))

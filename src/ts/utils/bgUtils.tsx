@@ -6,7 +6,7 @@ import { apiToTweet, validateTweet } from '../bg/tweetImporter'
 import { ReqDefaultTweetsMsg, ReqSearchMsg } from '../types/msgTypes'
 import { IdleMode, Option, SearchFilters, SearchMode, StorageChange } from '../types/stgTypes'
 import { Credentials } from '../types/types'
-import { getStg, getOption, makeOptionObs, makeStgItemObs, removeData, resetStorage, makeStgPathObs } from './dutils'
+import { getStg, getOption, makeOptionObs, makeStgItemObs, removeData, resetStorage, makeStgPathObs, stgPathObs } from './dutils'
 import { n_tweets_results } from './params'
 import { curVal } from './putils'
 import Kefir from 'kefir';
@@ -56,13 +56,13 @@ export const makeInitOptionsObs = curry((optionsChange$, itemName) => {
   return Kefir.fromPromise(_makeOptionObs(optionsChange$, itemName)).flatMap((x) => x).map(prop('value'))
 })
 // makeStgObs :: String -> a
-export const _makeStgObs = curry (async (itemName) => {
+export const _makeStgObs = curry (async (storageChange$, itemName) => {
   const initVal = await getStg(itemName)
-  return makeStgPathObs([itemName]).toProperty(()=>initVal)
+  return stgPathObs(storageChange$, [itemName]).toProperty(()=>initVal)
   // return makeStgItemObs(itemName).toProperty(()=>initVal)
 })
-export const makeInitStgObs = (itemName) => {
-  return Kefir.fromPromise(_makeStgObs(itemName)).flatMap((x) => x)
+export const makeInitStgObs = (storageChange$, itemName) => {
+  return Kefir.fromPromise(_makeStgObs(storageChange$, itemName)).flatMap((x) => x)
 }
 
 export const combineOptions = (...args: Option[]): SearchFilters => pipe(reduce((a,b)=>assoc(b.name, b.value, a),{}))(args)
