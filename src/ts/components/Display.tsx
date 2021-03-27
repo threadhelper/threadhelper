@@ -1,6 +1,7 @@
 import { Fragment, h } from 'preact';
 import { useContext, useEffect, useRef, useState } from 'preact/hooks';
 // flattenModule(global,R)
+import { useThrottle } from '@react-hook/throttle';
 import {
   defaultTo,
   filter,
@@ -25,19 +26,27 @@ import { getMetadataForPage } from './TtReader';
 
 import { Tweet as TweetCard } from './Tweet';
 import CrossIcon from '../../images/x-red.svg';
+import { pre_render_n } from '../utils/params';
 
 const prepTweets = (list: TweetResult[] | null): SearchResult[] =>
   filter(pipe(prop('tweet'), isNil, not), defaultTo([], list));
 
-function getApiMetrics(auth, results, setResults) {
+function tryApiMetricsFetch(auth, results, setResults) {
   let isMounted = true;
   const timeOutId = setTimeout(() => {
     if (isMounted && !isNil(auth) && !isEmpty(results)) {
-      apiMetricsFetch(auth, results).then((x) => {
-        if (isMounted) {
-          setResults(x);
-        }
-      });
+      try {
+        apiMetricsFetch(auth, results).then((x) => {
+          if (isMounted) {
+            // default to the base results if the request returned null for some reason
+            setResults(defaultTo(results, x));
+          }
+        });
+      } catch (e) {
+        console.error("Couldn't apiMetricsFetch", e);
+        // this setResults is important bc search intermediate results are smaller than these, so this displays more results
+        setResults(results);
+      }
     }
   }, 500);
   return () => {
@@ -188,7 +197,7 @@ function GenericIdleDisplay({ stgName, title }) {
   const auth = useContext(AuthContext);
 
   useEffect(() => {
-    return getApiMetrics(auth, prepTweets(stgIdleTweets), setRes);
+    return tryApiMetricsFetch(auth, prepTweets(stgIdleTweets), setRes);
   }, [auth, stgIdleTweets]);
 
   useEffect(() => {
@@ -237,18 +246,34 @@ function QtDisplay() {
 
 const SearchResMsg = () => {
   const [query, setQuery] = useStorage('query', '');
-  return <span>{`No search results for ${defaultTo(query, '')}. Yet!`} </span>;
+  return (
+    <span>{`No search results for "${defaultTo(query, '')}". Yet!`} </span>
+  );
 };
+
+// const throttleSize = (list)=>{
+//   let isMounted = true;
+//     const timeOutId = setTimeout(() => {
+//       if (isMounted) {
+//           return list
+//       }
+//     }, 500);
+//     return () => {
+//       isMounted = false;
+//       clearTimeout(timeOutId);
+//     };
+// }
 
 function GenericSearchResults({ stgName }) {
   const [stgSearchResults, setStgSearchResults] = useStorage(stgName, []);
-  const [res, setRes] = useState([]);
+  const [displayStgRes, setDisplayStgRes] = useState([]);
+  const [res, setRes] = useThrottle([], 200);
   const auth = useContext(AuthContext);
   // const [res, setRes] = useState(results);
   const [searchMode, setSearchMode] = useOption('searchMode');
 
   useEffect(() => {
-    return getApiMetrics(auth, prepTweets(stgSearchResults), setRes);
+    return tryApiMetricsFetch(auth, prepTweets(stgSearchResults), setRes);
   }, [auth, stgSearchResults]);
 
   useEffect(() => {
@@ -265,9 +290,12 @@ function GenericSearchResults({ stgName }) {
           ? 'Semantic search results:'
           : ''
       }
-      results={isEmpty(res) ? prepTweets(stgSearchResults) : prepTweets(res)}
-      // results={res}
-      // emptyMsg={`No search results. Yet!`}
+      // slice because stgSearchResults are the ones that show up quickly before api metrics kick in
+      results={
+        isEmpty(res)
+          ? prepTweets(slice(0, pre_render_n, stgSearchResults))
+          : prepTweets(res)
+      }
       emptyMsg={<SearchResMsg />}
     />
   );

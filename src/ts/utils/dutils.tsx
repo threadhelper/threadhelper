@@ -399,6 +399,7 @@ export function makeOnStorageChanged(act: (stgCh: StorageChange) => void): any {
       oldVal = changes[itemName].oldValue;
       newVal = changes[itemName].newValue;
       if (oldVal == newVal) break;
+      console.log('[DEBUG] makeOnStorageChanged', { itemName, oldVal, newVal });
       act({ itemName, oldVal, newVal });
     }
   };

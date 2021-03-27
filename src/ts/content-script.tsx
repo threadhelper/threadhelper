@@ -262,7 +262,7 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
       makeComposeObs(e.target as HTMLElement)
     ),
     post$.map((_) => ''),
-  ]);
+  ]).throttle(200);
   composeContent$.log('composeContent$');
   const composeQuery$ = Kefir.merge([
     urlChange$.map((_) => ''),
@@ -299,7 +299,7 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
   //  Actions
   targetedTweetActions$.log('targetedTweetActions');
   subObs(lastClickedId$, (_) => {});
-  subObs(composeQuery$, reqSearch);
+  // subObs(composeQuery$, reqSearch);
   subObs(actions$.delay(800), (_) => {
     handlePosting();
   });
