@@ -64,6 +64,7 @@ import {
   cleanOldStorage,
   dequeue4WorkStg,
   dequeueWorkQueueStg,
+  enqueueStg,
   enqueueStgNoDups,
   enqueueTweetStg,
   getData,
@@ -125,6 +126,10 @@ PageView('/background.html');
 var DEBUG = process.env.NODE_ENV != 'production';
 toggleDebug(window, DEBUG);
 (Kefir.Property.prototype as any).currentValue = currentValue;
+// log can contain the name of the operations done, arguments, succcess or not, time
+const bgOpLog = (op: string) => {
+  enqueueStg('bgOpLog', [op]);
+};
 
 // Stream clean up
 const subscriptions: any[] = [];
@@ -132,6 +137,7 @@ const rememberSub = (sub) => {
   subscriptions.push(sub);
   return sub;
 };
+
 const subObs = (
   obsObj: { [key: string]: Observable<any, any> },
   effect: any
@@ -144,7 +150,7 @@ const subObs = (
 
 const isQueueBusy = async (name) => {
   const qLen = await getStg(name + '_work_queue_length');
-  console.log('isQueueBusy', { qLen });
+  // console.log('isQueueBusy', { qLen });
   return !isNil(qLen) && qLen > 0;
 };
 
@@ -152,10 +158,10 @@ const maybeDq = async (name) => {
   const busy = await isQueueBusy(name);
   if (!busy) {
     const workload = dequeue4WorkStg(name, queue_load);
-    console.log('[DEBUG] dq', { name, workload });
+    // console.log('[DEBUG] dq', { name, workload });
     return true;
   } else {
-    console.log('[DEBUG] dq: queue busy ', { name });
+    // console.log('[DEBUG] dq: queue busy ', { name });
     return false;
   }
   // dequeue4WorkStg(name, R.length(defaultTo([], queue)));
@@ -165,7 +171,7 @@ const subWorkQueueStg = curry((storageChange$, name, workFn) => {
   const queueFn = async (q) => {
     const qLen = R.length(q);
     setStg(name + '_length', qLen);
-    console.log('subWorkQueue ' + name, { qLen, q });
+    // console.log('subWorkQueue ' + name, { qLen, q });
     if (qLen > 0) {
       await maybeDq(name);
     }
@@ -198,7 +204,7 @@ const subWorkQueueStg = curry((storageChange$, name, workFn) => {
     storageChange$,
     name + '_work_queue'
   ).filter(pipe(isNil, not));
-  workQueue$.log(name + '_work_queue' + '$');
+  // workQueue$.log(name + '_work_queue' + '$');
 
   subObs({ [name + '_work_queue' + '$']: workQueue$ }, workQueueFn);
 });
@@ -304,8 +310,12 @@ const doBigTweetScrape = async (_) => {
       R.length(timeline)
     );
     setStg('isMidScrape', false);
+    bgOpLog(
+      `[doBigTweetScrape] yielded ${R.length(timeline)} tweets. Success.`
+    );
   } catch (e) {
     console.error('doBigTweetScrape failed', { e });
+    bgOpLog(`[doBigTweetScrape] Failed.`);
     setStg('isMidScrape', false);
   }
 };
