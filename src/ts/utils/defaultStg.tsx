@@ -56,6 +56,7 @@ export const defaultStorage = (): StorageInterface => {
     pageMetadata: {}, //
     patchUrl: null,
     showApiSearchTooltip: false,
+    bgOpLog: [],
   };
 };
 
