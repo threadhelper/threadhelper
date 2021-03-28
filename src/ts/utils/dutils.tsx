@@ -244,7 +244,7 @@ export const getStg = (key: string) =>
 // );
 
 export const setStg = curry(async (key: string, val: any) => {
-  console.log('setStg', { key, val });
+  // console.log('setStg', { key, val });
   return setData({ [key]: val });
 });
 
@@ -261,7 +261,7 @@ export const setStgPath = curry(async (_path: string[], val) =>
 export const modStg = curry(async (key: string, fn) => {
   const oldVal = await getStg(key);
   const newVal = fn(oldVal);
-  console.log('modStg', { key, fn, oldVal, newVal });
+  // console.log('modStg', { key, fn, oldVal, newVal });
   return setStg(key, newVal);
   // return setData({ [key]: newVal });
 });
@@ -277,17 +277,17 @@ const enqueue = curry(<T,>(incoming: T[], old: T[]): T[] => {
 });
 
 export const enqueueStg = curry(async (key: string, vals: any[]) => {
-  console.log('enqueueStg', { key, vals });
+  // console.log('enqueueStg', { key, vals });
   modStg(key, enqueue(vals));
 });
 
 export const enqueueStgNoDups = curry(async (key: string, vals: any[]) => {
-  console.log('enqueueStg', { key, vals });
+  // console.log('enqueueStg', { key, vals });
   modStg(key, union(vals));
 });
 
 export const enqueueTweetStg = curry(async (key: string, vals: any[]) => {
-  console.log('enqueueTweetStg', { key, vals });
+  // console.log('enqueueTweetStg', { key, vals });
   const enqueueNoDupIds = (olds) =>
     unionWith(eqBy(prop('id')), vals, defaultTo([], olds));
   modStg(key, enqueueNoDupIds);
@@ -297,7 +297,7 @@ export const enqueueTweetStg = curry(async (key: string, vals: any[]) => {
 export const dequeueStg = curry(async (key: string, N: number) => {
   const curVal: any[] = defaultTo([], await getStg(key));
   const workLoad = slice(0, N, curVal);
-  console.log('dequeueStg', { key, N, workLoad });
+  // console.log('dequeueStg', { key, N, workLoad });
   const dequeueMod = pipe(defaultTo([]), slice(N, Infinity));
   modStg(key, dequeueMod);
   return workLoad;
@@ -399,7 +399,6 @@ export function makeOnStorageChanged(act: (stgCh: StorageChange) => void): any {
       oldVal = changes[itemName].oldValue;
       newVal = changes[itemName].newValue;
       if (oldVal == newVal) break;
-      console.log('[DEBUG] makeOnStorageChanged', { itemName, oldVal, newVal });
       act({ itemName, oldVal, newVal });
     }
   };
