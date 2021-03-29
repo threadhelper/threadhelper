@@ -1,12 +1,5 @@
-import { h, Fragment } from 'preact';
-import { useEffect, useReducer, useRef, useState } from 'preact/hooks';
-import { defaultTo, either, find, isEmpty, isNil, map, propEq } from 'ramda'; // Object
-import { validateTweet } from '../bg/tweetImporter';
-import { useStorage } from '../hooks/useStorage';
-import { extractTweetPropIfNeeded } from '../utils/bgUtils';
-import { getData, msgBG, setStg } from '../utils/dutils';
-import { csEvent, csException } from '../utils/ga';
-import Tooltip from './Tooltip';
+import { Fragment, h } from 'preact';
+import { getData } from '../utils/dutils';
 
 const archiveTooltip = <>{'Export your TH archive.'}</>;
 

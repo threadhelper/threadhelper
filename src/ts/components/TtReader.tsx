@@ -238,27 +238,29 @@ const _submitContextSearch = curry((dispatch, query: string) => {
 const _QtApiSearch = curry(async (dispatch, auth, tweetId) => {
   var hasQt = false;
   await searchAPI(auth, 'quoted_tweet_id:' + tweetId).then(
-    pipe(
-      filter(propEq('quoted_status_id_str', tweetId)),
-      sortBy(prop('favorite_count')),
-      reverse,
-      inspect('qt req'),
-      map(apiSearchToTweet),
-      map((tweet) => {
-        return { tweet };
-      }),
-      defaultTo([]),
-      (qts) => {
-        if (!isEmpty(qts)) {
-          hasQt = true;
-          setStg('qts', qts);
-          dispatch({
-            action: 'gotQts',
-            tweets: [],
-          });
+    ({ users, tweets }) =>
+      pipe(
+        () => tweets,
+        filter(propEq('quoted_status_id_str', tweetId)),
+        sortBy(prop('favorite_count')),
+        reverse,
+        inspect('qt req'),
+        map(apiSearchToTweet),
+        map((tweet) => {
+          return { tweet };
+        }),
+        defaultTo([]),
+        (qts) => {
+          if (!isEmpty(qts)) {
+            hasQt = true;
+            setStg('qts', qts);
+            dispatch({
+              action: 'gotQts',
+              tweets: [],
+            });
+          }
         }
-      }
-    )
+      )()
   );
   return hasQt;
 });

@@ -14,7 +14,7 @@ bookmarks
 
 */
 
-export const dbOpen = async () => {
+export const dbOpen = async (): Promise<IDBPDatabase<thTwitterDB>> => {
   console.log('OPENING DB');
   const db = await openDB<thTwitterDB>('ThreadHelper', 1, {
     upgrade(db, oldVersion, newVersion, transaction) {
@@ -68,7 +68,7 @@ export const dbGetMany = curry(async (db: IDBPDatabase, storeName, keys) => {
 });
 export const dbDelMany = curry(
   async (
-    db: IDBPDatabase,
+    db: IDBPDatabase<thTwitterDB>,
     storeName: StoreName,
     key_list: string[]
   ): Promise<any[]> => {

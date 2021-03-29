@@ -153,7 +153,7 @@ const TweetStg = () => {
     const importTweetQueue = async (db_promise, stgTweetQueue) => {
       setImportingStgTweetQueue(true);
       const db = await db_promise;
-      const tweets = await importTweets(db, (x) => x, stgTweetQueue);
+      const tweets = await dbPutMany(db, StoreName.tweets, stgTweetQueue);
       const postImport = (tweets) => {
         postMsg({ type: 'idbUpdateTweet' });
         setStgTweetQueue([]);
