@@ -1,6 +1,5 @@
 /* For interacting with Twitter API */
 import '@babel/polyfill';
-import { WranggleRpc } from '@wranggle/rpc';
 import delay from 'delay';
 import * as R from 'ramda';
 import {
@@ -20,15 +19,16 @@ import {
   when,
 } from 'ramda'; // Function
 import { FullUser, Status, Status as Tweet, User } from 'twitter-d';
-import { TweetResult } from '../types/msgTypes';
-import { ArchTweet, ScoutUserAndTweets, TweetId } from '../types/tweetTypes';
+import { inspect, toggleDebug } from '../utils/putils';
 import { Credentials } from '../types/types';
-import { inspect } from '../utils/putils';
+import { ArchTweet, thTweet, TweetId } from '../types/tweetTypes';
 import {
   apiSearchToTweet,
   getArchUserId,
   patchArchivePrep,
 } from './tweetImporter';
+import { TweetResult } from '../types/msgTypes';
+import { WranggleRpc, PostMessageTransport } from '@wranggle/rpc';
 
 // var DEBUG = process.env.NODE_ENV != 'production';
 // toggleDebug(window, DEBUG);
@@ -288,7 +288,8 @@ export const tweetLookupQuery = curry(
   async (auth: Credentials, ids: string[]): Promise<Tweet[]> => {
     const fetch100Ids = (ids: string[]): Promise<Tweet[]> =>
       fetchTweets(makeTweetLookupUrl(ids), auth);
-    const tweets = await pipe<
+
+    return pipe<
       string[],
       string[][],
       Promise<Tweet[]>[],
@@ -300,9 +301,6 @@ export const tweetLookupQuery = curry(
       (ps) => Promise.all(ps),
       R.andThen(R.reduce<Tweet[], Tweet[]>(R.concat, []))
     )(ids);
-    // const users:UserObj = indexBy('id_str', map(prop('user'), tweets));
-    // console.log('tweetLookupQuery', { tweets, users });
-    return tweets;
   }
 );
 // takes ids or names and sorts them in fetch100Ids
@@ -379,18 +377,14 @@ const query = curry(
     user_id: string,
     count: number,
     cursor: string,
-    res: ScoutUserAndTweets
-  ): Promise<ScoutUserAndTweets> => {
+    res: Tweet[]
+  ): Promise<Tweet[]> => {
     const url = makeTimelineQueryUrl(cursor, user_id, timelineStepSize);
     const authFetchUpdate = () => fetchTweets(url, auth);
     const _res = await loopRetry(authFetchUpdate);
     const formattedRes = await formatApiResUser(auth, user_id, _res);
-    const concatRes = R.mergeWith(
-      R.unionWith(R.eqBy(prop('id_str'))),
-      formattedRes,
-      res
-    );
-    if (stop_condition(_res, concatRes, count)) return concatRes;
+    const concatRes = R.unionWith(R.eqBy(prop('id_str')), formattedRes, res);
+    if (stop_condition(_res, concatRes, count)) return res;
     console.log('timelineQuery recursion 1', {
       formattedRes,
       user_id,
@@ -546,7 +540,7 @@ export async function patchArchive(
   auth: Credentials,
   userInfo: User,
   archive: ArchTweet[]
-): Promise<ScoutUserAndTweets> {
+): Promise<Tweet[]> {
   const _archOwner = await getArchiveOwner(auth, archive);
   const archOwner = _archOwner ?? userInfo;
   console.log('patchArchive', { _archOwner, archOwner });
@@ -558,14 +552,11 @@ export async function patchArchive(
   const _users = assoc(prop('id_str', archOwner), archOwner, users);
   const res = await map(pipe(assocQT(qts), assocUserArch(_users)), patchedArch);
   console.log('patchArchive', { res, users, prep: patchedArch });
-  return { users: _users, tweets: res };
+  return res;
 }
 
 // API v2 requests come in a specific format: {globalObjects:{tweets, users, ...}, timeline}, format these into tweets with users and quoted statuses
-const formatApiRes = async (
-  auth: Credentials,
-  _res
-): Promise<ScoutUserAndTweets> => {
+const formatApiRes = async (auth: Credentials, _res) => {
   let apiTweets: Tweet[] = unpackApiTweets(_res);
   const users: FullUser[] = unpackApiUsers(_res);
   const authGetQTs = () => getQTs(auth, _res);
@@ -573,14 +564,10 @@ const formatApiRes = async (
   const makeRes = (apiTweets: any[]): {} =>
     map(pipe(assocUser(users), assocQT(qts)), apiTweets);
   const res = await makeRes(apiTweets);
-  return { users, tweets: values(res) };
+  return values(res);
 };
 // same as formatApiRes but takes a user id argument
-const formatApiResUser = async (
-  auth: Credentials,
-  user_id: string,
-  _res
-): Promise<ScoutUserAndTweets> => {
+const formatApiResUser = async (auth: Credentials, user_id: string, _res) => {
   let apiTweets: Tweet[] = unpackApiTweets(_res);
   const users: FullUser[] = unpackApiUsers(_res);
   const authGetQTs = () => getQTs(auth, _res);
@@ -591,14 +578,14 @@ const formatApiResUser = async (
       apiTweets
     );
   const res = await makeRes(apiTweets);
-  return { users, tweets: values(res) };
+  return values(res);
 };
 
 export const updateQuery = async (
   auth: Credentials,
   userInfo: User,
   count: number
-): Promise<ScoutUserAndTweets> => {
+) => {
   const authFetchUpdate = () =>
     fetchTweets(makeUpdateQueryUrl(prop('id_str', userInfo), count), auth);
   const _res = await loopRetry(authFetchUpdate);
@@ -607,16 +594,14 @@ export const updateQuery = async (
   return formattedRes;
 };
 
-export async function getBookmarks(
-  auth: Credentials
-): Promise<ScoutUserAndTweets> {
+export async function getBookmarks(auth: Credentials): Promise<Tweet[]> {
   const authFetchBookmarks = () => fetchTweets(URLGetBookmarks, auth);
   const _res = await loopRetry(authFetchBookmarks);
   return formatApiRes(auth, _res);
 }
 
 export const searchAPI = curry(
-  async (auth: Credentials, query: string): Promise<ScoutUserAndTweets> => {
+  async (auth: Credentials, query: string): Promise<Tweet[]> => {
     const fetchQ = () => fetchTweets(makeApiSearchUrl(query), auth);
     const _res = await loopRetry(fetchQ);
     return formatApiRes(auth, _res);

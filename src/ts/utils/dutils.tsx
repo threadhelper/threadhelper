@@ -286,6 +286,13 @@ export const enqueueStgNoDups = curry(async (key: string, vals: any[]) => {
   modStg(key, union(vals));
 });
 
+export const enqueueUserStg = curry(async (key: string, vals: any[]) => {
+  // console.log('enqueueTweetStg', { key, vals });
+  const enqueueNoDupIds = (olds) =>
+    unionWith(eqBy(prop('id_str')), vals, defaultTo([], olds));
+  modStg(key, enqueueNoDupIds);
+});
+
 export const enqueueTweetStg = curry(async (key: string, vals: any[]) => {
   // console.log('enqueueTweetStg', { key, vals });
   const enqueueNoDupIds = (olds) =>

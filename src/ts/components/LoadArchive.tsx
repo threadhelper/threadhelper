@@ -1,10 +1,9 @@
-import { h, Fragment } from 'preact';
-import { useEffect, useReducer, useRef, useState } from 'preact/hooks';
-import { defaultTo, either, find, isEmpty, isNil, map, propEq } from 'ramda'; // Object
+import { Fragment, h } from 'preact';
+import { useEffect, useReducer, useRef } from 'preact/hooks';
+import { defaultTo, either, isEmpty, isNil, map } from 'ramda'; // Object
 import { validateTweet } from '../bg/tweetImporter';
 import { useStorage } from '../hooks/useStorage';
 import { extractTweetPropIfNeeded } from '../utils/bgUtils';
-import { msgBG, setStg } from '../utils/dutils';
 import { csEvent, csException } from '../utils/ga';
 import Tooltip from './Tooltip';
 

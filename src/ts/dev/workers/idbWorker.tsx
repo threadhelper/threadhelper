@@ -1,31 +1,36 @@
 import '@babel/polyfill';
-import { isNil, map, path } from 'ramda';
-import { SearchResult } from '../../types/stgTypes';
-import { thTweet } from '../../types/tweetTypes';
-import { dbOpen } from '../../worker/idb_wrapper';
-import { makeIndex, search } from '../../worker/nlp';
-import { makeSearchResponse, storeIndexToDb } from '../../worker/stgOps';
-import { ThIndexMetadata } from '../components/Search';
 import * as R from 'ramda';
-import {
-  importTweets,
-  removeTweets,
-  loadIndexFromIdb,
-} from '../storage/devStgUtils';
-import { toggleDebug } from '../../utils/putils';
+import { map } from 'ramda';
+import { StoreName } from '../../types/dbTypes';
+import { thTweet } from '../../types/tweetTypes';
+import { dbDelMany, dbOpen, dbPutMany } from '../../worker/idb_wrapper';
+import { makeIndex } from '../../worker/nlp';
+import { storeIndexToDb } from '../../worker/stgOps';
 
 // var DEBUG = process.env.NODE_ENV != 'production';
 // toggleDebug(window, DEBUG);
 
-export const workerImportTweets = async (tweets) => {
-  console.log('workerImportTweets', { tweets });
+/* Users */
+
+export const workerImportUsers = async (users) => {
+  console.log('workerImportUsers', { users });
   const db = await dbOpen();
-  const res = await importTweets(db, (x) => x, tweets);
+  const res = await dbPutMany(db, StoreName.users, users);
   db.close();
   return res;
 };
 
-const persistOldAccount = async (t: thTweet): thTweet => {
+export const workerRemoveUsers = async (ids) => {
+  const db = await dbOpen();
+  console.log('workerRemoveUsers', { ids, db });
+  const res = await dbDelMany(db, StoreName.users, ids);
+  db.close();
+  return res;
+};
+
+/* Tweets */
+
+const persistOldAccount = async (t: thTweet): Promise<thTweet> => {
   const db = await dbOpen();
   const oldT = await db.get('tweets', t.id);
   const newT = R.set(R.lensProp('account'), oldT.account ?? t.account, t);
@@ -33,11 +38,21 @@ const persistOldAccount = async (t: thTweet): thTweet => {
   return newT;
 };
 
+export const workerImportTweets = async (tweets) => {
+  console.log('workerImportTweets', { tweets });
+  const db = await dbOpen();
+  // const res = await importTweets(db, (x) => x, tweets);
+  const res = await dbPutMany(db, StoreName.tweets, tweets);
+  db.close();
+  return res;
+};
+
 export const workerRefreshTweets = async (tweets: thTweet[]) => {
   const _tweets = await Promise.all(map(persistOldAccount, tweets));
   console.log('[DEBUG] workerRefreshTweets', { _tweets });
   const db = await dbOpen();
-  const res = await importTweets(db, (x) => x, _tweets);
+  // const res = await importTweets(db, (x) => x, _tweets);
+  const res = await dbPutMany(db, StoreName.tweets, _tweets);
   db.close();
   return res;
 };
@@ -45,7 +60,7 @@ export const workerRefreshTweets = async (tweets: thTweet[]) => {
 export const workerRemoveTweets = async (ids) => {
   const db = await dbOpen();
   console.log('workerRemoveTweets', { ids, db });
-  const res = await removeTweets(db, ids);
+  const res = await dbDelMany(db, StoreName.tweets, ids);
   db.close();
   return res;
 };
