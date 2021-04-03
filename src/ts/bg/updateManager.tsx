@@ -5,7 +5,7 @@ export const welcomeUrl =
 export const patchNotes03 =
   'https://www.notion.so/Patch-Notes-afab29148a0c49358df0e55131978d48#cff459ef25ea4135a94a7882d4f2fe15';
 export const uninstallUrl =
-  "'https://docs.google.com/forms/d/e/1FAIpQLSf2s5y8tIFEQj4dIyk55QXS0DQmHQ_cmspmJmKNTslISOJ6oA/viewform'";
+  'https://docs.google.com/forms/d/e/1FAIpQLSd-eH-CYai-6H4_IAjvvpuXttwBmNKS32h5JsipqE6gMzva3w/viewform';
 
 export const choosePatchUrl = (previousVersion) => {
   console.log('[DEBUG] choosePatchUrl', {
