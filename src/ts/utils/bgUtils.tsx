@@ -1,16 +1,11 @@
-import { Observable } from 'kefir'
-import PromiseWorker from 'promise-worker'
+import Kefir, { Observable } from 'kefir'
 import { assoc, curry, defaultTo, filter, ifElse, isNil, map, not, path, pipe, prop, reduce } from 'ramda' // Function
-import { Status, User } from 'twitter-d'
+import { Status } from 'twitter-d'
 import { apiToTweet, validateTweet } from '../bg/tweetImporter'
-import { ReqDefaultTweetsMsg, ReqSearchMsg } from '../types/msgTypes'
-import { IdleMode, Option, SearchFilters, SearchMode, StorageChange } from '../types/stgTypes'
-import { Credentials } from '../types/types'
-import { getStg, getOption, makeOptionObs, makeStgItemObs, removeData, resetStorage, makeStgPathObs, stgPathObs } from './dutils'
-import { n_tweets_results } from './params'
-import { curVal } from './putils'
-import Kefir from 'kefir';
+import { Option, SearchFilters, StorageChange } from '../types/stgTypes'
 import { thTweet } from '../types/tweetTypes'
+import { Credentials } from '../types/types'
+import { getOption, getStg, makeOptionObs, stgPathObs } from './dutils'
 
 
 

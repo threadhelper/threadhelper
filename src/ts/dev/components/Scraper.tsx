@@ -1,36 +1,26 @@
-import { h, render, Fragment, createContext } from 'preact';
+import { createWorkerFactory, useWorker } from '@shopify/react-web-worker';
+import WranggleRpc from '@wranggle/rpc';
+import { createContext, Fragment, h } from 'preact';
+import { useContext, useEffect, useRef, useState } from 'preact/hooks';
 import {
-  useEffect,
-  useState,
-  useCallback,
-  useContext,
-  useRef,
-} from 'preact/hooks';
-import {
-  andThen,
   concat,
   defaultTo,
-  isNil,
   isEmpty,
+  isNil,
   length,
   map,
   path,
   pipe,
   prop,
   split,
-  tap,
   trim,
-  tryCatch,
 } from 'ramda';
-import { useStorage } from '../../hooks/useStorage';
-import { inspect } from '../../utils/putils';
+import RefreshIcon from '../../../images/refresh.svg';
 import {
-  apiBookmarkToTweet,
-  extractTweetPropIfNeeded,
-  saferTweetMap,
-} from '../../utils/bgUtils';
-
-import { createWorkerFactory, useWorker } from '@shopify/react-web-worker';
+  apiToTweet,
+  archToTweet,
+  bookmarkToTweet,
+} from '../../bg/tweetImporter';
 import {
   fetchUserInfo,
   getBookmarks,
@@ -39,16 +29,8 @@ import {
   tweetLookupQuery,
   userLookupQuery,
 } from '../../bg/twitterScout';
-import RefreshIcon from '../../../images/refresh.svg';
-import WranggleRpc from '@wranggle/rpc';
-import { getData, setData, setStg } from '../../utils/dutils';
-import {
-  apiToTweet,
-  archToTweet,
-  bookmarkToTweet,
-  getArchQtId,
-} from '../../bg/tweetImporter';
 import { useMsg } from '../../hooks/useMsg';
+import { useStorage } from '../../hooks/useStorage';
 
 const createWorker = createWorkerFactory(
   () => import('../workers/scrapeWorker')
@@ -174,8 +156,8 @@ const TimelineScraper = () => {
   const getBookmarks_ = async () => {
     if (authValid) {
       try {
-        const bookmarks = await getBookmarks(auth);
-        const thBookmarks = map(bookmarkToTweet, bookmarks);
+        const { users, tweets } = await getBookmarks(auth);
+        const thBookmarks = map(bookmarkToTweet, tweets);
         setBookmarks(thBookmarks);
         appendStgTweetQueue(thBookmarks);
       } catch (error) {

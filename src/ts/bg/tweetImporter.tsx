@@ -16,10 +16,8 @@ import {
   __,
 } from 'ramda'; // Function
 import { Status, User } from 'twitter-d';
-import { ArchTweet, thTweet } from '../types/tweetTypes';
-import { nullFn } from '../utils/putils';
-import { tweetLookupQuery } from './twitterScout';
 import default_pic_url from '../../images/defaultProfilePic.png';
+import { ArchTweet, thTweet } from '../types/tweetTypes';
 
 /* Constants */
 const rtRE = /RT @([a-zA-Z0-9_]+).*/;
@@ -57,6 +55,7 @@ const makeApiQuote = (quoted_status: Status): thTweet => {
     id: prop('id_str', quoted_status),
     name: path(['user', 'name'], quoted_status),
     username: path(['user', 'screen_name'], quoted_status),
+    user_id: path(['user', 'id_st'], quoted_status),
     time: new Date(prop('created_at', quoted_status)).getTime(),
     profile_image: path(['user', 'profile_image_url_https'], quoted_status),
     // Replies/mentions.
@@ -315,6 +314,34 @@ export const apiToTweet = (entry: Status) => {
 
 export const bookmarkToTweet = pipe(apiToTweet, R.assoc('is_bookmark', true));
 
+export const assocUserProps = (tweet: thTweet, user: User) => {
+  const picUrl =
+    prop('profile_image_url', user) ??
+    prop('profile_image_url_https', user) ??
+    default_pic_url;
+  return pipe(
+    () => tweet,
+    R.assoc('username', prop('screen_name', user)),
+    R.assoc('user_id', prop('id_str', user)),
+    R.assoc('name', prop('name', user)),
+    R.assoc('profile_image', picUrl)
+  )();
+};
+
+export const assocUserPropsDisplay = (tweet: thTweet, user: User) => {
+  const picUrl =
+    prop('profile_image_url', user) ??
+    prop('profile_image_url_https', user) ??
+    default_pic_url;
+  return pipe(
+    () => tweet,
+    R.assoc('username', prop('screen_name', user)),
+    R.assoc('user_id', prop('id_str', user)),
+    R.assoc('name', prop('name', user)),
+    R.assoc('profile_image', picUrl)
+  )();
+};
+
 //no qt
 const toTweetCommon = (thTweet: thTweet, t: Status) => {
   thTweet.retweeted = t.retweeted ?? false;
@@ -364,12 +391,14 @@ const toTweetCommon = (thTweet: thTweet, t: Status) => {
     defaultTo('', prop('full_text', t) || prop('text', t)).toString()
   );
   if (!isNil(t.user)) {
-    thTweet.username = path(['user', 'screen_name'], t);
-    thTweet.name = path(['user', 'name'], t);
-    thTweet.profile_image =
-      t.user?.profile_image_url ??
-      t.user?.profile_image_url_https ??
-      default_pic_url;
+    thTweet = assocUserProps(thTweet, t.user);
+    // thTweet.username = path(['user', 'screen_name'], t);
+    // thTweet.user_id = path(['user', 'id_str'], t);
+    // thTweet.name = path(['user', 'name'], t);
+    // thTweet.profile_image =
+    //   t.user?.profile_image_url ??
+    //   t.user?.profile_image_url_https ??
+    //   default_pic_url;
   }
   // Add media info.
   if (thTweet.has_media) {
