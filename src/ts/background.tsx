@@ -304,10 +304,10 @@ const doBigTweetScrape = async (_) => {
       bookmarksRes,
       usersToStore: values(R.mergeLeft(timelineRes.users, bookmarksRes.users)),
     });
-    enqueueUserStg(
-      'queue_addUsers',
-      values(R.mergeLeft(timelineRes.users, bookmarksRes.users))
-    );
+    // enqueueUserStg(
+    //   'queue_addUsers',
+    //   values(R.mergeLeft(timelineRes.users, bookmarksRes.users))
+    // );
     enqueueTweetStg(
       'queue_addTweets',
       R.concat(timelineRes.tweets, bookmarksRes.tweets)
@@ -352,10 +352,10 @@ const doSmallTweetScrape = async (_) => {
       bookmarksRes,
       usersToStore: values(R.mergeLeft(timelineRes.users, bookmarksRes.users)),
     });
-    enqueueUserStg(
-      'queue_addUsers',
-      values(R.mergeLeft(timelineRes.users, bookmarksRes.users))
-    );
+    // enqueueUserStg(
+    //   'queue_addUsers',
+    //   values(R.mergeLeft(timelineRes.users, bookmarksRes.users))
+    // );
     enqueueTweetStg(
       'queue_addTweets',
       R.concat(timelineRes.tweets, bookmarksRes.tweets)
@@ -387,7 +387,7 @@ const genericLookupAPI = curry(
       );
       const users: UserObj = R.indexBy('id_str', map(prop('user'), tweets));
       const thLookupTweets = toTh(tweets);
-      enqueueTweetStg('queue_addUsers', values(users));
+      // enqueueUserStg('queue_addUsers', values(users));
       enqueueTweetStg(queueName, thLookupTweets);
       setStg('isMidScrape', false);
     } catch (e) {
@@ -421,7 +421,7 @@ const importArchive = async (queue) => {
     );
     const toTh = saferTweetMap(archToTweet);
     const thArchiveTweets = toTh(tweets);
-    enqueueUserStg('queue_addUsers', values(users));
+    // enqueueUserStg('queue_addUsers', values(users));
     enqueueTweetStg('queue_addTweets', thArchiveTweets);
     setStg('isMidScrape', false);
   } catch (e) {

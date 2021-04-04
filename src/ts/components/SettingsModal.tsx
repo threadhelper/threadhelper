@@ -28,6 +28,7 @@ import defaultProfilePic from '../../images/defaultProfilePic.png';
 import CrossIcon from '../../images/x-red.svg';
 import { ArchiveExporter } from './ArchiveExporter';
 import { rpcBg } from '../utils/dutils';
+import { manualUrl, patchNotes03 } from '../bg/updateManager';
 
 const Checkbox = ({ get, set, label }) => {
   return (
@@ -347,19 +348,13 @@ export const SecretModal = ({ setOpen }) => {
           {/* helpful links */}
           <div class="flex flex-col text-sm text-twitterGray w-full mb-5 underline text-right ">
             <div>
-              <a
-                class="hover:text-white"
-                href="https://www.notion.so/Patch-Notes-afab29148a0c49358df0e55131978d48"
-              >
+              <a class="hover:text-white" href={patchNotes03}>
                 {'Threadhelper v' + process.env.VERSION}
               </a>
             </div>
             <div>
-              <a
-                class="hover:text-white"
-                href="https://www.notion.so/Welcome-e7c1b2b8d8064a80bdf5600c329b370d"
-              >
-                Tutorial
+              <a class="hover:text-white" href={manualUrl}>
+                TH Manual
               </a>
             </div>
           </div>
