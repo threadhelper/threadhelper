@@ -1,61 +1,28 @@
 import * as elasticlunr from 'elasticlunr';
 import { IDBPDatabase } from 'idb';
-import Kefir, { Subscription } from 'kefir';
 import {
   andThen,
-  apply,
-  assoc,
-  both,
   curry,
   filter,
   ifElse,
   includes,
   isEmpty,
   isNil,
-  keys,
-  last,
   map,
   not,
-  path,
-  pathEq,
   pipe,
   Pred,
   prop,
-  propEq,
   propSatisfies,
-  reduce,
-  tap,
-  tryCatch,
-  type,
-  __,
 } from 'ramda'; // Function
-import { User } from 'twitter-d';
-import { findInnerDiff } from '../bg/tweetImporter';
+import { assocUserProps } from '../bg/tweetImporter';
 import { StoreName, thTwitterDB } from '../types/dbTypes';
-import {
-  IndexSearchResult,
-  ReqDefaultTweetsMsg,
-  ReqSearchMsg,
-  SearchResult,
-  TweetResWorkerMsg,
-  WorkerMsg,
-  WriteAccMsg,
-} from '../types/msgTypes';
-import { SearchFilters } from '../types/stgTypes';
-import { IndexTweet, thTweet, TweetId } from '../types/tweetTypes';
-import {
-  currentValue,
-  isExist,
-  nullFn,
-  wInspect,
-  inspect,
-  wTimeFn,
-} from '../utils/putils';
+import { IndexSearchResult, SearchResult } from '../types/msgTypes';
+import { IndexTweet, thTweet } from '../types/tweetTypes';
+import { inspect } from '../utils/putils';
 import { dbFilter, dbGet } from './idb_wrapper';
-import { loadIndex, makeIndex, search, updateIndex } from './nlp';
-import { onWorkerPromise } from './promise-stream-worker';
-import { getLatestTweets, getRandomSampleTweets } from './search';
-import { doSemanticSearch, reqSemIndexTweets } from './semantic';
+import { updateIndex } from './nlp';
+import { reqSemIndexTweets } from './semantic';
 
 export const getRelevantOldIds = async (
   db: IDBPDatabase<thTwitterDB>,
@@ -132,6 +99,15 @@ export const makeTweetResponse = curry(
   async (db_promise, res: IndexSearchResult): Promise<SearchResult> => {
     const db = await db_promise;
     const tweet = await dbGet(db, 'tweets', res.ref);
+    const userId = prop('user_id', tweet);
+    if (userId) {
+      const user = await dbGet(db, 'users', userId);
+      const tweetResp = {
+        tweet: assocUserProps(tweet, user),
+        score: res.score,
+      };
+      return tweetResp;
+    }
     return { tweet, score: res.score };
   }
 );

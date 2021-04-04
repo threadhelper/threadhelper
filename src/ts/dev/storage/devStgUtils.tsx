@@ -1,7 +1,7 @@
 import * as elasticlunr from 'elasticlunr';
 import { IDBPDatabase } from 'idb';
 import { curry, difference, filter, isNil, keys, map, tap } from 'ramda';
-import { Status } from 'twitter-d';
+import { Status, User } from 'twitter-d';
 import { StoreName, thTwitterDB } from '../../types/dbTypes';
 import { IndexTweet, thTweet, TweetId } from '../../types/tweetTypes';
 import { dbDelMany, dbGetMany, dbPutMany } from '../../worker/idb_wrapper';
@@ -19,22 +19,23 @@ export const loadIndexFromIdb = async (
   return index;
 };
 
-export const importTweets = curry(
-  async (
-    db: IDBPDatabase<thTwitterDB>,
-    prepFn: (x: any) => thTweet,
-    tweets: thTweet[]
-  ) => {
-    const thTweets: thTweet[] = map(prepFn, tweets);
-    return await dbPutMany(db, StoreName.tweets, thTweets);
-  }
-);
+/* Tweets */
+// export const importTweets = curry(
+//   async (
+//     db: IDBPDatabase<thTwitterDB>,
+//     prepFn: (x: any) => thTweet,
+//     tweets: thTweet[]
+//   ) => {
+//     const thTweets: thTweet[] = map(prepFn, tweets);
+//     return await dbPutMany(db, StoreName.tweets, thTweets);
+//   }
+// );
 
-export const removeTweets = curry(
-  async (db: IDBPDatabase<thTwitterDB>, ids: TweetId[]) => {
-    return await dbDelMany(db, StoreName.tweets, ids);
-  }
-);
+// export const removeTweets = curry(
+//   async (db: IDBPDatabase<thTwitterDB>, ids: TweetId[]) => {
+//     return await dbDelMany(db, StoreName.tweets, ids);
+//   }
+// );
 
 export const findNewIdsInIdb = async (
   index: elasticlunr.Index<IndexTweet>,

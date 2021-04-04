@@ -10,6 +10,7 @@ import SearchIcon from '../../images/search.svg';
 import Tooltip, { StgFlagTooltip } from './Tooltip';
 
 import cx from 'classnames';
+import { useThrottle } from '@react-hook/throttle';
 
 var DEBUG = process.env.NODE_ENV != 'production';
 
@@ -72,7 +73,7 @@ function transformQuery(query, context) {
 
 export function ApiSearchBar() {
   const inputObj = useRef(null);
-  const [value, setValue] = useState('');
+  const [value, setValue] = useThrottle('', 1, true);
   const [showSearchBar, setShowSearchBar] = useState(false);
   const { feedDisplayMode, dispatchFeedDisplayMode } = useContext(
     FeedDisplayMode
@@ -119,6 +120,14 @@ export function ApiSearchBar() {
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
+
+  const typing = (q) => {
+    dispatchFeedDisplayMode({
+      action: 'typingApiSearch',
+      tweets: [],
+    });
+    setValue(q);
+  };
 
   return (
     <div class="flex items-center justify-between pt-3 pr-5 flex-initial">
@@ -175,7 +184,7 @@ export function ApiSearchBar() {
               // }}
               value={value}
               onInput={(e) =>
-                setValue(defaultTo('', path(['target', 'value'], e)))
+                typing(defaultTo('', path(['target', 'value'], e)))
               }
               onKeyUp={async (e) => {
                 if (e.key === 'Enter') {
@@ -185,7 +194,7 @@ export function ApiSearchBar() {
               onFocus={(e) => e.target?.select()}
               onBlur={() => setShowSearchBar(false)}
               type="text"
-              placeholder="Search Twitter"
+              placeholder="Search Twitter. Enter to open the search page."
             />
           </div>
         ) : (

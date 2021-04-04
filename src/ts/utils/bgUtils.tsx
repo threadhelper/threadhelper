@@ -1,16 +1,11 @@
-import { Observable } from 'kefir'
-import PromiseWorker from 'promise-worker'
+import Kefir, { Observable } from 'kefir'
 import { assoc, curry, defaultTo, filter, ifElse, isNil, map, not, path, pipe, prop, reduce } from 'ramda' // Function
-import { Status, User } from 'twitter-d'
+import { Status } from 'twitter-d'
 import { apiToTweet, validateTweet } from '../bg/tweetImporter'
-import { ReqDefaultTweetsMsg, ReqSearchMsg } from '../types/msgTypes'
-import { IdleMode, Option, SearchFilters, SearchMode, StorageChange } from '../types/stgTypes'
-import { Credentials } from '../types/types'
-import { getStg, getOption, makeOptionObs, makeStgItemObs, removeData, resetStorage, makeStgPathObs } from './dutils'
-import { n_tweets_results } from './params'
-import { curVal } from './putils'
-import Kefir from 'kefir';
+import { Option, SearchFilters, StorageChange } from '../types/stgTypes'
 import { thTweet } from '../types/tweetTypes'
+import { Credentials } from '../types/types'
+import { getOption, getStg, makeOptionObs, stgPathObs } from './dutils'
 
 
 
@@ -56,13 +51,13 @@ export const makeInitOptionsObs = curry((optionsChange$, itemName) => {
   return Kefir.fromPromise(_makeOptionObs(optionsChange$, itemName)).flatMap((x) => x).map(prop('value'))
 })
 // makeStgObs :: String -> a
-export const _makeStgObs = curry (async (itemName) => {
+export const _makeStgObs = curry (async (storageChange$, itemName) => {
   const initVal = await getStg(itemName)
-  return makeStgPathObs([itemName]).toProperty(()=>initVal)
+  return stgPathObs(storageChange$, [itemName]).toProperty(()=>initVal)
   // return makeStgItemObs(itemName).toProperty(()=>initVal)
 })
-export const makeInitStgObs = (itemName) => {
-  return Kefir.fromPromise(_makeStgObs(itemName)).flatMap((x) => x)
+export const makeInitStgObs = (storageChange$, itemName) => {
+  return Kefir.fromPromise(_makeStgObs(storageChange$, itemName)).flatMap((x) => x)
 }
 
 export const combineOptions = (...args: Option[]): SearchFilters => pipe(reduce((a,b)=>assoc(b.name, b.value, a),{}))(args)

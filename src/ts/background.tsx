@@ -50,7 +50,7 @@ import { loadIndexFromIdb, updateIdxFromIdb } from './dev/storage/devStgUtils';
 import window from './global';
 import { StoreName } from './types/dbTypes';
 import { IdleMode, SearchFilters } from './types/stgTypes';
-import { thTweet } from './types/tweetTypes';
+import { thTweet, UserObj } from './types/tweetTypes';
 import { Credentials } from './types/types';
 import {
   compareAuths,
@@ -64,8 +64,10 @@ import {
   cleanOldStorage,
   dequeue4WorkStg,
   dequeueWorkQueueStg,
+  enqueueStg,
   enqueueStgNoDups,
   enqueueTweetStg,
+  enqueueUserStg,
   getData,
   getOption,
   getStg,
@@ -125,6 +127,10 @@ PageView('/background.html');
 var DEBUG = process.env.NODE_ENV != 'production';
 toggleDebug(window, DEBUG);
 (Kefir.Property.prototype as any).currentValue = currentValue;
+// log can contain the name of the operations done, arguments, succcess or not, time
+const bgOpLog = (op: string) => {
+  enqueueStg('bgOpLog', [op]);
+};
 
 // Stream clean up
 const subscriptions: any[] = [];
@@ -132,6 +138,7 @@ const rememberSub = (sub) => {
   subscriptions.push(sub);
   return sub;
 };
+
 const subObs = (
   obsObj: { [key: string]: Observable<any, any> },
   effect: any
@@ -144,7 +151,7 @@ const subObs = (
 
 const isQueueBusy = async (name) => {
   const qLen = await getStg(name + '_work_queue_length');
-  console.log('isQueueBusy', { qLen });
+  // console.log('isQueueBusy', { qLen });
   return !isNil(qLen) && qLen > 0;
 };
 
@@ -152,25 +159,25 @@ const maybeDq = async (name) => {
   const busy = await isQueueBusy(name);
   if (!busy) {
     const workload = dequeue4WorkStg(name, queue_load);
-    console.log('[DEBUG] dq', { name, workload });
+    // console.log('[DEBUG] dq', { name, workload });
     return true;
   } else {
-    console.log('[DEBUG] dq: queue busy ', { name });
+    // console.log('[DEBUG] dq: queue busy ', { name });
     return false;
   }
   // dequeue4WorkStg(name, R.length(defaultTo([], queue)));
 };
-const subWorkQueue = (name, workFn) => {
+const subWorkQueueStg = curry((storageChange$, name, workFn) => {
   // Waiting queue
   const queueFn = async (q) => {
     const qLen = R.length(q);
     setStg(name + '_length', qLen);
-    console.log('subWorkQueue ' + name, { qLen, q });
+    // console.log('subWorkQueue ' + name, { qLen, q });
     if (qLen > 0) {
       await maybeDq(name);
     }
   };
-  const queue$ = makeInitStgObs(name).filter(pipe(isNil, not));
+  const queue$ = makeInitStgObs(storageChange$, name).filter(pipe(isNil, not));
   queue$.log(name + '$');
   subObs({ [name + '$']: queue$ }, queueFn);
 
@@ -194,13 +201,14 @@ const subWorkQueue = (name, workFn) => {
       maybeDq(name);
     }
   };
-  const workQueue$ = makeInitStgObs(name + '_work_queue').filter(
-    pipe(isNil, not)
-  );
-  workQueue$.log(name + '_work_queue' + '$');
+  const workQueue$ = makeInitStgObs(
+    storageChange$,
+    name + '_work_queue'
+  ).filter(pipe(isNil, not));
+  // workQueue$.log(name + '_work_queue' + '$');
 
   subObs({ [name + '_work_queue' + '$']: workQueue$ }, workQueueFn);
-};
+});
 
 const emitEvent = (name) => {
   window.dispatchEvent(new CustomEvent(name));
@@ -221,55 +229,56 @@ const makeUserQuery = (userQuery) => {
 const doRefreshIdb = async () => {
   console.log('[DEBUG] doRefreshIdb');
   await idbWorker.resetIndex();
-  const ids = await idbWorker.getAllIds('tweets');
+  const ids = await idbWorker.getAllIds(StoreName.tweets);
   enqueueStgNoDups('queue_lookupRefresh', ids);
   // setStg('doIndexUpdate', true);
 };
 
 const loopRetryScrape = genericLoopRetry(3, 1000);
 const assocUser = (userInfo) => assoc('account', prop('id_str', userInfo));
-const doBookmarkScrape = async (auth, userInfo) => {
+const doBookmarkScrape = async (auth, userInfo): ScoutUserAndTweets => {
   const toTh = saferTweetMap(pipe(bookmarkToTweet, assocUser(userInfo)));
   try {
-    const bookmarks = await tryFnsAsync(
+    const { users, tweets } = await tryFnsAsync(
       scrapeWorker.getBookmarks,
       getBookmarks,
       auth
     );
-    const thBookmarks = toTh(bookmarks);
-    return thBookmarks;
+    const thTweets = toTh(tweets);
+    return { users, tweets: thTweets };
   } catch (e) {
     console.error("couldn't doBookmarkScrape");
-    return [];
+    return { users: [], tweets: [] };
   }
 };
-const doTimelineScrape = async (auth, userInfo) => {
+const doTimelineScrape = async (auth, userInfo): ScoutUserAndTweets => {
   // try {
   const toTh = saferTweetMap(pipe(apiToTweet, assocUser(userInfo)));
-  const timelineTweets = await tryFnsAsync(
+  const { users, tweets } = await tryFnsAsync(
     scrapeWorker.timelineQuery,
     timelineQuery,
     auth,
     userInfo
   );
-  const thTimelineTweets = toTh(timelineTweets);
-  return thTimelineTweets;
+  const thTweets = toTh(tweets);
+  return { users, tweets: thTweets };
   // } catch (e) {
   //   console.error("couldn't doTimelineScrape");
   //   return [];
   // }
 };
-const doTimelineUpdateScrape = async (auth, userInfo) => {
+const doTimelineUpdateScrape = async (auth, userInfo): ScoutUserAndTweets => {
   const toTh = saferTweetMap(pipe(apiToTweet, assocUser(userInfo)));
-  const updateTweets = await tryFnsAsync(
+  const { users, tweets } = await tryFnsAsync(
     scrapeWorker.updateQuery,
     updateQuery,
     auth,
     userInfo,
     update_size
   );
-  const thUpdateTweets = toTh(updateTweets);
-  return thUpdateTweets;
+  console.log('doTimelineUpdateScrape', { users, tweets });
+  const thTweets = toTh(tweets);
+  return { users, tweets: thTweets };
 };
 
 const credsAndRetry = (fn, userInfo) =>
@@ -285,14 +294,24 @@ const doBigTweetScrape = async (_) => {
       getStg('userInfo'),
     ]);
     setStg('isMidScrape', true);
-    const [timeline, bookmarks] = await Promise.all([
+    const [timelineRes, bookmarksRes] = await Promise.all([
       credsAndRetry(doTimelineScrape, userInfo),
       credsAndRetry(doBookmarkScrape, userInfo),
     ]);
-    // const timeline = await doTimelineScrape(auth, userInfo);
-    // const bookmarks = await doBookmarkScrape(auth, userInfo);
-    const toAdd = R.concat(timeline, bookmarks);
-    enqueueTweetStg('queue_addTweets', toAdd);
+
+    console.log('doBigTweetScrape', {
+      timelineRes,
+      bookmarksRes,
+      usersToStore: values(R.mergeLeft(timelineRes.users, bookmarksRes.users)),
+    });
+    // enqueueUserStg(
+    //   'queue_addUsers',
+    //   values(R.mergeLeft(timelineRes.users, bookmarksRes.users))
+    // );
+    enqueueTweetStg(
+      'queue_addTweets',
+      R.concat(timelineRes.tweets, bookmarksRes.tweets)
+    );
     // setStg('doBigTweetScrape', false);
     await setStgPath(
       ['activeAccounts', userInfo.id_str, 'lastGotTimeline'],
@@ -300,11 +319,17 @@ const doBigTweetScrape = async (_) => {
     );
     await setStgPath(
       ['activeAccounts', userInfo.id_str, 'lastGotTimelineCount'],
-      R.length(timeline)
+      R.length(timelineRes.tweets)
     );
     setStg('isMidScrape', false);
+    bgOpLog(
+      `[doBigTweetScrape] yielded ${R.length(
+        timelineRes.tweets
+      )} tweets. Success.`
+    );
   } catch (e) {
     console.error('doBigTweetScrape failed', { e });
+    bgOpLog(`[doBigTweetScrape] Failed.`);
     setStg('isMidScrape', false);
   }
 };
@@ -318,14 +343,23 @@ const doSmallTweetScrape = async (_) => {
     setStg('isMidScrape', true);
     console.log('[DEBUG] doSmallTweetScrape', { auth, userInfo });
 
-    const [timeline, bookmarks] = await Promise.all([
+    const [timelineRes, bookmarksRes] = await Promise.all([
       credsAndRetry(doTimelineUpdateScrape, userInfo),
       credsAndRetry(doBookmarkScrape, userInfo),
     ]);
-    // const timeline = await doTimelineUpdateScrape(auth, userInfo);
-    // const bookmarks = await doBookmarkScrape(auth, userInfo);
-    const toAdd = R.concat(timeline, bookmarks);
-    enqueueTweetStg('queue_addTweets', toAdd);
+    console.log('doSmallTweetScrape', {
+      timelineRes,
+      bookmarksRes,
+      usersToStore: values(R.mergeLeft(timelineRes.users, bookmarksRes.users)),
+    });
+    // enqueueUserStg(
+    //   'queue_addUsers',
+    //   values(R.mergeLeft(timelineRes.users, bookmarksRes.users))
+    // );
+    enqueueTweetStg(
+      'queue_addTweets',
+      R.concat(timelineRes.tweets, bookmarksRes.tweets)
+    );
     // setStg('doSmallTweetScrape', false);
     setStg('isMidScrape', false);
   } catch (e) {
@@ -345,13 +379,15 @@ const genericLookupAPI = curry(
       setStg('isMidScrape', true);
       const toTweetAndAcc = pipe(toTweet, assocUser(userInfo));
       const toTh = saferTweetMap(toTweetAndAcc);
-      const lookupTweets = await tryFnsAsync(
+      const tweets = await tryFnsAsync(
         scrapeWorker.tweetLookupQuery,
         tweetLookupQuery,
         auth,
         ids
       );
-      const thLookupTweets = toTh(lookupTweets);
+      const users: UserObj = R.indexBy('id_str', map(prop('user'), tweets));
+      const thLookupTweets = toTh(tweets);
+      // enqueueUserStg('queue_addUsers', values(users));
       enqueueTweetStg(queueName, thLookupTweets);
       setStg('isMidScrape', false);
     } catch (e) {
@@ -376,7 +412,7 @@ const importArchive = async (queue) => {
       getStg('userInfo'),
     ]);
     setStg('isMidScrape', true);
-    const patchedArchive = await tryFnsAsync(
+    const { users, tweets } = await tryFnsAsync(
       scrapeWorker.patchArchive,
       patchArchive,
       auth,
@@ -384,13 +420,39 @@ const importArchive = async (queue) => {
       queue
     );
     const toTh = saferTweetMap(archToTweet);
-    const thArchiveTweets = toTh(patchedArchive);
+    const thArchiveTweets = toTh(tweets);
+    // enqueueUserStg('queue_addUsers', values(users));
     enqueueTweetStg('queue_addTweets', thArchiveTweets);
     setStg('isMidScrape', false);
   } catch (e) {
     console.error("couldn't importArchive ", e);
     setStg('isMidScrape', false);
   }
+};
+
+const importUserQueue = async (queue) => {
+  try {
+    setStg('isMidStore', true);
+    await idbWorker.workerImportUsers(queue);
+    setStg('isMidStore', false);
+  } catch (e) {
+    console.error("couldn't importUserQueue ", e);
+    setStg('isMidStore', false);
+  }
+};
+
+// remove tweets in the remove queue
+const removeUserQueue = async (queue) => {
+  // await removeTweets(db, queue);
+  try {
+    setStg('isMidStore', true);
+    await idbWorker.workerRemoveUsers(queue);
+    setStg('isMidStore', false);
+  } catch (e) {
+    console.error("couldn't removeUserQueue ", e);
+    setStg('isMidStore', false);
+  }
+  // dequeueWorkQueueStg('queue_removeTweets', R.length(queue)); // need to empty the working queue after using it
 };
 
 const importTweetQueue = async (queue) => {
@@ -515,26 +577,34 @@ const getSearchParams = async () => {
 const genericSeek = async (query) => {
   // const isMidSearch = getStg('isMidSearch')
   // console.trace(`seek ${query}`);
-  if (await getStg('isMidSearch')) return;
   const { accsShown, filters } = await getSearchParams();
-  console.time(`${query} seek`);
+  console.time(`${query} genericSeek`);
   const searchResults = await searchWorker.seek(
     filters,
     accsShown,
     n_tweets_results,
     query
   );
-  console.timeEnd(`${query} seek`);
-  setStg('isMidSearch', false);
+  console.timeEnd(`${query} genericSeek`);
   return searchResults;
 };
-
+let isMidSearch = false;
 const seek = async ({ query }) => {
-  // const isMidSearch = getStg('isMidSearch')
-  // console.trace(`seek ${query}`);
+  // if (await getStg('isMidSearch')) return [];
+  // await setStg('isMidSearch', true);
+  console.log('isMidSearch', { isMidSearch });
+  if (isMidSearch) {
+    return;
+  }
+  isMidSearch = true;
+  setTimeout(() => (isMidSearch = false), 3000);
   const searchResults = await genericSeek(query);
-  await setStg('search_results', searchResults);
-  return map(prop('id'), searchResults);
+  await setStg('search_results', searchResults).then((x) => {
+    isMidSearch = false;
+  });
+  isMidSearch = false;
+  // await setStg('isMidSearch', false);
+  // return map(prop('id'), searchResults);
 };
 
 const contextualSeek = async ({ query }) => {
@@ -619,7 +689,7 @@ const doSearchApi = async ({ query }) => {
     return [];
   }
   const auth = await getStg('auth');
-  const apiResults = await tryFnsAsync(
+  const { users, tweets } = await tryFnsAsync(
     scrapeWorker.searchAPI,
     searchAPI,
     auth,
@@ -631,7 +701,7 @@ const doSearchApi = async ({ query }) => {
       return { tweet };
     })
   );
-  const res = toTh(apiResults);
+  const res = toTh(tweets);
   setStg('api_results', res);
   return res;
 };
@@ -684,9 +754,14 @@ const updateTimeline = ({}) => emitDoSmallScrape();
 /* BG flow */
 // Listen for auth and store it. simple.
 //const webRequestPermitted$ = permissions$.thru(
+const storageChange$ = makeStorageChangeObs();
+const subWorkQueue = subWorkQueueStg(storageChange$);
 
-const webRequestPermission$ = makeInitStgObs('webRequestPermission');
-// const webRequestPermission$ = makeInitStgObs('webRequestPermission');
+const webRequestPermission$ = makeInitStgObs(
+  storageChange$,
+  'webRequestPermission'
+);
+// const webRequestPermission$ = makeInitStgObs(storageChange$, 'webRequestPermission');
 webRequestPermission$.log('webRequestPermission$');
 const auth$ = webRequestPermission$
   .filter((x) => x)
@@ -760,14 +835,14 @@ subObs({ incomingAccount$ }, onIncomingAccount);
 // we need userinfo and auth to do these
 const doRefreshIdb$ = userInfo$
   .take(1)
-  .flatMapLatest((_) => makeInitStgObs('doRefreshIdb'))
+  .flatMapLatest((_) => makeInitStgObs(storageChange$, 'doRefreshIdb'))
   .filter((x) => x);
 doRefreshIdb$.log('doRefreshIdb$');
 subObs({ doRefreshIdb$ }, doRefreshIdb);
 
 // const doBigTweetScrape$ = userInfo$
 //   .take(1)
-//   .flatMapLatest((_) => makeInitStgObs('doBigTweetScrape'))
+//   .flatMapLatest((_) => makeInitStgObs(storageChange$, 'doBigTweetScrape'))
 //   .filter((x) => x)
 //   .throttle(500);
 const doBigTweetScrape$ = Kefir.fromEvents(window, 'doBigTweetScrape');
@@ -775,7 +850,7 @@ subObs({ doBigTweetScrape$ }, doBigTweetScrape);
 
 // const doSmallTweetScrape$ = userInfo$
 // .take(1)
-// .flatMapLatest((_) => makeInitStgObs('doSmallTweetScrape'))
+// .flatMapLatest((_) => makeInitStgObs(storageChange$, 'doSmallTweetScrape'))
 // .filter((x) => x)
 // .throttle(500);
 const doSmallTweetScrape$ = Kefir.fromEvents(window, 'doSmallTweetScrape');
@@ -788,26 +863,29 @@ subWorkQueue('queue_addTweets', importTweetQueue);
 subWorkQueue('queue_refreshTweets', refreshTweetQueue);
 subWorkQueue('queue_removeTweets', removeTweetQueue);
 subWorkQueue('queue_tempArchive', importArchive);
+subWorkQueue('queue_addUsers', importUserQueue);
+subWorkQueue('queue_removeUsers', removeUserQueue);
 
-const doIndexUpdate$ = makeInitStgObs('doIndexUpdate').filter((x) => x);
+const doIndexUpdate$ = makeInitStgObs(storageChange$, 'doIndexUpdate').filter(
+  (x) => x
+);
 subObs({ doIndexUpdate$ }, doIndexUpdate);
 
 const indexUpdated$ = Kefir.fromEvents(window, 'indexUpdated');
 subObs({ indexUpdated$ }, (_) => onIndexUpdated());
 
-const query$ = makeInitStgObs('query');
-const contextQuery$ = makeInitStgObs('contextQuery');
+const query$ = makeInitStgObs(storageChange$, 'query');
+const contextQuery$ = makeInitStgObs(storageChange$, 'contextQuery');
 query$.log('query$');
 contextQuery$.log('contextQuery$');
 subObs({ query$ }, (query) => seek({ query }));
 subObs({ contextQuery$ }, (query) => contextualSeek({ query }));
 
-const isMidSearch$ = makeInitStgObs('isMidSearch');
+const isMidSearchTrue$ = makeInitStgObs(storageChange$, 'isMidSearch')
+  .filter((x) => x)
+  .delay(2000 * 5);
 // just to make sure isMidSearch$ never gets stuck
-subObs(
-  { isMidSearch$: isMidSearch$.filter((x) => x).delay(2000 * 5) },
-  setStg('isMidSearch', false)
-);
+subObs({ isMidSearchTrue$ }, () => setStg('isMidSearch', false));
 // const msg$ = makeGotMsgObs().map(prop('m'));
 // const msgStream = makeMsgStream(msg$);
 // const apiQuery$ = msgStream('apiQuery').map(prop('query'));
@@ -823,12 +901,12 @@ subObs(
 // const accountsUpdate$ = Kefir.merge([incomingAccounts$])
 // // const accountsUpdate$ = Kefir.merge([removeAccount$, incomingAccounts$])
 // subObs({ accountsUpdate$ }, setStg('activeAccounts'));
-const optionsChange$ = makeStorageChangeObs().filter(
-  propEq('itemName', 'options')
-);
+const optionsChange$ = storageChange$.filter(propEq('itemName', 'options'));
 
 const _makeInitOptionsObs = makeInitOptionsObs(optionsChange$);
-const accounts$ = makeInitStgObs('activeAccounts').map(defaultTo([]));
+const accounts$ = makeInitStgObs(storageChange$, 'activeAccounts').map(
+  defaultTo([])
+);
 accounts$.log('accounts$');
 const accsShown$ = (accounts$.map(
   filter(either(pipe(prop('showTweets'), isNil), propEq('showTweets', true)))
