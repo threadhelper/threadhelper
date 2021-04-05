@@ -39,7 +39,7 @@ import {
   updateQuery,
 } from './bg/twitterScout';
 import { makeAuthObs } from './bg/auth';
-import { choosePatchUrl } from './bg/updateManager';
+import { choosePatchUrl, uninstallUrl } from './bg/updateManager';
 import {
   apiSearchToTweet,
   apiToTweet,
@@ -1151,9 +1151,7 @@ const onUpdated = async (previousVersion) => {
 };
 
 if (!DEBUG) {
-  chrome.runtime.setUninstallURL(
-    'https://docs.google.com/forms/d/e/1FAIpQLSf2s5y8tIFEQj4dIyk55QXS0DQmHQ_cmspmJmKNTslISOJ6oA/viewform'
-  );
+  chrome.runtime.setUninstallURL(uninstallUrl);
 }
 
 // chrome.runtime.onSuspend.addListener(function () {

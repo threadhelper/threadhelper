@@ -171,14 +171,20 @@ type TweetDisplayProps = {
   title: string;
   results: TweetResult[];
   emptyMsg: string | JSX.Element;
+  onMouseEnter: () => {};
 };
-function TweetDisplay({ title, results, emptyMsg }: TweetDisplayProps) {
+function TweetDisplay({
+  title,
+  results,
+  emptyMsg,
+  onMouseEnter,
+}: TweetDisplayProps) {
   return (
     <>
       <div class="text-right text-gray-500 my-1 px-3">
         <span class="hover:text-mainTxt hover:underline">{title}</span>
       </div>
-      <div class="searchTweets">
+      <div class="searchTweets" onMouseEnter={onMouseEnter}>
         {isEmpty(results) ? (
           <span class="px-3">{emptyMsg}</span>
         ) : (
@@ -268,14 +274,23 @@ const SearchResMsg = () => {
 function GenericSearchResults({ stgName }) {
   const [stgSearchResults, setStgSearchResults] = useStorage(stgName, []);
   const [displayStgRes, setDisplayStgRes] = useState([]);
+  const [metricsRequested, setMetricsRequested] = useState(false);
   const [res, setRes] = useThrottle([], 200);
   const auth = useContext(AuthContext);
   // const [res, setRes] = useState(results);
   const [searchMode, setSearchMode] = useOption('searchMode');
 
   useEffect(() => {
-    return tryApiMetricsFetch(auth, prepTweets(stgSearchResults), setRes);
+    setMetricsRequested(false);
+    // return tryApiMetricsFetch(auth, prepTweets(stgSearchResults), setRes);
   }, [auth, stgSearchResults]);
+
+  useEffect(() => {
+    if (metricsRequested) {
+      console.log('[DEBUG] GenericSearchResults getting metrics');
+      return tryApiMetricsFetch(auth, prepTweets(stgSearchResults), setRes);
+    }
+  }, [metricsRequested]);
 
   useEffect(() => {
     setRes([]);
@@ -291,6 +306,7 @@ function GenericSearchResults({ stgName }) {
           ? 'Semantic search results:'
           : ''
       }
+      onMouseEnter={(_) => setMetricsRequested(true)}
       // slice because stgSearchResults are the ones that show up quickly before api metrics kick in
       results={
         isEmpty(res)

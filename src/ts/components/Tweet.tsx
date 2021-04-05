@@ -334,7 +334,8 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
   // const [auth, setAuth] = useStorage('auth', null);
   const [copyText, setCopyText] = useState('copy');
   const [_tweet, setTweet] = useState(tweet);
-  const [showActions, setShowActions] = useState(true);
+  const [showActions, setShowActions] = useState(false);
+  // const [showActions, setShowActions] = useState(true);
   const [profilePicSrc, setProfilePicSrc] = useState(() => {
     return prop('profile_image', tweet) ?? defaultProfilePic;
   });
@@ -382,8 +383,8 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
   return (
     <div
       class="px-4 py-3 border-b border-borderBg transition-colors duration-200 cursor-pointer hover:bg-hoverBg"
-      // onMouseEnter={(_) => setShowActions(true)}
-      // onMouseLeave={(_) => setShowActions(false)}
+      onMouseEnter={(_) => setShowActions(true)}
+      onMouseLeave={(_) => setShowActions(false)}
     >
       <div class="flex">
         <div class="mr-3">
