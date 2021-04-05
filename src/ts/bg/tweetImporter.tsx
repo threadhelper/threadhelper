@@ -321,9 +321,15 @@ export const assocUserProps = (tweet: thTweet, user: User) => {
     default_pic_url;
   return pipe(
     () => tweet,
-    R.assoc('username', prop('screen_name', user)),
-    R.assoc('user_id', prop('id_str', user)),
-    R.assoc('name', prop('name', user)),
+    R.when(
+      (_) => R.has('screen_name', user),
+      R.assoc('username', prop('screen_name', user))
+    ),
+    R.when(
+      (_) => R.has('id_str', user),
+      R.assoc('user_id', prop('id_str', user))
+    ),
+    R.when((_) => R.has('name', user), R.assoc('name', prop('name', user))),
     R.assoc('profile_image', picUrl)
   )();
 };
