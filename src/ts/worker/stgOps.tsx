@@ -100,13 +100,16 @@ export const makeTweetResponse = curry(
     const db = await db_promise;
     const tweet = await dbGet(db, 'tweets', res.ref);
     const userId = prop('user_id', tweet);
+    console.log('makeTweetResponse', { tweet, userId });
     if (userId) {
       const user = await dbGet(db, 'users', userId);
-      const tweetResp = {
-        tweet: assocUserProps(tweet, user),
-        score: res.score,
-      };
-      return tweetResp;
+      if (!isNil(user)) {
+        const tweetResp = {
+          tweet: assocUserProps(tweet, user),
+          score: res.score,
+        };
+        return tweetResp;
+      }
     }
     return { tweet, score: res.score };
   }

@@ -129,7 +129,9 @@ toggleDebug(window, DEBUG);
 (Kefir.Property.prototype as any).currentValue = currentValue;
 // log can contain the name of the operations done, arguments, succcess or not, time
 const bgOpLog = (op: string) => {
-  enqueueStg('bgOpLog', [op]);
+  if (DEBUG) {
+    enqueueStg('bgOpLog', [op]);
+  }
 };
 
 // Stream clean up
@@ -304,15 +306,14 @@ const doBigTweetScrape = async (_) => {
       bookmarksRes,
       usersToStore: values(R.mergeLeft(timelineRes.users, bookmarksRes.users)),
     });
-    // enqueueUserStg(
-    //   'queue_addUsers',
-    //   values(R.mergeLeft(timelineRes.users, bookmarksRes.users))
-    // );
+    enqueueUserStg(
+      'queue_addUsers',
+      values(R.mergeLeft(timelineRes.users, bookmarksRes.users))
+    );
     enqueueTweetStg(
       'queue_addTweets',
       R.concat(timelineRes.tweets, bookmarksRes.tweets)
     );
-    // setStg('doBigTweetScrape', false);
     await setStgPath(
       ['activeAccounts', userInfo.id_str, 'lastGotTimeline'],
       Date.now()
@@ -352,18 +353,24 @@ const doSmallTweetScrape = async (_) => {
       bookmarksRes,
       usersToStore: values(R.mergeLeft(timelineRes.users, bookmarksRes.users)),
     });
-    // enqueueUserStg(
-    //   'queue_addUsers',
-    //   values(R.mergeLeft(timelineRes.users, bookmarksRes.users))
-    // );
+    enqueueUserStg(
+      'queue_addUsers',
+      values(R.mergeLeft(timelineRes.users, bookmarksRes.users))
+    );
     enqueueTweetStg(
       'queue_addTweets',
       R.concat(timelineRes.tweets, bookmarksRes.tweets)
     );
     // setStg('doSmallTweetScrape', false);
     setStg('isMidScrape', false);
+    bgOpLog(
+      `[doSmallTweetScrape] yielded ${R.length(
+        timelineRes.tweets
+      )} tweets. Success.`
+    );
   } catch (e) {
     console.error('doSmallTweetScrape failed', { e });
+    bgOpLog(`[doSmallTweetScrape] Failed.`);
     setStg('isMidScrape', false);
   }
 };
@@ -387,7 +394,7 @@ const genericLookupAPI = curry(
       );
       const users: UserObj = R.indexBy('id_str', map(prop('user'), tweets));
       const thLookupTweets = toTh(tweets);
-      // enqueueUserStg('queue_addUsers', values(users));
+      enqueueUserStg('queue_addUsers', values(users));
       enqueueTweetStg(queueName, thLookupTweets);
       setStg('isMidScrape', false);
     } catch (e) {
@@ -421,7 +428,7 @@ const importArchive = async (queue) => {
     );
     const toTh = saferTweetMap(archToTweet);
     const thArchiveTweets = toTh(tweets);
-    // enqueueUserStg('queue_addUsers', values(users));
+    enqueueUserStg('queue_addUsers', values(users));
     enqueueTweetStg('queue_addTweets', thArchiveTweets);
     setStg('isMidScrape', false);
   } catch (e) {

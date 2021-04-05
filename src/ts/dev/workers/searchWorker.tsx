@@ -26,7 +26,7 @@ export async function seek(
   // console.time(`[TIME] worker seek`);
   const res = await search(filters, accsShown, resultN, index, query);
   const response = await makeSearchResponse(db_promise, res);
-  // console.log('worker seek', { res, response, index });
+  console.log('worker seek', { res, response, index });
   // console.timeEnd(`[TIME] worker seek`);
   return response;
 }
