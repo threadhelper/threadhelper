@@ -352,9 +352,9 @@ const getCursor = (cursorType: string) =>
 const getBottomCursor = getCursor('bottom');
 const getTopCursor = getCursor('top');
 //stop if got enough tweets or if max_id is null (twitter not giving any more)
-const stop_condition = (_res, res: Tweet[], count) => {
+const stop_condition = (_res, res: ScoutUserAndTweets, count) => {
   const updateSize = R.length(unpackApiTweets(_res));
-  const totalSize = R.length(res);
+  const totalSize = R.length(prop('tweets', res));
   console.log('stop_condition', {
     updateSize,
     totalSize,
@@ -472,16 +472,13 @@ const getQTs = curry(
       filter(pipe(isNil, not)),
       R.uniq
     )();
-    console.log('[DEBUG] getQTs', { qt_ids, tweets });
     const local_qts = values(R.pick(qt_ids, tweets));
-    console.log('[DEBUG] getQTs', { local_qts, qt_ids, tweets });
     const outside_qts: Tweet[] = await pipe(
       () => local_qts,
       R.keys,
       R.difference(qt_ids),
       tweetLookupQuery(auth)
     )();
-    console.log('[DEBUG] getQTs', { local_qts, outside_qts, qt_ids, tweets });
     return indexBy(prop('id_str'), R.concat(local_qts, outside_qts));
   }
 );
@@ -503,18 +500,11 @@ const getUsers = curry(
 
 // finds non-RT tweet in archive, looks it up and takes its user if it exists, if not tries another one
 const getArchiveOwner = async (auth, archive: ArchTweet[]): Promise<User> => {
-  console.log('getArchiveOwner', { auth, archive });
   for (const t of archive) {
     if (pipe(getArchUserId, prop('id_str'), isNil)(t)) {
-      console.log('ownTweet', { t });
       const ownTweetRes = await tweetLookupQuery(auth, [t.id_str]);
-      console.log('ownTweetRes', { ownTweetRes });
       const ownTweet = ownTweetRes[0];
       if (isNil(ownTweet)) {
-        console.log("ownTweet isn't there anymore, trying another one", {
-          t,
-          ownTweet,
-        });
         break;
       } else {
         const ownUser = ownTweet.user;

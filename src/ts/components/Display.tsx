@@ -31,6 +31,19 @@ import { pre_render_n } from '../utils/params';
 const prepTweets = (list: TweetResult[] | null): SearchResult[] =>
   filter(pipe(prop('tweet'), isNil, not), defaultTo([], list));
 
+function useEffectTimeout(fn, delay) {
+  let isMounted = true;
+  const timeOutId = setTimeout(() => {
+    if (isMounted) {
+      fn();
+    }
+  }, 500);
+  return () => {
+    isMounted = false;
+    clearTimeout(timeOutId);
+  };
+}
+
 function tryApiMetricsFetch(auth, results, setResults) {
   let isMounted = true;
   const timeOutId = setTimeout(() => {
@@ -170,7 +183,7 @@ type TweetDisplayProps = {
   title: string;
   results: TweetResult[];
   emptyMsg: string | JSX.Element;
-  onMouseEnter: () => {};
+  onMouseEnter: (_: any) => void;
 };
 function TweetDisplay({
   title,
@@ -196,15 +209,23 @@ function TweetDisplay({
 //
 
 function GenericIdleDisplay({ stgName, title }) {
-  // const auth = useContext(AuthContext);
+  // const [metricsRequested, setMetricsRequested] = useState(false);
   const [stgIdleTweets, setStgIdleTweets] = useStorage(stgName, []);
 
   const [res, setRes] = useState([]);
   const auth = useContext(AuthContext);
 
   useEffect(() => {
+    // setMetricsRequested(false);
     return tryApiMetricsFetch(auth, prepTweets(stgIdleTweets), setRes);
   }, [auth, stgIdleTweets]);
+
+  // useEffect(() => {
+  //   if (metricsRequested) {
+  //     console.log('[DEBUG] GenericSearchResults getting metrics');
+  //     return tryApiMetricsFetch(auth, prepTweets(stgIdleTweets), setRes);
+  //   }
+  // }, [metricsRequested]);
 
   useEffect(() => {
     console.log('GenericIdleDisplay', { res, auth, stgIdleTweets, stgName });
@@ -214,6 +235,7 @@ function GenericIdleDisplay({ stgName, title }) {
   return (
     <TweetDisplay
       title={title}
+      onMouseEnter={(_) => null}
       results={isEmpty(res) ? prepTweets(stgIdleTweets) : prepTweets(res)}
       emptyMsg={'No tweets yet!'}
     />
@@ -281,6 +303,9 @@ function GenericSearchResults({ stgName }) {
 
   useEffect(() => {
     setMetricsRequested(false);
+    return useEffectTimeout(() => {
+      setRes(stgSearchResults);
+    }, 500);
     // return tryApiMetricsFetch(auth, prepTweets(stgSearchResults), setRes);
   }, [auth, stgSearchResults]);
 
