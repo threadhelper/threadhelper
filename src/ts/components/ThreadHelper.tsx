@@ -48,6 +48,7 @@ const updateFeedDisplay = (
       return DisplayMode.Idle;
     case 'typingApiSearch':
       return DisplayMode.Api;
+    // return DisplayMode.ApiWaiting;
     case 'submitApiSearch':
       // return DisplayMode.ApiWaiting;
       return DisplayMode.Api;

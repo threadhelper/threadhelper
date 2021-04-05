@@ -11,6 +11,7 @@ import Tooltip, { StgFlagTooltip } from './Tooltip';
 
 import cx from 'classnames';
 import { useThrottle } from '@react-hook/throttle';
+import { useDebounce } from '@react-hook/debounce';
 
 var DEBUG = process.env.NODE_ENV != 'production';
 
@@ -73,7 +74,7 @@ function transformQuery(query, context) {
 
 export function ApiSearchBar() {
   const inputObj = useRef(null);
-  const [value, setValue] = useThrottle('', 1, true);
+  const [value, setValue] = useDebounce('', 800);
   const [showSearchBar, setShowSearchBar] = useState(false);
   const { feedDisplayMode, dispatchFeedDisplayMode } = useContext(
     FeedDisplayMode
@@ -182,7 +183,7 @@ export function ApiSearchBar() {
               //   // border: '0px',
               //   color: 'var(--main-txt-color)',
               // }}
-              value={value}
+              // value={value}
               onInput={(e) =>
                 typing(defaultTo('', path(['target', 'value'], e)))
               }
