@@ -1,7 +1,7 @@
 {
   "name": "threadhelper",
-  "version": "0.3.7",
-  "publicVersion": "0.3.7",
+  "version": "0.3.8",
+  "publicVersion": "0.3.8",
   "description": "ThreadHelper, more recall, less tabs.",
   "main": "index.js",
   "scripts": {
@@ -95,6 +95,7 @@
     "promise-worker": "^2.0.1",
     "ramda": "^0.27.1",
     "react-ga": "^3.3.0",
+    "react-timeout": "^2.0.1",
     "react-tooltip": "^4.2.13",
     "remeda": "0.0.27",
     "serialize-javascript": "^5.0.1",
