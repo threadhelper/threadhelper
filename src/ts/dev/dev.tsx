@@ -16,7 +16,7 @@ import {
 } from '../utils/dutils';
 import { nullFn } from '../utils/putils';
 import { updateTheme } from '../utils/wutils';
-import { dbOpen } from '../worker/idb_wrapper';
+import { dbOpen } from '../bg/idb_wrapper';
 import Scraper from './components/Scraper';
 import Search from './components/Search';
 import Storage from './components/Storage';

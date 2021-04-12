@@ -1,10 +1,7 @@
 import { h } from 'preact';
 import { useRef } from 'preact/hooks';
 import { defaultTo } from 'ramda'; // Logic, Type, Relation, String, Math
-import { useStgPath } from '../hooks/useStorage';
-import { msgBG } from '../utils/dutils';
 import { csEvent } from '../utils/ga';
-import { FilterButton } from './Console';
 
 const debug = false;
 
@@ -26,7 +23,11 @@ export function DropdownMenu({
       defaultTo(true, itemClickClose) ? closeMenu() : null;
     };
     return (
-      <a href="#" className="p-3 hover:bg-hoverBg flex items-center text-mainTxt" onClick={onClickItem}>
+      <a
+        href="#"
+        className="p-3 hover:bg-hoverBg flex items-center text-mainTxt"
+        onClick={onClickItem}
+      >
         <span className="icon-button">{props.leftIcon}</span>
         {props.id}
         <span className="icon-right fill-current">{props.rightIcon}</span>
@@ -38,39 +39,13 @@ export function DropdownMenu({
     return process.env.NODE_ENV == 'development' ? DropdownItem(props) : null;
   }
 
-  function FilterItem(props) {
-    const [filterItem, setFilterItem] = useStgPath(props.path, true);
-    const onClickItem = (e) => {
-      csEvent('User', `${name} th-dropdown click`, props.screen_name);
-      props.effect();
-      defaultTo(true, itemClickClose) ? closeMenu() : null;
-    };
-
-    return (
-      <a href="#" className="box-content menu-item" onClick={onClickItem}>
-        {/* <span className="icon-button">{props.leftIcon}</span> */}
-        <FilterButton
-          name={props.screen_name}
-          useFilter={filterItem}
-          setFilter={setFilterItem}
-          Icon={props.leftIcon}
-        />
-        {props.screen_name}
-        <span
-          className="x-icon"
-          onClick={(_) => msgBG({ type: 'remove-account', id: props.id })}
-        >
-          {'X'}
-        </span>
-      </a>
-    );
-  }
   return (
     <div>
-      <div 
-        className="bg-mainBg z-30 rounded-md shadow-highlighted absolute top-full left-0" 
-        style={{width: '150px'}}
-        ref={dropdownRef}>
+      <div
+        className="bg-mainBg z-30 rounded-md shadow-highlighted absolute top-full left-0"
+        style={{ width: '150px' }}
+        ref={dropdownRef}
+      >
         {defaultTo([], componentItems).map((Item) => (
           <Item />
         ))}
@@ -104,7 +79,10 @@ export function DropdownMenu({
           )
         )}
       </div>
-      <div class="fixed inset-0 z-10 cursor-default" onClick={() => closeMenu()}/>
+      <div
+        class="fixed inset-0 z-10 cursor-default"
+        onClick={() => closeMenu()}
+      />
     </div>
   );
 }

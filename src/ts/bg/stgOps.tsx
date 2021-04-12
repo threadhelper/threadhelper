@@ -15,7 +15,7 @@ import {
   prop,
   propSatisfies,
 } from 'ramda'; // Function
-import { assocUserProps } from '../bg/tweetImporter';
+import { assocUserProps } from './tweetImporter';
 import { StoreName, thTwitterDB } from '../types/dbTypes';
 import { IndexSearchResult, SearchResult } from '../types/msgTypes';
 import { IndexTweet, thTweet } from '../types/tweetTypes';

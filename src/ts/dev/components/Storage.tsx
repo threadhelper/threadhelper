@@ -31,15 +31,15 @@ import {
   dbOpen,
   dbPutMany,
   dbClear,
-} from '../../worker/idb_wrapper';
-import { addToIndex, makeIndex } from '../../worker/nlp';
+} from '../../bg/idb_wrapper';
+import { addToIndex, makeIndex } from '../../bg/nlp';
 import { Query } from '../dev';
 import { userInfo } from '../data/user';
 import { thTweet } from '../../types/tweetTypes';
 import { IDBPDatabase } from 'idb';
 import { StoreName, thTwitterDB } from '../../types/dbTypes';
 import { Status } from 'twitter-d';
-import { storeIndexToDb, updateIndexAndStoreToDb } from '../../worker/stgOps';
+import { storeIndexToDb, updateIndexAndStoreToDb } from '../../bg/stgOps';
 import {
   cbTimeFn,
   importTweets,

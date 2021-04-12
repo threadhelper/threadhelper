@@ -7,7 +7,12 @@ export interface UserObj {
   [id: string]: User;
 }
 
-interface ScoutUserAndTweets {
+export interface ScoutUserAndTweets {
+  users: UserObj;
+  tweets: Status[];
+}
+
+export interface UserAndThTweets {
   users: UserObj;
   tweets: Status[];
 }
