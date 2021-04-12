@@ -20,3 +20,11 @@ export const choosePatchUrl = (previousVersion) => {
     return null;
   }
 };
+
+export const updateNeedRefresh = (previousVersion) => {
+  if (compareVersions.compare(previousVersion, '0.3', '<')) {
+    return true;
+  } else {
+    return false;
+  }
+};

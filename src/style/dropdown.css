@@ -4,8 +4,8 @@
   display: flex;
   -webkit-box-orient: vertical;
   -webkit-box-direction: normal;
-  -ms-flex-direction: column;
-  flex-direction: column;
+      -ms-flex-direction: column;
+          flex-direction: column;
   --border-radius: 3px;
   --border: 1px solid #474a4d;
   --speed: 200ms;
@@ -35,15 +35,15 @@
   display: flex;
   -webkit-box-orient: horizontal;
   -webkit-box-direction: normal;
-  -ms-flex-direction: row;
-  flex-direction: row;
+      -ms-flex-direction: row;
+          flex-direction: row;
   -webkit-box-pack: justify;
-  -ms-flex-pack: justify;
-  justify-content: space-between;
+      -ms-flex-pack: justify;
+          justify-content: space-between;
   height: 30px;
   -webkit-box-align: center;
-  -ms-flex-align: center;
-  align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
   border-radius: var(--border-radius);
   /*transition: background var(--speed);*/
   padding: 0.5rem;
@@ -71,8 +71,8 @@
 
 .th-dropdown .icon-img {
   -webkit-box-flex: 0;
-  -ms-flex-positive: 0;
-  flex-grow: 0;
+      -ms-flex-positive: 0;
+          flex-grow: 0;
   height: 30px;
   border-radius: 50%;
   cursor: pointer;
@@ -85,15 +85,5 @@
 #settings-menu .th-dropdown {
   right: 0%;
   /*transform: translateX(-75%);*/
-}
-
-#accounts-menu {
-  position: relative;
-}
-
-#accounts-menu .th-dropdown {
-  top: 100%;
-  -webkit-transform: translate(-50%);
-  transform: translate(-50%);
 }
 /*# sourceMappingURL=dropdown.css.map */

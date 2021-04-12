@@ -10,24 +10,12 @@
 */
 //
 import '@babel/polyfill';
+import 'chrome-extension-async';
 import Kefir, { Observable, Property, Subscription } from 'kefir';
 import { h, render } from 'preact';
 import 'preact/debug';
 import 'preact/devtools';
-import { MsgObs, QueryObs, StorageChangeObs } from './hooks/BrowserEventObs';
-import * as R from 'ramda';
-import {
-  and,
-  curry,
-  defaultTo,
-  equals,
-  isEmpty,
-  isNil,
-  not,
-  pipe,
-  prop,
-  propEq,
-} from 'ramda'; // Function
+import { and, curry, equals, isNil, not, prop, propEq } from 'ramda'; // Function
 import * as css from '../style/cs.css';
 import * as pcss from '../styles.css';
 import ThreadHelper from './components/ThreadHelper';
@@ -40,8 +28,6 @@ import {
   makeDeleteEventStream,
   makeLastClickedObs,
   makeRemoveBookmarkStream,
-  makeReplyObs,
-  makeRoboStream,
 } from './domInterface/inputsHandler';
 import {
   injectDummy,
@@ -52,15 +38,10 @@ import {
   makeSidebarCompose,
   makeSidebarHome,
   removeSearchBar,
-  resizeSidebar,
-  ttSidebarObserver,
 } from './domInterface/sidebarHandler';
-import {
-  makeBgColorObs,
-  makeLastStatusObs,
-  makeThemeObs,
-} from './domInterface/tabsHandler';
+import { makeLastStatusObs, makeThemeObs } from './domInterface/tabsHandler';
 import * as window from './global';
+import { MsgObs, QueryObs, StorageChangeObs } from './hooks/BrowserEventObs';
 import { UrlMsg } from './types/msgTypes';
 import { curProp } from './types/types';
 import {
@@ -74,31 +55,9 @@ import {
 } from './utils/dutils';
 import { currentValue, inspect, nullFn, toggleDebug } from './utils/putils';
 import { getMode, updateTheme } from './utils/wutils';
-import {
-  WranggleRpc,
-  Relay,
-  PostMessageTransport,
-  BrowserExtensionTransport,
-} from '@wranggle/rpc';
-import 'chrome-extension-async';
 
 console.log('hi pcss', pcss);
 console.log('hi css', css);
-
-console.log('chrome.storage', { chrome });
-// chrome.storage.onChanged.addListener(function (changes, namespace) {
-//   for (var key in changes) {
-//     var storageChange = changes[key];
-//     console.log(
-//       'Storage key "%s" in namespace "%s" changed. ' +
-//         'Old value was "%s", new value is "%s".',
-//       key,
-//       namespace,
-//       storageChange.oldValue,
-//       storageChange.newValue
-//     );
-//   }
-// });
 
 // Project business
 var DEBUG = process.env.NODE_ENV != 'production';
@@ -140,21 +99,11 @@ const deactivateSidebar = (bar: Element) => {
   render(null, bar);
 };
 // Webpage events
-const makeIdObsMsg = curry((lastClickedId$: curProp<any>, type) => {
-  return { type: type, id: lastClickedId$.currentValue() };
-});
-const getBgColor = (x: HTMLElement) => x.style.backgroundColor;
-const minIdleTime = 3000;
 // Effects
 const handlePosting = () => {
   msgBG({ type: 'update-tweets' });
 }; // handle twitter posting actions like tweets, rts and deletes
 
-const reqSearch = R.pipe<any, string, void>(defaultTo(''), (query) => {
-  // console.log('reqSearch', { query });
-  // msgBG({ type: 'search', query });
-  // setStg('query', query);
-});
 // Stream clean up
 const subscriptions: Subscription[] = [];
 const rememberSub = (sub: Subscription) => {
@@ -189,24 +138,8 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
   const mode$ = urlChange$.map(getMode);
   //      storage
   const storageChange$ = makeStorageChangeObs();
-  console.log('storageChange$', { storageChange$ });
-  const latest$ = storageChange$
-    .filter((x: { itemName: string }) => x.itemName == 'latest_tweets')
-    .map(prop('newVal'));
-  const sync$ = storageChange$
-    .filter((x: { itemName: string }) => x.itemName == 'sync')
-    .map(prop('newVal'));
-  const syncDisplay$ = storageChange$
-    .filter((x: { itemName: string }) => x.itemName == 'syncDisplay')
-    .map(prop('newVal'))
-    .toProperty(() => '');
   //      webpage events
   //          theme
-  const bgColor$ = makeBgColorObs();
-  // const theme$ = bgColor$
-  //   .map(getBgColor)
-  //   .skipDuplicates()
-  //   .toProperty(() => getBgColor(document.body));
   const theme$ = makeThemeObs();
   //          tweet ids
   const lastStatus$ = makeLastStatusObs(mode$);
@@ -216,18 +149,12 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
     .filter((x) => !isNil(x))
     .toProperty() as unknown) as curProp<string>;
   subObs(lastClickedId$, setStg('lastClickedId'));
-  const makeIdMsg = makeIdObsMsg(lastClickedId$); // function
   //          actions
   const actions$ = makeActionStream(); // post, rt, unrt
   actions$.log('actions$');
   const post$ = actions$.filter((x) => x == 'tweet');
   post$.log('post$');
-  subObs(post$.delay(1000), async (_) =>
-    rpcBg('post', rpcBg('updateTimeline'))
-  );
-  const replyTo$ = makeReplyObs(mode$)
-    .map(getTargetId)
-    .toProperty(() => null) as curProp<string>;
+  subObs(post$.delay(1000), async (_) => rpcBg('updateTimeline'));
   const addBookmark$ = makeAddBookmarkStream()
     .map(inspect('add bookmark'))
     .map((_) => 'add-bookmark');
@@ -246,24 +173,13 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
   subObs(delete$, async (_) =>
     rpcBg('deleteTweet', { ids: [await getStg('lastClickedId')] })
   );
-  const targetedTweetActions$ = Kefir.merge([
-    addBookmark$,
-    removeBookmark$,
-    delete$,
-  ]);
   const [composeFocus$, composeFocusOut$] = makeComposeFocusObs(); // stream for focus on compose box
-  // composeFocus$.log('composeFocus$');
-  const composeUnfocused$ = Kefir.merge([
-    composeFocusOut$.map((_) => ''),
-    urlChange$.map((_) => ''),
-  ]);
   const composeContent$ = Kefir.merge([
     composeFocus$.flatMapLatest((e: Event) =>
       makeComposeObs(e.target as HTMLElement)
     ),
     post$.map((_) => ''),
   ]).throttle(200);
-  composeContent$.log('composeContent$');
   const composeQuery$ = Kefir.merge([
     urlChange$.map((_) => ''),
     composeContent$,
@@ -278,8 +194,6 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
     value
       ? activateHomeSidebar(storageChange$, msgObs$, composeQuery$)
       : deactivateSidebar(thBarHome); //function
-  // const ttSidebar$ = ttSidebarObserver().flatten();
-  // ttSidebar$.log('ttSidebar$');
   const searchBar$ = makeSearchBarObserver();
   searchBar$.log('searchBar$');
   const floatSidebar$ = makeFloatSidebarObserver(thBarComp); // floatSidebar$ :: String || Element  // for floating sidebar in compose mode
@@ -297,21 +211,15 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
 
   // Effects from streams
   //  Actions
-  targetedTweetActions$.log('targetedTweetActions');
-  subObs(lastClickedId$, (_) => {});
-  // subObs(composeQuery$, reqSearch);
   subObs(actions$.delay(800), (_) => {
     handlePosting();
   });
-  subObs(targetedTweetActions$, pipe(makeIdMsg, msgBG));
   subObs(theme$, updateTheme);
-  theme$.log('theme$');
   subObs(floatActive$, updateFloat);
   subObs(homeActiveSafe$, updateHome);
   subObs(storageChange$, nullFn);
   subObs(msgObs$, nullFn);
   subObs(searchBar$, removeSearchBar);
-  // subObs(ttSidebar$, resizeSidebar);
 }
 
 // Destructor if another CS comes to the same page(is this possible?)

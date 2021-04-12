@@ -39,7 +39,11 @@ import {
   updateQuery,
 } from './bg/twitterScout';
 import { makeAuthObs } from './bg/auth';
-import { choosePatchUrl, uninstallUrl } from './bg/updateManager';
+import {
+  choosePatchUrl,
+  uninstallUrl,
+  updateNeedRefresh,
+} from './bg/updateManager';
 import {
   apiSearchToTweet,
   apiToTweet,
@@ -49,8 +53,8 @@ import {
 import { loadIndexFromIdb, updateIdxFromIdb } from './dev/storage/devStgUtils';
 import window from './global';
 import { StoreName } from './types/dbTypes';
-import { IdleMode, SearchFilters } from './types/stgTypes';
-import { thTweet, UserObj } from './types/tweetTypes';
+import { ActiveAccsType, IdleMode, SearchFilters } from './types/stgTypes';
+import { UserAndThTweets, thTweet, UserObj } from './types/tweetTypes';
 import { Credentials } from './types/types';
 import {
   compareAuths,
@@ -87,18 +91,17 @@ import {
   errorFilter,
   inspect,
   isExist,
+  nullFn,
   promiseStream,
   toggleDebug,
 } from './utils/putils';
-import { dbFilter, dbOpen } from './worker/idb_wrapper';
-import { getLatestTweets, getRandomSampleTweets } from './worker/search';
+import { dbFilter, dbOpen } from './bg/idb_wrapper';
+import { getLatestTweets, getRandomSampleTweets } from './bg/search';
 
 const createSearchWorker = createWorkerFactory(
-  () => import('./dev/workers/searchWorker')
+  () => import('./bg/searchWorker')
 );
-const createIdbWorker = createWorkerFactory(
-  () => import('./dev/workers/idbWorker')
-);
+const createIdbWorker = createWorkerFactory(() => import('./bg/idbWorker'));
 const createScrapeWorker = createWorkerFactory(
   () => import('./bg/twitterScout')
   // () => import('./dev/workers/scrapeWorker')
@@ -130,7 +133,8 @@ toggleDebug(window, DEBUG);
 // log can contain the name of the operations done, arguments, succcess or not, time
 const bgOpLog = (op: string) => {
   if (DEBUG) {
-    enqueueStg('bgOpLog', [op]);
+    const timestamp = `[${new Date().toISOString()}] `;
+    enqueueStg('bgOpLog', [timestamp + op]);
   }
 };
 
@@ -228,17 +232,18 @@ const makeUserQuery = (userQuery) => {
   return usernameMatch ? usernameMatch[2] : userQuery;
 };
 
-const doRefreshIdb = async () => {
-  console.log('[DEBUG] doRefreshIdb');
+const startRefreshIdb = async () => {
+  console.log('[DEBUG] startRefreshIdb');
   await idbWorker.resetIndex();
   const ids = await idbWorker.getAllIds(StoreName.tweets);
   enqueueStgNoDups('queue_lookupRefresh', ids);
+  bgOpLog(`[startRefreshIdb] refreshing ${R.length(ids)} tweets. Success.`);
   // setStg('doIndexUpdate', true);
 };
 
 const loopRetryScrape = genericLoopRetry(3, 1000);
 const assocUser = (userInfo) => assoc('account', prop('id_str', userInfo));
-const doBookmarkScrape = async (auth, userInfo): ScoutUserAndTweets => {
+const doBookmarkScrape = async (auth, userInfo): Promise<UserAndThTweets> => {
   const toTh = saferTweetMap(pipe(bookmarkToTweet, assocUser(userInfo)));
   try {
     const { users, tweets } = await tryFnsAsync(
@@ -253,7 +258,7 @@ const doBookmarkScrape = async (auth, userInfo): ScoutUserAndTweets => {
     return { users: [], tweets: [] };
   }
 };
-const doTimelineScrape = async (auth, userInfo): ScoutUserAndTweets => {
+const doTimelineScrape = async (auth, userInfo): Promise<UserAndThTweets> => {
   // try {
   const toTh = saferTweetMap(pipe(apiToTweet, assocUser(userInfo)));
   const { users, tweets } = await tryFnsAsync(
@@ -269,7 +274,10 @@ const doTimelineScrape = async (auth, userInfo): ScoutUserAndTweets => {
   //   return [];
   // }
 };
-const doTimelineUpdateScrape = async (auth, userInfo): ScoutUserAndTweets => {
+const doTimelineUpdateScrape = async (
+  auth,
+  userInfo
+): Promise<UserAndThTweets> => {
   const toTh = saferTweetMap(pipe(apiToTweet, assocUser(userInfo)));
   const { users, tweets } = await tryFnsAsync(
     scrapeWorker.updateQuery,
@@ -484,7 +492,7 @@ const refreshTweetQueue = async (queue) => {
     setStg('isMidRefresh', false);
   }
   setStg('doIndexUpdate', true);
-  setStg('doRefreshIdb', false);
+  setStg('startRefreshIdb', false);
 };
 
 // remove tweets in the remove queue
@@ -669,49 +677,49 @@ const getDefault = (mode) => {
   return;
 };
 
-const doUserSearch = async ({ query }) => {
-  if (
-    isEmpty(query) ||
-    (query.match(/^\/(?!from|to)/) && !query.match(/(from|to)/))
-  ) {
-    setStg('api_users', []);
-    return [];
-  }
-  const auth = await getStg('auth');
-  const usersRes = await tryFnsAsync(
-    scrapeWorker.searchUsers,
-    searchUsers,
-    auth,
-    query
-  );
-  const users = prop('users', usersRes);
-  console.log('doUserSearch', { usersRes, users });
-  setStg('api_users', users);
-  return users;
-};
+// const doUserSearch = async ({ query }) => {
+//   if (
+//     isEmpty(query) ||
+//     (query.match(/^\/(?!from|to)/) && !query.match(/(from|to)/))
+//   ) {
+//     setStg('api_users', []);
+//     return [];
+//   }
+//   const auth = await getStg('auth');
+//   const usersRes = await tryFnsAsync(
+//     scrapeWorker.searchUsers,
+//     searchUsers,
+//     auth,
+//     query
+//   );
+//   const users = prop('users', usersRes);
+//   console.log('doUserSearch', { usersRes, users });
+//   setStg('api_users', users);
+//   return users;
+// };
 
-const doSearchApi = async ({ query }) => {
-  if (isEmpty(query)) {
-    setStg('api_results', []);
-    return [];
-  }
-  const auth = await getStg('auth');
-  const { users, tweets } = await tryFnsAsync(
-    scrapeWorker.searchAPI,
-    searchAPI,
-    auth,
-    query
-  );
-  const toTh = pipe(
-    saferTweetMap(apiSearchToTweet),
-    map((tweet) => {
-      return { tweet };
-    })
-  );
-  const res = toTh(tweets);
-  setStg('api_results', res);
-  return res;
-};
+// const doSearchApi = async ({ query }) => {
+//   if (isEmpty(query)) {
+//     setStg('api_results', []);
+//     return [];
+//   }
+//   const auth = await getStg('auth');
+//   const { users, tweets } = await tryFnsAsync(
+//     scrapeWorker.searchAPI,
+//     searchAPI,
+//     auth,
+//     query
+//   );
+//   const toTh = pipe(
+//     saferTweetMap(apiSearchToTweet),
+//     map((tweet) => {
+//       return { tweet };
+//     })
+//   );
+//   const res = toTh(tweets);
+//   setStg('api_results', res);
+//   return res;
+// };
 
 const addBookmark = ({ ids }) => {
   enqueueStgNoDups('queue_lookupBookmark', ids);
@@ -814,6 +822,7 @@ const shouldDoBigTweetScrape = async (acc: FullUser) => {
   const aWeek = 1000 * 60 * 60 * 24 * 7;
   console.log('shouldDoBigTweetScrape', {
     acc,
+    activeAcc: await getStgPath(['activeAccounts', acc.id_str]),
     timeSince,
     aWeek,
     lastGotTimeline,
@@ -827,25 +836,37 @@ const dressActiveAccount = pipe(
 );
 const incomingAccount$ = userInfo$.map(dressActiveAccount).toProperty();
 // Add to a list with no duplicates of the key (so no duplicates)
-
+const addActiveAccount = (
+  _acc: User,
+  activeAccounts: ActiveAccsType
+): ActiveAccsType => {
+  const acc = R.has(prop('id_str', _acc), activeAccounts)
+    ? _acc
+    : dressActiveAccount(_acc);
+  return R.set(R.lensProp(prop('id_str', acc)), acc, activeAccounts);
+};
 const onIncomingAccount = async (acc: User) => {
   // if (!R.has('id_str', acc)) return; // it needs to have at least an id_str to be valid
   const oldAccs = await getStg('activeAccounts');
   console.log('[DEBUG] onIncomingAccount', { acc, oldAccs });
-  await modStg('activeAccounts', (olds) =>
-    R.set(R.lensProp(prop('id_str', acc)), acc, olds)
-  );
+  await modStg('activeAccounts', (olds) => addActiveAccount(acc, olds));
   // if (await shouldDoBigTweetScrape(acc)) setStgFlag('doBigTweetScrape', true);
 };
 subObs({ incomingAccount$ }, onIncomingAccount);
 
 // we need userinfo and auth to do these
-const doRefreshIdb$ = userInfo$
-  .take(1)
-  .flatMapLatest((_) => makeInitStgObs(storageChange$, 'doRefreshIdb'))
-  .filter((x) => x);
-doRefreshIdb$.log('doRefreshIdb$');
-subObs({ doRefreshIdb$ }, doRefreshIdb);
+// what does this do?
+// this starts an observer once we have userInfo
+// I think skipUntilBy does the same
+const startRefreshIdb$ = makeInitStgObs(storageChange$, 'startRefreshIdb')
+  .skipUntilBy(userInfo$)
+  .filter((x) => x != false);
+// const startRefreshIdb$ = userInfo$
+//   .take(1)
+//   .flatMapLatest((_) => makeInitStgObs(storageChange$, 'startRefreshIdb'))
+//   .filter((x) => x);
+startRefreshIdb$.log('startRefreshIdb$');
+subObs({ startRefreshIdb$ }, startRefreshIdb);
 
 // const doBigTweetScrape$ = userInfo$
 //   .take(1)
@@ -874,7 +895,7 @@ subWorkQueue('queue_addUsers', importUserQueue);
 subWorkQueue('queue_removeUsers', removeUserQueue);
 
 const doIndexUpdate$ = makeInitStgObs(storageChange$, 'doIndexUpdate').filter(
-  (x) => x
+  (x) => x != false
 );
 subObs({ doIndexUpdate$ }, doIndexUpdate);
 
@@ -889,25 +910,10 @@ subObs({ query$ }, (query) => seek({ query }));
 subObs({ contextQuery$ }, (query) => contextualSeek({ query }));
 
 const isMidSearchTrue$ = makeInitStgObs(storageChange$, 'isMidSearch')
-  .filter((x) => x)
+  .filter((x) => x != false)
   .delay(2000 * 5);
 // just to make sure isMidSearch$ never gets stuck
 subObs({ isMidSearchTrue$ }, () => setStg('isMidSearch', false));
-// const msg$ = makeGotMsgObs().map(prop('m'));
-// const msgStream = makeMsgStream(msg$);
-// const apiQuery$ = msgStream('apiQuery').map(prop('query'));
-// subObs({ apiQuery$ }, doSearchApi);
-
-// const apiReqUsers$ = apiQuery$
-//   .filter(
-//     (q) => !(isEmpty(q) || (q.match(/^\/(?!from|to)/) && !q.match(/(from|to)/)))
-//   )
-//   .map(makeUserQuery);
-// subObs({ apiReqUsers$ }, doUserSearch);
-
-// const accountsUpdate$ = Kefir.merge([incomingAccounts$])
-// // const accountsUpdate$ = Kefir.merge([removeAccount$, incomingAccounts$])
-// subObs({ accountsUpdate$ }, setStg('activeAccounts'));
 const optionsChange$ = storageChange$.filter(propEq('itemName', 'options'));
 
 const _makeInitOptionsObs = makeInitOptionsObs(optionsChange$);
@@ -927,7 +933,6 @@ const idleMode$ = _makeInitOptionsObs('idleMode') as Observable<IdleMode, any>;
 idleMode$.log('idleMode$');
 subObs({ idleMode$ }, getDefault);
 
-const searchMode$ = _makeInitOptionsObs('searchMode');
 const searchFilters$ = Kefir.merge([
   _makeInitOptionsObs('getRTs'),
   _makeInitOptionsObs('useBookmarks'),
@@ -952,8 +957,6 @@ var searchFns = {
   seek,
   getLatest,
   getRandom,
-  doUserSearch,
-  doSearchApi,
 };
 var proxyFns = {
   fetchBg,
@@ -984,24 +987,6 @@ chrome.runtime.onMessage.addListener(async function (
     sendResponse('not RPC');
     return;
   }
-  // switch (request.fnName) {
-  //   case 'webReqPermission':
-  //     const granted = await reqWebReqPermission({});
-  //     setStg('webRequestPermission', granted);
-  //     sendResponse(granted);
-  //     break;
-  //   case 'fetchBg':
-  //     const resP = thFetch(request.args.url, request.args.options);
-  //     const res = await resP;
-  //     sendResponse(res);
-  //     break;
-  //   case 'getAuth':
-  //     const auth = await getData('auth');
-  //     sendResponse(auth);
-  //     break;
-  //   default:
-  //     break;
-  // }
   let response = '';
   if (
     propEq('type', 'rpcBg') &&
@@ -1009,9 +994,7 @@ chrome.runtime.onMessage.addListener(async function (
     R.includes(request.fnName, keys(rpcFns))
   ) {
     try {
-      // console.time(`[TIME] RPC ${request.fnName}`);
       response = await rpcFns[request.fnName](defaultTo({}, request.args));
-      // console.timeEnd(`[TIME] RPC ${request.fnName}`);
       sendResponse(response);
     } catch (error) {
       response = 'RPC call failed';
@@ -1020,7 +1003,7 @@ chrome.runtime.onMessage.addListener(async function (
     }
   } else {
     response = 'not RPC';
-    console.error(`bgRpc no function ${request.fnName}`);
+    console.error(`rpcBg no function ${request.fnName}`);
     sendResponse(response);
   }
   return true;
@@ -1148,8 +1131,8 @@ const onUpdated = async (previousVersion) => {
   const newStg = await cleanOldStorage();
   console.log('[INFO] onUpdated chrome.storage', newStg);
   // refresh idb tweets (lookup)
-  if (!DEBUG && compareVersions.compare(previousVersion, '0.3', '<')) {
-    setStg('doRefreshIdb', true);
+  if (!DEBUG && updateNeedRefresh(previousVersion)) {
+    setStg('startRefreshIdb', true);
     setStg('showApiSearchTooltip', true);
   }
   // triggers patch notes

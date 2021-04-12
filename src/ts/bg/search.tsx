@@ -17,7 +17,7 @@ import {
   __,
 } from 'ramda'; // Function
 import { User } from 'twitter-d';
-import { sortKeys } from '../bg/tweetImporter';
+import { sortKeys } from './tweetImporter';
 import { SearchFilters } from '../types/stgTypes';
 import { IndexTweet, thTweet, TweetId } from '../types/tweetTypes';
 

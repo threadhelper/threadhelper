@@ -19,9 +19,9 @@ import {
 import { useMsg } from '../../hooks/useMsg';
 import { postMsg, setStg } from '../../utils/dutils';
 import { inspect } from '../../utils/putils';
-import { dbGetMany, dbOpen } from '../../worker/idb_wrapper';
-import { makeIndex, updateIndex, search } from '../../worker/nlp';
-import { makeSearchResponse } from '../../worker/stgOps';
+import { dbGetMany, dbOpen } from '../../bg/idb_wrapper';
+import { makeIndex, updateIndex, search } from '../../bg/nlp';
+import { makeSearchResponse } from '../../bg/stgOps';
 import {
   cbTimeFn,
   loadIndexFromIdb,

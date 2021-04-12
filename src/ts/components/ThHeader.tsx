@@ -1,17 +1,17 @@
+import { useDebounce } from '@react-hook/debounce';
 import { h } from 'preact';
 import { useContext, useEffect, useRef, useState } from 'preact/hooks';
-import { defaultTo, isEmpty, path } from 'ramda';
-import { msgBG, rpcBg } from '../utils/dutils';
-import { FeedDisplayMode } from './ThreadHelper';
-import { goToTwitterSearchPage } from './TtReader';
-import { SettingsButton } from './Settings';
-import { NinjaSyncIcon, SyncIcon } from './Sync';
+import { defaultTo, isEmpty, path, pipe, prop, map } from 'ramda';
 import SearchIcon from '../../images/search.svg';
-import Tooltip, { StgFlagTooltip } from './Tooltip';
-
-import cx from 'classnames';
-import { useThrottle } from '@react-hook/throttle';
-import { useDebounce } from '@react-hook/debounce';
+import { SettingsButton } from './Settings';
+import { NinjaSyncIcon } from './Sync';
+import { FeedDisplayMode, AuthContext } from './ThreadHelper';
+import { StgFlagTooltip } from './Tooltip';
+import { goToTwitterSearchPage } from './TtReader';
+import { apiSearchToTweet } from '../bg/tweetImporter';
+import { searchAPI, searchUsers } from '../bg/twitterScout';
+import { saferTweetMap } from '../utils/bgUtils';
+import { setStg } from '../utils/dutils';
 
 var DEBUG = process.env.NODE_ENV != 'production';
 
@@ -71,13 +71,43 @@ function transformQuery(query, context) {
     }
   }
 }
+const doUserSearch = async (auth, query) => {
+  if (
+    isEmpty(query) ||
+    (query.match(/^\/(?!from|to)/) && !query.match(/(from|to)/))
+  ) {
+    setStg('api_users', []);
+    return [];
+  }
+  const usersRes = await searchUsers(auth, query);
+  const users = prop('users', usersRes);
+  setStg('api_users', users);
+  return users;
+};
 
+const doSearchApi = async (auth, query) => {
+  if (isEmpty(query)) {
+    setStg('api_results', []);
+    return [];
+  }
+  const { users, tweets } = await searchAPI(auth, query);
+  const toTh = pipe(
+    saferTweetMap(apiSearchToTweet),
+    map((tweet) => {
+      return { tweet };
+    })
+  );
+  const res = toTh(tweets);
+  setStg('api_results', res);
+  return res;
+};
 export function ApiSearchBar() {
   const inputObj = useRef(null);
-  const [value, setValue] = useDebounce('', 800);
+  const [value, setValue] = useDebounce('', 800, { leading: true });
   const [showSearchBar, setShowSearchBar] = useState(false);
   const { feedDisplayMode, dispatchFeedDisplayMode } =
     useContext(FeedDisplayMode);
+  const auth = useContext(AuthContext);
 
   const submitApiSearch = (value) => {
     dispatchFeedDisplayMode({
@@ -86,13 +116,8 @@ export function ApiSearchBar() {
     });
     const timeOutId = setTimeout(() => {
       // msgBG({ type: 'apiQuery', query: value });
-      rpcBg('doSearchApi', { query: value });
-      if (
-        (q) =>
-          !(isEmpty(q) || (q.match(/^\/(?!from|to)/) && !q.match(/(from|to)/)))
-      ) {
-        rpcBg('doUserSearch', { query: value });
-      }
+      doSearchApi(auth, value);
+      doUserSearch(auth, value);
     }, 500);
     return timeOutId;
   };
@@ -183,7 +208,7 @@ export function ApiSearchBar() {
               //   // border: '0px',
               //   color: 'var(--main-txt-color)',
               // }}
-              // value={value}
+              value={value}
               onInput={(e) =>
                 typing(defaultTo('', path(['target', 'value'], e)))
               }

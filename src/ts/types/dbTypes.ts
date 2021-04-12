@@ -26,3 +26,5 @@ export interface thTwitterDB extends DBSchema {
     value: any;
   };
 }
+
+export type ThIndexMetadata = { size: number | null };

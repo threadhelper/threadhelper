@@ -5,7 +5,6 @@
   "description": "ThreadHelper, more recall, less tabs.",
   "main": "index.js",
   "scripts": {
-    "watch:css": "postcss src/tailwind.css -o src/index.css",
     "serve": "cross-env NODE_ENV=development DEV_MODE=serve webpack-dev-server --mode=development --env.devMode=serve",
     "webext": "cross-env NODE_ENV=development DEV_MODE=webext webpack --mode=development --env.devMode=webext",
     "build-dev": "rm -rf build/* && cross-env NODE_ENV=development DEV_MODE=extension webpack --mode=development --env.devMode=development",
