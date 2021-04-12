@@ -53,7 +53,12 @@ import {
 import { loadIndexFromIdb, updateIdxFromIdb } from './dev/storage/devStgUtils';
 import window from './global';
 import { StoreName } from './types/dbTypes';
-import { ActiveAccsType, IdleMode, SearchFilters } from './types/stgTypes';
+import {
+  ActiveAccsType,
+  IdleMode,
+  SearchFilters,
+  SearchResult,
+} from './types/stgTypes';
 import { UserAndThTweets, thTweet, UserObj } from './types/tweetTypes';
 import { Credentials } from './types/types';
 import {
@@ -227,10 +232,6 @@ const emitDoSmallScrape = () => emitEvent('doSmallTweetScrape');
 // Scraping functions
 
 var usernameFilterRegex = /(from|to):([a-zA-Z0-9_]*\s?[a-zA-Z0-9_]*)$/;
-const makeUserQuery = (userQuery) => {
-  var usernameMatch = userQuery.match(usernameFilterRegex);
-  return usernameMatch ? usernameMatch[2] : userQuery;
-};
 
 const startRefreshIdb = async () => {
   console.log('[DEBUG] startRefreshIdb');
@@ -238,7 +239,6 @@ const startRefreshIdb = async () => {
   const ids = await idbWorker.getAllIds(StoreName.tweets);
   enqueueStgNoDups('queue_lookupRefresh', ids);
   bgOpLog(`[startRefreshIdb] refreshing ${R.length(ids)} tweets. Success.`);
-  // setStg('doIndexUpdate', true);
 };
 
 const loopRetryScrape = genericLoopRetry(3, 1000);
@@ -297,6 +297,11 @@ const credsAndRetry = (fn, userInfo) =>
     return fn(auth, userInfo);
   });
 
+const updateLastGotTimeline = async (id_str, len) => {
+  console.log('updateLastGotTimeline', { id_str, len, date: Date.now() });
+  await setStgPath(['activeAccounts', id_str, 'lastGotTimeline'], Date.now());
+  await setStgPath(['activeAccounts', id_str, 'lastGotTimelineCount'], len);
+};
 const doBigTweetScrape = async (_) => {
   try {
     const [auth, userInfo] = await Promise.all([
@@ -322,14 +327,7 @@ const doBigTweetScrape = async (_) => {
       'queue_addTweets',
       R.concat(timelineRes.tweets, bookmarksRes.tweets)
     );
-    await setStgPath(
-      ['activeAccounts', userInfo.id_str, 'lastGotTimeline'],
-      Date.now()
-    );
-    await setStgPath(
-      ['activeAccounts', userInfo.id_str, 'lastGotTimelineCount'],
-      R.length(timelineRes.tweets)
-    );
+    await updateLastGotTimeline(userInfo.id_str, R.length(timelineRes.tweets));
     setStg('isMidScrape', false);
     bgOpLog(
       `[doBigTweetScrape] yielded ${R.length(
@@ -568,7 +566,7 @@ const getAuth = async (_) => {
   return await getData('auth');
 };
 
-const calcAccsShown = (activeAccounts: activeAccsType): User[] =>
+const calcAccsShown = (activeAccounts: ActiveAccsType): User[] =>
   filter(
     either(pipe(prop('showTweets'), isNil), propEq('showTweets', true)),
     values(activeAccounts)
@@ -623,9 +621,9 @@ const seek = async ({ query }) => {
 };
 
 const contextualSeek = async ({ query }) => {
-  const searchResults = await genericSeek(query);
+  const searchResults: SearchResult[] = await genericSeek(query);
   await setStg('context_results', searchResults);
-  return map(prop('id'), searchResults);
+  return map(R.path(['tweet', 'id']), searchResults);
 };
 const getLatest = async () => {
   const { accsShown, filters } = await getSearchParams();
@@ -676,50 +674,6 @@ const getDefault = (mode) => {
   }
   return;
 };
-
-// const doUserSearch = async ({ query }) => {
-//   if (
-//     isEmpty(query) ||
-//     (query.match(/^\/(?!from|to)/) && !query.match(/(from|to)/))
-//   ) {
-//     setStg('api_users', []);
-//     return [];
-//   }
-//   const auth = await getStg('auth');
-//   const usersRes = await tryFnsAsync(
-//     scrapeWorker.searchUsers,
-//     searchUsers,
-//     auth,
-//     query
-//   );
-//   const users = prop('users', usersRes);
-//   console.log('doUserSearch', { usersRes, users });
-//   setStg('api_users', users);
-//   return users;
-// };
-
-// const doSearchApi = async ({ query }) => {
-//   if (isEmpty(query)) {
-//     setStg('api_results', []);
-//     return [];
-//   }
-//   const auth = await getStg('auth');
-//   const { users, tweets } = await tryFnsAsync(
-//     scrapeWorker.searchAPI,
-//     searchAPI,
-//     auth,
-//     query
-//   );
-//   const toTh = pipe(
-//     saferTweetMap(apiSearchToTweet),
-//     map((tweet) => {
-//       return { tweet };
-//     })
-//   );
-//   const res = toTh(tweets);
-//   setStg('api_results', res);
-//   return res;
-// };
 
 const addBookmark = ({ ids }) => {
   enqueueStgNoDups('queue_lookupBookmark', ids);
@@ -776,17 +730,14 @@ const webRequestPermission$ = makeInitStgObs(
   storageChange$,
   'webRequestPermission'
 );
-// const webRequestPermission$ = makeInitStgObs(storageChange$, 'webRequestPermission');
 webRequestPermission$.log('webRequestPermission$');
 const auth$ = webRequestPermission$
   .filter((x) => x)
   .skipDuplicates()
-  .map(inspect('making auth obs'))
   .flatMapLatest((_) => makeAuthObs())
   .skipDuplicates(compareAuths);
 subObs({ auth$ }, setStg('auth'));
 const _userInfo$ = auth$
-  .map(inspect('_userInfo$ 0'))
   .thru<Observable<User, any>>(
     promiseStream(async (auth: Credentials) => {
       console.log('calling scrapeWorker.fetchUserInfo(auth)');
@@ -794,9 +745,7 @@ const _userInfo$ = auth$
       return await tryFnsAsync(scrapeWorker.fetchUserInfo, fetchUserInfo, auth);
     })
   )
-  .map(inspect('_userInfo$ 1'))
   .filter(pipe(isNil, not))
-  .map(inspect('_userInfo$ 2'))
   .filter(pipe(prop('id'), isNil, not))
   .thru(errorFilter('_userInfo$'));
 const userInfo$ = Kefir.merge([
@@ -836,20 +785,19 @@ const dressActiveAccount = pipe(
 );
 const incomingAccount$ = userInfo$.map(dressActiveAccount).toProperty();
 // Add to a list with no duplicates of the key (so no duplicates)
-const addActiveAccount = (
-  _acc: User,
-  activeAccounts: ActiveAccsType
-): ActiveAccsType => {
-  const acc = R.has(prop('id_str', _acc), activeAccounts)
-    ? _acc
-    : dressActiveAccount(_acc);
-  return R.set(R.lensProp(prop('id_str', acc)), acc, activeAccounts);
-};
+const addActiveAccount = curry(
+  (_acc: User, activeAccounts: ActiveAccsType): ActiveAccsType => {
+    const acc = R.has(prop('id_str', _acc), activeAccounts)
+      ? _acc
+      : dressActiveAccount(_acc);
+    return R.set(R.lensProp(prop('id_str', acc)), acc, activeAccounts);
+  }
+);
 const onIncomingAccount = async (acc: User) => {
   // if (!R.has('id_str', acc)) return; // it needs to have at least an id_str to be valid
   const oldAccs = await getStg('activeAccounts');
   console.log('[DEBUG] onIncomingAccount', { acc, oldAccs });
-  await modStg('activeAccounts', (olds) => addActiveAccount(acc, olds));
+  await modStg('activeAccounts', addActiveAccount(acc));
   // if (await shouldDoBigTweetScrape(acc)) setStgFlag('doBigTweetScrape', true);
 };
 subObs({ incomingAccount$ }, onIncomingAccount);
