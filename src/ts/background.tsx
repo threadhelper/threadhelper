@@ -809,26 +809,13 @@ subObs({ incomingAccount$ }, onIncomingAccount);
 const startRefreshIdb$ = makeInitStgObs(storageChange$, 'startRefreshIdb')
   .skipUntilBy(userInfo$)
   .filter((x) => x != false);
-// const startRefreshIdb$ = userInfo$
-//   .take(1)
-//   .flatMapLatest((_) => makeInitStgObs(storageChange$, 'startRefreshIdb'))
-//   .filter((x) => x);
+
 startRefreshIdb$.log('startRefreshIdb$');
 subObs({ startRefreshIdb$ }, startRefreshIdb);
 
-// const doBigTweetScrape$ = userInfo$
-//   .take(1)
-//   .flatMapLatest((_) => makeInitStgObs(storageChange$, 'doBigTweetScrape'))
-//   .filter((x) => x)
-//   .throttle(500);
 const doBigTweetScrape$ = Kefir.fromEvents(window, 'doBigTweetScrape');
 subObs({ doBigTweetScrape$ }, doBigTweetScrape);
 
-// const doSmallTweetScrape$ = userInfo$
-// .take(1)
-// .flatMapLatest((_) => makeInitStgObs(storageChange$, 'doSmallTweetScrape'))
-// .filter((x) => x)
-// .throttle(500);
 const doSmallTweetScrape$ = Kefir.fromEvents(window, 'doSmallTweetScrape');
 subObs({ doSmallTweetScrape$ }, doSmallTweetScrape);
 
