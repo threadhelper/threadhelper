@@ -255,17 +255,19 @@ const doBookmarkScrape = async (auth, userInfo): Promise<UserAndThTweets> => {
     return { users, tweets: thTweets };
   } catch (e) {
     console.error("couldn't doBookmarkScrape");
-    return { users: [], tweets: [] };
+    return { users: {}, tweets: [] };
   }
 };
 const doTimelineScrape = async (auth, userInfo): Promise<UserAndThTweets> => {
   // try {
+  const cursor = null;
   const toTh = saferTweetMap(pipe(apiToTweet, assocUser(userInfo)));
   const { users, tweets } = await tryFnsAsync(
     scrapeWorker.timelineQuery,
     timelineQuery,
     auth,
-    userInfo
+    userInfo,
+    cursor
   );
   const thTweets = toTh(tweets);
   return { users, tweets: thTweets };
@@ -741,7 +743,6 @@ const _userInfo$ = auth$
   .thru<Observable<User, any>>(
     promiseStream(async (auth: Credentials) => {
       console.log('calling scrapeWorker.fetchUserInfo(auth)');
-      let userInfo;
       return await tryFnsAsync(scrapeWorker.fetchUserInfo, fetchUserInfo, auth);
     })
   )

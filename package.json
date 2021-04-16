@@ -1,7 +1,7 @@
 {
   "name": "threadhelper",
   "version": "0.3.11",
-  "publicVersion": "0.3.10",
+  "publicVersion": "0.3.11",
   "description": "ThreadHelper, more recall, less tabs.",
   "main": "index.js",
   "scripts": {
