@@ -210,12 +210,12 @@ function QuadrupleMedia({
             <div class="flex-1 relative">
               <div
                 class="absolute inset-0 bg-cover bg-no-repeat bg-center w-full h-full"
-                style={`background-image: url('${url3}')`}
+                style={`background-image: url('${url4}')`}
               ></div>
               <img
                 class="absolute inset-0 w-full h-full"
                 style="z-index: -1"
-                src={url3}
+                src={url4}
               />
             </div>
           </div>
