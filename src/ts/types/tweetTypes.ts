@@ -14,7 +14,7 @@ export interface ScoutUserAndTweets {
 
 export interface UserAndThTweets {
   users: UserObj;
-  tweets: Status[];
+  tweets: thTweet[];
 }
 
 export interface ArchTweet extends Status {}
