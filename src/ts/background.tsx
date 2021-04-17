@@ -90,7 +90,12 @@ import {
   softUpdateStorage,
 } from './utils/dutils';
 import { initGA, PageView } from './utils/ga';
-import { n_tweets_results, update_size, queue_load } from './utils/params';
+import {
+  n_tweets_results,
+  update_size,
+  queue_load,
+  timeline_scrape_interval,
+} from './utils/params';
 import {
   currentValue,
   errorFilter,
@@ -252,6 +257,8 @@ const doBookmarkScrape = async (auth, userInfo): Promise<UserAndThTweets> => {
       auth
     );
     const thTweets = toTh(tweets);
+    enqueueUserStg('queue_addUsers', values(users));
+    enqueueTweetStg('queue_addTweets', thTweets);
     return { users, tweets: thTweets };
   } catch (e) {
     console.error("couldn't doBookmarkScrape");
@@ -260,16 +267,36 @@ const doBookmarkScrape = async (auth, userInfo): Promise<UserAndThTweets> => {
 };
 const doTimelineScrape = async (auth, userInfo): Promise<UserAndThTweets> => {
   // try {
-  const cursor = null;
+  const cursorPath = [
+    'activeAccounts',
+    prop('id_str', userInfo),
+    'timelineBottomCursor',
+  ];
+  const cursor = await getStgPath(cursorPath);
+  console.log('doTimelineScrape', { cursor, userInfo, auth });
+
   const toTh = saferTweetMap(pipe(apiToTweet, assocUser(userInfo)));
-  const { users, tweets } = await tryFnsAsync(
+  const { users, tweets, done, bottomCursor } = await tryFnsAsync(
     scrapeWorker.timelineQuery,
     timelineQuery,
     auth,
     userInfo,
-    cursor
+    defaultTo(null, cursor)
   );
+
+  // If not done, store the cursor. If done, set it to null so next time the scrape starts from the present.
+
   const thTweets = toTh(tweets);
+  enqueueUserStg('queue_addUsers', values(users));
+  enqueueTweetStg('queue_addTweets', thTweets);
+  console.log('doTimelineScrape 1', { cursor, bottomCursor, done, userInfo });
+  if (done) {
+    // Only note that you've got the timeline if you're done, otherwise let it be tried again next time.
+    await updateLastGotTimeline(userInfo.id_str, R.length(tweets));
+    await setStgPath(cursorPath, null);
+  } else {
+    await setStgPath(cursorPath, bottomCursor);
+  }
   return { users, tweets: thTweets };
   // } catch (e) {
   //   console.error("couldn't doTimelineScrape");
@@ -321,15 +348,7 @@ const doBigTweetScrape = async (_) => {
       bookmarksRes,
       usersToStore: values(R.mergeLeft(timelineRes.users, bookmarksRes.users)),
     });
-    enqueueUserStg(
-      'queue_addUsers',
-      values(R.mergeLeft(timelineRes.users, bookmarksRes.users))
-    );
-    enqueueTweetStg(
-      'queue_addTweets',
-      R.concat(timelineRes.tweets, bookmarksRes.tweets)
-    );
-    await updateLastGotTimeline(userInfo.id_str, R.length(timelineRes.tweets));
+
     setStg('isMidScrape', false);
     bgOpLog(
       `[doBigTweetScrape] yielded ${R.length(
@@ -769,29 +788,68 @@ const shouldDoBigTweetScrape = async (acc: FullUser) => {
   ]);
   const lastGotTimeline = defaultTo(0, _lastGotTimeline);
   const timeSince = Date.now() - lastGotTimeline;
-  const aWeek = 1000 * 60 * 60 * 24 * 7;
   console.log('shouldDoBigTweetScrape', {
     acc,
     activeAcc: await getStgPath(['activeAccounts', acc.id_str]),
     timeSince,
-    aWeek,
+    timeline_scrape_interval,
     lastGotTimeline,
-    should: timeSince > aWeek,
+    should: timeSince > timeline_scrape_interval,
   });
-  return timeSince > aWeek;
+  return timeSince > timeline_scrape_interval;
 };
-const dressActiveAccount = pipe(
-  assoc('lastGotTimeline', 0),
-  assoc('showTweets', true)
-);
-const incomingAccount$ = userInfo$.map(dressActiveAccount).toProperty();
+const dressActiveAccount = R.mergeDeepRight({
+  lastGotTimeline: 0,
+  showTweets: true,
+  timelineBottomCursor: null,
+});
+const incomingAccount$ = userInfo$; //.map(dressActiveAccount).toProperty();
 // Add to a list with no duplicates of the key (so no duplicates)
 const addActiveAccount = curry(
   (_acc: User, activeAccounts: ActiveAccsType): ActiveAccsType => {
-    const acc = R.has(prop('id_str', _acc), activeAccounts)
-      ? _acc
-      : dressActiveAccount(_acc);
-    return R.set(R.lensProp(prop('id_str', acc)), acc, activeAccounts);
+    // const accAddonProps = [
+    //   'lastGotTimeline',
+    //   'showTweets',
+    //   'timelineBottomCursor',
+    // ];
+
+    // const hasDressedAcc = (accs, id_str) => {
+    //   console.log('hasDressedAcc', {
+    //     accs,
+    //     id_str,
+    //     hasPaths: R.map(
+    //       (property) => R.hasPath([id_str, property], accs),
+    //       accAddonProps
+    //     ),
+    //   });
+    //   return R.any(
+    //     (property) => R.hasPath([id_str, property], accs),
+    //     accAddonProps
+    //   );
+    // };
+    // Check if we already have this account. If not, "dress" it with additional properties
+    // const acc = hasDressedAcc(activeAccounts, prop('id_str', _acc))
+    //   ? _acc
+    //   : dressActiveAccount(_acc);
+
+    const acc = pipe(
+      () => _acc,
+      prop('id_str'),
+      prop(R.__, activeAccounts),
+      defaultTo({}),
+      R.mergeDeepLeft(_acc),
+      dressActiveAccount
+    )();
+    console.log('addActiveAccount', {
+      acc,
+      _acc,
+      activeAccounts: R.mergeDeepLeft(
+        activeAccounts,
+        R.indexBy(prop('id_str'), [acc])
+      ),
+    });
+    return R.mergeDeepLeft(activeAccounts, R.indexBy(prop('id_str'), [acc]));
+    // return R.set(R.lensProp(prop('id_str', acc)), acc, activeAccounts);
   }
 );
 const onIncomingAccount = async (acc: User) => {
