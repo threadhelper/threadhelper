@@ -21,7 +21,12 @@ import {
 } from 'ramda'; // Function
 import { FullUser, Status, Status as Tweet, User } from 'twitter-d';
 import { TweetResult } from '../types/msgTypes';
-import { ArchTweet, ScoutUserAndTweets, TweetId } from '../types/tweetTypes';
+import {
+  ArchTweet,
+  ScoutUserAndTweets,
+  TimelineScrape,
+  TweetId,
+} from '../types/tweetTypes';
 import { Credentials } from '../types/types';
 import { inspect } from '../utils/putils';
 import {
@@ -385,7 +390,7 @@ export const timelineQuery = async (
   auth: Credentials,
   userInfo: FullUser,
   cursor: string
-) => {
+): Promise<TimelineScrape> => {
   console.log('timelineQuery', { auth, userInfo });
   return await query(
     auth,
@@ -438,7 +443,7 @@ const query = curry(
     count: number,
     cursor: string,
     res: ScoutUserAndTweets
-  ): Promise<ScoutUserAndTweets> => {
+  ): Promise<TimelineScrape> => {
     const url = makeTimelineQueryUrl(cursor, user_id, timelineStepSize);
 
     const responseP = twitterFetch(url, {
@@ -464,7 +469,11 @@ const query = curry(
       stop_condition(_res, concatRes, count) ||
       softRatelimit(response.headers)
     ) {
-      return concatRes;
+      return {
+        ...concatRes,
+        done: stop_condition(_res, concatRes, count),
+        bottomCursor: getBottomCursor(_res),
+      };
     }
     console.log('timelineQuery recursion', {
       formattedRes,

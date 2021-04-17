@@ -12,6 +12,11 @@ export interface ScoutUserAndTweets {
   tweets: Status[];
 }
 
+export interface TimelineScrape extends ScoutUserAndTweets {
+  done: boolean;
+  bottomCursor: string;
+}
+
 export interface UserAndThTweets {
   users: UserObj;
   tweets: thTweet[];
