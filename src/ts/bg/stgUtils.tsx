@@ -2,11 +2,11 @@ import * as elasticlunr from 'elasticlunr';
 import { IDBPDatabase } from 'idb';
 import { curry, difference, filter, isNil, keys, map, tap } from 'ramda';
 import { Status, User } from 'twitter-d';
-import { StoreName, thTwitterDB } from '../../types/dbTypes';
-import { IndexTweet, thTweet, TweetId } from '../../types/tweetTypes';
-import { dbDelMany, dbGetMany, dbPutMany } from '../../bg/idb_wrapper';
-import { makeIndex } from '../../bg/nlp';
-import { updateIndexAndStoreToDb } from '../../bg/stgOps';
+import { StoreName, thTwitterDB } from '../types/dbTypes';
+import { IndexTweet, thTweet, TweetId } from '../types/tweetTypes';
+import { dbDelMany, dbGetMany, dbPutMany } from './idb_wrapper';
+import { makeIndex } from './nlp';
+import { updateIndexAndStoreToDb } from './stgOps';
 
 export const loadIndexFromIdb = async (
   db_promise: Promise<IDBPDatabase<thTwitterDB>>

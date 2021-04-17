@@ -5,6 +5,7 @@ import { Credentials } from './types';
 export interface ActiveAccType extends FullUser {
   lastGotTimeline: number;
   showTweets: boolean;
+  timelineBottomCursor: string;
 }
 export type ActiveAccsType = { [id: TweetId]: ActiveAccType };
 export interface StorageInterface {

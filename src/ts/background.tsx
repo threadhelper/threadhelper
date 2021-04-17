@@ -39,7 +39,11 @@ import {
   updateQuery,
 } from './bg/twitterScout';
 import { makeAuthObs } from './bg/auth';
-import { choosePatchUrl } from './bg/updateManager';
+import {
+  choosePatchUrl,
+  uninstallUrl,
+  updateNeedRefresh,
+} from './bg/updateManager';
 import {
   apiSearchToTweet,
   apiToTweet,
@@ -49,8 +53,13 @@ import {
 import { loadIndexFromIdb, updateIdxFromIdb } from './dev/storage/devStgUtils';
 import window from './global';
 import { StoreName } from './types/dbTypes';
-import { IdleMode, SearchFilters } from './types/stgTypes';
-import { thTweet, UserObj } from './types/tweetTypes';
+import {
+  ActiveAccsType,
+  IdleMode,
+  SearchFilters,
+  SearchResult,
+} from './types/stgTypes';
+import { UserAndThTweets, thTweet, UserObj } from './types/tweetTypes';
 import { Credentials } from './types/types';
 import {
   compareAuths,
@@ -81,24 +90,28 @@ import {
   softUpdateStorage,
 } from './utils/dutils';
 import { initGA, PageView } from './utils/ga';
-import { n_tweets_results, update_size, queue_load } from './utils/params';
+import {
+  n_tweets_results,
+  update_size,
+  queue_load,
+  timeline_scrape_interval,
+} from './utils/params';
 import {
   currentValue,
   errorFilter,
   inspect,
   isExist,
+  nullFn,
   promiseStream,
   toggleDebug,
 } from './utils/putils';
-import { dbFilter, dbOpen } from './worker/idb_wrapper';
-import { getLatestTweets, getRandomSampleTweets } from './worker/search';
+import { dbFilter, dbOpen } from './bg/idb_wrapper';
+import { getLatestTweets, getRandomSampleTweets } from './bg/search';
 
 const createSearchWorker = createWorkerFactory(
-  () => import('./dev/workers/searchWorker')
+  () => import('./bg/searchWorker')
 );
-const createIdbWorker = createWorkerFactory(
-  () => import('./dev/workers/idbWorker')
-);
+const createIdbWorker = createWorkerFactory(() => import('./bg/idbWorker'));
 const createScrapeWorker = createWorkerFactory(
   () => import('./bg/twitterScout')
   // () => import('./dev/workers/scrapeWorker')
@@ -129,7 +142,10 @@ toggleDebug(window, DEBUG);
 (Kefir.Property.prototype as any).currentValue = currentValue;
 // log can contain the name of the operations done, arguments, succcess or not, time
 const bgOpLog = (op: string) => {
-  enqueueStg('bgOpLog', [op]);
+  if (DEBUG) {
+    const timestamp = `[${new Date().toISOString()}] `;
+    enqueueStg('bgOpLog', [timestamp + op]);
+  }
 };
 
 // Stream clean up
@@ -221,22 +237,18 @@ const emitDoSmallScrape = () => emitEvent('doSmallTweetScrape');
 // Scraping functions
 
 var usernameFilterRegex = /(from|to):([a-zA-Z0-9_]*\s?[a-zA-Z0-9_]*)$/;
-const makeUserQuery = (userQuery) => {
-  var usernameMatch = userQuery.match(usernameFilterRegex);
-  return usernameMatch ? usernameMatch[2] : userQuery;
-};
 
-const doRefreshIdb = async () => {
-  console.log('[DEBUG] doRefreshIdb');
+const startRefreshIdb = async () => {
+  console.log('[DEBUG] startRefreshIdb');
   await idbWorker.resetIndex();
   const ids = await idbWorker.getAllIds(StoreName.tweets);
   enqueueStgNoDups('queue_lookupRefresh', ids);
-  // setStg('doIndexUpdate', true);
+  bgOpLog(`[startRefreshIdb] refreshing ${R.length(ids)} tweets. Success.`);
 };
 
 const loopRetryScrape = genericLoopRetry(3, 1000);
 const assocUser = (userInfo) => assoc('account', prop('id_str', userInfo));
-const doBookmarkScrape = async (auth, userInfo): ScoutUserAndTweets => {
+const doBookmarkScrape = async (auth, userInfo): Promise<UserAndThTweets> => {
   const toTh = saferTweetMap(pipe(bookmarkToTweet, assocUser(userInfo)));
   try {
     const { users, tweets } = await tryFnsAsync(
@@ -245,29 +257,56 @@ const doBookmarkScrape = async (auth, userInfo): ScoutUserAndTweets => {
       auth
     );
     const thTweets = toTh(tweets);
+    enqueueUserStg('queue_addUsers', values(users));
+    enqueueTweetStg('queue_addTweets', thTweets);
     return { users, tweets: thTweets };
   } catch (e) {
     console.error("couldn't doBookmarkScrape");
-    return { users: [], tweets: [] };
+    return { users: {}, tweets: [] };
   }
 };
-const doTimelineScrape = async (auth, userInfo): ScoutUserAndTweets => {
+const doTimelineScrape = async (auth, userInfo): Promise<UserAndThTweets> => {
   // try {
+  const cursorPath = [
+    'activeAccounts',
+    prop('id_str', userInfo),
+    'timelineBottomCursor',
+  ];
+  const cursor = await getStgPath(cursorPath);
+  console.log('doTimelineScrape', { cursor, userInfo, auth });
+
   const toTh = saferTweetMap(pipe(apiToTweet, assocUser(userInfo)));
-  const { users, tweets } = await tryFnsAsync(
+  const { users, tweets, done, bottomCursor } = await tryFnsAsync(
     scrapeWorker.timelineQuery,
     timelineQuery,
     auth,
-    userInfo
+    userInfo,
+    defaultTo(null, cursor)
   );
+
+  // If not done, store the cursor. If done, set it to null so next time the scrape starts from the present.
+
   const thTweets = toTh(tweets);
+  enqueueUserStg('queue_addUsers', values(users));
+  enqueueTweetStg('queue_addTweets', thTweets);
+  console.log('doTimelineScrape 1', { cursor, bottomCursor, done, userInfo });
+  if (done) {
+    // Only note that you've got the timeline if you're done, otherwise let it be tried again next time.
+    await updateLastGotTimeline(userInfo.id_str, R.length(tweets));
+    await setStgPath(cursorPath, null);
+  } else {
+    await setStgPath(cursorPath, bottomCursor);
+  }
   return { users, tweets: thTweets };
   // } catch (e) {
   //   console.error("couldn't doTimelineScrape");
   //   return [];
   // }
 };
-const doTimelineUpdateScrape = async (auth, userInfo): ScoutUserAndTweets => {
+const doTimelineUpdateScrape = async (
+  auth,
+  userInfo
+): Promise<UserAndThTweets> => {
   const toTh = saferTweetMap(pipe(apiToTweet, assocUser(userInfo)));
   const { users, tweets } = await tryFnsAsync(
     scrapeWorker.updateQuery,
@@ -287,6 +326,11 @@ const credsAndRetry = (fn, userInfo) =>
     return fn(auth, userInfo);
   });
 
+const updateLastGotTimeline = async (id_str, len) => {
+  console.log('updateLastGotTimeline', { id_str, len, date: Date.now() });
+  await setStgPath(['activeAccounts', id_str, 'lastGotTimeline'], Date.now());
+  await setStgPath(['activeAccounts', id_str, 'lastGotTimelineCount'], len);
+};
 const doBigTweetScrape = async (_) => {
   try {
     const [auth, userInfo] = await Promise.all([
@@ -304,23 +348,7 @@ const doBigTweetScrape = async (_) => {
       bookmarksRes,
       usersToStore: values(R.mergeLeft(timelineRes.users, bookmarksRes.users)),
     });
-    // enqueueUserStg(
-    //   'queue_addUsers',
-    //   values(R.mergeLeft(timelineRes.users, bookmarksRes.users))
-    // );
-    enqueueTweetStg(
-      'queue_addTweets',
-      R.concat(timelineRes.tweets, bookmarksRes.tweets)
-    );
-    // setStg('doBigTweetScrape', false);
-    await setStgPath(
-      ['activeAccounts', userInfo.id_str, 'lastGotTimeline'],
-      Date.now()
-    );
-    await setStgPath(
-      ['activeAccounts', userInfo.id_str, 'lastGotTimelineCount'],
-      R.length(timelineRes.tweets)
-    );
+
     setStg('isMidScrape', false);
     bgOpLog(
       `[doBigTweetScrape] yielded ${R.length(
@@ -352,18 +380,24 @@ const doSmallTweetScrape = async (_) => {
       bookmarksRes,
       usersToStore: values(R.mergeLeft(timelineRes.users, bookmarksRes.users)),
     });
-    // enqueueUserStg(
-    //   'queue_addUsers',
-    //   values(R.mergeLeft(timelineRes.users, bookmarksRes.users))
-    // );
+    enqueueUserStg(
+      'queue_addUsers',
+      values(R.mergeLeft(timelineRes.users, bookmarksRes.users))
+    );
     enqueueTweetStg(
       'queue_addTweets',
       R.concat(timelineRes.tweets, bookmarksRes.tweets)
     );
     // setStg('doSmallTweetScrape', false);
     setStg('isMidScrape', false);
+    bgOpLog(
+      `[doSmallTweetScrape] yielded ${R.length(
+        timelineRes.tweets
+      )} tweets. Success.`
+    );
   } catch (e) {
     console.error('doSmallTweetScrape failed', { e });
+    bgOpLog(`[doSmallTweetScrape] Failed.`);
     setStg('isMidScrape', false);
   }
 };
@@ -387,7 +421,7 @@ const genericLookupAPI = curry(
       );
       const users: UserObj = R.indexBy('id_str', map(prop('user'), tweets));
       const thLookupTweets = toTh(tweets);
-      // enqueueUserStg('queue_addUsers', values(users));
+      enqueueUserStg('queue_addUsers', values(users));
       enqueueTweetStg(queueName, thLookupTweets);
       setStg('isMidScrape', false);
     } catch (e) {
@@ -421,7 +455,7 @@ const importArchive = async (queue) => {
     );
     const toTh = saferTweetMap(archToTweet);
     const thArchiveTweets = toTh(tweets);
-    // enqueueUserStg('queue_addUsers', values(users));
+    enqueueUserStg('queue_addUsers', values(users));
     enqueueTweetStg('queue_addTweets', thArchiveTweets);
     setStg('isMidScrape', false);
   } catch (e) {
@@ -477,7 +511,7 @@ const refreshTweetQueue = async (queue) => {
     setStg('isMidRefresh', false);
   }
   setStg('doIndexUpdate', true);
-  setStg('doRefreshIdb', false);
+  setStg('startRefreshIdb', false);
 };
 
 // remove tweets in the remove queue
@@ -553,7 +587,7 @@ const getAuth = async (_) => {
   return await getData('auth');
 };
 
-const calcAccsShown = (activeAccounts: activeAccsType): User[] =>
+const calcAccsShown = (activeAccounts: ActiveAccsType): User[] =>
   filter(
     either(pipe(prop('showTweets'), isNil), propEq('showTweets', true)),
     values(activeAccounts)
@@ -608,9 +642,9 @@ const seek = async ({ query }) => {
 };
 
 const contextualSeek = async ({ query }) => {
-  const searchResults = await genericSeek(query);
+  const searchResults: SearchResult[] = await genericSeek(query);
   await setStg('context_results', searchResults);
-  return map(prop('id'), searchResults);
+  return map(R.path(['tweet', 'id']), searchResults);
 };
 const getLatest = async () => {
   const { accsShown, filters } = await getSearchParams();
@@ -660,50 +694,6 @@ const getDefault = (mode) => {
     getLatest();
   }
   return;
-};
-
-const doUserSearch = async ({ query }) => {
-  if (
-    isEmpty(query) ||
-    (query.match(/^\/(?!from|to)/) && !query.match(/(from|to)/))
-  ) {
-    setStg('api_users', []);
-    return [];
-  }
-  const auth = await getStg('auth');
-  const usersRes = await tryFnsAsync(
-    scrapeWorker.searchUsers,
-    searchUsers,
-    auth,
-    query
-  );
-  const users = prop('users', usersRes);
-  console.log('doUserSearch', { usersRes, users });
-  setStg('api_users', users);
-  return users;
-};
-
-const doSearchApi = async ({ query }) => {
-  if (isEmpty(query)) {
-    setStg('api_results', []);
-    return [];
-  }
-  const auth = await getStg('auth');
-  const { users, tweets } = await tryFnsAsync(
-    scrapeWorker.searchAPI,
-    searchAPI,
-    auth,
-    query
-  );
-  const toTh = pipe(
-    saferTweetMap(apiSearchToTweet),
-    map((tweet) => {
-      return { tweet };
-    })
-  );
-  const res = toTh(tweets);
-  setStg('api_results', res);
-  return res;
 };
 
 const addBookmark = ({ ids }) => {
@@ -761,27 +751,21 @@ const webRequestPermission$ = makeInitStgObs(
   storageChange$,
   'webRequestPermission'
 );
-// const webRequestPermission$ = makeInitStgObs(storageChange$, 'webRequestPermission');
 webRequestPermission$.log('webRequestPermission$');
 const auth$ = webRequestPermission$
   .filter((x) => x)
   .skipDuplicates()
-  .map(inspect('making auth obs'))
   .flatMapLatest((_) => makeAuthObs())
   .skipDuplicates(compareAuths);
 subObs({ auth$ }, setStg('auth'));
 const _userInfo$ = auth$
-  .map(inspect('_userInfo$ 0'))
   .thru<Observable<User, any>>(
     promiseStream(async (auth: Credentials) => {
       console.log('calling scrapeWorker.fetchUserInfo(auth)');
-      let userInfo;
       return await tryFnsAsync(scrapeWorker.fetchUserInfo, fetchUserInfo, auth);
     })
   )
-  .map(inspect('_userInfo$ 1'))
   .filter(pipe(isNil, not))
-  .map(inspect('_userInfo$ 2'))
   .filter(pipe(prop('id'), isNil, not))
   .thru(errorFilter('_userInfo$'));
 const userInfo$ = Kefir.merge([
@@ -804,55 +788,93 @@ const shouldDoBigTweetScrape = async (acc: FullUser) => {
   ]);
   const lastGotTimeline = defaultTo(0, _lastGotTimeline);
   const timeSince = Date.now() - lastGotTimeline;
-  const aWeek = 1000 * 60 * 60 * 24 * 7;
   console.log('shouldDoBigTweetScrape', {
     acc,
+    activeAcc: await getStgPath(['activeAccounts', acc.id_str]),
     timeSince,
-    aWeek,
+    timeline_scrape_interval,
     lastGotTimeline,
-    should: timeSince > aWeek,
+    should: timeSince > timeline_scrape_interval,
   });
-  return timeSince > aWeek;
+  return timeSince > timeline_scrape_interval;
 };
-const dressActiveAccount = pipe(
-  assoc('lastGotTimeline', 0),
-  assoc('showTweets', true)
-);
-const incomingAccount$ = userInfo$.map(dressActiveAccount).toProperty();
+const dressActiveAccount = R.mergeDeepRight({
+  lastGotTimeline: 0,
+  showTweets: true,
+  timelineBottomCursor: null,
+});
+const incomingAccount$ = userInfo$; //.map(dressActiveAccount).toProperty();
 // Add to a list with no duplicates of the key (so no duplicates)
+const addActiveAccount = curry(
+  (_acc: User, activeAccounts: ActiveAccsType): ActiveAccsType => {
+    // const accAddonProps = [
+    //   'lastGotTimeline',
+    //   'showTweets',
+    //   'timelineBottomCursor',
+    // ];
 
+    // const hasDressedAcc = (accs, id_str) => {
+    //   console.log('hasDressedAcc', {
+    //     accs,
+    //     id_str,
+    //     hasPaths: R.map(
+    //       (property) => R.hasPath([id_str, property], accs),
+    //       accAddonProps
+    //     ),
+    //   });
+    //   return R.any(
+    //     (property) => R.hasPath([id_str, property], accs),
+    //     accAddonProps
+    //   );
+    // };
+    // Check if we already have this account. If not, "dress" it with additional properties
+    // const acc = hasDressedAcc(activeAccounts, prop('id_str', _acc))
+    //   ? _acc
+    //   : dressActiveAccount(_acc);
+
+    const acc = pipe(
+      () => _acc,
+      prop('id_str'),
+      prop(R.__, activeAccounts),
+      defaultTo({}),
+      R.mergeDeepLeft(_acc),
+      dressActiveAccount
+    )();
+    console.log('addActiveAccount', {
+      acc,
+      _acc,
+      activeAccounts: R.mergeDeepLeft(
+        activeAccounts,
+        R.indexBy(prop('id_str'), [acc])
+      ),
+    });
+    return R.mergeDeepLeft(activeAccounts, R.indexBy(prop('id_str'), [acc]));
+    // return R.set(R.lensProp(prop('id_str', acc)), acc, activeAccounts);
+  }
+);
 const onIncomingAccount = async (acc: User) => {
   // if (!R.has('id_str', acc)) return; // it needs to have at least an id_str to be valid
   const oldAccs = await getStg('activeAccounts');
   console.log('[DEBUG] onIncomingAccount', { acc, oldAccs });
-  await modStg('activeAccounts', (olds) =>
-    R.set(R.lensProp(prop('id_str', acc)), acc, olds)
-  );
+  await modStg('activeAccounts', addActiveAccount(acc));
   // if (await shouldDoBigTweetScrape(acc)) setStgFlag('doBigTweetScrape', true);
 };
 subObs({ incomingAccount$ }, onIncomingAccount);
 
 // we need userinfo and auth to do these
-const doRefreshIdb$ = userInfo$
-  .take(1)
-  .flatMapLatest((_) => makeInitStgObs(storageChange$, 'doRefreshIdb'))
-  .filter((x) => x);
-doRefreshIdb$.log('doRefreshIdb$');
-subObs({ doRefreshIdb$ }, doRefreshIdb);
+// what does this do?
+// this starts an observer once we have userInfo
+// I think skipUntilBy does the same
+const startRefreshIdb$ = makeInitStgObs(storageChange$, 'startRefreshIdb')
+  .skipUntilBy(userInfo$)
+  .filter((x) => x != false);
 
-// const doBigTweetScrape$ = userInfo$
-//   .take(1)
-//   .flatMapLatest((_) => makeInitStgObs(storageChange$, 'doBigTweetScrape'))
-//   .filter((x) => x)
-//   .throttle(500);
+startRefreshIdb$.log('startRefreshIdb$');
+subObs({ startRefreshIdb$ }, startRefreshIdb);
+
 const doBigTweetScrape$ = Kefir.fromEvents(window, 'doBigTweetScrape');
 subObs({ doBigTweetScrape$ }, doBigTweetScrape);
 
-// const doSmallTweetScrape$ = userInfo$
-// .take(1)
-// .flatMapLatest((_) => makeInitStgObs(storageChange$, 'doSmallTweetScrape'))
-// .filter((x) => x)
-// .throttle(500);
 const doSmallTweetScrape$ = Kefir.fromEvents(window, 'doSmallTweetScrape');
 subObs({ doSmallTweetScrape$ }, doSmallTweetScrape);
 
@@ -867,7 +889,7 @@ subWorkQueue('queue_addUsers', importUserQueue);
 subWorkQueue('queue_removeUsers', removeUserQueue);
 
 const doIndexUpdate$ = makeInitStgObs(storageChange$, 'doIndexUpdate').filter(
-  (x) => x
+  (x) => x != false
 );
 subObs({ doIndexUpdate$ }, doIndexUpdate);
 
@@ -882,25 +904,10 @@ subObs({ query$ }, (query) => seek({ query }));
 subObs({ contextQuery$ }, (query) => contextualSeek({ query }));
 
 const isMidSearchTrue$ = makeInitStgObs(storageChange$, 'isMidSearch')
-  .filter((x) => x)
+  .filter((x) => x != false)
   .delay(2000 * 5);
 // just to make sure isMidSearch$ never gets stuck
 subObs({ isMidSearchTrue$ }, () => setStg('isMidSearch', false));
-// const msg$ = makeGotMsgObs().map(prop('m'));
-// const msgStream = makeMsgStream(msg$);
-// const apiQuery$ = msgStream('apiQuery').map(prop('query'));
-// subObs({ apiQuery$ }, doSearchApi);
-
-// const apiReqUsers$ = apiQuery$
-//   .filter(
-//     (q) => !(isEmpty(q) || (q.match(/^\/(?!from|to)/) && !q.match(/(from|to)/)))
-//   )
-//   .map(makeUserQuery);
-// subObs({ apiReqUsers$ }, doUserSearch);
-
-// const accountsUpdate$ = Kefir.merge([incomingAccounts$])
-// // const accountsUpdate$ = Kefir.merge([removeAccount$, incomingAccounts$])
-// subObs({ accountsUpdate$ }, setStg('activeAccounts'));
 const optionsChange$ = storageChange$.filter(propEq('itemName', 'options'));
 
 const _makeInitOptionsObs = makeInitOptionsObs(optionsChange$);
@@ -920,7 +927,6 @@ const idleMode$ = _makeInitOptionsObs('idleMode') as Observable<IdleMode, any>;
 idleMode$.log('idleMode$');
 subObs({ idleMode$ }, getDefault);
 
-const searchMode$ = _makeInitOptionsObs('searchMode');
 const searchFilters$ = Kefir.merge([
   _makeInitOptionsObs('getRTs'),
   _makeInitOptionsObs('useBookmarks'),
@@ -945,8 +951,6 @@ var searchFns = {
   seek,
   getLatest,
   getRandom,
-  doUserSearch,
-  doSearchApi,
 };
 var proxyFns = {
   fetchBg,
@@ -977,24 +981,6 @@ chrome.runtime.onMessage.addListener(async function (
     sendResponse('not RPC');
     return;
   }
-  // switch (request.fnName) {
-  //   case 'webReqPermission':
-  //     const granted = await reqWebReqPermission({});
-  //     setStg('webRequestPermission', granted);
-  //     sendResponse(granted);
-  //     break;
-  //   case 'fetchBg':
-  //     const resP = thFetch(request.args.url, request.args.options);
-  //     const res = await resP;
-  //     sendResponse(res);
-  //     break;
-  //   case 'getAuth':
-  //     const auth = await getData('auth');
-  //     sendResponse(auth);
-  //     break;
-  //   default:
-  //     break;
-  // }
   let response = '';
   if (
     propEq('type', 'rpcBg') &&
@@ -1002,9 +988,7 @@ chrome.runtime.onMessage.addListener(async function (
     R.includes(request.fnName, keys(rpcFns))
   ) {
     try {
-      // console.time(`[TIME] RPC ${request.fnName}`);
       response = await rpcFns[request.fnName](defaultTo({}, request.args));
-      // console.timeEnd(`[TIME] RPC ${request.fnName}`);
       sendResponse(response);
     } catch (error) {
       response = 'RPC call failed';
@@ -1013,7 +997,7 @@ chrome.runtime.onMessage.addListener(async function (
     }
   } else {
     response = 'not RPC';
-    console.error(`bgRpc no function ${request.fnName}`);
+    console.error(`rpcBg no function ${request.fnName}`);
     sendResponse(response);
   }
   return true;
@@ -1141,8 +1125,8 @@ const onUpdated = async (previousVersion) => {
   const newStg = await cleanOldStorage();
   console.log('[INFO] onUpdated chrome.storage', newStg);
   // refresh idb tweets (lookup)
-  if (!DEBUG && compareVersions.compare(previousVersion, '0.3', '<')) {
-    setStg('doRefreshIdb', true);
+  if (!DEBUG && updateNeedRefresh(previousVersion)) {
+    setStg('startRefreshIdb', true);
     setStg('showApiSearchTooltip', true);
   }
   // triggers patch notes
@@ -1151,9 +1135,7 @@ const onUpdated = async (previousVersion) => {
 };
 
 if (!DEBUG) {
-  chrome.runtime.setUninstallURL(
-    'https://docs.google.com/forms/d/e/1FAIpQLSf2s5y8tIFEQj4dIyk55QXS0DQmHQ_cmspmJmKNTslISOJ6oA/viewform'
-  );
+  chrome.runtime.setUninstallURL(uninstallUrl);
 }
 
 // chrome.runtime.onSuspend.addListener(function () {

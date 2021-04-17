@@ -1,13 +1,13 @@
 import '@babel/polyfill';
 import { isNil, path } from 'ramda';
-import { SearchResult } from '../../types/stgTypes';
-import { thTweet } from '../../types/tweetTypes';
-import { toggleDebug } from '../../utils/putils';
-import { dbOpen } from '../../bg/idb_wrapper';
-import { search } from '../../bg/nlp';
-import { makeSearchResponse } from '../../bg/stgOps';
-import { ThIndexMetadata } from '../components/Search';
-import { loadIndexFromIdb } from '../storage/devStgUtils';
+import { SearchResult } from '../types/stgTypes';
+import { thTweet } from '../types/tweetTypes';
+import { toggleDebug } from '../utils/putils';
+import { dbOpen } from './idb_wrapper';
+import { search } from './nlp';
+import { makeSearchResponse } from './stgOps';
+import { ThIndexMetadata } from '../types/dbTypes';
+import { loadIndexFromIdb } from './stgUtils';
 
 // var DEBUG = process.env.NODE_ENV != 'production';
 // toggleDebug(window, DEBUG);
@@ -23,11 +23,8 @@ export async function seek(
   query
 ): Promise<SearchResult[]> {
   const index = await idx_promise;
-  // console.time(`[TIME] worker seek`);
   const res = await search(filters, accsShown, resultN, index, query);
   const response = await makeSearchResponse(db_promise, res);
-  console.log('worker seek', { res, response, index });
-  // console.timeEnd(`[TIME] worker seek`);
   return response;
 }
 

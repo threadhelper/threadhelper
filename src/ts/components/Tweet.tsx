@@ -1,35 +1,31 @@
-import { h, Fragment, render, Component } from 'preact';
+import { Fragment, h } from 'preact';
 import {
-  useState,
-  useRef,
-  useEffect,
-  useContext,
   useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
 } from 'preact/hooks';
-import { csEvent } from '../utils/ga';
-import { getActiveComposer } from '../utils/wutils';
-import { thTweet } from '../types/tweetTypes';
-import ReplyIcon from '../../images/reply.svg';
-import RetweetIcon from '../../images/retweet.svg';
+import { defaultTo, isNil, last, prop } from 'ramda';
+import defaultProfilePic from '../../images/defaultProfilePic.png';
 import LikeIcon from '../../images/like.svg';
 import FullLikeIcon from '../../images/like_full.svg';
-import PencilIcon from '../../images/pencil.svg';
 import LinkIcon from '../../images/link.svg';
-import { andThen, any, defaultTo, isNil, last, pipe, prop } from 'ramda';
+import PencilIcon from '../../images/pencil.svg';
+import ReplyIcon from '../../images/reply.svg';
+import RetweetIcon from '../../images/retweet.svg';
 import {
   sendLikeRequest,
   sendRetweetRequest,
   sendUnlikeRequest,
   sendUnretweetRequest,
-  fetchStatus,
 } from '../bg/twitterScout';
-import { useStorage } from '../hooks/useStorage';
-import { AuthContext } from './ThreadHelper';
-import { apiSearchToTweet } from '../bg/tweetImporter';
-import { inspect } from '../utils/putils';
+import { thTweet } from '../types/tweetTypes';
+import { csEvent } from '../utils/ga';
+import { getActiveComposer } from '../utils/wutils';
 import { DropdownMenu } from './Dropdown';
 import { Media } from './Media';
-import defaultProfilePic from '../../images/defaultProfilePic.png';
+import { AuthContext } from './ThreadHelper';
 import Tooltip from './Tooltip';
 
 const isProduction = process.env.NODE_ENV != 'development';
@@ -332,15 +328,17 @@ export const CopyAction = ({
 export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
   // placeholder is just text
   // const [auth, setAuth] = useStorage('auth', null);
+  const parentTweetRef = useRef(null);
   const [copyText, setCopyText] = useState('copy');
   const [_tweet, setTweet] = useState(tweet);
-  const [showActions, setShowActions] = useState(true);
+  const [showActions, setShowActions] = useState(false);
+  // const [showActions, setShowActions] = useState(true);
   const [profilePicSrc, setProfilePicSrc] = useState(() => {
     return prop('profile_image', tweet) ?? defaultProfilePic;
   });
   // const [favCount, setFavCount] = useState(0);
   // const [replyCount, setReplyCount] = useState(0);
-  // const [rtCount, setRtCount] = useState(0);
+  // const [rtCount, setRtCount] = useState(0);`
   // const [rtActive, setRtActive] = useState(false);
   // const [favActive, setFavActive] = useState(false);
 
@@ -382,8 +380,19 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
   return (
     <div
       class="px-4 py-3 border-b border-borderBg transition-colors duration-200 cursor-pointer hover:bg-hoverBg"
-      // onMouseEnter={(_) => setShowActions(true)}
-      // onMouseLeave={(_) => setShowActions(false)}
+      onMouseEnter={(_) => setShowActions(true)}
+      onMouseLeave={(e) => {
+        if (parentTweetRef.current.contains(e.relatedTarget)) {
+          console.log('mouse leave but inside child', {
+            tweet: parentTweetRef.current,
+            target: e.target,
+            relatedTarget: e.relatedTarget,
+          });
+          return;
+        }
+        setShowActions(false);
+      }}
+      ref={parentTweetRef}
     >
       <div class="flex">
         <div class="mr-3">

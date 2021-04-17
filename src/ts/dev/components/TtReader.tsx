@@ -1,7 +1,7 @@
 import { h, render, Fragment } from 'preact';
 import { SearchBar } from './SearchBar';
 import { ArchiveUploader } from '../../components/LoadArchive';
-import { dbOpen } from '../../worker/idb_wrapper';
+import { dbOpen } from '../../bg/idb_wrapper';
 
 const TtReader = () => {
   return (

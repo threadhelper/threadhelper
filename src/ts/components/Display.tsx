@@ -31,6 +31,19 @@ import { pre_render_n } from '../utils/params';
 const prepTweets = (list: TweetResult[] | null): SearchResult[] =>
   filter(pipe(prop('tweet'), isNil, not), defaultTo([], list));
 
+function useEffectTimeout(fn, delay) {
+  let isMounted = true;
+  const timeOutId = setTimeout(() => {
+    if (isMounted) {
+      fn();
+    }
+  }, 500);
+  return () => {
+    isMounted = false;
+    clearTimeout(timeOutId);
+  };
+}
+
 function tryApiMetricsFetch(auth, results, setResults) {
   let isMounted = true;
   const timeOutId = setTimeout(() => {
@@ -171,14 +184,20 @@ type TweetDisplayProps = {
   title: string;
   results: TweetResult[];
   emptyMsg: string | JSX.Element;
+  onMouseEnter: (_: any) => void;
 };
-function TweetDisplay({ title, results, emptyMsg }: TweetDisplayProps) {
+function TweetDisplay({
+  title,
+  results,
+  emptyMsg,
+  onMouseEnter,
+}: TweetDisplayProps) {
   return (
     <>
       <div class="text-right text-gray-500 my-1 px-3">
         <span class="hover:text-mainTxt hover:underline">{title}</span>
       </div>
-      <div class="searchTweets">
+      <div class="searchTweets" onMouseEnter={onMouseEnter}>
         {isEmpty(results) ? (
           <span class="px-3">{emptyMsg}</span>
         ) : (
@@ -191,15 +210,23 @@ function TweetDisplay({ title, results, emptyMsg }: TweetDisplayProps) {
 //
 
 function GenericIdleDisplay({ stgName, title }) {
-  // const auth = useContext(AuthContext);
+  // const [metricsRequested, setMetricsRequested] = useState(false);
   const [stgIdleTweets, setStgIdleTweets] = useStorage(stgName, []);
 
   const [res, setRes] = useState([]);
   const auth = useContext(AuthContext);
 
   useEffect(() => {
+    // setMetricsRequested(false);
     return tryApiMetricsFetch(auth, prepTweets(stgIdleTweets), setRes);
   }, [auth, stgIdleTweets]);
+
+  // useEffect(() => {
+  //   if (metricsRequested) {
+  //     console.log('[DEBUG] GenericSearchResults getting metrics');
+  //     return tryApiMetricsFetch(auth, prepTweets(stgIdleTweets), setRes);
+  //   }
+  // }, [metricsRequested]);
 
   useEffect(() => {
     console.log('GenericIdleDisplay', { res, auth, stgIdleTweets, stgName });
@@ -209,6 +236,7 @@ function GenericIdleDisplay({ stgName, title }) {
   return (
     <TweetDisplay
       title={title}
+      onMouseEnter={(_) => null}
       results={isEmpty(res) ? prepTweets(stgIdleTweets) : prepTweets(res)}
       emptyMsg={'No tweets yet!'}
     />
@@ -268,14 +296,26 @@ const SearchResMsg = () => {
 function GenericSearchResults({ stgName }) {
   const [stgSearchResults, setStgSearchResults] = useStorage(stgName, []);
   const [displayStgRes, setDisplayStgRes] = useState([]);
+  const [metricsRequested, setMetricsRequested] = useState(false);
   const [res, setRes] = useThrottle([], 200);
   const auth = useContext(AuthContext);
   // const [res, setRes] = useState(results);
   const [searchMode, setSearchMode] = useOption('searchMode');
 
   useEffect(() => {
-    return tryApiMetricsFetch(auth, prepTweets(stgSearchResults), setRes);
+    setMetricsRequested(false);
+    return useEffectTimeout(() => {
+      setRes(stgSearchResults);
+    }, 500);
+    // return tryApiMetricsFetch(auth, prepTweets(stgSearchResults), setRes);
   }, [auth, stgSearchResults]);
+
+  useEffect(() => {
+    if (metricsRequested) {
+      console.log('[DEBUG] GenericSearchResults getting metrics');
+      return tryApiMetricsFetch(auth, prepTweets(stgSearchResults), setRes);
+    }
+  }, [metricsRequested]);
 
   useEffect(() => {
     setRes([]);
@@ -291,6 +331,7 @@ function GenericSearchResults({ stgName }) {
           ? 'Semantic search results:'
           : ''
       }
+      onMouseEnter={(_) => setMetricsRequested(true)}
       // slice because stgSearchResults are the ones that show up quickly before api metrics kick in
       results={
         isEmpty(res)

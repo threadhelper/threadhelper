@@ -43,17 +43,34 @@ const GenericTooltip = ({
 const Tooltip = (props) => {
   let timeout;
   const [active, setActive] = useState(false);
+  const [hovering, setHovering] = useState(false);
+
+  useEffect(() => {
+    if (hovering) {
+      timeout = setTimeout(() => {
+        setActive(true);
+      }, props.delay || 800);
+      return () => {
+        clearTimeout(timeout);
+      };
+    } else {
+      clearTimeout(timeout);
+      setActive(false);
+    }
+  }, [hovering]);
 
   const showTip = () => {
-    console.log('showing tooltip', props);
-    timeout = setTimeout(() => {
-      setActive(true);
-    }, props.delay || 800);
+    // console.log('showing tooltip', props);
+    // timeout = setTimeout(() => {
+    //   setActive(true);
+    // }, props.delay || 800);
+    setHovering(true);
   };
 
   const hideTip = () => {
-    clearInterval(timeout);
-    setActive(false);
+    // clearInterval(timeout);
+    // setActive(false);
+    setHovering(false);
   };
 
   return <GenericTooltip {...{ ...props, active, showTip, hideTip }} />;

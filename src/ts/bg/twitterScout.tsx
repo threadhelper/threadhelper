@@ -21,7 +21,12 @@ import {
 } from 'ramda'; // Function
 import { FullUser, Status, Status as Tweet, User } from 'twitter-d';
 import { TweetResult } from '../types/msgTypes';
-import { ArchTweet, ScoutUserAndTweets, TweetId } from '../types/tweetTypes';
+import {
+  ArchTweet,
+  ScoutUserAndTweets,
+  TimelineScrape,
+  TweetId,
+} from '../types/tweetTypes';
 import { Credentials } from '../types/types';
 import { inspect } from '../utils/putils';
 import {
@@ -105,7 +110,7 @@ const makeUserSearchUrl = (q) =>
   )}&src=search_box&result_type=users`;
 const makeFetchStatusUrl = (tid) =>
   `https://api.twitter.com/1.1/statuses/show.json?id=${tid}&tweet_mode=extended`;
-const shouldRetryError = (error) => ![403, 429].includes(error.status);
+const shouldRetryError = (error) => ![403, 429].includes(prop('status', error));
 
 export const genericLoopRetry = curry(
   async <T,>(retryLimit, delayMs, fn: () => Promise<T>): Promise<T> => {
@@ -136,6 +141,46 @@ export const genericLoopRetry = curry(
 );
 
 const loopRetry = genericLoopRetry(retryLimit, 500);
+
+const _thFetch = async (url: string, options): Promise<any> =>
+  fetch(url, options)
+    .then(errorRefusal)
+    .then((response) => {
+      console.log('thFetch', {
+        'x-rate-limit-reset': response.headers.get('x-rate-limit-reset'),
+        'x-rate-limit-limit': response.headers.get('x-rate-limit-limit'),
+        'x-rate-limit-remaining': response.headers.get(
+          'x-rate-limit-remaining'
+        ),
+      });
+      return response;
+    })
+    .then((response) => response.json())
+    .catch(handleFetchError);
+
+const dateFromSeconds = (s): Date => {
+  let t = new Date(0);
+  t.setUTCSeconds(s);
+  return t;
+};
+
+const softRatelimit = (headers) => {
+  const reset = headers.get('x-rate-limit-reset');
+  const limit = headers.get('x-rate-limit-limit');
+  const remaining = headers.get('x-rate-limit-remaining');
+  const timeRemaining = +dateFromSeconds(reset) - +new Date(); // The + sign tells TS to convert dates to numbers
+  const min15 = 1000 * 60 * 15;
+  const softLimit = 10 + limit * (1 / 3) * (timeRemaining / min15); // always leaves a spare 10 tweets + a fraction of 1/3 of the limit proportional to the time remaining (you get more requests if reset is coming sooner)
+  console.log('softRatelimit', {
+    reset,
+    limit,
+    remaining,
+    timeRemaining,
+    min15,
+    softLimit,
+  });
+  return remaining <= softLimit;
+};
 
 const errorRefusal = (response) => {
   if (!response.ok) {
@@ -175,15 +220,9 @@ const handleFetchError = (error) => {
   throw error;
 };
 
-const _thFetch = async (url: string, options): Promise<any> =>
-  fetch(url, options)
-    .then(errorRefusal)
-    .then((response) => response.json())
-    .catch(handleFetchError);
-
-export const thFetch = isServe ? remote.fetchBg : _thFetch;
+// export const thFetch = isServe ? remote.fetchBg : _thFetch;
 //
-function twitterFetch(url: string, options) {
+const twitterFetch = async (url: string, options): Promise<any> => {
   if (!options.authHeaders['x-csrf-token']) {
     return Promise.reject('not requesting, no auth');
   }
@@ -212,12 +251,18 @@ function twitterFetch(url: string, options) {
   if (options.method === 'POST') {
     fullOptions.headers['content-type'] = 'application/x-www-form-urlencoded';
   }
-  console.log('thFetching', { url, fullOptions });
-  return thFetch(url, fullOptions);
+  return fetch(url, fullOptions);
+};
+
+async function twitterFetchBody(url: string, options) {
+  return twitterFetch(url, options)
+    .then(errorRefusal)
+    .then((response) => response.json())
+    .catch(handleFetchError);
 }
 
 export const searchTwitter = (authHeaders, query) =>
-  twitterFetch(makeApiSearchUrl(query), {
+  twitterFetchBody(makeApiSearchUrl(query), {
     authHeaders,
     method: 'GET',
     body: null,
@@ -228,7 +273,7 @@ export const fetchStatus = async (
   authHeaders: Credentials,
   id: TweetId
 ): Promise<Status> => {
-  return await twitterFetch(makeFetchStatusUrl(id), { authHeaders });
+  return await twitterFetchBody(makeFetchStatusUrl(id), { authHeaders });
 };
 
 function getUsersFromSearchResponse(data) {
@@ -238,7 +283,7 @@ function getUsersFromSearchResponse(data) {
   };
 }
 export const searchUsers = (authHeaders, query) =>
-  twitterFetch(makeUserSearchUrl(query), {
+  twitterFetchBody(makeUserSearchUrl(query), {
     authHeaders,
     method: 'GET',
     body: null,
@@ -246,7 +291,7 @@ export const searchUsers = (authHeaders, query) =>
   }).then(getUsersFromSearchResponse);
 
 const sendTweetAction = curry((url, authHeaders, tweetId) => {
-  return twitterFetch(url, {
+  return twitterFetchBody(url, {
     authHeaders,
     method: 'POST',
     body: `tweet_mode=extended&id=${tweetId}`,
@@ -259,15 +304,15 @@ export const sendUnlikeRequest = sendTweetAction(URLDestroyFav);
 export const sendRetweetRequest = sendTweetAction(URLRetweet);
 export const sendUnretweetRequest = sendTweetAction(URLUnretweet);
 
-const fetchTweets = async (
-  url: string,
-  authHeaders: Credentials
-): Promise<Tweet[]> =>
-  twitterFetch(url, {
-    authHeaders,
-    method: 'GET',
-    body: null,
-  });
+// const fetchTweets = async (
+//   url: string,
+//   authHeaders: Credentials
+// ): Promise<Tweet[]> =>
+//   twitterFetch(url, {
+//     authHeaders,
+//     method: 'GET',
+//     body: null,
+//   });
 
 export const fetchUserInfo = async (
   authHeaders: Credentials
@@ -275,7 +320,7 @@ export const fetchUserInfo = async (
   console.log('fetchUserInfo', { authHeaders });
   try {
     return await loopRetry(() =>
-      twitterFetch(URLVerifyCredentials, { authHeaders })
+      twitterFetchBody(URLVerifyCredentials, { authHeaders })
     );
   } catch (e) {
     console.error('fetchUserInfo failed');
@@ -287,7 +332,11 @@ export const fetchUserInfo = async (
 export const tweetLookupQuery = curry(
   async (auth: Credentials, ids: string[]): Promise<Tweet[]> => {
     const fetch100Ids = (ids: string[]): Promise<Tweet[]> =>
-      fetchTweets(makeTweetLookupUrl(ids), auth);
+      twitterFetchBody(makeTweetLookupUrl(ids), {
+        authHeaders: auth,
+        method: 'GET',
+        body: null,
+      });
     const tweets = await pipe<
       string[],
       string[][],
@@ -314,7 +363,11 @@ export const userLookupQuery = curry(
       const userIds = ids.filter(R.test(idRE));
       const userNames = R.difference(ids.filter(R.test(nameRE)), userIds);
       console.log('userLookupQuery', { userIds, userNames });
-      return fetchTweets(makeUserLookupUrl(userIds, userNames), auth);
+      return twitterFetchBody(makeUserLookupUrl(userIds, userNames), {
+        authHeaders: auth,
+        method: 'GET',
+        body: null,
+      });
     };
     return pipe<
       string[],
@@ -332,14 +385,19 @@ export const userLookupQuery = curry(
 );
 
 // fetch as many tweets as possible from the timeline
-export const timelineQuery = async (auth: Credentials, userInfo: FullUser) => {
+// passing a null cursor will just start from the beginning
+export const timelineQuery = async (
+  auth: Credentials,
+  userInfo: FullUser,
+  cursor: string
+): Promise<TimelineScrape> => {
   console.log('timelineQuery', { auth, userInfo });
   return await query(
     auth,
     prop('id_str', userInfo),
     prop('statuses_count', userInfo),
-    null,
-    []
+    cursor,
+    { users: {}, tweets: [] }
   );
 };
 
@@ -352,9 +410,9 @@ const getCursor = (cursorType: string) =>
 const getBottomCursor = getCursor('bottom');
 const getTopCursor = getCursor('top');
 //stop if got enough tweets or if max_id is null (twitter not giving any more)
-const stop_condition = (_res, res: Tweet[], count) => {
+const stop_condition = (_res, res: ScoutUserAndTweets, count) => {
   const updateSize = R.length(unpackApiTweets(_res));
-  const totalSize = R.length(res);
+  const totalSize = R.length(prop('tweets', res));
   console.log('stop_condition', {
     updateSize,
     totalSize,
@@ -373,6 +431,11 @@ const stop_condition = (_res, res: Tweet[], count) => {
 };
 // 20 maximizes how many tweets we get. Bigger steps: less tweets.
 const timelineStepSize = 20;
+
+// .then(errorRefusal)
+//     .then((response) => response.json())
+//     .catch(handleFetchError);
+
 const query = curry(
   async (
     auth: Credentials,
@@ -380,18 +443,39 @@ const query = curry(
     count: number,
     cursor: string,
     res: ScoutUserAndTweets
-  ): Promise<ScoutUserAndTweets> => {
+  ): Promise<TimelineScrape> => {
     const url = makeTimelineQueryUrl(cursor, user_id, timelineStepSize);
-    const authFetchUpdate = () => fetchTweets(url, auth);
-    const _res = await loopRetry(authFetchUpdate);
+
+    const responseP = twitterFetch(url, {
+      authHeaders: auth,
+      method: 'GET',
+      body: null,
+    });
+    const response = await responseP;
+    // const responseP = loopRetry(() =>
+    //   twitterFetch(url, { auth, method: 'GET', body: null })
+    // );
+    const _res = await responseP
+      .then(errorRefusal)
+      .then((response) => response.json())
+      .catch(handleFetchError);
     const formattedRes = await formatApiResUser(auth, user_id, _res);
     const concatRes = R.mergeWith(
       R.unionWith(R.eqBy(prop('id_str'))),
       formattedRes,
       res
     );
-    if (stop_condition(_res, concatRes, count)) return concatRes;
-    console.log('timelineQuery recursion 1', {
+    if (
+      stop_condition(_res, concatRes, count) ||
+      softRatelimit(response.headers)
+    ) {
+      return {
+        ...concatRes,
+        done: stop_condition(_res, concatRes, count),
+        bottomCursor: getBottomCursor(_res),
+      };
+    }
+    console.log('timelineQuery recursion', {
       formattedRes,
       user_id,
       res,
@@ -472,16 +556,13 @@ const getQTs = curry(
       filter(pipe(isNil, not)),
       R.uniq
     )();
-    console.log('[DEBUG] getQTs', { qt_ids, tweets });
     const local_qts = values(R.pick(qt_ids, tweets));
-    console.log('[DEBUG] getQTs', { local_qts, qt_ids, tweets });
     const outside_qts: Tweet[] = await pipe(
       () => local_qts,
       R.keys,
       R.difference(qt_ids),
       tweetLookupQuery(auth)
     )();
-    console.log('[DEBUG] getQTs', { local_qts, outside_qts, qt_ids, tweets });
     return indexBy(prop('id_str'), R.concat(local_qts, outside_qts));
   }
 );
@@ -503,18 +584,11 @@ const getUsers = curry(
 
 // finds non-RT tweet in archive, looks it up and takes its user if it exists, if not tries another one
 const getArchiveOwner = async (auth, archive: ArchTweet[]): Promise<User> => {
-  console.log('getArchiveOwner', { auth, archive });
   for (const t of archive) {
     if (pipe(getArchUserId, prop('id_str'), isNil)(t)) {
-      console.log('ownTweet', { t });
       const ownTweetRes = await tweetLookupQuery(auth, [t.id_str]);
-      console.log('ownTweetRes', { ownTweetRes });
       const ownTweet = ownTweetRes[0];
       if (isNil(ownTweet)) {
-        console.log("ownTweet isn't there anymore, trying another one", {
-          t,
-          ownTweet,
-        });
         break;
       } else {
         const ownUser = ownTweet.user;
@@ -600,7 +674,11 @@ export const updateQuery = async (
   count: number
 ): Promise<ScoutUserAndTweets> => {
   const authFetchUpdate = () =>
-    fetchTweets(makeUpdateQueryUrl(prop('id_str', userInfo), count), auth);
+    twitterFetchBody(makeUpdateQueryUrl(prop('id_str', userInfo), count), {
+      authHeaders: auth,
+      method: 'GET',
+      body: null,
+    });
   const _res = await loopRetry(authFetchUpdate);
   const formattedRes = await formatApiResUser(auth, userInfo.id_str, _res);
   console.log('updateQuery', { _res, userInfo, formattedRes });
@@ -610,64 +688,29 @@ export const updateQuery = async (
 export async function getBookmarks(
   auth: Credentials
 ): Promise<ScoutUserAndTweets> {
-  const authFetchBookmarks = () => fetchTweets(URLGetBookmarks, auth);
+  const authFetchBookmarks = () =>
+    twitterFetchBody(URLGetBookmarks, {
+      authHeaders: auth,
+      method: 'GET',
+      body: null,
+    });
   const _res = await loopRetry(authFetchBookmarks);
   return formatApiRes(auth, _res);
 }
 
 export const searchAPI = curry(
   async (auth: Credentials, query: string): Promise<ScoutUserAndTweets> => {
-    const fetchQ = () => fetchTweets(makeApiSearchUrl(query), auth);
+    const fetchQ = () =>
+      twitterFetchBody(makeApiSearchUrl(query), {
+        authHeaders: auth,
+        method: 'GET',
+        body: null,
+      });
     const _res = await loopRetry(fetchQ);
     return formatApiRes(auth, _res);
   }
 );
-// export const updateQuery = async (
-//   auth: Credentials,
-//   userInfo: User,
-//   count: number
-// ) => {
-// const authFetchUpdate = () =>
-//   fetchTweets(makeUpdateQueryUrl(prop('id_str', userInfo), count), auth);
-//   const _res = await loopRetry(authFetchUpdate);
-//   let update: Tweet[] = unpackApiTweets(_res);
-//   const users: FullUser[] = unpackApiUsers(_res);
-//   const authGetQTs = () => getQTs(auth, _res);
-//   const qts: Tweet[] = await loopRetry(authGetQTs);
-//   console.log('updateQuery', { _res, update, qts });
-//   const makeRes = (update: any[]): {} =>
-//     map(pipe(assocUser(users), assocQT(qts)), update);
-//   const res = await makeRes(update);
-//   return values(res);
-// };
 
-// export async function getBookmarks(auth: Credentials): Promise<Tweet[]> {
-//   const authFetchBookmarks = () => fetchTweets(URLGetBookmarks, auth);
-//   const _res = await loopRetry(authFetchBookmarks);
-//   let bookmarks: Tweet[] = unpackApiTweets(_res);
-//   const users = unpackApiUsers(_res);
-//   const authGetQTs = () => getQTs(auth, _res);
-//   const qts = await loopRetry(authGetQTs);
-//   const makeRes = (bookmarks: any[]): {} =>
-//     map(pipe(assocUser(users), assocQT(qts)), bookmarks);
-//   const res = await makeRes(bookmarks);
-//   return values(res);
-// }
-
-// export const searchAPI = curry(
-//   async (auth: Credentials, query: string): Promise<Tweet[]> => {
-//     const fetchQ = () => fetchTweets(makeApiSearchUrl(query), auth);
-//     const _res = await loopRetry(fetchQ);
-//     const tweets = unpackApiTweets(_res);
-//     const users = unpackApiUsers(_res);
-//     const authGetQTs = () => getQTs(auth, _res);
-//     const qts = await loopRetry(authGetQTs);
-//     const makeRes = (tweets: Tweet[]): Tweet[] =>
-//       pipe(() => tweets, map(assocUser(users)), map(assocQT(qts)))();
-//     const res = await makeRes(tweets);
-//     return res;
-//   }
-// );
 // order b by pathB according to a's pathA
 const orderBy = curry(
   (pathA: string[], as: any[], pathB: string[], bs: any[]): any[] => {

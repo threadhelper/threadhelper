@@ -7,9 +7,19 @@ export interface UserObj {
   [id: string]: User;
 }
 
-interface ScoutUserAndTweets {
+export interface ScoutUserAndTweets {
   users: UserObj;
   tweets: Status[];
+}
+
+export interface TimelineScrape extends ScoutUserAndTweets {
+  done: boolean;
+  bottomCursor: string;
+}
+
+export interface UserAndThTweets {
+  users: UserObj;
+  tweets: thTweet[];
 }
 
 export interface ArchTweet extends Status {}

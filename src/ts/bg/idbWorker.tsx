@@ -1,11 +1,11 @@
 import '@babel/polyfill';
 import * as R from 'ramda';
 import { map } from 'ramda';
-import { StoreName } from '../../types/dbTypes';
-import { thTweet } from '../../types/tweetTypes';
-import { dbDelMany, dbOpen, dbPutMany } from '../../bg/idb_wrapper';
-import { makeIndex } from '../../bg/nlp';
-import { storeIndexToDb } from '../../bg/stgOps';
+import { StoreName } from '../types/dbTypes';
+import { thTweet } from '../types/tweetTypes';
+import { dbDelMany, dbOpen, dbPutMany } from './idb_wrapper';
+import { makeIndex } from './nlp';
+import { storeIndexToDb } from './stgOps';
 
 // var DEBUG = process.env.NODE_ENV != 'production';
 // toggleDebug(window, DEBUG);
