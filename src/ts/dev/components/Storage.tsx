@@ -25,7 +25,7 @@ import { archToTweet } from '../../bg/tweetImporter';
 import { useStorage } from '../../hooks/useStorage';
 import { useMsg } from '../../hooks/useMsg';
 import { inspect } from '../../utils/putils';
-import { extractTweetPropIfNeeded } from '../../utils/bgUtils';
+import { extractTweetPropIfNeeded } from '../../bg/bgUtils';
 import {
   dbGetMany,
   dbOpen,
@@ -50,7 +50,7 @@ import {
 import RefreshIcon from '../../../images/refresh.svg';
 import XIcon from '../../../images/x-circle.svg';
 import DownIcon from '../../../images/arrow-circle-down.svg';
-import { postMsg, resetStorage } from '../../utils/dutils';
+import { postMsg, resetStorage } from '../../stg/dutils';
 import { JsonToTable } from 'react-json-to-table';
 
 const db_promise = dbOpen();

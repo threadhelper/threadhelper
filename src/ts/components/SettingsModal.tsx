@@ -27,7 +27,7 @@ import Tooltip from './Tooltip';
 import defaultProfilePic from '../../images/defaultProfilePic.png';
 import CrossIcon from '../../images/x-red.svg';
 import { ArchiveExporter } from './ArchiveExporter';
-import { rpcBg } from '../utils/dutils';
+import { rpcBg } from '../stg/dutils';
 import { manualUrl, patchNotes03 } from '../bg/updateManager';
 
 const Checkbox = ({ get, set, label }) => {

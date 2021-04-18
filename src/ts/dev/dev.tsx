@@ -13,9 +13,9 @@ import {
   makeGotMsgObs,
   makeStorageChangeObs,
   setData,
-} from '../utils/dutils';
+} from '../stg/dutils';
 import { nullFn } from '../utils/putils';
-import { updateTheme } from '../utils/wutils';
+import { updateTheme } from '../domInterface/wutils';
 import { dbOpen } from '../bg/idb_wrapper';
 import Scraper from './components/Scraper';
 import Search from './components/Search';

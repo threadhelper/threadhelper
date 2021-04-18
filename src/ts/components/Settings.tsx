@@ -2,7 +2,7 @@ import { h } from 'preact';
 import { useCallback, useState } from 'preact/hooks';
 import { defaultTo, pipe } from 'ramda'; // Function
 import GearIcon from '../../images/gear.svg';
-import { msgBG } from '../utils/dutils';
+import { msgBG } from '../stg/dutils';
 import { csEvent } from '../utils/ga';
 import SettingsModal, { SecretModal } from './SettingsModal';
 import Tooltip from './Tooltip';

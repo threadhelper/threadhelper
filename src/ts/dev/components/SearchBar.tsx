@@ -2,7 +2,7 @@ import { useRef, useState } from 'preact/hooks';
 import { defaultTo, path, trim } from 'ramda';
 import SearchIcon from '../../../images/search.svg';
 import { useStorage } from '../../hooks/useStorage';
-import { msgBG, setStg } from '../../utils/dutils';
+import { msgBG, setStg } from '../../stg/dutils';
 import { asyncTimeFn, timeFn } from '../../utils/putils';
 
 const trimNewlines = (str) =>

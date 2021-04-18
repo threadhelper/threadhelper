@@ -2,7 +2,7 @@ import { h } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import '../../style/Tooltip.css';
 import { useStorage } from '../hooks/useStorage';
-import { getStg, setStg } from '../utils/dutils';
+import { getStg, setStg } from '../stg/dutils';
 
 const GenericTooltip = ({
   children,

@@ -42,7 +42,7 @@ import {
   defaultStorage as _defaultStorage,
   devStorage,
 } from './defaultStg';
-import { asyncTimeFn, currentValue, inspect, timeFn } from './putils';
+import { asyncTimeFn, currentValue, inspect, timeFn } from '../utils/putils';
 
 (Kefir.Property.prototype as any).currentValue = currentValue;
 
