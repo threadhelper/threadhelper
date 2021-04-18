@@ -17,7 +17,7 @@ import {
   tap,
 } from 'ramda';
 import { useMsg } from '../../hooks/useMsg';
-import { postMsg, setStg } from '../../utils/dutils';
+import { postMsg, setStg } from '../../stg/dutils';
 import { inspect } from '../../utils/putils';
 import { dbGetMany, dbOpen } from '../../bg/idb_wrapper';
 import { makeIndex, updateIndex, search } from '../../bg/nlp';

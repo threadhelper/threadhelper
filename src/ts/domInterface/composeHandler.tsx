@@ -1,6 +1,6 @@
 import { filter, isEmpty, not, pipe, prop } from 'ramda'; // Function
 import { obsCharData } from '../utils/kefirMutationObs';
-import { url_regex } from '../utils/wutils.tsx';
+import { url_regex } from './wutils.tsx';
 
 // We use this to find the tweet editor
 let editorClass = 'DraftEditor-editorContainer';

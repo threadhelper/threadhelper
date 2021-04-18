@@ -1,5 +1,5 @@
 import { useContext, useEffect, useMemo } from 'preact/hooks';
-import { msgStream } from '../utils/dutils';
+import { msgStream } from '../stg/dutils';
 import { nullFn } from '../utils/putils';
 import { MsgObs } from './BrowserEventObs';
 import { _useStream } from './useStream';

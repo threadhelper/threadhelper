@@ -1,10 +1,10 @@
 import Kefir, { Observable } from 'kefir';
 import { equals, ifElse, isEmpty, isNil, nth, pipe } from 'ramda';
 import { curProp, UrlModes } from '../types/types';
-import { setData } from '../utils/dutils';
+import { setData } from '../stg/dutils';
 import { obsAdded, obsAttributes } from '../utils/kefirMutationObs';
 import { currentValue } from '../utils/putils';
-import { getCurrentUrl, getIdFromUrl, getMode } from '../utils/wutils';
+import { getCurrentUrl, getIdFromUrl, getMode } from './wutils';
 
 (Kefir.Property.prototype as any).currentValue = currentValue;
 

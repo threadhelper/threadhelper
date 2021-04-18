@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'preact/hooks';
-import { msgBG } from '../utils/dutils';
+import { msgBG } from '../stg/dutils';
 
 export const useStream = (stream, initialState) => {
   // const init = stream.currentValue != null ? stream.currentValue() : initialState

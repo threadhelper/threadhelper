@@ -2,7 +2,7 @@ import { h } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { useStorage } from '../hooks/useStorage';
 import Tooltip from './Tooltip';
-import { msgBG } from '../utils/dutils';
+import { msgBG } from '../stg/dutils';
 import { getTimeDiff } from './Tweet';
 import { join, filter, isNil } from 'ramda';
 

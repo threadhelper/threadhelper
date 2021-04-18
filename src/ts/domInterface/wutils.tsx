@@ -1,6 +1,6 @@
 import { isNil, isEmpty } from 'ramda';
 import { UrlModes } from '../types/types';
-import { isExist } from './putils';
+import { isExist } from '../utils/putils';
 export const url_regex = /(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})/;
 export const last_tweet_id = 0;
 export const editorClass = 'DraftEditor-editorContainer';

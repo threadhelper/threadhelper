@@ -22,7 +22,7 @@ import {
 } from '../bg/twitterScout';
 import { thTweet } from '../types/tweetTypes';
 import { csEvent } from '../utils/ga';
-import { getActiveComposer } from '../utils/wutils';
+import { getActiveComposer } from '../domInterface/wutils';
 import { DropdownMenu } from './Dropdown';
 import { Media } from './Media';
 import { AuthContext } from './ThreadHelper';

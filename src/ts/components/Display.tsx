@@ -21,8 +21,14 @@ import { apiMetricsFetch } from '../bg/twitterScout';
 import { useOption, useStorage } from '../hooks/useStorage';
 import { DisplayMode } from '../types/interfaceTypes';
 import { SearchResult, TweetResult } from '../types/msgTypes';
-import { AuthContext, FeedDisplayMode } from './ThreadHelper';
-import { getMetadataForPage } from './TtReader';
+import {
+  ApiTweetResults,
+  ApiUserResults,
+  AuthContext,
+  ContextualResults,
+  FeedDisplayMode,
+} from './ThreadHelper';
+import { getMetadataForPage, useCurrentTwitterPage } from './TtReader';
 
 import { Tweet as TweetCard } from './Tweet';
 import CrossIcon from '../../images/x-red.svg';
@@ -83,10 +89,8 @@ export function DisplayController(props: any) {
     useContext(FeedDisplayMode);
   const myRef = useRef(null);
   const [apiUsers, setApiUsers] = useStorage('api_users', []);
-  const [currentPage, setCurrentPage] = useStorage(
-    'pageMetadata',
-    getMetadataForPage(window.location.href)
-  );
+  const { apiUserResults, setApiUserResults } = useContext(ApiUserResults);
+  const currentPage = useCurrentTwitterPage();
 
   const makeFeedDisplay = (displayMode: DisplayMode) => {
     // console.log({ searchResults });
@@ -114,7 +118,7 @@ export function DisplayController(props: any) {
   return (
     <div class="searchWidget" ref={myRef}>
       {showUserSearch(apiUsers, feedDisplayMode) && (
-        <UserDisplay results={apiUsers} />
+        <UserDisplay results={apiUserResults} />
       )}
       {makeFeedDisplay(feedDisplayMode)}
     </div>
@@ -222,7 +226,7 @@ function GenericIdleDisplay({ stgName, title }) {
 
   // useEffect(() => {
   //   if (metricsRequested) {
-  //     console.log('[DEBUG] GenericSearchResults getting metrics');
+  //     console.log('[DEBUG] StgSearchResults getting metrics');
   //     return tryApiMetricsFetch(auth, prepTweets(stgIdleTweets), setRes);
   //   }
   // }, [metricsRequested]);
@@ -258,20 +262,6 @@ function IdleDisplay() {
   return idleMode == 'random' ? <IdleDisplayRandom /> : <IdleDisplayLatest />;
 }
 
-function QtDisplay() {
-  // const auth = useContext(AuthContext);
-  const [stgQts, setStgQts] = useStorage('qts', []);
-  console.log('QtDisplay render', { stgQts });
-
-  return (
-    <TweetDisplay
-      title="Quote Tweets:"
-      results={prepTweets(stgQts)}
-      emptyMsg={'No Quote Tweets.'}
-    />
-  );
-}
-
 const SearchResMsg = () => {
   const [query, setQuery] = useStorage('query', '');
   return (
@@ -292,9 +282,62 @@ const SearchResMsg = () => {
 //     };
 // }
 
-function GenericSearchResults({ stgName }) {
+function ContextSearchResults({}) {
+  const auth = useContext(AuthContext);
+  const { contextualResults, setContextualResults } = useContext(
+    ContextualResults
+  );
+  const [metricsRequested, setMetricsRequested] = useState(false);
+  const [res, setRes] = useThrottle([], 200);
+  const [searchMode, setSearchMode] = useOption('searchMode');
+
+  useEffect(() => {
+    console.log('contextualResults', { contextualResults });
+    setMetricsRequested(false);
+    return useEffectTimeout(() => {
+      setRes(contextualResults);
+    }, 500);
+    // return tryApiMetricsFetch(auth, prepTweets(stgSearchResults), setRes);
+  }, [auth, contextualResults]);
+
+  useEffect(() => {
+    if (metricsRequested) {
+      console.log('[DEBUG] ContextSearchResults getting metrics', {
+        contextualResults,
+        res,
+      });
+      return tryApiMetricsFetch(auth, prepTweets(contextualResults), setRes);
+    }
+  }, [metricsRequested]);
+
+  useEffect(() => {
+    setRes([]);
+    // setRes(prepTweets(stgSearchResults));
+  }, [contextualResults]);
+
+  return (
+    <TweetDisplay
+      title={
+        searchMode == 'fulltext'
+          ? 'Search results:'
+          : searchMode == 'semantic'
+          ? 'Semantic search results:'
+          : ''
+      }
+      onMouseEnter={(_) => setMetricsRequested(true)}
+      // slice because stgSearchResults are the ones that show up quickly before api metrics kick in
+      results={
+        isEmpty(res)
+          ? prepTweets(slice(0, pre_render_n, contextualResults))
+          : prepTweets(res)
+      }
+      emptyMsg={<SearchResMsg />}
+    />
+  );
+}
+
+function StgSearchResults({ stgName }) {
   const [stgSearchResults, setStgSearchResults] = useStorage(stgName, []);
-  const [displayStgRes, setDisplayStgRes] = useState([]);
   const [metricsRequested, setMetricsRequested] = useState(false);
   const [res, setRes] = useThrottle([], 200);
   const auth = useContext(AuthContext);
@@ -311,7 +354,7 @@ function GenericSearchResults({ stgName }) {
 
   useEffect(() => {
     if (metricsRequested) {
-      console.log('[DEBUG] GenericSearchResults getting metrics');
+      console.log('[DEBUG] StgSearchResults getting metrics');
       return tryApiMetricsFetch(auth, prepTweets(stgSearchResults), setRes);
     }
   }, [metricsRequested]);
@@ -343,20 +386,37 @@ function GenericSearchResults({ stgName }) {
 }
 
 function SearchResults() {
-  return <GenericSearchResults stgName="search_results" />;
+  return <StgSearchResults stgName="search_results" />;
 }
 
 function ContextResults() {
-  return <GenericSearchResults stgName="context_results" />;
+  return <ContextSearchResults />;
 }
 
 function ApiSearchResults() {
-  const [stgApiResults, setStgApiResults] = useStorage('api_results', []);
+  // const [stgApiResults, setStgApiResults] = useStorage('api_results', []);
+  const { apiTweetResults, setApiTweetResults } = useContext(ApiTweetResults);
   return (
     <TweetDisplay
       title={'Twitter search results:'}
-      results={prepTweets(stgApiResults)}
+      results={prepTweets(apiTweetResults)}
       emptyMsg={'No search results. Yet!'}
+    />
+  );
+}
+
+function QtDisplay() {
+  // const auth = useContext(AuthContext);
+  const { contextualResults, setContextualResults } = useContext(
+    ContextualResults
+  );
+  // const [stgQts, setStgQts] = useStorage('qts', []);
+
+  return (
+    <TweetDisplay
+      title="Quote Tweets:"
+      results={prepTweets(contextualResults)}
+      emptyMsg={'No Quote Tweets.'}
     />
   );
 }

@@ -6,7 +6,7 @@ import {
   msgBG,
   setDataLocalSync,
   rpcBg,
-} from '../utils/dutils';
+} from '../stg/dutils';
 import {
   WranggleRpc,
   Relay,

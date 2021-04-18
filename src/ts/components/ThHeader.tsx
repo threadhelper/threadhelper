@@ -5,13 +5,18 @@ import { defaultTo, isEmpty, path, pipe, prop, map } from 'ramda';
 import SearchIcon from '../../images/search.svg';
 import { SettingsButton } from './Settings';
 import { NinjaSyncIcon } from './Sync';
-import { FeedDisplayMode, AuthContext } from './ThreadHelper';
+import {
+  FeedDisplayMode,
+  AuthContext,
+  ApiTweetResults,
+  ApiUserResults,
+} from './ThreadHelper';
 import { StgFlagTooltip } from './Tooltip';
 import { goToTwitterSearchPage } from './TtReader';
 import { apiSearchToTweet } from '../bg/tweetImporter';
 import { searchAPI, searchUsers } from '../bg/twitterScout';
-import { saferTweetMap } from '../utils/bgUtils';
-import { setStg } from '../utils/dutils';
+import { saferTweetMap } from '../bg/bgUtils';
+import { setStg } from '../stg/dutils';
 
 var DEBUG = process.env.NODE_ENV != 'production';
 
@@ -98,7 +103,7 @@ const doSearchApi = async (auth, query) => {
     })
   );
   const res = toTh(tweets);
-  setStg('api_results', res);
+  // setStg('api_results', res);
   return res;
 };
 export function ApiSearchBar() {
@@ -107,6 +112,9 @@ export function ApiSearchBar() {
   const [showSearchBar, setShowSearchBar] = useState(false);
   const { feedDisplayMode, dispatchFeedDisplayMode } =
     useContext(FeedDisplayMode);
+  const { apiTweetResults, setApiTweetResults } = useContext(ApiTweetResults);
+  const { apiUserResults, setApiUserResults } = useContext(ApiUserResults);
+
   const auth = useContext(AuthContext);
 
   const submitApiSearch = (value) => {
@@ -114,10 +122,12 @@ export function ApiSearchBar() {
       action: isEmpty(value) ? 'emptyApiSearch' : 'submitApiSearch',
       tweets: [],
     });
-    const timeOutId = setTimeout(() => {
+    const timeOutId = setTimeout(async () => {
       // msgBG({ type: 'apiQuery', query: value });
-      doSearchApi(auth, value);
-      doUserSearch(auth, value);
+      const tweets = await doSearchApi(auth, value);
+      setApiTweetResults(tweets);
+      const users = await doUserSearch(auth, value);
+      setApiUserResults(users);
     }, 500);
     return timeOutId;
   };

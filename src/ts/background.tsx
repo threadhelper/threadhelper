@@ -1,5 +1,3 @@
-// only for development with `npm run serve`, to take advantage of HMR
-
 import '@babel/polyfill';
 import compareVersions from 'compare-versions';
 import { createWorkerFactory } from '@shopify/web-worker';
@@ -68,7 +66,13 @@ import {
   makeInitStgObs,
   saferTweetMap,
   twitter_url,
-} from './utils/bgUtils';
+  tryFnsAsync,
+  _rememberSub,
+  _subObs,
+  isQueueBusy,
+  maybeDq,
+  _subWorkQueueStg,
+} from './bg/bgUtils';
 import {
   cleanOldStorage,
   dequeue4WorkStg,
@@ -88,7 +92,7 @@ import {
   setStgFlag,
   setStgPath,
   softUpdateStorage,
-} from './utils/dutils';
+} from './stg/dutils';
 import { initGA, PageView } from './utils/ga';
 import {
   n_tweets_results,
@@ -120,17 +124,6 @@ const searchWorker = createSearchWorker();
 const idbWorker = createIdbWorker();
 const scrapeWorker = createScrapeWorker();
 
-// Scrape worker can't make requests for some people (TODO: find cause)
-// tries one function with the arguments and if it doesn't work tries the other one
-const tryFnsAsync = async (fn1, fn2, ...args) => {
-  try {
-    return await fn1(...args);
-  } catch (e) {
-    console.log(`[ERROR] ${fn1.name} failed, trying ${fn2.name}`);
-    return await fn2(...args);
-  }
-};
-
 // Analytics //IMPORTANT: this block must come before setting the currentValue for Kefir. Property and I have no idea why
 (function initAnalytics() {
   initGA();
@@ -150,82 +143,9 @@ const bgOpLog = (op: string) => {
 
 // Stream clean up
 const subscriptions: any[] = [];
-const rememberSub = (sub) => {
-  subscriptions.push(sub);
-  return sub;
-};
-
-const subObs = (
-  obsObj: { [key: string]: Observable<any, any> },
-  effect: any
-) => {
-  let obs = head(values(obsObj));
-  let name = head(keys(obsObj)) as string;
-  obs = obs.setName(name);
-  rememberSub(obs.observe({ value: effect }));
-};
-
-const isQueueBusy = async (name) => {
-  const qLen = await getStg(name + '_work_queue_length');
-  // console.log('isQueueBusy', { qLen });
-  return !isNil(qLen) && qLen > 0;
-};
-
-const maybeDq = async (name) => {
-  const busy = await isQueueBusy(name);
-  if (!busy) {
-    const workload = dequeue4WorkStg(name, queue_load);
-    // console.log('[DEBUG] dq', { name, workload });
-    return true;
-  } else {
-    // console.log('[DEBUG] dq: queue busy ', { name });
-    return false;
-  }
-  // dequeue4WorkStg(name, R.length(defaultTo([], queue)));
-};
-const subWorkQueueStg = curry((storageChange$, name, workFn) => {
-  // Waiting queue
-  const queueFn = async (q) => {
-    const qLen = R.length(q);
-    setStg(name + '_length', qLen);
-    // console.log('subWorkQueue ' + name, { qLen, q });
-    if (qLen > 0) {
-      await maybeDq(name);
-    }
-  };
-  const queue$ = makeInitStgObs(storageChange$, name).filter(pipe(isNil, not));
-  queue$.log(name + '$');
-  subObs({ [name + '$']: queue$ }, queueFn);
-
-  // Work queue (being worked on right now)
-  const workQueueFn = async (queue) => {
-    // keep track of the size of the queue because we check it sometimes
-    setStg(name + '_work_queue' + '_length', R.length(queue));
-    // If there's a queue, work it!
-    if (isExist(queue)) {
-      try {
-        await workFn(queue);
-        dequeueWorkQueueStg(name, R.length(queue));
-      } catch (e) {
-        console.error(
-          `couldn't consume ${name + '_work_queue'} with ${workFn.name}`,
-          e
-        );
-      }
-    } else {
-      //if the work queue is empty, maybe it shouldn't be! Dequeue any queued workload!
-      maybeDq(name);
-    }
-  };
-  const workQueue$ = makeInitStgObs(
-    storageChange$,
-    name + '_work_queue'
-  ).filter(pipe(isNil, not));
-  // workQueue$.log(name + '_work_queue' + '$');
-
-  subObs({ [name + '_work_queue' + '$']: workQueue$ }, workQueueFn);
-});
-
+const rememberSub = _rememberSub(subscriptions);
+const subObs = _subObs(subscriptions);
+const subWorkQueueStg = _subWorkQueueStg(subscriptions);
 const emitEvent = (name) => {
   window.dispatchEvent(new CustomEvent(name));
 };
@@ -235,8 +155,6 @@ const emitDoSmallScrape = () => emitEvent('doSmallTweetScrape');
 
 /* TODO: Functions to move out of this file */
 // Scraping functions
-
-var usernameFilterRegex = /(from|to):([a-zA-Z0-9_]*\s?[a-zA-Z0-9_]*)$/;
 
 const startRefreshIdb = async () => {
   console.log('[DEBUG] startRefreshIdb');
@@ -643,8 +561,9 @@ const seek = async ({ query }) => {
 
 const contextualSeek = async ({ query }) => {
   const searchResults: SearchResult[] = await genericSeek(query);
-  await setStg('context_results', searchResults);
-  return map(R.path(['tweet', 'id']), searchResults);
+  // await setStg('context_results', searchResults);
+  return searchResults
+  // return map(R.path(['tweet', 'id']), searchResults);
 };
 const getLatest = async () => {
   const { accsShown, filters } = await getSearchParams();
@@ -807,31 +726,6 @@ const incomingAccount$ = userInfo$; //.map(dressActiveAccount).toProperty();
 // Add to a list with no duplicates of the key (so no duplicates)
 const addActiveAccount = curry(
   (_acc: User, activeAccounts: ActiveAccsType): ActiveAccsType => {
-    // const accAddonProps = [
-    //   'lastGotTimeline',
-    //   'showTweets',
-    //   'timelineBottomCursor',
-    // ];
-
-    // const hasDressedAcc = (accs, id_str) => {
-    //   console.log('hasDressedAcc', {
-    //     accs,
-    //     id_str,
-    //     hasPaths: R.map(
-    //       (property) => R.hasPath([id_str, property], accs),
-    //       accAddonProps
-    //     ),
-    //   });
-    //   return R.any(
-    //     (property) => R.hasPath([id_str, property], accs),
-    //     accAddonProps
-    //   );
-    // };
-    // Check if we already have this account. If not, "dress" it with additional properties
-    // const acc = hasDressedAcc(activeAccounts, prop('id_str', _acc))
-    //   ? _acc
-    //   : dressActiveAccount(_acc);
-
     const acc = pipe(
       () => _acc,
       prop('id_str'),
@@ -949,6 +843,7 @@ var idbFns = {
 };
 var searchFns = {
   seek,
+  contextualSeek,
   getLatest,
   getRandom,
 };
@@ -969,13 +864,6 @@ chrome.runtime.onMessage.addListener(async function (
   sender,
   sendResponse
 ) {
-  // console.log(
-  //   sender.tab
-  //     ? 'from a content script:' + sender.tab.url
-  //     : 'from the extension',
-  //   { sender, request }
-  // );
-
   if (request.type != 'rpcBg' || !R.has('fnName', request)) {
     console.log('BG RPC: ignoring request', { request });
     sendResponse('not RPC');

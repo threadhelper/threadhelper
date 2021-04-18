@@ -3,7 +3,7 @@ import { useEffect, useReducer, useRef } from 'preact/hooks';
 import { defaultTo, either, isEmpty, isNil, map } from 'ramda'; // Object
 import { validateTweet } from '../bg/tweetImporter';
 import { useStorage } from '../hooks/useStorage';
-import { extractTweetPropIfNeeded } from '../utils/bgUtils';
+import { extractTweetPropIfNeeded } from '../bg/bgUtils';
 import { csEvent, csException } from '../utils/ga';
 import Tooltip from './Tooltip';
 

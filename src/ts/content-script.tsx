@@ -52,9 +52,9 @@ import {
   resetStorageField,
   rpcBg,
   setStg,
-} from './utils/dutils';
+} from './stg/dutils';
 import { currentValue, inspect, nullFn, toggleDebug } from './utils/putils';
-import { getMode, updateTheme } from './utils/wutils';
+import { getMode, updateTheme } from './domInterface/wutils';
 
 console.log('hi pcss', pcss);
 console.log('hi css', css);
