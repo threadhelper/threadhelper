@@ -63,7 +63,7 @@ export const ArchiveUploader = (props) => {
             Upload Twiter archive
           </button>
         </Tooltip>
-        <div class="ml-8">{statusMsg[status]}</div>
+        <div class="ml-8 text-lsm">{statusMsg[status]}</div>
       </div>
     );
   };

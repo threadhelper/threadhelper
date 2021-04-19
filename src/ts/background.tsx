@@ -35,6 +35,7 @@ import {
   timelineQuery,
   tweetLookupQuery,
   updateQuery,
+  userLookupQuery,
 } from './bg/twitterScout';
 import { makeAuthObs } from './bg/auth';
 import {
@@ -355,8 +356,30 @@ const doLookupBookmarkAPI = genericLookupAPI(
   'queue_addTweets'
 );
 const doLookupRefreshAPI = genericLookupAPI(apiToTweet, 'queue_refreshTweets');
-// IDB functions
 
+const doLookupUsersAPI = curry(async (ids) => {
+  try {
+    const [auth, userInfo] = await Promise.all<Credentials, User>([
+      getStg('auth'),
+      getStg('userInfo'),
+    ]);
+    setStg('isMidScrape', true);
+    const userList = await tryFnsAsync(
+      scrapeWorker.userLookupQuery,
+      userLookupQuery,
+      auth,
+      ids
+    );
+    const users: UserObj = R.indexBy('id_str', map(prop('user'), userList));
+    enqueueUserStg('queue_addUsers', values(users));
+    setStg('isMidScrape', false);
+  } catch (e) {
+    console.error('lookupUsersAPI failed', { e });
+    setStg('isMidScrape', false);
+  }
+});
+
+// IDB functions
 const importArchive = async (queue) => {
   try {
     const [auth, userInfo] = await Promise.all<Credentials, User>([
@@ -371,7 +394,7 @@ const importArchive = async (queue) => {
       userInfo,
       queue
     );
-    const toTh = saferTweetMap(archToTweet);
+    const toTh = saferTweetMap(R.pipe(archToTweet, assocUser(userInfo)));
     const thArchiveTweets = toTh(tweets);
     enqueueUserStg('queue_addUsers', values(users));
     enqueueTweetStg('queue_addTweets', thArchiveTweets);
@@ -562,7 +585,7 @@ const seek = async ({ query }) => {
 const contextualSeek = async ({ query }) => {
   const searchResults: SearchResult[] = await genericSeek(query);
   // await setStg('context_results', searchResults);
-  return searchResults
+  return searchResults;
   // return map(R.path(['tweet', 'id']), searchResults);
 };
 const getLatest = async () => {
@@ -779,6 +802,7 @@ subWorkQueue('queue_addTweets', importTweetQueue);
 subWorkQueue('queue_refreshTweets', refreshTweetQueue);
 subWorkQueue('queue_removeTweets', removeTweetQueue);
 subWorkQueue('queue_tempArchive', importArchive);
+subWorkQueue('queue_lookupUsers', doLookupUsersAPI);
 subWorkQueue('queue_addUsers', importUserQueue);
 subWorkQueue('queue_removeUsers', removeUserQueue);
 
