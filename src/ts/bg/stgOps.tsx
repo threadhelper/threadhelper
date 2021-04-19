@@ -102,6 +102,7 @@ export const makeTweetResponse = curry(
     const userId = prop('user_id', tweet);
     if (userId) {
       const user = await dbGet(db, 'users', userId);
+      // console.log("makeTweetResponse", {tweet, userId, user})
       if (!isNil(user)) {
         const tweetResp = {
           tweet: assocUserProps(tweet, user),
@@ -121,6 +122,12 @@ export const makeSearchResponse = curry(
     );
     const missing = filter(pipe(prop('tweet'), isNil), _response);
     const response = filter(pipe(prop('tweet'), isNil, not), _response);
+    console.log('makeSearchResponse', {
+      missing,
+      response,
+      _response,
+      results,
+    });
     return response;
   }
 );

@@ -27,6 +27,7 @@ import { DropdownMenu } from './Dropdown';
 import { Media } from './Media';
 import { AuthContext } from './ThreadHelper';
 import Tooltip from './Tooltip';
+import { enqueueStgNoDups } from '../stg/dutils';
 
 const isProduction = process.env.NODE_ENV != 'development';
 
@@ -402,7 +403,11 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
               <img
                 class="rounded-full"
                 src={profilePicSrc}
-                onError={() => setProfilePicSrc(defaultProfilePic)}
+                onError={() => {
+                  setProfilePicSrc(defaultProfilePic);
+                  if (tweet.user_id)
+                    enqueueStgNoDups('queue_lookupUsers', [tweet.user_id]);
+                }}
               />
             </a>
           </div>
