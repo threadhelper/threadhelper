@@ -125,10 +125,12 @@ export const tryFnsAsync = async (fn1, fn2, ...args) => {
 
 // observer and queue subscriptions
 
+// Remember subscription for deconstruction
 export const _rememberSub = curry((subscriptions, sub) => {
   subscriptions.push(sub);
   return sub;
 });
+// Subscribe to an observer with a function and remember it for deconstruction later
 export const _subObs = curry((
   subscriptions,
   obsObj: { [key: string]: Observable<any, any> },
@@ -140,18 +142,26 @@ export const _subObs = curry((
   _rememberSub(subscriptions, obs.observe({ value: effect }));
 });
 
-export const isQueueBusy = async (name) => {
+export const isQueueEmpty = async (name) => {
+  const qLen = await getStg(name+"_length");
+  // console.log('isWorkQueueBusy', { qLen });
+  return isNil(qLen) || qLen <= 0;
+};
+// Is the work queue corresponding to `name` populated? (means it's busy, waiting for work to be done)
+export const isWorkQueueBusy = async (name) => {
   const qLen = await getStg(name + '_work_queue_length');
-  // console.log('isQueueBusy', { qLen });
+  // console.log('isWorkQueueBusy', { qLen });
   return !isNil(qLen) && qLen > 0;
 };
 
+// Dequeue from `name` to `name`_work_queue
 export const maybeDq = async (name) => {
-  const busy = await isQueueBusy(name);
-  if (!busy) {
+  const busy = await isWorkQueueBusy(name);
+  const empty = await isQueueEmpty(name)
+  if (!(busy || empty)) {
     const workload = dequeue4WorkStg(name, queue_load);
     // console.log('[DEBUG] dq', { name, workload });
-    return true;
+    return workload;
   } else {
     // console.log('[DEBUG] dq: queue busy ', { name });
     return false;
@@ -159,16 +169,23 @@ export const maybeDq = async (name) => {
   // dequeue4WorkStg(name, R.length(defaultTo([], queue)));
 };
 
+// Subscribes to a queue called `name` in chrome.storage  with a function `workFn`.
+// Batches of data are taken from the queue `name` and moved to `name`_work_queue  
 export const _subWorkQueueStg = curry((subscriptions, storageChange$, name, workFn) => {
   // Waiting queue
   const queueFn = async (q) => {
     const qLen = R.length(q);
     setStg(name + '_length', qLen);
-    // console.log('subWorkQueue ' + name, { qLen, q });
+    console.log('subWorkQueue ' + name, { qLen, q });
     if (qLen > 0) {
-      await maybeDq(name);
+      const workload = await maybeDq(name);
+      // subtract the length of the workload to the length of the whole queue
+      // const newLen = qLen-R.length(workload)
+      // console.log('subWorkQueue ' + name, { name, qLen, q, newLen,workload });
+      // setStg(name + '_length', newLen);
     }
   };
+  // const queue$ = makeInitStgObs(storageChange$, name).filter(isExist);
   const queue$ = makeInitStgObs(storageChange$, name).filter(pipe(isNil, not));
   queue$.log(name + '$');
   _subObs(subscriptions, { [name + '$']: queue$ }, queueFn);
