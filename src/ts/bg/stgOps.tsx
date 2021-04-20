@@ -94,40 +94,36 @@ export const _updateIndex = async (
   );
   return newIndex;
 };
-
+// gets user props from IndexedDB and if there is a user, assocs with thTweet
+export const patchTweetWithUser = async (
+  db_promise,
+  tweet: thTweet
+): thTweet => {
+  const db = await db_promise;
+  const userId = prop('user_id', tweet);
+  const user = await dbGet(db, 'users', userId);
+  if (!isNil(user)) {
+    const patchedTweet = assocUserProps(tweet, user);
+    return patchedTweet;
+  }
+  return tweet;
+};
 export const makeTweetResponse = curry(
   async (db_promise, res: IndexSearchResult): Promise<SearchResult> => {
     const db = await db_promise;
     const tweet = await dbGet(db, 'tweets', res.ref);
-    const userId = prop('user_id', tweet);
-    if (userId) {
-      const user = await dbGet(db, 'users', userId);
-      // console.log("makeTweetResponse", {tweet, userId, user})
-      if (!isNil(user)) {
-        const tweetResp = {
-          tweet: assocUserProps(tweet, user),
-          score: res.score,
-        };
-        return tweetResp;
-      }
-    }
-    return { tweet, score: res.score };
+    const patchedTweet = await patchTweetWithUser(db_promise, tweet);
+    return { tweet: patchedTweet, score: res.score };
   }
 );
 
 export const makeSearchResponse = curry(
   async (db_promise, results: IndexSearchResult[]): Promise<SearchResult[]> => {
-    const _response = await Promise.all(
+    const _response: SearchResult[] = await Promise.all(
       map(makeTweetResponse(db_promise), results)
     );
-    const missing = filter(pipe(prop('tweet'), isNil), _response);
+    // const missing = filter(pipe(prop('tweet'), isNil), _response);
     const response = filter(pipe(prop('tweet'), isNil, not), _response);
-    console.log('makeSearchResponse', {
-      missing,
-      response,
-      _response,
-      results,
-    });
     return response;
   }
 );
