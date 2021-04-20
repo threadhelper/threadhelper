@@ -6,6 +6,7 @@ import { useStorage } from '../hooks/useStorage';
 import { extractTweetPropIfNeeded } from '../bg/bgUtils';
 import { csEvent, csException } from '../utils/ga';
 import Tooltip from './Tooltip';
+import { enqueueStg } from '../stg/dutils';
 
 const archiveTooltip = (
   <>
@@ -50,7 +51,7 @@ const statusMsg = {
 
 export const ArchiveUploader = (props) => {
   const [hasArchive, setHasArchive] = useStorage('hasArchive', false);
-  const [tempArchive, setTempArchive] = useStorage('queue_tempArchive', []);
+  const [tempArchive, setTempArchive] = useStorage('queue_tempArchive', null);
   // Create a reference to the hidden file input element
   const hiddenFileInput = useRef<HTMLInputElement>(null);
   const [status, dispatchMsg] = useReducer(statusReducer, 'idle');
@@ -69,6 +70,7 @@ export const ArchiveUploader = (props) => {
   };
 
   useEffect(() => {
+    console.log('ArchiveUploader', { tempArchive });
     if (either(isNil, isEmpty)(tempArchive)) {
       dispatchMsg('idle');
     }
@@ -129,7 +131,10 @@ export const ArchiveUploader = (props) => {
 
     console.log('setting archive', importedTweetArchive);
     dispatchMsg('waiting');
-    setTempArchive(map(extractTweetPropIfNeeded, importedTweetArchive));
+    enqueueStg(
+      'queue_tempArchive',
+      map(extractTweetPropIfNeeded, importedTweetArchive)
+    );
     setHasArchive(true);
     hiddenFileInput.current.value = null;
     // setStg(
