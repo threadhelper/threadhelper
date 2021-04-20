@@ -1,4 +1,6 @@
 import Kefir, { Emitter, Observable, Stream } from 'kefir';
+// import 'chrome-extension-async';
+
 import {
   curry,
   defaultTo,
@@ -356,12 +358,12 @@ export function postMsg(_msg: Msg) {
 
 export const rpcBg = async (fnName, args?) => {
   try {
+    console.log('rpcBg 0', { fnName, args });
     const returnValue = await chrome.runtime.sendMessage({
       type: 'rpcBg',
       fnName,
       args: defaultTo({}, args),
     });
-    console.log('rpcBg', { returnValue });
     return returnValue;
   } catch (error) {
     console.error(`rpcBg ${fnName} failed`, { error, args });
