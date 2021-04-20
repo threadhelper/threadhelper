@@ -52,7 +52,7 @@ function makeNewDummy() {
   const dummyLeft: Element = document.createElement('div');
   dummyLeft.className = 'dummyLeft';
   const dummyRight: Element = document.createElement('div');
-  dummyRight.className = 'dummyRight';
+  dummyRight.className = 'dummyRight max-w-xl';
   dummyRight.id = 'suggestionContainer';
   dummyUI.appendChild(dummyLeft);
   dummyUI.appendChild(dummyRight);
