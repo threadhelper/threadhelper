@@ -15,7 +15,7 @@ import {
   prop,
   __,
 } from 'ramda'; // Function
-import { Status, User } from 'twitter-d';
+import { FullUser, Status, User } from 'twitter-d';
 import default_pic_url from '../../images/defaultProfilePic.png';
 import { ArchTweet, thTweet } from '../types/tweetTypes';
 
@@ -314,7 +314,7 @@ export const apiToTweet = (entry: Status) => {
 
 export const bookmarkToTweet = pipe(apiToTweet, R.assoc('is_bookmark', true));
 
-export const assocUserProps = (tweet: thTweet, user: User) => {
+export const assocUserProps = (tweet: thTweet, user: FullUser) => {
   const picUrl =
     prop('profile_image_url', user) ??
     prop('profile_image_url_https', user) ??

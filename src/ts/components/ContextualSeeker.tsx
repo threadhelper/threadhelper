@@ -108,7 +108,6 @@ const reqContextSearch = async (query) => {
   // msgBG({ type: 'search', query });
   setStg('contextQuery', query);
   const searchResults = await rpcBg('contextualSeek', { query });
-  console.log('reqContextSearch', { query, searchResults });
   return searchResults;
 };
 

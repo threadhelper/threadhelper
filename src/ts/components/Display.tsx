@@ -211,8 +211,8 @@ function TweetDisplay({
     </>
   );
 }
-//
 
+// Gets metrics right away, rather than on mouse hover
 function GenericIdleDisplay({ stgName, title }) {
   // const [metricsRequested, setMetricsRequested] = useState(false);
   const [stgIdleTweets, setStgIdleTweets] = useStorage(stgName, []);
