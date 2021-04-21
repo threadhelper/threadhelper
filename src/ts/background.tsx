@@ -1,5 +1,4 @@
 import '@babel/polyfill';
-import compareVersions from 'compare-versions';
 import { createWorkerFactory } from '@shopify/web-worker';
 import 'chrome-extension-async';
 import Kefir, { Observable } from 'kefir';
@@ -12,8 +11,6 @@ import {
   defaultTo,
   either,
   filter,
-  head,
-  isEmpty,
   isNil,
   keys,
   map,
@@ -24,61 +21,42 @@ import {
   values,
 } from 'ramda'; // Function
 import { FullUser, User } from 'twitter-d';
-import {
-  fetchUserInfo,
-  genericLoopRetry,
-  getBookmarks,
-  patchArchive,
-  searchAPI,
-  searchUsers,
-  thFetch,
-  timelineQuery,
-  tweetLookupQuery,
-  updateQuery,
-  userLookupQuery,
-} from './bg/twitterScout';
 import { makeAuthObs } from './bg/auth';
-import {
-  choosePatchUrl,
-  uninstallUrl,
-  updateNeedRefresh,
-} from './bg/updateManager';
-import {
-  apiSearchToTweet,
-  apiToTweet,
-  archToTweet,
-  bookmarkToTweet,
-} from './bg/tweetImporter';
-import { loadIndexFromIdb, updateIdxFromIdb } from './dev/storage/devStgUtils';
-import window from './global';
-import { StoreName } from './types/dbTypes';
-import {
-  ActiveAccsType,
-  IdleMode,
-  SearchFilters,
-  SearchResult,
-} from './types/stgTypes';
-import { UserAndThTweets, thTweet, UserObj } from './types/tweetTypes';
-import { Credentials } from './types/types';
 import {
   compareAuths,
   getDateFormatted,
   makeInitOptionsObs,
   makeInitStgObs,
   saferTweetMap,
-  twitter_url,
   tryFnsAsync,
+  twitter_url,
+  validateAuth,
   _rememberSub,
   _subObs,
-  isQueueBusy,
-  maybeDq,
   _subWorkQueueStg,
-  validateAuth,
 } from './bg/bgUtils';
+import { dbFilter, dbOpen } from './bg/idb_wrapper';
+import { apiToTweet, archToTweet, bookmarkToTweet } from './bg/tweetImporter';
+import {
+  fetchUserInfo,
+  genericLoopRetry,
+  getBookmarks,
+  patchArchive,
+  thFetch,
+  timelineQuery,
+  tweetLookupQuery,
+  updateQuery,
+  userLookupQuery,
+} from './bg/twitterScout';
+import {
+  choosePatchUrl,
+  uninstallUrl,
+  updateNeedRefresh,
+} from './bg/updateManager';
+import { loadIndexFromIdb, updateIdxFromIdb } from './dev/storage/devStgUtils';
+import window from './global';
 import {
   cleanOldStorage,
-  dequeue4WorkStg,
-  dequeueWorkQueueStg,
   enqueueStg,
   enqueueStgNoDups,
   enqueueTweetStg,
@@ -91,28 +69,25 @@ import {
   modStg,
   msgCS,
   setStg,
-  setStgFlag,
   setStgPath,
   softUpdateStorage,
 } from './stg/dutils';
+import { StoreName } from './types/dbTypes';
+import {
+  ActiveAccsType,
+  IdleMode,
+  SearchFilters,
+  SearchResult,
+} from './types/stgTypes';
+import { thTweet, UserAndThTweets, UserObj } from './types/tweetTypes';
+import { Credentials } from './types/types';
 import { initGA, PageView } from './utils/ga';
 import {
   n_tweets_results,
-  update_size,
-  queue_load,
   timeline_scrape_interval,
+  update_size,
 } from './utils/params';
-import {
-  currentValue,
-  errorFilter,
-  inspect,
-  isExist,
-  nullFn,
-  promiseStream,
-  toggleDebug,
-} from './utils/putils';
-import { dbFilter, dbOpen } from './bg/idb_wrapper';
-import { getLatestTweets, getRandomSampleTweets } from './bg/search';
+import { currentValue, errorFilter, promiseStream } from './utils/putils';
 
 const createSearchWorker = createWorkerFactory(
   () => import('./bg/searchWorker')
