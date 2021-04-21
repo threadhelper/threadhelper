@@ -1,61 +1,43 @@
+import 'chrome-extension-async'
 import Kefir, { Observable } from 'kefir'
-import { assoc, curry, defaultTo, filter, ifElse, isNil, map, not, path, pipe, prop, reduce } from 'ramda' // Function
+import * as R from 'ramda'
+import { assoc, curry, defaultTo, filter, head, ifElse, isNil, keys, map, not, path, pipe, prop, reduce, values } from 'ramda' // Function
 import { Status } from 'twitter-d'
-import { apiToTweet, validateTweet } from './tweetImporter'
+import {
+  dequeue4WorkStg,
+  dequeueWorkQueueStg,
+
+
+
+
+  getOption,
+  getStg,
+
+
+
+
+
+
+
+
+
+  makeOptionObs, setStg,
+
+
+
+  stgPathObs
+} from '../stg/dutils'
 import { Option, SearchFilters, StorageChange } from '../types/stgTypes'
 import { thTweet } from '../types/tweetTypes'
 import { Credentials } from '../types/types'
-import 'chrome-extension-async';
-import * as R from 'ramda';
 import {
-  andThen,
-  either,
-  head,
-  isEmpty,
-  keys,
-  propEq,
-  values,
-} from 'ramda'; // Function
+  queue_load
+} from '../utils/params'
+import {
+  isExist
+} from '../utils/putils'
+import { apiToTweet, validateTweet } from './tweetImporter'
 
-import {
-  n_tweets_results,
-  update_size,
-  queue_load,
-  timeline_scrape_interval,
-} from '../utils/params';
-import {
-  currentValue,
-  errorFilter,
-  inspect,
-  isExist,
-  nullFn,
-  promiseStream,
-  toggleDebug,
-} from '../utils/putils';
-import { dbFilter, dbOpen } from './idb_wrapper';
-import { getLatestTweets, getRandomSampleTweets } from './search';
-import {
-  cleanOldStorage,
-  dequeue4WorkStg,
-  dequeueWorkQueueStg,
-  enqueueStg,
-  enqueueStgNoDups,
-  enqueueTweetStg,
-  enqueueUserStg,
-  getData,
-  getOption,
-  getStg,
-  getStgPath,
-  makeStorageChangeObs as makeStorageChangeObs,
-  modStg,
-  msgCS,
-  setStg,
-  setStgFlag,
-  setStgPath,
-  softUpdateStorage,
-  stgPathObs,
-  makeOptionObs,
-} from '../stg/dutils';
 
 export const getDateFormatted = () => (new Date()).toLocaleString()
 export const twitter_url = /https?:\/\/(www\.)?twitter.com\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/
