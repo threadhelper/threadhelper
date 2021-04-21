@@ -73,6 +73,7 @@ import {
   isQueueBusy,
   maybeDq,
   _subWorkQueueStg,
+  validateAuth,
 } from './bg/bgUtils';
 import {
   cleanOldStorage,
@@ -132,7 +133,7 @@ const scrapeWorker = createScrapeWorker();
 PageView('/background.html');
 // Project business
 var DEBUG = process.env.NODE_ENV != 'production';
-toggleDebug(window, DEBUG);
+// toggleDebug(window, DEBUG);
 (Kefir.Property.prototype as any).currentValue = currentValue;
 // log can contain the name of the operations done, arguments, succcess or not, time
 const bgOpLog = (op: string) => {
@@ -357,12 +358,9 @@ const doLookupBookmarkAPI = genericLookupAPI(
 );
 const doLookupRefreshAPI = genericLookupAPI(apiToTweet, 'queue_refreshTweets');
 
-const doLookupUsersAPI = curry(async (ids) => {
+const doLookupUsersAPI = curry(async (ids: string[]) => {
   try {
-    const [auth, userInfo] = await Promise.all<Credentials, User>([
-      getStg('auth'),
-      getStg('userInfo'),
-    ]);
+    const auth = await getStg('auth');
     setStg('isMidScrape', true);
     const userList = await tryFnsAsync(
       scrapeWorker.userLookupQuery,
@@ -370,8 +368,12 @@ const doLookupUsersAPI = curry(async (ids) => {
       auth,
       ids
     );
-    const users: UserObj = R.indexBy('id_str', map(prop('user'), userList));
-    enqueueUserStg('queue_addUsers', values(users));
+    const users: UserObj = R.indexBy(
+      prop('id_str'),
+      map(prop('user'), userList)
+    );
+    console.log('doLookupUsersAPI', { userList, auth, users });
+    enqueueUserStg('queue_addUsers', userList);
     setStg('isMidScrape', false);
   } catch (e) {
     console.error('lookupUsersAPI failed', { e });
@@ -409,6 +411,7 @@ const importUserQueue = async (queue) => {
   try {
     setStg('isMidStore', true);
     await idbWorker.workerImportUsers(queue);
+
     setStg('isMidStore', false);
   } catch (e) {
     console.error("couldn't importUserQueue ", e);
@@ -481,7 +484,7 @@ const updateNTweets = async () => {
 
 const setLastUpdated = async () => {
   const date = getDateFormatted();
-  setStg('lastUpdated', date);
+  setStg('lastUpdated', new Date().getTime());
   return date;
 };
 
@@ -553,14 +556,14 @@ const genericSeek = async (query) => {
   // const isMidSearch = getStg('isMidSearch')
   // console.trace(`seek ${query}`);
   const { accsShown, filters } = await getSearchParams();
-  console.time(`${query} genericSeek`);
+  // console.time(`${query} genericSeek`);
   const searchResults = await searchWorker.seek(
     filters,
     accsShown,
     n_tweets_results,
     query
   );
-  console.timeEnd(`${query} genericSeek`);
+  // console.timeEnd(`${query} genericSeek`);
   return searchResults;
 };
 let isMidSearch = false;
@@ -584,59 +587,69 @@ const seek = async ({ query }) => {
 
 const contextualSeek = async ({ query }) => {
   const searchResults: SearchResult[] = await genericSeek(query);
+  console.log('contextualSeek', { searchResults, query });
   // await setStg('context_results', searchResults);
   return searchResults;
   // return map(R.path(['tweet', 'id']), searchResults);
 };
-const getLatest = async () => {
-  const { accsShown, filters } = await getSearchParams();
-  const db = await dbOpen();
-  const dbGet = curry((storeName, key) => db.get(storeName, key));
-  console.log('getting latest tweets ', { accsShown, filters });
-  const latestTweets = await getLatestTweets(
-    n_tweets_results,
-    filters,
-    dbGet,
-    accsShown,
-    () => db.getAllKeys('tweets')
-  );
-  const res = map((tweet) => {
-    return { tweet };
-  }, latestTweets);
-  db.close();
-  setStg('latest_tweets', res);
-  return map(prop('id'), latestTweets);
-};
+// const getLatest = async () => {
+//   const { accsShown, filters } = await getSearchParams();
+//   const db_promise = dbOpen();
+//   const db = await db_promise;
+//   const dbGet = curry((storeName, key) => db.get(storeName, key));
+//   console.log('getting latest tweets ', { accsShown, filters });
+//   const latestTweets = await getLatestTweets(
+//     n_tweets_results,
+//     filters,
+//     dbGet,
+//     accsShown,
+//     () => db.getAllKeys('tweets')
+//   );
+//   const res = map((tweet) => {
+//     return { tweet };
+//   }, latestTweets);
+//   db.close();
+//   setStg('latest_tweets', res);
+//   return map(prop('id'), latestTweets);
+// };
 
-const getRandom = async () => {
-  const { accsShown, filters } = await getSearchParams();
-  const db = await dbOpen();
-  const dbGet = curry((storeName, key) => db.get(storeName, key));
-  const randomSample = await getRandomSampleTweets(
-    n_tweets_results,
-    filters,
-    dbGet,
-    accsShown,
-    () => db.getAllKeys('tweets')
-  );
-  const res = map((tweet) => {
-    return { tweet };
-  }, randomSample);
-  db.close();
-  setStg('latest_tweets', res);
-  setStg('random_tweets', res);
-  console.log('getRandom', { res, accsShown, filters });
-  return map(prop('id'), randomSample);
-};
+// const getRandom = async () => {
+//   const { accsShown, filters } = await getSearchParams();
+//   const db = await dbOpen();
+//   const dbGet = curry((storeName, key) => db.get(storeName, key));
+//   const randomSample = await getRandomSampleTweets(
+//     n_tweets_results,
+//     filters,
+//     dbGet,
+//     accsShown,
+//     () => db.getAllKeys('tweets')
+//   );
+//   const res = map((tweet) => {
+//     return { tweet };
+//   }, randomSample);
+//   db.close();
 
-const getDefault = (mode) => {
+//   console.log('getRandom', { res, accsShown, filters });
+//   return map(prop('id'), randomSample);
+// };
+
+const getDefault = async (mode) => {
+  const { accsShown, filters } = await getSearchParams();
   if (mode === 'random') {
-    getRandom();
+    const res = await searchWorker.getRandom(accsShown, filters);
+    setStg('latest_tweets', res);
+    console.log('getDefault', { mode, res });
+    return res;
   } else {
-    getLatest();
+    const res = await searchWorker.getLatest(accsShown, filters);
+    setStg('random_tweets', res);
+    setStg('latest_tweets', res);
+    console.log('getDefault', { mode, res });
+    return res;
   }
-  return;
 };
+const getLatest = () => getDefault('latest');
+const getRandom = () => getDefault('random');
 
 const addBookmark = ({ ids }) => {
   enqueueStgNoDups('queue_lookupBookmark', ids);
@@ -698,6 +711,7 @@ const auth$ = webRequestPermission$
   .filter((x) => x)
   .skipDuplicates()
   .flatMapLatest((_) => makeAuthObs())
+  .filter(validateAuth)
   .skipDuplicates(compareAuths);
 subObs({ auth$ }, setStg('auth'));
 const _userInfo$ = auth$
@@ -814,12 +828,12 @@ subObs({ doIndexUpdate$ }, doIndexUpdate);
 const indexUpdated$ = Kefir.fromEvents(window, 'indexUpdated');
 subObs({ indexUpdated$ }, (_) => onIndexUpdated());
 
+// const contextQuery$ = makeInitStgObs(storageChange$, 'contextQuery');
+// contextQuery$.log('contextQuery$');
 const query$ = makeInitStgObs(storageChange$, 'query');
-const contextQuery$ = makeInitStgObs(storageChange$, 'contextQuery');
 query$.log('query$');
-contextQuery$.log('contextQuery$');
 subObs({ query$ }, (query) => seek({ query }));
-subObs({ contextQuery$ }, (query) => contextualSeek({ query }));
+// subObs({ contextQuery$ }, (query) => contextualSeek({ query }));
 
 const isMidSearchTrue$ = makeInitStgObs(storageChange$, 'isMidSearch')
   .filter((x) => x != false)
@@ -837,7 +851,7 @@ const accsShown$ = accounts$.map(
   filter(either(pipe(prop('showTweets'), isNil), propEq('showTweets', true)))
 ) as unknown) as Observable<User[], any>;
 subObs({ accsShown$ }, async (_) => {
-  getDefault(await getStg('idleMode'));
+  getDefault(await getOption('idleMode'));
 });
 accsShown$.log('accsShown$');
 /* Display options and Search filters */
@@ -882,16 +896,14 @@ var rpcFns = {
   ...scrapingFns,
   webReqPermission,
 };
-// RPC central
-chrome.runtime.onMessage.addListener(async function (
-  request,
-  sender,
-  sendResponse
-) {
+
+const rpcBgServer = async (request, sender, sendResponse) => {
   if (request.type != 'rpcBg' || !R.has('fnName', request)) {
     console.log('BG RPC: ignoring request', { request });
     sendResponse('not RPC');
     return;
+  } else {
+    console.log('BG RPC', { request });
   }
   let response = '';
   if (
@@ -901,7 +913,10 @@ chrome.runtime.onMessage.addListener(async function (
   ) {
     try {
       response = await rpcFns[request.fnName](defaultTo({}, request.args));
+      console.log('rpcBg sending response', { name: request.fnName, response });
       sendResponse(response);
+      const isFf = await isFirefox();
+      return isFf ? response : true;
     } catch (error) {
       response = 'RPC call failed';
       console.error(error);
@@ -913,9 +928,26 @@ chrome.runtime.onMessage.addListener(async function (
     sendResponse(response);
   }
   return true;
+};
+// RPC central
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  rpcBgServer(request, sender, sendResponse);
+  return true;
 });
 
 /* Connection to tabs and CS */
+const isFirefox = async () => {
+  try {
+    const gettingInfo = await browser.runtime.getBrowserInfo();
+    console.log('isFirefox', { gettingInfo });
+    const isFf = gettingInfo.name.includes('Firefox');
+    console.log('isFirefox', { isFf, gettingInfo });
+    return isFf;
+  } catch (e) {
+    console.log('Not Firefox');
+  }
+  return false;
+};
 
 let ports = [];
 

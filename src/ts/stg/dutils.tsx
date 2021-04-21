@@ -1,5 +1,5 @@
 import Kefir, { Emitter, Observable, Stream } from 'kefir';
-// import 'chrome-extension-async';
+import 'chrome-extension-async';
 
 import {
   curry,
@@ -364,6 +364,7 @@ export const rpcBg = async (fnName, args?) => {
       fnName,
       args: defaultTo({}, args),
     });
+    console.log('rpcBg 0', { fnName, args, returnValue });
     return returnValue;
   } catch (error) {
     console.error(`rpcBg ${fnName} failed`, { error, args });
