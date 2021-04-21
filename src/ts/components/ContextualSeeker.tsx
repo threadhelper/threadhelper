@@ -25,7 +25,7 @@ import {
   ContextualResults,
   FeedDisplayMode,
 } from './ThreadHelper';
-import { useCurrentTwitterPage } from './TtReader';
+import { parseThQuery, useCurrentTwitterPage } from './TtReader';
 
 export function ContextualSeeker() {
   const auth = useContext(AuthContext);
@@ -106,8 +106,9 @@ export function ContextualSeeker() {
 
 const reqContextSearch = async (query) => {
   // msgBG({ type: 'search', query });
-  setStg('contextQuery', query);
-  const searchResults = await rpcBg('contextualSeek', { query });
+  const searchResults = await rpcBg('contextualSeek', {
+    query: parseThQuery(query),
+  });
   return searchResults;
 };
 

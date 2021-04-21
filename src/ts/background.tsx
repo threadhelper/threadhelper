@@ -690,23 +690,23 @@ const webRequestPermission$: Observable<boolean, any> = makeInitStgObs(
   'webRequestPermission'
 );
 webRequestPermission$.log('webRequestPermission$');
-const incomingAuth$ = makeAuthObs()
+const incomingAuth$ = makeAuthObs();
+const auth$ = incomingAuth$
   .filterBy(webRequestPermission$)
-  .filter(validateAuthFormat); //No skipping duplicates bc what if setStg fails for some reason?
-// .skipDuplicates(compareAuths);
-subObs({ incomingAuth$ }, setStg('auth'));
-incomingAuth$.log('[DEBUG] incomingAuth$');
-const auth$ = makeInitStgObs(storageChange$, 'auth')
-  .filter(validateAuthFormat)
+  .filter(validateAuth)
   .skipDuplicates(compareAuths);
-auth$.log('[DEBUG] auth$');
 
-const incomingUserInfo$ = auth$
+// const auth$ = webRequestPermission$
+//   .filter((x) => x)
+//   .skipDuplicates()
+//   .flatMapLatest((_) => makeAuthObs())
+//   .filter(validateAuth)
+//   .skipDuplicates(compareAuths);
+subObs({ auth$ }, setStg('auth'));
+const _userInfo$ = auth$
   .thru<Observable<User, any>>(
     promiseStream(async (auth: Credentials) => {
-      console.log('_userInfo$', { auth });
-      // return await tryFnsAsync(scrapeWorker.fetchUserInfo, fetchUserInfo, auth);
-      return await scrapeWorker.debugFetchUserInfo(auth);
+      return await tryFnsAsync(scrapeWorker.fetchUserInfo, fetchUserInfo, auth);
     })
   )
   .map(inspect('incomingUserInfo$'))
