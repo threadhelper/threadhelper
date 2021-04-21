@@ -2,7 +2,7 @@ import { fromEvents, Kefir, Observable } from 'kefir';
 import { isNil } from 'ramda'; // Logic, Type, Relation, String, Math
 import { obsAdded, obsRemoved } from '../utils/kefirMutationObs';
 import { inspect } from '../utils/putils';
-import { isSidebar } from '../utils/wutils';
+import { isSidebar } from './wutils';
 const photoSelector = '[data-testid="tweetPhoto"]'; // can't use this bc sidebar doesn't start with photos loaded
 const photoHrefSelector = '[href*="/photo"]';
 const advancedSearchSelector = '[href*="/search-advanced"]';
@@ -52,7 +52,7 @@ function makeNewDummy() {
   const dummyLeft: Element = document.createElement('div');
   dummyLeft.className = 'dummyLeft';
   const dummyRight: Element = document.createElement('div');
-  dummyRight.className = 'dummyRight';
+  dummyRight.className = 'dummyRight max-w-xl';
   dummyRight.id = 'suggestionContainer';
   dummyUI.appendChild(dummyLeft);
   dummyUI.appendChild(dummyRight);

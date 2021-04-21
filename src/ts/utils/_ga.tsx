@@ -1,5 +1,5 @@
 import ReactGA from 'react-ga';
-import { msgBG } from './dutils';
+import { msgBG } from '../stg/dutils';
 
 export const UA_CODE = 'UA-170230545-2';
 

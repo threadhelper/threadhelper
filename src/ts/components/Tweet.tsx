@@ -22,11 +22,13 @@ import {
 } from '../bg/twitterScout';
 import { thTweet } from '../types/tweetTypes';
 import { csEvent } from '../utils/ga';
-import { getActiveComposer } from '../utils/wutils';
+import { getActiveComposer } from '../domInterface/wutils';
 import { DropdownMenu } from './Dropdown';
 import { Media } from './Media';
 import { AuthContext } from './ThreadHelper';
 import Tooltip from './Tooltip';
+import { enqueueStgNoDups } from '../stg/dutils';
+import { isExist } from '../utils/putils';
 
 const isProduction = process.env.NODE_ENV != 'development';
 
@@ -402,7 +404,11 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
               <img
                 class="rounded-full"
                 src={profilePicSrc}
-                onError={() => setProfilePicSrc(defaultProfilePic)}
+                onError={() => {
+                  setProfilePicSrc(defaultProfilePic);
+                  if (tweet.user_id)
+                    enqueueStgNoDups('queue_lookupUsers', [tweet.user_id]);
+                }}
               />
             </a>
           </div>
@@ -427,7 +433,9 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
             </Tooltip>
           </div>
           <div class="flex-none">
-            <div class="text-neutral">{reply_text}</div>
+            {isExist(reply_text) && (
+              <div class="text-neutral">{reply_text}</div>
+            )}
             {reformattedText(tweet)}
           </div>
           {maybeMedia(tweet)}
@@ -634,6 +642,9 @@ function renderQuote(quote: thTweet, parent_has_media) {
       null,
       quote.media
     );
+    const [profilePicSrc, setProfilePicSrc] = useState(() => {
+      return prop('profile_image', quote) ?? defaultProfilePic;
+    });
 
     const media = quote.has_media ? renderMedia(quote.media, true) : null;
 
@@ -647,7 +658,12 @@ function renderQuote(quote: thTweet, parent_has_media) {
                   <div class="w-full h-full absolute rounded-full inset-0 transition-colors duration-200 hover:bg-black hover:bg-opacity-15"></div>
                   <img
                     class="rounded-full"
-                    src={prop('profile_image', quote) ?? defaultProfilePic}
+                    src={profilePicSrc}
+                    onError={() => {
+                      setProfilePicSrc(defaultProfilePic);
+                      if (quote.user_id)
+                        enqueueStgNoDups('queue_lookupUsers', [quote.user_id]);
+                    }}
                   />
                 </a>
               </div>

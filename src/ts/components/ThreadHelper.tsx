@@ -1,15 +1,20 @@
 import { createContext, h } from 'preact';
-import { useReducer, useRef, useState } from 'preact/hooks';
+import { useEffect, useReducer, useRef, useState } from 'preact/hooks';
 import { useStorage } from '../hooks/useStorage';
 import { DisplayMode } from '../types/interfaceTypes';
 import { TweetResult } from '../types/msgTypes';
-import { rpcBg } from '../utils/dutils';
+import { rpcBg } from '../stg/dutils';
 import { ApiSearchBar } from './ThHeader';
 import { Banner } from './Banner';
 import { DisplayController } from './Display';
-import { TtReader } from './TtReader';
+import { TtReader, useCurrentTwitterPage } from './TtReader';
 import { isNil } from 'ramda';
+import { ContextualSeeker } from './ContextualSeeker';
 
+// Tweets to show that results from navigation, not explicit search (i.e., QTs, auto search an open tweet's text)
+export const ContextualResults = createContext(null);
+export const ApiTweetResults = createContext(null);
+export const ApiUserResults = createContext(null);
 export const AuthContext = createContext<Credentials>({
   authorization: null,
   'x-csrf-token': null,
@@ -115,22 +120,50 @@ var renderCount = 0;
 
 function Sidebar(props: { active: any }) {
   // const [feedDisplayMode, setFeedDisplayMode] = useState('idle');
-  const [auth, setAuth] = useStorage('auth', {});
+  const [auth, setAuth] = useStorage('auth', null);
+  const [contextualResults, setContextualResults] = useState([]);
+  const [apiTweetResults, setApiTweetResults] = useState([]);
+  const [apiUserResults, setApiUserResults] = useState([]);
 
   const [feedDisplayMode, dispatchFeedDisplayMode] = useReducer(
     updateFeedDisplay,
     DisplayMode.Idle
   );
+  useEffect(() => {
+    console.log('Sidebar', { contextualResults });
+  }, [contextualResults]);
   return (
     <FeedDisplayMode.Provider
       value={{ feedDisplayMode, dispatchFeedDisplayMode }}
     >
       <AuthContext.Provider value={auth}>
-        <div class="sidebar">
-          <TtReader />
-          <ApiSearchBar />
-          <DisplayController />
-        </div>
+        <ContextualResults.Provider
+          value={{
+            contextualResults,
+            setContextualResults,
+          }}
+        >
+          <ApiTweetResults.Provider
+            value={{
+              apiTweetResults,
+              setApiTweetResults,
+            }}
+          >
+            <ApiUserResults.Provider
+              value={{
+                apiUserResults,
+                setApiUserResults,
+              }}
+            >
+              <div class="sidebar">
+                <TtReader />
+                <ContextualSeeker />
+                <ApiSearchBar />
+                <DisplayController />
+              </div>
+            </ApiUserResults.Provider>
+          </ApiTweetResults.Provider>
+        </ContextualResults.Provider>
       </AuthContext.Provider>
     </FeedDisplayMode.Provider>
   );

@@ -10,6 +10,7 @@ import {
   project,
   prop,
   take,
+  tap,
   values,
 } from 'ramda'; // Function
 import { User } from 'twitter-d';
@@ -147,7 +148,13 @@ export const getTopNResults = curry(
     const sample = pipe(
       () => results,
       map(pick(['ref', 'score'])),
+      tap((ids) => {
+        console.log('getTopNResults 0', {
+          tweets: map(pipe(prop('ref'), getDoc(index)), ids),
+        });
+      }),
       filter(pipe(prop('ref'), getDoc(index), isValidTweet)),
+      inspect('getTopNResults 1'),
       take(n_tweets)
     )();
     return sample;
@@ -165,7 +172,9 @@ export const search = curry(
     return await pipe(
       () => query,
       getRelated(index),
-      andThen(getTopNResults(n_tweets, index, filters, accsShown))
+      inspect('nlp search 0...'),
+      andThen(getTopNResults(n_tweets, index, filters, accsShown)),
+      andThen(inspect('nlp search 1...'))
     )();
   }
 );

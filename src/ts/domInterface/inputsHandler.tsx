@@ -20,7 +20,7 @@ import {
   getMode,
   getTweetId,
   isFocused,
-} from '../utils/wutils';
+} from './wutils';
 (Kefir.Property.prototype as any).currentValue = currentValue;
 const tweetHeaderSelector = '[data-testid="tweet"]';
 const dateSelector = 'a time';
