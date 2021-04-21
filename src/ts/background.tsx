@@ -1,5 +1,3 @@
-// only for development with `npm run serve`, to take advantage of HMR
-
 import '@babel/polyfill';
 import compareVersions from 'compare-versions';
 import { createWorkerFactory } from '@shopify/web-worker';
@@ -37,6 +35,7 @@ import {
   timelineQuery,
   tweetLookupQuery,
   updateQuery,
+  userLookupQuery,
 } from './bg/twitterScout';
 import { makeAuthObs } from './bg/auth';
 import {
@@ -68,7 +67,14 @@ import {
   makeInitStgObs,
   saferTweetMap,
   twitter_url,
-} from './utils/bgUtils';
+  tryFnsAsync,
+  _rememberSub,
+  _subObs,
+  isQueueBusy,
+  maybeDq,
+  _subWorkQueueStg,
+  validateAuth,
+} from './bg/bgUtils';
 import {
   cleanOldStorage,
   dequeue4WorkStg,
@@ -88,7 +94,7 @@ import {
   setStgFlag,
   setStgPath,
   softUpdateStorage,
-} from './utils/dutils';
+} from './stg/dutils';
 import { initGA, PageView } from './utils/ga';
 import {
   n_tweets_results,
@@ -120,17 +126,6 @@ const searchWorker = createSearchWorker();
 const idbWorker = createIdbWorker();
 const scrapeWorker = createScrapeWorker();
 
-// Scrape worker can't make requests for some people (TODO: find cause)
-// tries one function with the arguments and if it doesn't work tries the other one
-const tryFnsAsync = async (fn1, fn2, ...args) => {
-  try {
-    return await fn1(...args);
-  } catch (e) {
-    console.log(`[ERROR] ${fn1.name} failed, trying ${fn2.name}`);
-    return await fn2(...args);
-  }
-};
-
 // Analytics //IMPORTANT: this block must come before setting the currentValue for Kefir. Property and I have no idea why
 (function initAnalytics() {
   initGA();
@@ -138,7 +133,7 @@ const tryFnsAsync = async (fn1, fn2, ...args) => {
 PageView('/background.html');
 // Project business
 var DEBUG = process.env.NODE_ENV != 'production';
-toggleDebug(window, DEBUG);
+// toggleDebug(window, DEBUG);
 (Kefir.Property.prototype as any).currentValue = currentValue;
 // log can contain the name of the operations done, arguments, succcess or not, time
 const bgOpLog = (op: string) => {
@@ -150,82 +145,9 @@ const bgOpLog = (op: string) => {
 
 // Stream clean up
 const subscriptions: any[] = [];
-const rememberSub = (sub) => {
-  subscriptions.push(sub);
-  return sub;
-};
-
-const subObs = (
-  obsObj: { [key: string]: Observable<any, any> },
-  effect: any
-) => {
-  let obs = head(values(obsObj));
-  let name = head(keys(obsObj)) as string;
-  obs = obs.setName(name);
-  rememberSub(obs.observe({ value: effect }));
-};
-
-const isQueueBusy = async (name) => {
-  const qLen = await getStg(name + '_work_queue_length');
-  // console.log('isQueueBusy', { qLen });
-  return !isNil(qLen) && qLen > 0;
-};
-
-const maybeDq = async (name) => {
-  const busy = await isQueueBusy(name);
-  if (!busy) {
-    const workload = dequeue4WorkStg(name, queue_load);
-    // console.log('[DEBUG] dq', { name, workload });
-    return true;
-  } else {
-    // console.log('[DEBUG] dq: queue busy ', { name });
-    return false;
-  }
-  // dequeue4WorkStg(name, R.length(defaultTo([], queue)));
-};
-const subWorkQueueStg = curry((storageChange$, name, workFn) => {
-  // Waiting queue
-  const queueFn = async (q) => {
-    const qLen = R.length(q);
-    setStg(name + '_length', qLen);
-    // console.log('subWorkQueue ' + name, { qLen, q });
-    if (qLen > 0) {
-      await maybeDq(name);
-    }
-  };
-  const queue$ = makeInitStgObs(storageChange$, name).filter(pipe(isNil, not));
-  queue$.log(name + '$');
-  subObs({ [name + '$']: queue$ }, queueFn);
-
-  // Work queue (being worked on right now)
-  const workQueueFn = async (queue) => {
-    // keep track of the size of the queue because we check it sometimes
-    setStg(name + '_work_queue' + '_length', R.length(queue));
-    // If there's a queue, work it!
-    if (isExist(queue)) {
-      try {
-        await workFn(queue);
-        dequeueWorkQueueStg(name, R.length(queue));
-      } catch (e) {
-        console.error(
-          `couldn't consume ${name + '_work_queue'} with ${workFn.name}`,
-          e
-        );
-      }
-    } else {
-      //if the work queue is empty, maybe it shouldn't be! Dequeue any queued workload!
-      maybeDq(name);
-    }
-  };
-  const workQueue$ = makeInitStgObs(
-    storageChange$,
-    name + '_work_queue'
-  ).filter(pipe(isNil, not));
-  // workQueue$.log(name + '_work_queue' + '$');
-
-  subObs({ [name + '_work_queue' + '$']: workQueue$ }, workQueueFn);
-});
-
+const rememberSub = _rememberSub(subscriptions);
+const subObs = _subObs(subscriptions);
+const subWorkQueueStg = _subWorkQueueStg(subscriptions);
 const emitEvent = (name) => {
   window.dispatchEvent(new CustomEvent(name));
 };
@@ -235,8 +157,6 @@ const emitDoSmallScrape = () => emitEvent('doSmallTweetScrape');
 
 /* TODO: Functions to move out of this file */
 // Scraping functions
-
-var usernameFilterRegex = /(from|to):([a-zA-Z0-9_]*\s?[a-zA-Z0-9_]*)$/;
 
 const startRefreshIdb = async () => {
   console.log('[DEBUG] startRefreshIdb');
@@ -437,8 +357,31 @@ const doLookupBookmarkAPI = genericLookupAPI(
   'queue_addTweets'
 );
 const doLookupRefreshAPI = genericLookupAPI(apiToTweet, 'queue_refreshTweets');
-// IDB functions
 
+const doLookupUsersAPI = curry(async (ids: string[]) => {
+  try {
+    const auth = await getStg('auth');
+    setStg('isMidScrape', true);
+    const userList = await tryFnsAsync(
+      scrapeWorker.userLookupQuery,
+      userLookupQuery,
+      auth,
+      ids
+    );
+    const users: UserObj = R.indexBy(
+      prop('id_str'),
+      map(prop('user'), userList)
+    );
+    console.log('doLookupUsersAPI', { userList, auth, users });
+    enqueueUserStg('queue_addUsers', userList);
+    setStg('isMidScrape', false);
+  } catch (e) {
+    console.error('lookupUsersAPI failed', { e });
+    setStg('isMidScrape', false);
+  }
+});
+
+// IDB functions
 const importArchive = async (queue) => {
   try {
     const [auth, userInfo] = await Promise.all<Credentials, User>([
@@ -453,7 +396,7 @@ const importArchive = async (queue) => {
       userInfo,
       queue
     );
-    const toTh = saferTweetMap(archToTweet);
+    const toTh = saferTweetMap(R.pipe(archToTweet, assocUser(userInfo)));
     const thArchiveTweets = toTh(tweets);
     enqueueUserStg('queue_addUsers', values(users));
     enqueueTweetStg('queue_addTweets', thArchiveTweets);
@@ -468,6 +411,7 @@ const importUserQueue = async (queue) => {
   try {
     setStg('isMidStore', true);
     await idbWorker.workerImportUsers(queue);
+
     setStg('isMidStore', false);
   } catch (e) {
     console.error("couldn't importUserQueue ", e);
@@ -540,7 +484,7 @@ const updateNTweets = async () => {
 
 const setLastUpdated = async () => {
   const date = getDateFormatted();
-  setStg('lastUpdated', date);
+  setStg('lastUpdated', new Date().getTime());
   return date;
 };
 
@@ -612,14 +556,14 @@ const genericSeek = async (query) => {
   // const isMidSearch = getStg('isMidSearch')
   // console.trace(`seek ${query}`);
   const { accsShown, filters } = await getSearchParams();
-  console.time(`${query} genericSeek`);
+  // console.time(`${query} genericSeek`);
   const searchResults = await searchWorker.seek(
     filters,
     accsShown,
     n_tweets_results,
     query
   );
-  console.timeEnd(`${query} genericSeek`);
+  // console.timeEnd(`${query} genericSeek`);
   return searchResults;
 };
 let isMidSearch = false;
@@ -643,58 +587,69 @@ const seek = async ({ query }) => {
 
 const contextualSeek = async ({ query }) => {
   const searchResults: SearchResult[] = await genericSeek(query);
-  await setStg('context_results', searchResults);
-  return map(R.path(['tweet', 'id']), searchResults);
+  console.log('contextualSeek', { searchResults, query });
+  // await setStg('context_results', searchResults);
+  return searchResults;
+  // return map(R.path(['tweet', 'id']), searchResults);
 };
-const getLatest = async () => {
-  const { accsShown, filters } = await getSearchParams();
-  const db = await dbOpen();
-  const dbGet = curry((storeName, key) => db.get(storeName, key));
-  console.log('getting latest tweets ', { accsShown, filters });
-  const latestTweets = await getLatestTweets(
-    n_tweets_results,
-    filters,
-    dbGet,
-    accsShown,
-    () => db.getAllKeys('tweets')
-  );
-  const res = map((tweet) => {
-    return { tweet };
-  }, latestTweets);
-  db.close();
-  setStg('latest_tweets', res);
-  return map(prop('id'), latestTweets);
-};
+// const getLatest = async () => {
+//   const { accsShown, filters } = await getSearchParams();
+//   const db_promise = dbOpen();
+//   const db = await db_promise;
+//   const dbGet = curry((storeName, key) => db.get(storeName, key));
+//   console.log('getting latest tweets ', { accsShown, filters });
+//   const latestTweets = await getLatestTweets(
+//     n_tweets_results,
+//     filters,
+//     dbGet,
+//     accsShown,
+//     () => db.getAllKeys('tweets')
+//   );
+//   const res = map((tweet) => {
+//     return { tweet };
+//   }, latestTweets);
+//   db.close();
+//   setStg('latest_tweets', res);
+//   return map(prop('id'), latestTweets);
+// };
 
-const getRandom = async () => {
-  const { accsShown, filters } = await getSearchParams();
-  const db = await dbOpen();
-  const dbGet = curry((storeName, key) => db.get(storeName, key));
-  const randomSample = await getRandomSampleTweets(
-    n_tweets_results,
-    filters,
-    dbGet,
-    accsShown,
-    () => db.getAllKeys('tweets')
-  );
-  const res = map((tweet) => {
-    return { tweet };
-  }, randomSample);
-  db.close();
-  setStg('latest_tweets', res);
-  setStg('random_tweets', res);
-  console.log('getRandom', { res, accsShown, filters });
-  return map(prop('id'), randomSample);
-};
+// const getRandom = async () => {
+//   const { accsShown, filters } = await getSearchParams();
+//   const db = await dbOpen();
+//   const dbGet = curry((storeName, key) => db.get(storeName, key));
+//   const randomSample = await getRandomSampleTweets(
+//     n_tweets_results,
+//     filters,
+//     dbGet,
+//     accsShown,
+//     () => db.getAllKeys('tweets')
+//   );
+//   const res = map((tweet) => {
+//     return { tweet };
+//   }, randomSample);
+//   db.close();
 
-const getDefault = (mode) => {
+//   console.log('getRandom', { res, accsShown, filters });
+//   return map(prop('id'), randomSample);
+// };
+
+const getDefault = async (mode) => {
+  const { accsShown, filters } = await getSearchParams();
   if (mode === 'random') {
-    getRandom();
+    const res = await searchWorker.getRandom(accsShown, filters);
+    setStg('latest_tweets', res);
+    console.log('getDefault', { mode, res });
+    return res;
   } else {
-    getLatest();
+    const res = await searchWorker.getLatest(accsShown, filters);
+    setStg('random_tweets', res);
+    setStg('latest_tweets', res);
+    console.log('getDefault', { mode, res });
+    return res;
   }
-  return;
 };
+const getLatest = () => getDefault('latest');
+const getRandom = () => getDefault('random');
 
 const addBookmark = ({ ids }) => {
   enqueueStgNoDups('queue_lookupBookmark', ids);
@@ -756,6 +711,7 @@ const auth$ = webRequestPermission$
   .filter((x) => x)
   .skipDuplicates()
   .flatMapLatest((_) => makeAuthObs())
+  .filter(validateAuth)
   .skipDuplicates(compareAuths);
 subObs({ auth$ }, setStg('auth'));
 const _userInfo$ = auth$
@@ -807,31 +763,6 @@ const incomingAccount$ = userInfo$; //.map(dressActiveAccount).toProperty();
 // Add to a list with no duplicates of the key (so no duplicates)
 const addActiveAccount = curry(
   (_acc: User, activeAccounts: ActiveAccsType): ActiveAccsType => {
-    // const accAddonProps = [
-    //   'lastGotTimeline',
-    //   'showTweets',
-    //   'timelineBottomCursor',
-    // ];
-
-    // const hasDressedAcc = (accs, id_str) => {
-    //   console.log('hasDressedAcc', {
-    //     accs,
-    //     id_str,
-    //     hasPaths: R.map(
-    //       (property) => R.hasPath([id_str, property], accs),
-    //       accAddonProps
-    //     ),
-    //   });
-    //   return R.any(
-    //     (property) => R.hasPath([id_str, property], accs),
-    //     accAddonProps
-    //   );
-    // };
-    // Check if we already have this account. If not, "dress" it with additional properties
-    // const acc = hasDressedAcc(activeAccounts, prop('id_str', _acc))
-    //   ? _acc
-    //   : dressActiveAccount(_acc);
-
     const acc = pipe(
       () => _acc,
       prop('id_str'),
@@ -885,6 +816,7 @@ subWorkQueue('queue_addTweets', importTweetQueue);
 subWorkQueue('queue_refreshTweets', refreshTweetQueue);
 subWorkQueue('queue_removeTweets', removeTweetQueue);
 subWorkQueue('queue_tempArchive', importArchive);
+subWorkQueue('queue_lookupUsers', doLookupUsersAPI);
 subWorkQueue('queue_addUsers', importUserQueue);
 subWorkQueue('queue_removeUsers', removeUserQueue);
 
@@ -896,12 +828,12 @@ subObs({ doIndexUpdate$ }, doIndexUpdate);
 const indexUpdated$ = Kefir.fromEvents(window, 'indexUpdated');
 subObs({ indexUpdated$ }, (_) => onIndexUpdated());
 
+// const contextQuery$ = makeInitStgObs(storageChange$, 'contextQuery');
+// contextQuery$.log('contextQuery$');
 const query$ = makeInitStgObs(storageChange$, 'query');
-const contextQuery$ = makeInitStgObs(storageChange$, 'contextQuery');
 query$.log('query$');
-contextQuery$.log('contextQuery$');
 subObs({ query$ }, (query) => seek({ query }));
-subObs({ contextQuery$ }, (query) => contextualSeek({ query }));
+// subObs({ contextQuery$ }, (query) => contextualSeek({ query }));
 
 const isMidSearchTrue$ = makeInitStgObs(storageChange$, 'isMidSearch')
   .filter((x) => x != false)
@@ -919,7 +851,7 @@ const accsShown$ = (accounts$.map(
   filter(either(pipe(prop('showTweets'), isNil), propEq('showTweets', true)))
 ) as unknown) as Observable<User[], any>;
 subObs({ accsShown$ }, async (_) => {
-  getDefault(await getStg('idleMode'));
+  getDefault(await getOption('idleMode'));
 });
 accsShown$.log('accsShown$');
 /* Display options and Search filters */
@@ -949,6 +881,7 @@ var idbFns = {
 };
 var searchFns = {
   seek,
+  contextualSeek,
   getLatest,
   getRandom,
 };
@@ -963,23 +896,14 @@ var rpcFns = {
   ...scrapingFns,
   webReqPermission,
 };
-// RPC central
-chrome.runtime.onMessage.addListener(async function (
-  request,
-  sender,
-  sendResponse
-) {
-  // console.log(
-  //   sender.tab
-  //     ? 'from a content script:' + sender.tab.url
-  //     : 'from the extension',
-  //   { sender, request }
-  // );
 
+const rpcBgServer = async (request, sender, sendResponse) => {
   if (request.type != 'rpcBg' || !R.has('fnName', request)) {
     console.log('BG RPC: ignoring request', { request });
     sendResponse('not RPC');
     return;
+  } else {
+    console.log('BG RPC', { request });
   }
   let response = '';
   if (
@@ -989,7 +913,10 @@ chrome.runtime.onMessage.addListener(async function (
   ) {
     try {
       response = await rpcFns[request.fnName](defaultTo({}, request.args));
+      console.log('rpcBg sending response', { name: request.fnName, response });
       sendResponse(response);
+      const isFf = await isFirefox();
+      return isFf ? response : true;
     } catch (error) {
       response = 'RPC call failed';
       console.error(error);
@@ -1001,9 +928,26 @@ chrome.runtime.onMessage.addListener(async function (
     sendResponse(response);
   }
   return true;
+};
+// RPC central
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  rpcBgServer(request, sender, sendResponse);
+  return true;
 });
 
 /* Connection to tabs and CS */
+const isFirefox = async () => {
+  try {
+    const gettingInfo = await browser.runtime.getBrowserInfo();
+    console.log('isFirefox', { gettingInfo });
+    const isFf = gettingInfo.name.includes('Firefox');
+    console.log('isFirefox', { isFf, gettingInfo });
+    return isFf;
+  } catch (e) {
+    console.log('Not Firefox');
+  }
+  return false;
+};
 
 let ports = [];
 

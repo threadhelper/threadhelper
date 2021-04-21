@@ -46,7 +46,7 @@ export const filterTweet = curry(
 );
 export const accFilterTweet = curry(
   (activeAccIds: string | readonly string[], t) =>
-    includes(t.account, activeAccIds)
+    includes(t.account, activeAccIds) || isNil(t.account)
 );
 export const makeValidateTweet = (
   filters: SearchFilters,

@@ -46,6 +46,7 @@ export const defaultStorage = (): StorageInterface => {
     queue_addTweets: [],
     queue_refreshTweets: [], //the same as addTweets, but for when we're refreshing tweets that are already in the idb
     queue_removeTweets: [],
+    queue_lookupUsers: [],
     queue_addUsers: [],
     queue_removeUsers: [],
     isMidSearch: false,

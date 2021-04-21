@@ -7,7 +7,7 @@ import {
   setStg,
   setStgPath,
   stgPathObs,
-} from '../utils/dutils';
+} from '../stg/dutils';
 import { nullFn } from '../utils/putils';
 import { _useStream } from './useStream';
 

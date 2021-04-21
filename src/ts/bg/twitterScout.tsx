@@ -74,7 +74,7 @@ const makeUserLookupUrl = (ids, names = []) =>
   `https://api.twitter.com/1.1/users/lookup.json?${
     isEmpty(ids)
       ? ''
-      : 'user_id=$' + R.join(',', ids) + (isEmpty(names) ? '' : '&')
+      : 'user_id=' + R.join(',', ids) + (isEmpty(names) ? '' : '&')
   }${isEmpty(names) ? '' : 'screen_name=' + R.join(',', names)}`;
 
 const makeTimelineQueryUrlv1 = curry(

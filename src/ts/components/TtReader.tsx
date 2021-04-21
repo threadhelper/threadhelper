@@ -1,4 +1,4 @@
-import { h, Fragment } from 'preact';
+import { createContext, h } from 'preact';
 import { useContext, useEffect, useRef, useState } from 'preact/hooks';
 import {
   curry,
@@ -16,26 +16,23 @@ import {
   reverse,
   sortBy,
   trim,
-  __,
 } from 'ramda';
-import { useStorage } from '../hooks/useStorage';
 import SearchIcon from '../../images/search.svg';
-import Kefir from 'kefir';
-import { getStg, makeGotMsgObs, msgBG, rpcBg, setStg } from '../utils/dutils';
-import { AuthContext, FeedDisplayMode } from './ThreadHelper';
-import { DisplayMode } from '../types/interfaceTypes';
-import { searchAPI, tweetLookupQuery } from '../bg/twitterScout';
 import { apiSearchToTweet } from '../bg/tweetImporter';
-import { asyncTimeFn, inspect, isExist, timeFn } from '../utils/putils';
+import { searchAPI, tweetLookupQuery } from '../bg/twitterScout';
+import { getRepliedToText } from '../domInterface/wutils';
 import { QueryObs } from '../hooks/BrowserEventObs';
-import { _useStream } from '../hooks/useStream';
 import { useMsg } from '../hooks/useMsg';
-import { getRepliedToText, repliedTimeSelector } from '../utils/wutils';
+import { useStorage } from '../hooks/useStorage';
+import { _useStream } from '../hooks/useStream';
+import { rpcBg, setStg } from '../stg/dutils';
+import { inspect, isExist } from '../utils/putils';
+import { AuthContext, FeedDisplayMode, PageMetadata } from './ThreadHelper';
 
 export function TtReader() {
   return (
     <>
-      <Page />
+      {/* <Page /> */}
       <SearchBar show={false} />
     </>
   );
@@ -163,12 +160,11 @@ export const goToTwitterSearchPage = (query) => {
   window.open(fullResultsLink, newTab ? '_blank' : '_self');
 };
 
-var useCurrentTwitterPage = function () {
+export var useCurrentTwitterPage = function () {
   // var [currentPage, setCurrentPage] = useState(function () {
   //   return getMetadataForPage(window.location.href);
   // });
-  const [currentPage, setCurrentPage] = useStorage(
-    'pageMetadata',
+  const [currentPage, setCurrentPage] = useState(
     getMetadataForPage(window.location.href)
   );
 
@@ -176,30 +172,15 @@ var useCurrentTwitterPage = function () {
   useEffect(
     function () {
       const url = defaultTo(window.location.href, prop('url', tabChange));
-      console.log('tabChange', { tabChange });
+      console.log('tabChange', { tabChange, url });
       if (isNil(url)) return () => {};
-      // setCurrentPage(getMetadataForPage(prop('url', tabChange)));
-      setStg('pageMetadata', getMetadataForPage(url));
+      setCurrentPage(getMetadataForPage(url));
+      // setStg('pageMetadata', getMetadataForPage(url));
       return () => {};
     },
     [tabChange]
   );
-  // useEffect(function () {
-  //   const urlChange$ = makeGotMsgObs()
-  //     .map(prop('m'))
-  //     .filter(propEq('type', 'tab-change-url'))
-  //     .map(inspect('useCurrentTwitterPage'))
-  //     .map(prop('url'))
-  //     .skipDuplicates()
-  //     .map(getMetadataForPage);
 
-  //   setSubscription(urlChange$.observe({ value: setCurrentPage }));
-  //   // urlChange$.onValue(setCurrentPage);
-  //   return () => {
-  //     subscription.unsubscribe();
-  //     // urlChange$.offValue(setCurrentPage);
-  //   };
-  // }, []);
   return currentPage;
 };
 
@@ -219,122 +200,120 @@ const _submitSearch = curry((dispatch, query: string) => {
   }
 });
 
-const _submitContextSearch = curry((dispatch, query: string) => {
-  const q = defaultTo('', query);
-  if (isEmpty(trimNewlines(q))) {
-    dispatch({
-      action: 'emptyContextSearch',
-      tweets: [],
-    });
-  } else {
-    dispatch({
-      action: 'submitContextSearch',
-      tweets: [],
-    });
-    reqContextSearch(q);
-  }
-});
+// const _submitContextSearch = curry((dispatch, query: string) => {
+//   const q = defaultTo('', query);
+//   if (isEmpty(trimNewlines(q))) {
+//     dispatch({
+//       action: 'emptyContextSearch',
+//       tweets: [],
+//     });
+//   } else {
+//     dispatch({
+//       action: 'submitContextSearch',
+//       tweets: [],
+//     });
+//     reqContextSearch(q);
+//   }
+// });
 
-const _QtApiSearch = curry(async (dispatch, auth, tweetId) => {
-  var hasQt = false;
-  await searchAPI(auth, 'quoted_tweet_id:' + tweetId).then(
-    ({ users, tweets }) =>
-      pipe(
-        () => tweets,
-        filter(propEq('quoted_status_id_str', tweetId)),
-        sortBy(prop('favorite_count')),
-        reverse,
-        inspect('qt req'),
-        map(apiSearchToTweet),
-        map((tweet) => {
-          return { tweet };
-        }),
-        defaultTo([]),
-        (qts) => {
-          if (!isEmpty(qts)) {
-            hasQt = true;
-            setStg('qts', qts);
-            dispatch({
-              action: 'gotQts',
-              tweets: [],
-            });
-          }
-        }
-      )()
-  );
-  return hasQt;
-});
+// const _QtApiSearch = curry(async (dispatch, auth, tweetId) => {
+//   var hasQt = false;
+//   await searchAPI(auth, 'quoted_tweet_id:' + tweetId).then(
+//     ({ users, tweets }) =>
+//       pipe(
+//         () => tweets,
+//         filter(propEq('quoted_status_id_str', tweetId)),
+//         sortBy(prop('favorite_count')),
+//         reverse,
+//         inspect('qt req'),
+//         map(apiSearchToTweet),
+//         map((tweet) => {
+//           return { tweet };
+//         }),
+//         defaultTo([]),
+//         (qts) => {
+//           if (!isEmpty(qts)) {
+//             hasQt = true;
+//             setStg('qts', qts);
+//             dispatch({
+//               action: 'gotQts',
+//               tweets: [],
+//             });
+//           }
+//         }
+//       )()
+//   );
+//   return hasQt;
+// });
 
-const _searchLookupTweet = curry(async (submitSearch, auth, id) => {
-  return tweetLookupQuery(auth, [id]).then(
-    pipe(
-      inspect('showTweet tweetLookupQuery'),
-      nth(0),
-      prop('full_text'),
-      defaultTo(''),
-      submitSearch
-    )
-  );
-});
+// const _searchLookupTweet = curry(async (submitSearch, auth, id) => {
+//   return tweetLookupQuery(auth, [id]).then(
+//     pipe(
+//       inspect('showTweet tweetLookupQuery'),
+//       nth(0),
+//       prop('full_text'),
+//       defaultTo(''),
+//       submitSearch
+//     )
+//   );
+// });
 
-const _showTweetContext = curry(async (dispatch, tweetId, auth) => {
-  console.log('show Tweet', { id: tweetId });
-  const QtApiSearch = _QtApiSearch(dispatch);
-  const submitContextSearch = _submitContextSearch(dispatch);
-  const searchLookupTweet = _searchLookupTweet(submitContextSearch);
-  const hasQt = await QtApiSearch(auth, tweetId);
-  if (!hasQt) searchLookupTweet(auth, tweetId);
-});
+// const _showTweetContext = curry(async (dispatch, tweetId, auth) => {
+//   console.log('show Tweet', { id: tweetId });
+//   const QtApiSearch = _QtApiSearch(dispatch);
+//   const submitContextSearch = _submitContextSearch(dispatch);
+//   const searchLookupTweet = _searchLookupTweet(submitContextSearch);
+//   const hasQt = await QtApiSearch(auth, tweetId);
+//   if (!hasQt) searchLookupTweet(auth, tweetId);
+// });
 
-const handleContext = (dispatch, currentPage, auth) => {
-  const showTweetContext = _showTweetContext(dispatch);
-  const submitContextSearch = _submitContextSearch(dispatch);
-  if (propEq('pageType', 'showTweet', currentPage)) {
-    showTweetContext(currentPage.tweetId, auth);
-  } else if (propEq('pageType', 'compose', currentPage)) {
-    const textRepliedTo = getRepliedToText();
-    const isReply = !isNil(textRepliedTo);
-    console.log('Ttreader page: Compose' + ` ${defaultTo('', textRepliedTo)}`);
-    if (isReply) submitContextSearch(textRepliedTo);
-  } else if (propEq('pageType', 'intentReply', currentPage)) {
-    const textRepliedTo = getRepliedToText();
-    const hasText = isExist(textRepliedTo);
-    console.log('Ttreader page: Compose' + ` ${defaultTo('', textRepliedTo)}`);
-    if (hasText) {
-      submitContextSearch(textRepliedTo);
-    } else {
-      showTweetContext(currentPage.tweetId, auth);
-    }
-  } else {
-    // if no contextual information#
-    console.log('TtReader handleContext', { currentPage });
-    setStg('context_results', []);
-    setStg('contextQuery', '');
-    dispatch({
-      action: 'emptySearch',
-      tweets: [],
-    });
-  }
-};
+// const handleContext = (dispatch, currentPage, auth) => {
+//   const showTweetContext = _showTweetContext(dispatch);
+//   const submitContextSearch = _submitContextSearch(dispatch);
+//   if (propEq('pageType', 'showTweet', currentPage)) {
+//     showTweetContext(currentPage.tweetId, auth);
+//   } else if (propEq('pageType', 'compose', currentPage)) {
+//     const textRepliedTo = getRepliedToText();
+//     const isReply = !isNil(textRepliedTo);
+//     console.log('Ttreader page: Compose' + ` ${defaultTo('', textRepliedTo)}`);
+//     if (isReply) submitContextSearch(textRepliedTo);
+//   } else if (propEq('pageType', 'intentReply', currentPage)) {
+//     const textRepliedTo = getRepliedToText();
+//     const hasText = isExist(textRepliedTo);
+//     console.log('Ttreader page: Compose' + ` ${defaultTo('', textRepliedTo)}`);
+//     if (hasText) {
+//       submitContextSearch(textRepliedTo);
+//     } else {
+//       showTweetContext(currentPage.tweetId, auth);
+//     }
+//   } else {
+//     // if no contextual information#
+//     console.log('TtReader handleContext', { currentPage });
+//     setStg('context_results', []);
+//     setStg('contextQuery', '');
+//     dispatch({
+//       action: 'emptySearch',
+//       tweets: [],
+//     });
+//   }
+// };
 
-export function Page() {
-  const auth = useContext(AuthContext);
-  const currentPage = useCurrentTwitterPage();
-  const { feedDisplayMode, dispatchFeedDisplayMode } = useContext(
-    FeedDisplayMode
-  );
+// export function Page() {
+//   const { pageMetadata, setPageMetadata } = useContext(PageMetadata);
+//   const auth = useContext(AuthContext);
+//   const currentPage = useCurrentTwitterPage();
+//   const { feedDisplayMode, dispatchFeedDisplayMode } = useContext(
+//     FeedDisplayMode
+//   );
 
-  useEffect(() => {
-    console.log('[DEBUG] TtReader > Page', { currentPage, auth });
-    if (isNil(currentPage) || isNil(auth)) return;
+//   useEffect(() => {
+//     console.log('[DEBUG] TtReader > Page', { currentPage, auth });
+//     if (isNil(currentPage) || isNil(auth)) return;
 
-    handleContext(dispatchFeedDisplayMode, currentPage, auth);
-  }, [currentPage, auth]);
-  return <></>;
-}
-
-const trimNewlines = (str) =>
-  trim(str).replace(/(^\s*(?!.+)\n+)|(\n+\s+(?!.+)$)/g, '');
+//     handleContext(dispatchFeedDisplayMode, currentPage, auth);
+//   }, [currentPage, auth]);
+//   return <></>;
+// }
 
 const reqSearch = async (query) => {
   // msgBG({ type: 'search', query });
@@ -348,11 +327,12 @@ const reqSearch = async (query) => {
 const reqContextSearch = async (query) => {
   // msgBG({ type: 'search', query });
   setStg('contextQuery', query);
-  // console.time(`[TIME] reqSearch`);
-  // const searchResults = await rpcBg('seek', { query });
-  // console.timeEnd(`[TIME] reqSearch`);
+  const searchResults = await rpcBg('contextualSeek', { query });
+  console.log('reqContextSearch', { query, searchResults });
   // return searchResults;
 };
+const trimNewlines = (str) =>
+  trim(str).replace(/(^\s*(?!.+)\n+)|(\n+\s+(?!.+)$)/g, '');
 
 export function SearchBar({ show }) {
   const inputObj = useRef(null);
@@ -393,36 +373,12 @@ export function SearchBar({ show }) {
     return () => {};
   }, [query]);
 
-  // useEffect(() => {
-  //   if (!midSearch) {
-  //     console.log('[INFO] making query', { query });
-  //     setMidSearch(true);
-  //     submitSearch(query).then((_) => setMidSearch(false));
-  //   } else {
-  //     // console.log('[INFO] queueing query', { query });
-  //     setNextQuery(query);
-  //   }
-  //   return () => {};
-  // }, [query]);
-
-  // useEffect(() => {
-  //   if (!midSearch && !isNil(nextQuery)) {
-  //     console.log('[INFO] making queued query', { midSearch, nextQuery });
-  //     setMidSearch(true);
-  //     submitSearch(nextQuery).then((_) => {
-  //       setMidSearch(false);
-  //       setNextQuery(null);
-  //     });
-  //   }
-  //   return () => {};
-  // }, [midSearch]);
-
   return (
     <>
       {show ? (
         <div class="searchBar">
           <span>
-            <SearchIcon class="stroke-0 stroke-current fill-current  inline w-4 h-4" />
+            <SearchIcon class="stroke-0 stroke-current fill-current inline w-4 h-4" />
             <input
               ref={inputObj}
               class="inline w-20"
