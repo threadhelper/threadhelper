@@ -702,22 +702,27 @@ const updateTimeline = ({}) => emitDoSmallScrape();
 const storageChange$ = makeStorageChangeObs();
 const subWorkQueue = subWorkQueueStg(storageChange$);
 
-const webRequestPermission$ = makeInitStgObs(
+const webRequestPermission$: Observable<boolean, any> = makeInitStgObs(
   storageChange$,
   'webRequestPermission'
 );
 webRequestPermission$.log('webRequestPermission$');
-const auth$ = webRequestPermission$
-  .filter((x) => x)
-  .skipDuplicates()
-  .flatMapLatest((_) => makeAuthObs())
+const incomingAuth$ = makeAuthObs();
+const auth$ = incomingAuth$
+  .filterBy(webRequestPermission$)
   .filter(validateAuth)
   .skipDuplicates(compareAuths);
+
+// const auth$ = webRequestPermission$
+//   .filter((x) => x)
+//   .skipDuplicates()
+//   .flatMapLatest((_) => makeAuthObs())
+//   .filter(validateAuth)
+//   .skipDuplicates(compareAuths);
 subObs({ auth$ }, setStg('auth'));
 const _userInfo$ = auth$
   .thru<Observable<User, any>>(
     promiseStream(async (auth: Credentials) => {
-      console.log('calling scrapeWorker.fetchUserInfo(auth)');
       return await tryFnsAsync(scrapeWorker.fetchUserInfo, fetchUserInfo, auth);
     })
   )
