@@ -145,16 +145,16 @@ const loopRetry = genericLoopRetry(retryLimit, 500);
 const _thFetch = async (url: string, options): Promise<any> =>
   fetch(url, options)
     .then(errorRefusal)
-    .then((response) => {
-      console.log('thFetch', {
-        'x-rate-limit-reset': response.headers.get('x-rate-limit-reset'),
-        'x-rate-limit-limit': response.headers.get('x-rate-limit-limit'),
-        'x-rate-limit-remaining': response.headers.get(
-          'x-rate-limit-remaining'
-        ),
-      });
-      return response;
-    })
+    // .then((response) => {
+    //   console.log('thFetch', {
+    //     'x-rate-limit-reset': response.headers.get('x-rate-limit-reset'),
+    //     'x-rate-limit-limit': response.headers.get('x-rate-limit-limit'),
+    //     'x-rate-limit-remaining': response.headers.get(
+    //       'x-rate-limit-remaining'
+    //     ),
+    //   });
+    //   return response;
+    // })
     .then((response) => response.json())
     .catch(handleFetchError);
 
