@@ -68,7 +68,7 @@ export const makeInit = (auth: Credentials) : RequestInit => {
     };
   }
 export const compareAuths = (a: Credentials, b: Credentials)=>{return a.authorization == b.authorization && a["x-csrf-token"] == b.["x-csrf-token"]}
-export const validateAuth = (x: Credentials)=>(prop('authorization', x) != null && prop("x-csrf-token", x) != null)
+export const validateAuthFormat = (x: Credentials)=>(prop('authorization', x) != null && prop("x-csrf-token", x) != null)
 
   //chrome storage
 export const isOptionSame = curry ((name: string | number, x: { oldVal: any; newVal: any })=> (isNil(x.oldVal) && isNil(x.newVal)) || (!isNil(x.oldVal) && !isNil(x.newVal) && (path(['oldVal', name, 'value'],x) === path(['newVal', name, 'value'],x))) )
