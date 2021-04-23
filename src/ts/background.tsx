@@ -699,7 +699,6 @@ incomingAuth$.log('[DEBUG] incomingAuth$');
 const auth$ = makeInitStgObs(storageChange$, 'auth')
   .filter(validateAuthFormat)
   .skipDuplicates(compareAuths);
-
 auth$.log('[DEBUG] auth$');
 
 const incomingUserInfo$ = auth$
