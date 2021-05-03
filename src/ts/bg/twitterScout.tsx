@@ -110,7 +110,8 @@ const makeUserSearchUrl = (q) =>
   )}&src=search_box&result_type=users`;
 const makeFetchStatusUrl = (tid) =>
   `https://api.twitter.com/1.1/statuses/show.json?id=${tid}&tweet_mode=extended`;
-const shouldRetryError = (error) => ![403, 429].includes(prop('status', error));
+const shouldRetryError = (error) =>
+  ![401, 403, 429].includes(prop('status', error));
 
 export const genericLoopRetry = curry(
   async <T,>(retryLimit, delayMs, fn: () => Promise<T>): Promise<T> => {
@@ -145,16 +146,16 @@ const loopRetry = genericLoopRetry(retryLimit, 500);
 const _thFetch = async (url: string, options): Promise<any> =>
   fetch(url, options)
     .then(errorRefusal)
-    .then((response) => {
-      console.log('thFetch', {
-        'x-rate-limit-reset': response.headers.get('x-rate-limit-reset'),
-        'x-rate-limit-limit': response.headers.get('x-rate-limit-limit'),
-        'x-rate-limit-remaining': response.headers.get(
-          'x-rate-limit-remaining'
-        ),
-      });
-      return response;
-    })
+    // .then((response) => {
+    //   console.log('thFetch', {
+    //     'x-rate-limit-reset': response.headers.get('x-rate-limit-reset'),
+    //     'x-rate-limit-limit': response.headers.get('x-rate-limit-limit'),
+    //     'x-rate-limit-remaining': response.headers.get(
+    //       'x-rate-limit-remaining'
+    //     ),
+    //   });
+    //   return response;
+    // })
     .then((response) => response.json())
     .catch(handleFetchError);
 
@@ -211,6 +212,11 @@ const handleFetchError = (error) => {
         error,
       });
       throw error; // Too many requests.
+    case 500:
+      console.error(`[ERROR] thFetch ${error.status}, Internal server error.`, {
+        error,
+      });
+      break; // Internal server error.
     default:
       console.error(`[ERROR] thFetch ${error.status}, ${error.statusText}`, {
         error,
@@ -313,6 +319,20 @@ export const sendUnretweetRequest = sendTweetAction(URLUnretweet);
 //     method: 'GET',
 //     body: null,
 //   });
+export const debugFetchUserInfo = async (
+  authHeaders: Credentials
+): Promise<User> => {
+  console.log('debugFetchUserInfo', { authHeaders });
+  try {
+    return await twitterFetchBody(URLVerifyCredentials, { authHeaders });
+    // return await loopRetry(() =>
+    //   twitterFetchBody(URLVerifyCredentials, { authHeaders })
+    // );
+  } catch (e) {
+    console.error('debugFetchUserInfo failed', { e, authHeaders });
+    throw e;
+  }
+};
 
 export const fetchUserInfo = async (
   authHeaders: Credentials
@@ -331,6 +351,7 @@ export const fetchUserInfo = async (
 
 export const tweetLookupQuery = curry(
   async (auth: Credentials, ids: string[]): Promise<Tweet[]> => {
+    console.log('tweetLookupQuery', { auth, ids });
     const fetch100Ids = (ids: string[]): Promise<Tweet[]> =>
       twitterFetchBody(makeTweetLookupUrl(ids), {
         authHeaders: auth,
@@ -350,7 +371,7 @@ export const tweetLookupQuery = curry(
       R.andThen(R.reduce<Tweet[], Tweet[]>(R.concat, []))
     )(ids);
     // const users:UserObj = indexBy('id_str', map(prop('user'), tweets));
-    // console.log('tweetLookupQuery', { tweets, users });
+    console.log('tweetLookupQuery', { auth, ids, tweets });
     return tweets;
   }
 );
