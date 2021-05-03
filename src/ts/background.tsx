@@ -1,5 +1,4 @@
 import '@babel/polyfill';
-import compareVersions from 'compare-versions';
 import { createWorkerFactory } from '@shopify/web-worker';
 import 'chrome-extension-async';
 import Kefir, { Observable } from 'kefir';
@@ -12,8 +11,6 @@ import {
   defaultTo,
   either,
   filter,
-  head,
-  isEmpty,
   isNil,
   keys,
   map,
@@ -24,61 +21,42 @@ import {
   values,
 } from 'ramda'; // Function
 import { FullUser, User } from 'twitter-d';
-import {
-  fetchUserInfo,
-  genericLoopRetry,
-  getBookmarks,
-  patchArchive,
-  searchAPI,
-  searchUsers,
-  thFetch,
-  timelineQuery,
-  tweetLookupQuery,
-  updateQuery,
-  userLookupQuery,
-} from './bg/twitterScout';
 import { makeAuthObs } from './bg/auth';
-import {
-  choosePatchUrl,
-  uninstallUrl,
-  updateNeedRefresh,
-} from './bg/updateManager';
-import {
-  apiSearchToTweet,
-  apiToTweet,
-  archToTweet,
-  bookmarkToTweet,
-} from './bg/tweetImporter';
-import { loadIndexFromIdb, updateIdxFromIdb } from './dev/storage/devStgUtils';
-import window from './global';
-import { StoreName } from './types/dbTypes';
-import {
-  ActiveAccsType,
-  IdleMode,
-  SearchFilters,
-  SearchResult,
-} from './types/stgTypes';
-import { UserAndThTweets, thTweet, UserObj } from './types/tweetTypes';
-import { Credentials } from './types/types';
 import {
   compareAuths,
   getDateFormatted,
   makeInitOptionsObs,
   makeInitStgObs,
   saferTweetMap,
-  twitter_url,
   tryFnsAsync,
+  twitter_url,
+  validateAuthFormat,
   _rememberSub,
   _subObs,
-  isQueueBusy,
-  maybeDq,
   _subWorkQueueStg,
-  validateAuth,
 } from './bg/bgUtils';
+import { dbFilter, dbOpen } from './bg/idb_wrapper';
+import { apiToTweet, archToTweet, bookmarkToTweet } from './bg/tweetImporter';
+import {
+  fetchUserInfo,
+  genericLoopRetry,
+  getBookmarks,
+  patchArchive,
+  thFetch,
+  timelineQuery,
+  tweetLookupQuery,
+  updateQuery,
+  userLookupQuery,
+} from './bg/twitterScout';
+import {
+  choosePatchUrl,
+  uninstallUrl,
+  updateNeedRefresh,
+} from './bg/updateManager';
+import { loadIndexFromIdb, updateIdxFromIdb } from './dev/storage/devStgUtils';
+import window from './global';
 import {
   cleanOldStorage,
-  dequeue4WorkStg,
-  dequeueWorkQueueStg,
   enqueueStg,
   enqueueStgNoDups,
   enqueueTweetStg,
@@ -91,28 +69,30 @@ import {
   modStg,
   msgCS,
   setStg,
-  setStgFlag,
   setStgPath,
   softUpdateStorage,
 } from './stg/dutils';
+import { StoreName } from './types/dbTypes';
+import {
+  ActiveAccsType,
+  IdleMode,
+  SearchFilters,
+  SearchResult,
+} from './types/stgTypes';
+import { thTweet, UserAndThTweets, UserObj } from './types/tweetTypes';
+import { Credentials } from './types/types';
 import { initGA, PageView } from './utils/ga';
 import {
   n_tweets_results,
-  update_size,
-  queue_load,
   timeline_scrape_interval,
+  update_size,
 } from './utils/params';
 import {
   currentValue,
   errorFilter,
   inspect,
-  isExist,
-  nullFn,
   promiseStream,
-  toggleDebug,
 } from './utils/putils';
-import { dbFilter, dbOpen } from './bg/idb_wrapper';
-import { getLatestTweets, getRandomSampleTweets } from './bg/search';
 
 const createSearchWorker = createWorkerFactory(
   () => import('./bg/searchWorker')
@@ -325,21 +305,24 @@ const doSmallTweetScrape = async (_) => {
 // TODO: mind the associated account in full lookup: should be the original one, not the one doing the lookup
 const genericLookupAPI = curry(
   async (toTweet: (ts: Status) => thTweet, queueName, ids) => {
+    const [auth, userInfo] = await Promise.all<Credentials, User>([
+      getStg('auth'),
+      getStg('userInfo'),
+    ]);
+    setStg('isMidScrape', true);
+    const toTweetAndAcc = pipe(toTweet, assocUser(userInfo));
+    const toTh = saferTweetMap(toTweetAndAcc);
     try {
-      const [auth, userInfo] = await Promise.all<Credentials, User>([
-        getStg('auth'),
-        getStg('userInfo'),
-      ]);
-      setStg('isMidScrape', true);
-      const toTweetAndAcc = pipe(toTweet, assocUser(userInfo));
-      const toTh = saferTweetMap(toTweetAndAcc);
       const tweets = await tryFnsAsync(
         scrapeWorker.tweetLookupQuery,
         tweetLookupQuery,
         auth,
         ids
       );
-      const users: UserObj = R.indexBy('id_str', map(prop('user'), tweets));
+      const users: UserObj = R.indexBy(
+        prop('id_str'),
+        map(prop('user'), tweets)
+      );
       const thLookupTweets = toTh(tweets);
       enqueueUserStg('queue_addUsers', values(users));
       enqueueTweetStg(queueName, thLookupTweets);
@@ -707,33 +690,39 @@ const webRequestPermission$: Observable<boolean, any> = makeInitStgObs(
   'webRequestPermission'
 );
 webRequestPermission$.log('webRequestPermission$');
-const incomingAuth$ = makeAuthObs();
-const auth$ = incomingAuth$
+const incomingAuth$ = makeAuthObs()
   .filterBy(webRequestPermission$)
-  .filter(validateAuth)
+  .filter(validateAuthFormat); //No skipping duplicates bc what if setStg fails for some reason?
+// .skipDuplicates(compareAuths);
+subObs({ incomingAuth$ }, setStg('auth'));
+incomingAuth$.log('[DEBUG] incomingAuth$');
+const auth$ = makeInitStgObs(storageChange$, 'auth')
+  .filter(validateAuthFormat)
   .skipDuplicates(compareAuths);
+auth$.log('[DEBUG] auth$');
 
-// const auth$ = webRequestPermission$
-//   .filter((x) => x)
-//   .skipDuplicates()
-//   .flatMapLatest((_) => makeAuthObs())
-//   .filter(validateAuth)
-//   .skipDuplicates(compareAuths);
-subObs({ auth$ }, setStg('auth'));
-const _userInfo$ = auth$
+const incomingUserInfo$ = auth$
   .thru<Observable<User, any>>(
     promiseStream(async (auth: Credentials) => {
-      return await tryFnsAsync(scrapeWorker.fetchUserInfo, fetchUserInfo, auth);
+      console.log('_userInfo$', { auth });
+      // return await tryFnsAsync(scrapeWorker.fetchUserInfo, fetchUserInfo, auth);
+      return await scrapeWorker.debugFetchUserInfo(auth);
     })
   )
+  .map(inspect('incomingUserInfo$'))
   .filter(pipe(isNil, not))
   .filter(pipe(prop('id'), isNil, not))
+  .skipDuplicates()
   .thru(errorFilter('_userInfo$'));
-const userInfo$ = Kefir.merge([
-  _userInfo$.skipDuplicates(),
-  // _userInfo$.sampledBy(dataReset$),
-]);
-subObs({ userInfo$ }, setStg('userInfo'));
+
+subObs({ incomingUserInfo$ }, setStg('userInfo'));
+
+const userInfo$ = makeInitStgObs(storageChange$, 'userInfo')
+  .filter(pipe(isNil, not))
+  .filter(pipe(prop('id'), isNil, not))
+  .skipDuplicates();
+
+userInfo$.log('userInfo$');
 // subObs({ userInfo$ }, (_) => setStgFlag('doSmallTweetScrape', true));
 subObs({ userInfo$ }, (_) => emitDoSmallScrape());
 subObs({ userInfo$ }, async (userInfo) => {
@@ -856,13 +845,13 @@ const accsShown$ = (accounts$.map(
   filter(either(pipe(prop('showTweets'), isNil), propEq('showTweets', true)))
 ) as unknown) as Observable<User[], any>;
 subObs({ accsShown$ }, async (_) => {
-  getDefault(await getOption('idleMode'));
+  getDefault(await getOption('idleMode').then(prop('value')));
 });
 accsShown$.log('accsShown$');
 /* Display options and Search filters */
 const idleMode$ = _makeInitOptionsObs('idleMode') as Observable<IdleMode, any>;
 idleMode$.log('idleMode$');
-subObs({ idleMode$ }, getDefault);
+subObs({ idleMode$: idleMode$.map(prop('value')) }, getDefault);
 
 const searchFilters$ = Kefir.merge([
   _makeInitOptionsObs('getRTs'),
