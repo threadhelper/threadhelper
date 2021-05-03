@@ -329,7 +329,7 @@ export const debugFetchUserInfo = async (
     //   twitterFetchBody(URLVerifyCredentials, { authHeaders })
     // );
   } catch (e) {
-    console.error('debugFetchUserInfo failed');
+    console.error('debugFetchUserInfo failed', { e, authHeaders });
     throw e;
   }
 };

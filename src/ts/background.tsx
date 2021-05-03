@@ -705,8 +705,8 @@ const incomingUserInfo$ = auth$
   .thru<Observable<User, any>>(
     promiseStream(async (auth: Credentials) => {
       console.log('_userInfo$', { auth });
-      return await tryFnsAsync(scrapeWorker.fetchUserInfo, fetchUserInfo, auth);
-      // return await scrapeWorker.fetchUserInfo(auth);
+      // return await tryFnsAsync(scrapeWorker.fetchUserInfo, fetchUserInfo, auth);
+      return await scrapeWorker.debugFetchUserInfo(auth);
     })
   )
   .map(inspect('incomingUserInfo$'))
