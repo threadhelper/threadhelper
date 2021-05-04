@@ -38,6 +38,7 @@ import {
   makeSidebarCompose,
   makeSidebarHome,
   removeSearchBar,
+  removeSidebarContent,
 } from './domInterface/sidebarHandler';
 import { makeLastStatusObs, makeThemeObs } from './domInterface/tabsHandler';
 import * as window from './global';
@@ -55,6 +56,7 @@ import {
 } from './stg/dutils';
 import { currentValue, inspect, nullFn, toggleDebug } from './utils/putils';
 import { getMode, updateTheme } from './domInterface/wutils';
+import { makeInitStgObs } from './bg/bgUtils';
 
 console.log('hi pcss', pcss);
 console.log('hi css', css);
@@ -75,6 +77,7 @@ const activateSidebar = curry(
   (
     inject: (arg0: Element) => any,
     bar: Element,
+    inHome: boolean,
     storageChange$,
     msgObs$,
     composeQuery$
@@ -85,7 +88,7 @@ const activateSidebar = curry(
       <StorageChangeObs.Provider value={storageChange$}>
         <MsgObs.Provider value={msgObs$}>
           <QueryObs.Provider value={composeQuery$}>
-            <ThreadHelper />
+            <ThreadHelper inHome={inHome} />
           </QueryObs.Provider>
         </MsgObs.Provider>
       </StorageChangeObs.Provider>,
@@ -93,8 +96,8 @@ const activateSidebar = curry(
     );
   }
 );
-const activateFloatSidebar = activateSidebar(injectDummy, thBarComp);
-const activateHomeSidebar = activateSidebar(injectSidebarHome, thBarHome);
+const activateFloatSidebar = activateSidebar(injectDummy, thBarComp, false);
+const activateHomeSidebar = activateSidebar(injectSidebarHome, thBarHome, true);
 const deactivateSidebar = (bar: Element) => {
   render(null, bar);
 };
@@ -138,6 +141,10 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
   const mode$ = urlChange$.map(getMode);
   //      storage
   const storageChange$ = makeStorageChangeObs();
+  const hideTtSearchBar$ = makeInitStgObs(storageChange$, 'doIndexUpdate');
+  hideTtSearchBar$.log('hideTtSearchBar$');
+  const hideTtSidebarContent$ = makeInitStgObs(storageChange$, 'doIndexUpdate');
+  hideTtSidebarContent$.log('hideTtSidebarContent$');
   //      webpage events
   //          theme
   const theme$ = makeThemeObs();
@@ -219,7 +226,16 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
   subObs(homeActiveSafe$, updateHome);
   subObs(storageChange$, nullFn);
   subObs(msgObs$, nullFn);
-  subObs(searchBar$, removeSearchBar);
+  subObs(searchBar$.filterBy(hideTtSearchBar$), removeSearchBar);
+  subObs(searchBar$.filterBy(hideTtSidebarContent$), removeSidebarContent);
+  subObs(
+    hideTtSearchBar$.filter((x) => x == true),
+    removeSearchBar
+  );
+  subObs(
+    hideTtSidebarContent$.filter((x) => x == true),
+    removeSidebarContent
+  );
 }
 
 // Destructor if another CS comes to the same page(is this possible?)
