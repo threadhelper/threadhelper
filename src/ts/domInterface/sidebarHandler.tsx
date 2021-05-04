@@ -1,5 +1,6 @@
 import { fromEvents, Kefir, Observable } from 'kefir';
 import { isNil } from 'ramda'; // Logic, Type, Relation, String, Math
+import { getData, getStg } from '../stg/dutils';
 import { obsAdded, obsRemoved } from '../utils/kefirMutationObs';
 import { inspect } from '../utils/putils';
 import { isSidebar } from './wutils';
@@ -7,7 +8,9 @@ const photoSelector = '[data-testid="tweetPhoto"]'; // can't use this bc sidebar
 const photoHrefSelector = '[href*="/photo"]';
 const advancedSearchSelector = '[href*="/search-advanced"]';
 const trendText = '[aria-label="Timeline: Trending now"]';
-const searchBarSelector = '[data-testid="SearchBox_Search_Input"] ';
+const searchBarInputSelector = '[data-testid="SearchBox_Search_Input"] ';
+const searchBarSelector =
+  'div div div div form div div div div' + ' ' + searchBarInputSelector;
 const sideBarSelector = '[data-testid="sidebarColumn"]';
 const editorClass = 'DraftEditor-editorContainer';
 const floatingComposeSelector =
@@ -16,12 +19,20 @@ const floatingComposeSelector =
 let activeSidebar = {};
 export function makeSidebarHome() {
   let thBar = document.createElement('div');
-  thBar.setAttribute('class', 'sug_home bg-mainBg');
+  thBar.setAttribute('class', 'sug_home');
   return thBar;
 }
 // impure
-export function injectSidebarHome(thBar: Element) {
-  removeSearchBar();
+export async function injectSidebarHome(thBar: Element) {
+  const hideTtSearchBar = await getStg('hideTtSearchBar');
+  const hideTtSidebarContent = await getStg('hideTtSidebarContent');
+  console.log('injectSidebarHome', { hideTtSearchBar });
+  if (hideTtSearchBar) {
+    removeSearchBar();
+  }
+  if (hideTtSidebarContent) {
+    removeSidebarContent();
+  }
   resizeSidebar();
   let sidebarElement = document.querySelector(sideBarSelector);
   if (!isNil(sidebarElement)) {
@@ -98,7 +109,7 @@ export function injectDummy(thBar: Element): Element {
 }
 export function makeSidebarCompose(): Element {
   let thBar = document.createElement('div');
-  thBar.setAttribute('class', 'sug_compose bg-mainBg');
+  thBar.setAttribute('class', 'sug_compose w-full');
   return thBar;
 }
 // Produces events every time a sidebar should be created (trends sidebar shows up or compose screen comes up)
@@ -106,7 +117,7 @@ export function makeSearchBarObserver(): Observable<Element, any> {
   // console.log('[DEBUG] makeHomeSidebarObserver 0', { thBar });
   const searchBarAdd$: Observable<Element, any> = obsAdded(
     document,
-    searchBarSelector,
+    searchBarInputSelector,
     true
   ); // searchBarAdd$ :: Element // Trends element is added
   const searchBarRemove$ = obsRemoved(document, searchBarSelector, true); // searchBarAdd$ :: Element // Trends element is remove
@@ -114,50 +125,74 @@ export function makeSearchBarObserver(): Observable<Element, any> {
 }
 //
 export function removeSearchBar(_?) {
+  const searchBarInputEl = document.querySelector(searchBarInputSelector);
+  // console.log('deleting sidebar children', { children: slot.children });
+  try {
+    const searchBarEl =
+      searchBarInputEl.parentElement.parentElement.parentElement.parentElement
+        .parentElement.parentElement.parentElement.parentElement.parentElement;
+    console.log('removing', { searchBarInputEl, searchBarEl });
+    searchBarEl.remove();
+  } catch (e) {
+    console.error("Couldn't remove search bar element", {
+      searchBarInputEl,
+    });
+  }
+}
+
+export function removeSidebarContent(_?) {
   const sidebarElement = document.querySelector(sideBarSelector);
   const istTh = (el) => el.className.includes('sug_home');
   const isUserPhotos = (el) => !isNil(el.querySelector(photoHrefSelector));
   const isAdvancedSearch = (el) =>
     !isNil(el.querySelector(advancedSearchSelector));
-  const slot =
-    sidebarElement.firstElementChild.lastElementChild.firstElementChild
-      .firstElementChild.firstElementChild;
-  // console.log('deleting sidebar children', { children: slot.children });
-  Array.from(slot.children).forEach((el: Element) => {
-    if (istTh(el) || isUserPhotos(el) || isAdvancedSearch(el)) {
-      // console.log('skipped', el);
-      return;
-    }
-    try {
-      // console.log('removing', el);
-      el.remove();
-    } catch (e) {
-      console.error("Couldn't remove sidebar element", { slot, el });
-    }
-  });
-  // try {
-  //   const sibling = slot.parentElement.nextSibling;
-  //   sibling.remove();
-  //   console.log('Removed search bar sibling!', { bar });
-  // } catch (e) {
-  //   console.error("Couldn't remove search bar sibling", { bar, e });
-  // }
-  // try {
-  //   const parent =
-  //     bar.parentElement.parentElement.parentElement.parentElement.parentElement
-  //       .parentElement.parentElement.parentElement.parentElement;
-  //   parent.remove();
-  //   console.log('Removed search bar!', { bar });
-  // } catch (e) {
-  //   console.error("Couldn't remove search bar", { bar, e });
-  // }
+  const isSearchBar = (el) => !isNil(el.querySelector(searchBarInputSelector));
+  try {
+    const slot =
+      sidebarElement.firstElementChild.lastElementChild.firstElementChild
+        .firstElementChild.firstElementChild;
+    // console.log('deleting sidebar children', { children: slot.children });
+    Array.from(slot.children).forEach((el: Element) => {
+      if (
+        istTh(el) ||
+        isUserPhotos(el) ||
+        isAdvancedSearch(el) ||
+        isSearchBar(el)
+      ) {
+        // console.log('skipped', el);
+        return;
+      }
+      try {
+        // console.log('removing', el);
+        el.remove();
+      } catch (e) {
+        console.error("Couldn't remove sidebar element", { slot, el });
+      }
+    });
+  } catch (e) {}
 }
+
 export function resizeSidebar() {
-  const sidebarElement = document.querySelector(
-    sideBarSelector + ' div div div div div'
-  );
-  console.log('[DEBUG] resizeSidebar', { sidebarElement });
-  sidebarElement.classList.add('2xl:w-128');
+  try {
+    const sidebarElement = document.querySelector(
+      sideBarSelector + ' div div div div div'
+    );
+    console.log('[DEBUG] resizeSidebar', { sidebarElement });
+    sidebarElement.classList.add('2xl:w-128');
+  } catch (e) {
+    console.error("Couldn't resize sidebar");
+  }
+
+  try {
+    const searchBarInputEl = document.querySelector(searchBarInputSelector);
+    // console.log('deleting sidebar children', { children: slot.children });
+    const searchBarEl =
+      searchBarInputEl.parentElement.parentElement.parentElement.parentElement
+        .parentElement.parentElement.parentElement.parentElement.parentElement;
+    searchBarEl.classList.add('2xl:w-128');
+  } catch (e) {
+    console.error("Couldn't resize search bar");
+  }
 }
 
 // export function resizeSidebar(ttSidebar) {
@@ -212,11 +247,11 @@ export function makeHomeSidebarObserver(
   // });
   return homeSidebarObserver$;
 }
-export const removeHomeSidebar = () => {
-  // console.log('removing sidebar');
-  const sugHomes = [...document.getElementsByClassName('sug_home')];
-  sugHomes.forEach((x: { remove: () => void }) => x.remove());
-};
+// export const removeHomeSidebar = () => {
+//   // console.log('removing sidebar');
+//   const sugHomes = [...document.getElementsByClassName('sug_home')];
+//   sugHomes.forEach((x: { remove: () => void }) => x.remove());
+// };
 export function makeFloatSidebarObserver(
   thBar: EventTarget | NodeJS.EventEmitter | { on: Function; off: Function }
 ) {

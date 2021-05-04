@@ -56,14 +56,18 @@ export const ArchiveUploader = (props) => {
   const hiddenFileInput = useRef<HTMLInputElement>(null);
   const [status, dispatchMsg] = useReducer(statusReducer, 'idle');
 
+  const buttonClass =
+    'rounded text-md text-mainTxt inline bg-hoverBg hover:bg-hoverBg hover:text-twitterGray px-1';
+
   const LoadArchiveIcon = () => {
     return (
       <div class="inline-flex">
-        <Tooltip content={archiveTooltip} direction="bottom">
-          <button class="underline text-lsm font-bold text-twitterGray hover:text-mainTxt">
-            Upload Twiter archive
-          </button>
-        </Tooltip>
+        {/* <Tooltip content={archiveTooltip} direction="bottom"> */}
+        <button class={buttonClass}>
+          {/* <button class="underline text-md text-mainTxt hover:text-twitterGray"> */}
+          Upload Twiter archive
+        </button>
+        {/* </Tooltip> */}
         <div class="ml-8 text-lsm">{statusMsg[status]}</div>
       </div>
     );

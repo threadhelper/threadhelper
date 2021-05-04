@@ -616,23 +616,23 @@ const contextualSeek = async ({ query }) => {
 //   return map(prop('id'), randomSample);
 // };
 
-const getDefault = async (mode) => {
+const getDefault = async (mode: IdleMode) => {
   const { accsShown, filters } = await getSearchParams();
   if (mode === 'random') {
     const res = await searchWorker.getRandom(accsShown, filters);
+    setStg('random_tweets', res);
     setStg('latest_tweets', res);
     console.log('getDefault', { mode, res });
     return res;
   } else {
     const res = await searchWorker.getLatest(accsShown, filters);
-    setStg('random_tweets', res);
     setStg('latest_tweets', res);
     console.log('getDefault', { mode, res });
     return res;
   }
 };
-const getLatest = () => getDefault('latest');
-const getRandom = () => getDefault('random');
+const getLatest = () => getDefault(IdleMode.timeline);
+const getRandom = () => getDefault(IdleMode.random);
 
 const addBookmark = ({ ids }) => {
   enqueueStgNoDups('queue_lookupBookmark', ids);
@@ -692,35 +692,40 @@ const webRequestPermission$: Observable<boolean, any> = makeInitStgObs(
 webRequestPermission$.log('webRequestPermission$');
 const incomingAuth$ = makeAuthObs()
   .filterBy(webRequestPermission$)
-  .filter(validateAuthFormat); //No skipping duplicates bc what if setStg fails for some reason?
+  .filter(validateAuthFormat) //No skipping duplicates bc what if setStg fails for some reason?
+  .throttle(2000);
 // .skipDuplicates(compareAuths);
 subObs({ incomingAuth$ }, setStg('auth'));
 incomingAuth$.log('[DEBUG] incomingAuth$');
 const auth$ = makeInitStgObs(storageChange$, 'auth')
   .filter(validateAuthFormat)
-  .skipDuplicates(compareAuths);
+  .skipDuplicates(R.equals);
+// .throttle(2000);
+// .skipDuplicates(compareAuths);
 auth$.log('[DEBUG] auth$');
 
 const incomingUserInfo$ = auth$
   .thru<Observable<User, any>>(
     promiseStream(async (auth: Credentials) => {
-      console.log('_userInfo$', { auth });
-      // return await tryFnsAsync(scrapeWorker.fetchUserInfo, fetchUserInfo, auth);
-      return await scrapeWorker.debugFetchUserInfo(auth);
+      console.log('incomingUserInfo$', { auth });
+      return await tryFnsAsync(scrapeWorker.fetchUserInfo, fetchUserInfo, auth);
+      // return await scrapeWorker.debugFetchUserInfo(auth);
     })
   )
   .map(inspect('incomingUserInfo$'))
   .filter(pipe(isNil, not))
   .filter(pipe(prop('id'), isNil, not))
   .skipDuplicates()
-  .thru(errorFilter('_userInfo$'));
+  // .throttle(2000);
+  .thru(errorFilter('incomingUserInfo$'));
 
 subObs({ incomingUserInfo$ }, setStg('userInfo'));
 
 const userInfo$ = makeInitStgObs(storageChange$, 'userInfo')
   .filter(pipe(isNil, not))
   .filter(pipe(prop('id'), isNil, not))
-  .skipDuplicates();
+  .skipDuplicates(R.equals);
+// .throttle(2000);
 
 userInfo$.log('userInfo$');
 // subObs({ userInfo$ }, (_) => setStgFlag('doSmallTweetScrape', true));
@@ -792,7 +797,7 @@ subObs({ incomingAccount$ }, onIncomingAccount);
 // I think skipUntilBy does the same
 const startRefreshIdb$ = makeInitStgObs(storageChange$, 'startRefreshIdb')
   .skipUntilBy(userInfo$)
-  .filter((x) => x != false);
+  .filter((x) => x == true);
 
 startRefreshIdb$.log('startRefreshIdb$');
 subObs({ startRefreshIdb$ }, startRefreshIdb);
@@ -849,9 +854,9 @@ subObs({ accsShown$ }, async (_) => {
 });
 accsShown$.log('accsShown$');
 /* Display options and Search filters */
-const idleMode$ = _makeInitOptionsObs('idleMode') as Observable<IdleMode, any>;
-idleMode$.log('idleMode$');
-subObs({ idleMode$: idleMode$.map(prop('value')) }, getDefault);
+// const idleMode$ = _makeInitOptionsObs('idleMode') as Observable<IdleMode, any>;
+// idleMode$.log('idleMode$');
+// subObs({ idleMode$ }, getDefault);
 
 const searchFilters$ = Kefir.merge([
   _makeInitOptionsObs('getRTs'),

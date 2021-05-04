@@ -1,6 +1,8 @@
 const colors = require('tailwindcss/colors');
 
 module.exports = {
+  plugins: [require(`@tailwindcss/typography`)],
+
   purge: ['./src/**/*.{js,jsx,ts,tsx}'],
   darkMode: false, // or 'media' or 'class'
   theme: {
@@ -12,17 +14,18 @@ module.exports = {
         '4xl': '2rem',
       },
       fontSize: {
-        'xxs': '0.5rem',
-        'lsm': '0.933rem'
+        xxs: '0.5rem',
+        lsm: '0.933rem',
       },
       opacity: {
-        '15': '0.15',
+        15: '0.15',
       },
       zIndex: {
         '-1': '-1',
-       },
-       boxShadow: {
-        highlighted: 'rgba(255, 255, 255, 0.2) 0px 0px 15px, rgba(255, 255, 255, 0.15) 0px 0px 3px 1px',
+      },
+      boxShadow: {
+        highlighted:
+          'rgba(255, 255, 255, 0.2) 0px 0px 15px, rgba(255, 255, 255, 0.15) 0px 0px 3px 1px',
       },
     },
     colors: {
@@ -59,5 +62,5 @@ module.exports = {
       green: colors.emerald,
       purple: colors.violet,
     },
-  },  
+  },
 };

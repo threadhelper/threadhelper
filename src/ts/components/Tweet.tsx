@@ -327,13 +327,21 @@ export const CopyAction = ({
   );
 };
 
-export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
+export function Tweet({
+  tweet,
+  minimizeActions,
+  score,
+}: {
+  tweet: thTweet;
+  minimizeActions: boolean;
+  score?: number;
+}) {
   // placeholder is just text
   // const [auth, setAuth] = useStorage('auth', null);
   const parentTweetRef = useRef(null);
   const [copyText, setCopyText] = useState('copy');
   const [_tweet, setTweet] = useState(tweet);
-  const [showActions, setShowActions] = useState(false);
+  const [showActions, setShowActions] = useState(!minimizeActions);
   // const [showActions, setShowActions] = useState(true);
   const [profilePicSrc, setProfilePicSrc] = useState(() => {
     return prop('profile_image', tweet) ?? defaultProfilePic;
@@ -392,7 +400,9 @@ export function Tweet({ tweet, score }: { tweet: thTweet; score?: number }) {
           });
           return;
         }
-        setShowActions(false);
+        if (minimizeActions) {
+          setShowActions(false);
+        }
       }}
       ref={parentTweetRef}
     >
