@@ -616,23 +616,23 @@ const contextualSeek = async ({ query }) => {
 //   return map(prop('id'), randomSample);
 // };
 
-const getDefault = async (mode) => {
+const getDefault = async (mode: IdleMode) => {
   const { accsShown, filters } = await getSearchParams();
   if (mode === 'random') {
     const res = await searchWorker.getRandom(accsShown, filters);
+    setStg('random_tweets', res);
     setStg('latest_tweets', res);
     console.log('getDefault', { mode, res });
     return res;
   } else {
     const res = await searchWorker.getLatest(accsShown, filters);
-    setStg('random_tweets', res);
     setStg('latest_tweets', res);
     console.log('getDefault', { mode, res });
     return res;
   }
 };
-const getLatest = () => getDefault('latest');
-const getRandom = () => getDefault('random');
+const getLatest = () => getDefault(IdleMode.timeline);
+const getRandom = () => getDefault(IdleMode.random);
 
 const addBookmark = ({ ids }) => {
   enqueueStgNoDups('queue_lookupBookmark', ids);
@@ -792,7 +792,7 @@ subObs({ incomingAccount$ }, onIncomingAccount);
 // I think skipUntilBy does the same
 const startRefreshIdb$ = makeInitStgObs(storageChange$, 'startRefreshIdb')
   .skipUntilBy(userInfo$)
-  .filter((x) => x != false);
+  .filter((x) => x == true);
 
 startRefreshIdb$.log('startRefreshIdb$');
 subObs({ startRefreshIdb$ }, startRefreshIdb);
@@ -849,9 +849,9 @@ subObs({ accsShown$ }, async (_) => {
 });
 accsShown$.log('accsShown$');
 /* Display options and Search filters */
-const idleMode$ = _makeInitOptionsObs('idleMode') as Observable<IdleMode, any>;
-idleMode$.log('idleMode$');
-subObs({ idleMode$: idleMode$.map(prop('value')) }, getDefault);
+// const idleMode$ = _makeInitOptionsObs('idleMode') as Observable<IdleMode, any>;
+// idleMode$.log('idleMode$');
+// subObs({ idleMode$ }, getDefault);
 
 const searchFilters$ = Kefir.merge([
   _makeInitOptionsObs('getRTs'),
