@@ -72,6 +72,7 @@ export function initStg() {
 
 /* Storage API */
 
+// returns a {key: value} object
 export const getData = async (keys) => {
   if (SERVE) {
     return getDataLocal(keys);
@@ -237,6 +238,7 @@ export const resetStorage = () => setData(defaultStorage());
 export const resetStorageField = (key: string) =>
   setData({ [key]: defaultStorage()[key] });
 
+// returns the value for that key
 export const getStg = (key: string) =>
   getData([key]).then(
     pipe(prop(key), defaultTo(defaultStorage()[key]), addNewDefault(key))

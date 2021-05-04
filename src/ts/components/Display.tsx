@@ -3,6 +3,7 @@ import { useContext, useEffect, useRef, useState } from 'preact/hooks';
 // flattenModule(global,R)
 import { useThrottle } from '@react-hook/throttle';
 import {
+  curry,
   defaultTo,
   filter,
   includes,
@@ -174,15 +175,16 @@ function UserDisplay({ results }: { results: User[] }) {
   );
 }
 
-const buildTweetComponent = (res: TweetResult) => (
+const buildTweetComponent = curry((minimizeActions, res: TweetResult) => (
   // Without a key, Preact has to guess which tweets have
   // changed when re-rendering.
   <TweetCard
     key={path(['tweet', 'id'])}
     tweet={prop('tweet', res)}
     score={prop('score', res)}
+    minimizeActions={minimizeActions}
   />
-);
+));
 
 type TweetDisplayProps = {
   title: string;
@@ -196,6 +198,10 @@ function TweetDisplay({
   emptyMsg,
   onMouseEnter,
 }: TweetDisplayProps) {
+  const [minimizeActions, setMinimizeActions] = useStorage(
+    'minimizeTweetActions',
+    null
+  );
   return (
     <>
       <div class="text-right text-gray-500 my-1 px-3">
@@ -205,7 +211,16 @@ function TweetDisplay({
         {isEmpty(results) ? (
           <span class="px-3">{emptyMsg}</span>
         ) : (
-          map(buildTweetComponent, results)
+          map((res) => {
+            return (
+              <TweetCard
+                key={path(['tweet', 'id'])}
+                tweet={prop('tweet', res)}
+                score={prop('score', res)}
+                minimizeActions={minimizeActions}
+              />
+            );
+          }, results)
         )}
       </div>
     </>

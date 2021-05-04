@@ -92,7 +92,11 @@ function PermissionAsker() {
     </div>
   );
 }
-export default function ThreadHelper(props: any) {
+const composeModeStyles =
+  'ThreadHelper bg-mainBg rounded-2xl my-4 mx-8 flex-grow overflow-x-visible pointer-events-auto w-10/12';
+const homeModeStyles =
+  'ThreadHelper bg-mainBg rounded-2xl mb-8overflow-x-visible';
+export default function ThreadHelper({ inHome }) {
   const [active, setActive] = useState(true);
   const myRef = useRef(null);
   const [patchUrl, setPatchUrl] = useStorage('patchUrl', null);
@@ -100,9 +104,20 @@ export default function ThreadHelper(props: any) {
     'webRequestPermission',
     true
   );
+  const [hideTtSearchBar, setHideTtSearchBar] = useStorage(
+    'hideTtSearchBar',
+    null
+  );
 
   return (
-    <div class="ThreadHelper" ref={myRef}>
+    <div
+      class={
+        (inHome ? homeModeStyles : composeModeStyles) +
+        ' ' +
+        (hideTtSearchBar ? '' : 'mt-12')
+      }
+      ref={myRef}
+    >
       {!webRequestPermission && <PermissionAsker />}
       {!isNil(patchUrl) && (
         <Banner
