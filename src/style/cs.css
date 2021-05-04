@@ -10,28 +10,11 @@
   */
 }
 
-.sug_compose {
-  width: 80%;
-  pointer-events: auto;
-  margin: 20px 10px 20px 10px;
-  border-radius: 10px;
-  -webkit-box-flex: 1;
-      -ms-flex-positive: 1;
-          flex-grow: 1;
-  overflow-x: visible;
-}
-
 /* Maximum width applies to stuff with width lower than this*/
 @media (max-width: 200px) {
   .sug_compose {
     visibility: hidden;
   }
-}
-
-.sug_home {
-  border-radius: 10px;
-  margin-bottom: 20px;
-  overflow-x: visible;
 }
 
 /* Dropdown Menu */
