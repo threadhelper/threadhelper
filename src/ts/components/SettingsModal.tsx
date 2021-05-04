@@ -44,7 +44,7 @@ const Checkbox = ({ get, set, label }) => {
           set(!get);
         }}
       />
-      <span class="ml-4 text-lsm font-medium text-twitterGray hover:text-mainTxt">
+      <span class="ml-4 text-lsm font-medium text-mainTxt hover:text-text-twitterGray">
         {label}
       </span>
     </label>
@@ -205,11 +205,11 @@ const SettingsInterface = () => {
   return (
     <div>
       {/* <div class="mb-7 flex justify-between items-center">{'Interface'}</div> */}
-      <div items-center>
+      <div class="items-center">
         {map(([description, form]) => {
           return (
             <>
-              <div class="flex flex-row justify-between items-center">
+              <div class="flex flex-row justify-between items-center font-medium text-lsm">
                 <div class="text-left">{description}</div>
                 <div class="text-right">{form}</div>
               </div>
@@ -228,13 +228,21 @@ const SettingsData = () => {
   const [nTweets, setNTweets] = useStorage('nTweets', 0);
 
   return (
-    <div class="mb-7 flex flex-col justify-between">
+    <div class="mb-7 flex flex-col justify-between h-full font-medium text-lsm">
+      <div>
+        <p>{'Stats'}</p>
+        <p class="pl-2 text-twitterGray">{`Your database includes ${nTweets} tweets from the following accounts: ${join(
+          ', ',
+          map(prop('screen_name'), values(activeAccounts))
+        )}.`}</p>
+      </div>
+      <hr class="my-2 text-mainTxt w-full"></hr>
       <div class="text-twitterGray pt-2 ">
         <ArchiveUploader />
         <div class="pl-2">
           {"If you haven't yet, "}
           <a
-            class="underline hover:opacity-80 pl-2"
+            class="underline hover:opacity-80"
             // class="underline text-blue-600 hover:text-blue-800 visited:text-purple-600"
             style="color: var(--accent-color)"
             href="https://twitter.com/settings/your_twitter_data"
@@ -243,14 +251,6 @@ const SettingsData = () => {
           </a>
           {', extract it and select data/tweet.js.'}
         </div>
-      </div>
-      <hr class="my-2 text-mainTxt w-full"></hr>
-      <div>
-        <p>{'Stats'}</p>
-        <p class="pl-2">{`Your database includes ${nTweets} tweets from the following accounts: ${join(
-          ', ',
-          map(prop('screen_name'), values(activeAccounts))
-        )}.`}</p>
       </div>
     </div>
   );
@@ -273,7 +273,7 @@ const inlineCodeClass = 'font-mono text-sm inline bg-hoverBg px-1';
 
 const SettingsHotkeys = () => {
   return (
-    <div class="">
+    <div class="font-medium text-lsm">
       <div class="text-right pb-4">
         <a class="underline hover:text-twitterGray " href={manualUrl}>
           ThreadHelper Manual
@@ -337,7 +337,7 @@ const SettingsAbout = () => {
         <div class="flex flex-col text-md text-mainTxt w-full mb-5 underline text-right">
           <div>
             <a class="hover:text-twitterGray" href={patchNotes03}>
-              {'Threadhelper v' + process.env.VERSION}
+              {'Patch Notes v' + process.env.VERSION}
             </a>
           </div>
         </div>
