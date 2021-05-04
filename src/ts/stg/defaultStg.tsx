@@ -16,30 +16,43 @@ export const defaultOptions = (): Options => {
 
 export const defaultStorage = (): StorageInterface => {
   return {
+    // interface options
+    hideTtSidebarContent: true,
+    hideTtSearchBar: true,
+    minimizeTweetActions: true,
+    // search options
     options: defaultOptions(),
-    hasArchive: false,
-    hasTimeline: {}, // {id_str: Bool}
+    // Important data
+    auth: { authorization: null, 'x-csrf-token': null, name: 'empty_auth' },
+    userInfo: {},
     activeAccounts: {}, //{id:FullUser}
+    query: '',
+    lastClickedId: null,
+    //meta data
+    pageMetadata: {}, //
     currentScreenName: '',
+    nTweets: 0,
+    lastUpdated: 0,
+    sync: false,
+    // api results
+    api_results: [],
+    api_users: [],
+    // index tweets
     latest_tweets: [],
     search_results: [],
     context_results: [],
-    api_results: [],
-    api_users: [],
-    // temp_archive: [],
-    queue_tempArchive: [],
-    sync: false,
-    nTweets: 0,
-    lastUpdated: 0,
-    query: '',
-    auth: { authorization: null, 'x-csrf-token': null, name: 'empty_auth' },
-    userInfo: {},
-    doRefreshIdb: false,
+    random_tweets: [],
+    // data flags
+    hasArchive: false,
+    hasTimeline: {}, // {id_str: Bool}
+    // application info/flags
+    showApiSearchTooltip: false,
     webRequestPermission: true,
-    doBigTweetScrape: true,
-    doSmallTweetScrape: false,
-    doIndexUpdate: false,
-    doIndexLoad: false,
+    bgOpLog: [],
+    patchUrl: null,
+    startRefreshIdb: false,
+    // queues
+    queue_tempArchive: [],
     queue_lookupTweets: [],
     queue_lookupRefresh: [],
     queue_lookupBookmarks: [],
@@ -49,17 +62,16 @@ export const defaultStorage = (): StorageInterface => {
     queue_lookupUsers: [],
     queue_addUsers: [],
     queue_removeUsers: [],
+    // bg work flags
+    doRefreshIdb: false,
+    doBigTweetScrape: true,
+    doSmallTweetScrape: false,
+    doIndexUpdate: false,
+    doIndexLoad: false,
     isMidSearch: false,
     isMidScrape: false,
     isMidStore: false,
     isMidRefresh: false,
-    // archiveQueueN: 0,
-    random_tweets: [],
-    lastClickedId: null,
-    pageMetadata: {}, //
-    patchUrl: null,
-    showApiSearchTooltip: false,
-    bgOpLog: [],
   };
 };
 
