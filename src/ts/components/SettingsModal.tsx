@@ -228,7 +228,15 @@ const SettingsData = () => {
   const [nTweets, setNTweets] = useStorage('nTweets', 0);
 
   return (
-    <div class="mb-7 flex flex-col justify-between">
+    <div class="mb-7 flex flex-col justify-between h-full">
+      <div>
+        <p>{'Stats'}</p>
+        <p class="pl-2">{`Your database includes ${nTweets} tweets from the following accounts: ${join(
+          ', ',
+          map(prop('screen_name'), values(activeAccounts))
+        )}.`}</p>
+      </div>
+      <hr class="my-2 text-mainTxt w-full"></hr>
       <div class="text-twitterGray pt-2 ">
         <ArchiveUploader />
         <div class="pl-2">
@@ -243,14 +251,6 @@ const SettingsData = () => {
           </a>
           {', extract it and select data/tweet.js.'}
         </div>
-      </div>
-      <hr class="my-2 text-mainTxt w-full"></hr>
-      <div>
-        <p>{'Stats'}</p>
-        <p class="pl-2">{`Your database includes ${nTweets} tweets from the following accounts: ${join(
-          ', ',
-          map(prop('screen_name'), values(activeAccounts))
-        )}.`}</p>
       </div>
     </div>
   );
