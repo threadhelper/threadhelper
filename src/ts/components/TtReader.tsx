@@ -1,33 +1,23 @@
-import { createContext, h } from 'preact';
+import { h } from 'preact';
 import { useContext, useEffect, useRef, useState } from 'preact/hooks';
 import {
   curry,
   defaultTo,
-  filter,
   includes,
   isEmpty,
   isNil,
-  map,
-  nth,
+  join,
+  length,
   path,
-  pipe,
   prop,
-  propEq,
-  reverse,
-  sortBy,
   trim,
 } from 'ramda';
 import SearchIcon from '../../images/search.svg';
-import { apiSearchToTweet } from '../bg/tweetImporter';
-import { searchAPI, tweetLookupQuery } from '../bg/twitterScout';
-import { getRepliedToText } from '../domInterface/wutils';
 import { QueryObs } from '../hooks/BrowserEventObs';
 import { useMsg } from '../hooks/useMsg';
-import { useStorage } from '../hooks/useStorage';
 import { _useStream } from '../hooks/useStream';
 import { rpcBg, setStg } from '../stg/dutils';
-import { inspect, isExist } from '../utils/putils';
-import { AuthContext, FeedDisplayMode, PageMetadata } from './ThreadHelper';
+import { FeedDisplayMode } from './ThreadHelper';
 
 export function TtReader() {
   return (
@@ -184,155 +174,36 @@ export var useCurrentTwitterPage = function () {
   return currentPage;
 };
 
-const _submitSearch = curry((dispatch, query: string) => {
-  const q = defaultTo('', query);
-  if (isEmpty(trimNewlines(q))) {
-    dispatch({
-      action: 'emptySearch',
-      tweets: [],
-    });
+export const parseThQuery = (query) => {
+  const bracketedQueries = defaultTo(
+    [],
+    query.match(inSquareBracketsAndStarting)
+  );
+  console.log('parseThQuery [[]]', { bracketedQueries });
+  if (length(bracketedQueries) <= 0) {
+    return query;
   } else {
-    dispatch({
-      action: 'submitSearch',
-      tweets: [],
-    });
-    reqSearch(q);
+    return combineBracketedQueries(bracketedQueries);
   }
-});
-
-// const _submitContextSearch = curry((dispatch, query: string) => {
-//   const q = defaultTo('', query);
-//   if (isEmpty(trimNewlines(q))) {
-//     dispatch({
-//       action: 'emptyContextSearch',
-//       tweets: [],
-//     });
-//   } else {
-//     dispatch({
-//       action: 'submitContextSearch',
-//       tweets: [],
-//     });
-//     reqContextSearch(q);
-//   }
-// });
-
-// const _QtApiSearch = curry(async (dispatch, auth, tweetId) => {
-//   var hasQt = false;
-//   await searchAPI(auth, 'quoted_tweet_id:' + tweetId).then(
-//     ({ users, tweets }) =>
-//       pipe(
-//         () => tweets,
-//         filter(propEq('quoted_status_id_str', tweetId)),
-//         sortBy(prop('favorite_count')),
-//         reverse,
-//         inspect('qt req'),
-//         map(apiSearchToTweet),
-//         map((tweet) => {
-//           return { tweet };
-//         }),
-//         defaultTo([]),
-//         (qts) => {
-//           if (!isEmpty(qts)) {
-//             hasQt = true;
-//             setStg('qts', qts);
-//             dispatch({
-//               action: 'gotQts',
-//               tweets: [],
-//             });
-//           }
-//         }
-//       )()
-//   );
-//   return hasQt;
-// });
-
-// const _searchLookupTweet = curry(async (submitSearch, auth, id) => {
-//   return tweetLookupQuery(auth, [id]).then(
-//     pipe(
-//       inspect('showTweet tweetLookupQuery'),
-//       nth(0),
-//       prop('full_text'),
-//       defaultTo(''),
-//       submitSearch
-//     )
-//   );
-// });
-
-// const _showTweetContext = curry(async (dispatch, tweetId, auth) => {
-//   console.log('show Tweet', { id: tweetId });
-//   const QtApiSearch = _QtApiSearch(dispatch);
-//   const submitContextSearch = _submitContextSearch(dispatch);
-//   const searchLookupTweet = _searchLookupTweet(submitContextSearch);
-//   const hasQt = await QtApiSearch(auth, tweetId);
-//   if (!hasQt) searchLookupTweet(auth, tweetId);
-// });
-
-// const handleContext = (dispatch, currentPage, auth) => {
-//   const showTweetContext = _showTweetContext(dispatch);
-//   const submitContextSearch = _submitContextSearch(dispatch);
-//   if (propEq('pageType', 'showTweet', currentPage)) {
-//     showTweetContext(currentPage.tweetId, auth);
-//   } else if (propEq('pageType', 'compose', currentPage)) {
-//     const textRepliedTo = getRepliedToText();
-//     const isReply = !isNil(textRepliedTo);
-//     console.log('Ttreader page: Compose' + ` ${defaultTo('', textRepliedTo)}`);
-//     if (isReply) submitContextSearch(textRepliedTo);
-//   } else if (propEq('pageType', 'intentReply', currentPage)) {
-//     const textRepliedTo = getRepliedToText();
-//     const hasText = isExist(textRepliedTo);
-//     console.log('Ttreader page: Compose' + ` ${defaultTo('', textRepliedTo)}`);
-//     if (hasText) {
-//       submitContextSearch(textRepliedTo);
-//     } else {
-//       showTweetContext(currentPage.tweetId, auth);
-//     }
-//   } else {
-//     // if no contextual information#
-//     console.log('TtReader handleContext', { currentPage });
-//     setStg('context_results', []);
-//     setStg('contextQuery', '');
-//     dispatch({
-//       action: 'emptySearch',
-//       tweets: [],
-//     });
-//   }
-// };
-
-// export function Page() {
-//   const { pageMetadata, setPageMetadata } = useContext(PageMetadata);
-//   const auth = useContext(AuthContext);
-//   const currentPage = useCurrentTwitterPage();
-//   const { feedDisplayMode, dispatchFeedDisplayMode } = useContext(
-//     FeedDisplayMode
-//   );
-
-//   useEffect(() => {
-//     console.log('[DEBUG] TtReader > Page', { currentPage, auth });
-//     if (isNil(currentPage) || isNil(auth)) return;
-
-//     handleContext(dispatchFeedDisplayMode, currentPage, auth);
-//   }, [currentPage, auth]);
-//   return <></>;
-// }
-
-const reqSearch = async (query) => {
-  // msgBG({ type: 'search', query });
-  setStg('query', query);
+};
+export const reqSearch = async (query) => {
+  setStg('query', parseThQuery(query));
   // console.time(`[TIME] reqSearch`);
   // const searchResults = await rpcBg('seek', { query });
   // console.timeEnd(`[TIME] reqSearch`);
   // return searchResults;
 };
 
-const reqContextSearch = async (query) => {
-  // msgBG({ type: 'search', query });
-  setStg('contextQuery', query);
-  const searchResults = await rpcBg('contextualSeek', { query });
-  console.log('reqContextSearch', { query, searchResults });
-  // return searchResults;
-};
 const trimNewlines = (str) =>
   trim(str).replace(/(^\s*(?!.+)\n+)|(\n+\s+(?!.+)$)/g, '');
+
+// this captures all top level phrases in double [[square]] [[brackets]]
+const inSquareBrackets = /\[\[(\[\[.*]|.)*?\]\]/g;
+// Same as above but also captures [[... when you haven't closed the double brackets
+export const inSquareBracketsAndStarting = /(\[\[(\[\[.*]|.)*?\]\])|\[\[.*/g;
+export const combineBracketedQueries = (queries: string[]): string => {
+  return join(' ', queries);
+};
 
 export function SearchBar({ show }) {
   const inputObj = useRef(null);
@@ -342,8 +213,6 @@ export function SearchBar({ show }) {
   );
   const query$ = useContext(QueryObs);
   const [query, setQuery] = _useStream(query$, '');
-  const [midSearch, setMidSearch] = useState(false);
-  const [nextQuery, setNextQuery] = useState(null);
 
   const submitSearch = async (query: string) => {
     const q = defaultTo('', query);
