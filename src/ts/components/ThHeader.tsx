@@ -144,7 +144,7 @@ export function ApiSearchBar() {
 
   useEffect(() => {
     function handleKeyDown(e) {
-      if (e.getModifierState('Control') && (e.key == '/' || e.key == 'k')) {
+      if (e.getModifierState('Control') && e.key == '/') {
         setShowSearchBar(true);
       }
     }
