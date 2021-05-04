@@ -258,8 +258,8 @@ const SettingsData = () => {
 
 // Description, Hotkey pairs
 const hotkeysData = [
-  ['Focus Twitter API search bar', 'ctrl + /'],
   ['Focused search (searches key expressions)', '[[key expression]]'],
+  ['Focus Twitter API search bar', 'ctrl + /'],
 ];
 
 const inlineCodeClass = 'font-mono text-sm inline bg-hoverBg px-1';
