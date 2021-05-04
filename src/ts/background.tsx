@@ -692,35 +692,40 @@ const webRequestPermission$: Observable<boolean, any> = makeInitStgObs(
 webRequestPermission$.log('webRequestPermission$');
 const incomingAuth$ = makeAuthObs()
   .filterBy(webRequestPermission$)
-  .filter(validateAuthFormat); //No skipping duplicates bc what if setStg fails for some reason?
+  .filter(validateAuthFormat) //No skipping duplicates bc what if setStg fails for some reason?
+  .throttle(2000);
 // .skipDuplicates(compareAuths);
 subObs({ incomingAuth$ }, setStg('auth'));
 incomingAuth$.log('[DEBUG] incomingAuth$');
 const auth$ = makeInitStgObs(storageChange$, 'auth')
   .filter(validateAuthFormat)
-  .skipDuplicates(compareAuths);
+  .skipDuplicates(R.equals);
+// .throttle(2000);
+// .skipDuplicates(compareAuths);
 auth$.log('[DEBUG] auth$');
 
 const incomingUserInfo$ = auth$
   .thru<Observable<User, any>>(
     promiseStream(async (auth: Credentials) => {
-      console.log('_userInfo$', { auth });
-      // return await tryFnsAsync(scrapeWorker.fetchUserInfo, fetchUserInfo, auth);
-      return await scrapeWorker.debugFetchUserInfo(auth);
+      console.log('incomingUserInfo$', { auth });
+      return await tryFnsAsync(scrapeWorker.fetchUserInfo, fetchUserInfo, auth);
+      // return await scrapeWorker.debugFetchUserInfo(auth);
     })
   )
   .map(inspect('incomingUserInfo$'))
   .filter(pipe(isNil, not))
   .filter(pipe(prop('id'), isNil, not))
   .skipDuplicates()
-  .thru(errorFilter('_userInfo$'));
+  // .throttle(2000);
+  .thru(errorFilter('incomingUserInfo$'));
 
 subObs({ incomingUserInfo$ }, setStg('userInfo'));
 
 const userInfo$ = makeInitStgObs(storageChange$, 'userInfo')
   .filter(pipe(isNil, not))
   .filter(pipe(prop('id'), isNil, not))
-  .skipDuplicates();
+  .skipDuplicates(R.equals);
+// .throttle(2000);
 
 userInfo$.log('userInfo$');
 // subObs({ userInfo$ }, (_) => setStgFlag('doSmallTweetScrape', true));

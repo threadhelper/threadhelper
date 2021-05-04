@@ -109,7 +109,7 @@ export function injectDummy(thBar: Element): Element {
 }
 export function makeSidebarCompose(): Element {
   let thBar = document.createElement('div');
-  thBar.setAttribute('class', 'sug_compose bg-mainBg');
+  thBar.setAttribute('class', 'sug_compose w-full');
   return thBar;
 }
 // Produces events every time a sidebar should be created (trends sidebar shows up or compose screen comes up)
