@@ -228,7 +228,7 @@ const SettingsData = () => {
   const [nTweets, setNTweets] = useStorage('nTweets', 0);
 
   return (
-    <div class="mb-7 flex flex-col justify-between h-full font-medium text-lsm">
+    <div class="mb-7 flex flex-col h-full font-medium text-lsm">
       <div>
         <p>{'Stats'}</p>
         <p class="pl-2 text-twitterGray">{`Your database includes ${nTweets} tweets from the following accounts: ${join(
@@ -240,7 +240,7 @@ const SettingsData = () => {
       <div class="text-twitterGray pt-2 ">
         <ArchiveUploader />
         <div class="pl-2">
-          {"If you haven't yet, "}
+          {'To have even more tweets available, '}
           <a
             class="underline hover:opacity-80"
             // class="underline text-blue-600 hover:text-blue-800 visited:text-purple-600"
@@ -274,11 +274,6 @@ const inlineCodeClass = 'font-mono text-sm inline bg-hoverBg px-1';
 const SettingsHotkeys = () => {
   return (
     <div class="font-medium text-lsm">
-      <div class="text-right pb-4">
-        <a class="underline hover:text-twitterGray " href={manualUrl}>
-          ThreadHelper Manual
-        </a>
-      </div>
       <div>
         {map(([description, hotkey]) => {
           return (
@@ -293,6 +288,11 @@ const SettingsHotkeys = () => {
             </>
           );
         }, hotkeysData)}
+      </div>
+      <div class="text-left pb-4">
+        <a class="underline hover:text-twitterGray " href={manualUrl}>
+          ThreadHelper Manual
+        </a>
       </div>
     </div>
   );
@@ -332,18 +332,7 @@ const SettingsAbout = () => {
 
   return (
     <div class="flex flex-col justify-between h-full">
-      <div class="flex flex-col justify-between">
-        {/* helpful links */}
-        <div class="flex flex-col text-md text-mainTxt w-full mb-5 underline text-right">
-          <div>
-            <a class="hover:text-twitterGray" href={patchNotes03}>
-              {'Patch Notes v' + process.env.VERSION}
-            </a>
-          </div>
-        </div>
-
-        {/* banter */}
-      </div>
+      <div></div>
       <div class="flex flex-col justify-evenly">
         {/* us */}
         <div class="text-sm  w-full mb-5">
@@ -381,6 +370,19 @@ const SettingsAbout = () => {
               </button>
             </a>
           </div>
+        </div>
+      </div>
+      <div class="flex flex-row justify-between text-lsm text-twitterGray mb-5">
+        {/* helpful links */}
+        <div class="text-left">
+          <div>
+            <p>Privacy Policy: We NEVER keep your data.</p>
+          </div>
+        </div>
+        <div class="text-mainTxt underline text-right">
+          <a class="hover:text-twitterGray" href={patchNotes03}>
+            {'Patch Notes v' + process.env.VERSION}
+          </a>
         </div>
       </div>
     </div>
@@ -427,8 +429,8 @@ const SettingsModal = ({ setOpen, setSecretOpen }) => {
             (sectionName) => (
               <div
                 class={
-                  'hover:bg-hoverBg pl-4 py-1 cursor-pointer ' +
-                  (sectionName == section ? ' bg-hoverBg' : '')
+                  'hover:bg-mainBg pl-4 py-1 cursor-pointer ' +
+                  (sectionName == section ? ' bg-mainBg' : '')
                 }
                 onClick={(e) => {
                   setSection(sectionName);
