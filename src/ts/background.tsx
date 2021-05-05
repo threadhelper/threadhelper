@@ -92,6 +92,7 @@ import {
   errorFilter,
   inspect,
   promiseStream,
+  toggleDebug,
 } from './utils/putils';
 
 const createSearchWorker = createWorkerFactory(
@@ -113,7 +114,7 @@ const scrapeWorker = createScrapeWorker();
 PageView('/background.html');
 // Project business
 var DEBUG = process.env.NODE_ENV != 'production';
-// toggleDebug(window, DEBUG);
+toggleDebug(window, DEBUG);
 (Kefir.Property.prototype as any).currentValue = currentValue;
 // log can contain the name of the operations done, arguments, succcess or not, time
 const bgOpLog = (op: string) => {

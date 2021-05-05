@@ -93,7 +93,7 @@ function PermissionAsker() {
   );
 }
 const composeModeStyles =
-  'ThreadHelper bg-mainBg rounded-2xl my-4 mx-8 flex-grow overflow-x-visible pointer-events-auto w-10/12';
+  'ThreadHelper bg-mainBg rounded-2xl my-4 mx-8 flex-grow overflow-x-visible pointer-events-auto ';
 const homeModeStyles =
   'ThreadHelper bg-mainBg rounded-2xl mb-8overflow-x-visible';
 export default function ThreadHelper({ inHome }) {
