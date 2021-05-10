@@ -35,7 +35,7 @@ import {
   _subObs,
   _subWorkQueueStg,
 } from './bg/bgUtils';
-import { dbFilter, dbOpen } from './bg/idb_wrapper';
+import { dbFilter, dbGetMany, dbOpen } from './bg/idb_wrapper';
 import { apiToTweet, archToTweet, bookmarkToTweet } from './bg/tweetImporter';
 import {
   fetchUserInfo,
@@ -457,6 +457,13 @@ const removeTweetQueue = async (queue) => {
   // dequeueWorkQueueStg('queue_removeTweets', R.length(queue)); // need to empty the working queue after using it
 };
 
+const idbGet = async ({ storeName, ids }) => {
+  const db = await dbOpen();
+  const res = await dbGetMany(db, storeName, ids); // getAllIds :: () -> [ids]
+  db.close();
+  return res;
+};
+
 const updateNTweets = async () => {
   const db = await dbOpen();
   const keys = await db.getAllKeys('tweets');
@@ -509,7 +516,7 @@ const webReqPermission = async ({}) => {
 };
 // Playground proxy functions
 const fetchBg = async ({ url, options }) => {
-  return await tryFnsAsync(scrapeWorker.thFetch, thFetch, url, options);
+  // return await tryFnsAsync(scrapeWorker.thFetch, thFetch, url, options);
 };
 const getAuth = async (_) => {
   return await getData('auth');
@@ -886,6 +893,7 @@ var idbFns = {
   removeBookmark,
   deleteTweet,
   removeAccount,
+  idbGet,
 };
 var searchFns = {
   seek,
