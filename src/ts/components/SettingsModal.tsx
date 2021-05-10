@@ -89,6 +89,18 @@ const AccountCheckbox = ({ account, isUserInfo }) => {
     true
   );
   const [accProp, setAccProp] = useState(() => pick(accountProps, account));
+  useEffect(() => {
+    const idbGetAcc = async () => {
+      const accs = await rpcBg('idbGet', {
+        storeName: 'users',
+        ids: [prop('id_str', account)],
+      });
+      setAccProp(pick(accountProps, accs[0]));
+    };
+    idbGetAcc();
+    return;
+  }, []);
+
   return (
     <>
       {/* <Checkbox
@@ -468,6 +480,12 @@ export const AvatarTrophy = ({
   const [profilePicSrc, setProfilePicSrc] = useState(() => {
     return profile_image_url_https ?? defaultProfilePic;
   });
+
+  useEffect(() => {
+    console.log('AvatarTrophy profilePicSrc', { profilePicSrc });
+    setProfilePicSrc(profile_image_url_https);
+  }, [profile_image_url_https]);
+
   return (
     <div
       class="flex flex-col items-center px-4 text-xs leading-none mt-6 cursor-pointer"
@@ -479,7 +497,11 @@ export const AvatarTrophy = ({
           <div class="w-full h-full absolute rounded-full inset-0 transition-colors duration-200 hover:bg-black hover:bg-opacity-15"></div>
           <img
             class="rounded-full h-16 w-16"
-            src={profile_image_url_https.replace('_normal', '')}
+            src={profilePicSrc}
+            onError={() => {
+              setProfilePicSrc(defaultProfilePic);
+              if (id_str) enqueueStgNoDups('queue_lookupUsers', [id_str]);
+            }}
           />
         </a>
       ) : (

@@ -52,20 +52,26 @@ export const dbGet = curry(
     return db.get(storeName, key);
   }
 );
-export const dbGetMany = curry(async (db: IDBPDatabase, storeName, keys) => {
-  const tx = db.transaction(storeName, 'readwrite');
-  const store = tx.objectStore(storeName);
-  let promises: any[] = [];
-  try {
-    for (let key of keys) {
-      promises.push(store.get(key));
+export const dbGetMany = curry(
+  async (
+    db: IDBPDatabase<thTwitterDB>,
+    storeName: StoreName,
+    keys: string[]
+  ) => {
+    const tx = db.transaction(storeName, 'readwrite');
+    const store = tx.objectStore(storeName);
+    let promises: any[] = [];
+    try {
+      for (let key of keys) {
+        promises.push(store.get(key));
+      }
+      promises.push(tx.done);
+      return await Promise.all(promises);
+    } catch (e) {
+      throw e;
     }
-    promises.push(tx.done);
-    return await Promise.all(promises);
-  } catch (e) {
-    throw e;
   }
-});
+);
 export const dbDelMany = curry(
   async (
     db: IDBPDatabase<thTwitterDB>,
