@@ -30,6 +30,7 @@ import CrossIcon from '../../images/x-red.svg';
 import { ArchiveExporter } from './ArchiveExporter';
 import { enqueueStgNoDups, rpcBg } from '../stg/dutils';
 import { manualUrl, patchNotes03 } from '../bg/updateManager';
+import { helpUsUrl, thDmUrl, thSurveyUrl } from '../utils/params';
 
 const Checkbox = ({ get, set, label }) => {
   return (
@@ -323,7 +324,6 @@ const SettingsAbout = () => {
         return;
       }
       const accProps = map(pick(accountProps), flatten(accs));
-      console.log('SecretModal', { accountNames, accs, accProps });
       setAccounts(accProps);
     };
     getUsers();
@@ -337,7 +337,7 @@ const SettingsAbout = () => {
         {/* us */}
         <div class="text-sm  w-full mb-5">
           <div class="text-twitterGray font-semibold">
-            ThreadHelper is brought to you by.
+            ThreadHelper is brought to you by
           </div>
         </div>
         <div class="flex flex-row justify-between pb-5">
@@ -348,10 +348,7 @@ const SettingsAbout = () => {
         {/* buttons */}
         <div class="flex flex-row space-x-4 justify-between text-base pt-5">
           <div class="flex-1">
-            <a
-              href="https://www.notion.so/Help-us-3b7734d28c514412aab56d51e9886d25"
-              target="_blank"
-            >
+            <a href={helpUsUrl} target="_blank">
               <button
                 class="w-full border-2 font-black py-1 px-4 rounded-3xl text-accent border-accent text-center hover:opacity-80 text-lg"
                 // class="w-full border text-blue-500 border-blue-500 hover:border-blue-700 hover:text-blue-700 font-bold py-1 px-4 rounded-3xl text-center"
@@ -361,7 +358,7 @@ const SettingsAbout = () => {
             </a>
           </div>
           <div class="flex-1">
-            <a href="https://twitter.com/messages/compose?recipient_id=1329161144817377283">
+            <a href={thDmUrl}>
               <button
                 class="w-full border-2 font-black py-1 px-4 rounded-3xl text-accent border-accent text-center hover:opacity-80 text-lg"
                 // class="w-full border text-blue-500 border-blue-500 hover:border-blue-700 hover:text-blue-700 font-bold py-1 px-4 rounded-3xl text-center"
