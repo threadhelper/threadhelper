@@ -50,6 +50,7 @@ export const defaultStorage = (): StorageInterface => {
     webRequestPermission: true,
     bgOpLog: [],
     patchUrl: null,
+    answeredSurvey: false,
     startRefreshIdb: false,
     // queues
     queue_tempArchive: [],

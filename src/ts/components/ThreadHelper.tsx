@@ -10,6 +10,7 @@ import { DisplayController } from './Display';
 import { TtReader, useCurrentTwitterPage } from './TtReader';
 import { isNil } from 'ramda';
 import { ContextualSeeker } from './ContextualSeeker';
+import { thSurveyUrl } from '../utils/params';
 
 // Tweets to show that results from navigation, not explicit search (i.e., QTs, auto search an open tweet's text)
 export const ContextualResults = createContext(null);
@@ -96,10 +97,16 @@ const composeModeStyles =
   'ThreadHelper bg-mainBg rounded-2xl my-4 mx-8 flex-grow overflow-x-visible pointer-events-auto ';
 const homeModeStyles =
   'ThreadHelper bg-mainBg rounded-2xl mb-8overflow-x-visible';
+
+const bannersData = {};
 export default function ThreadHelper({ inHome }) {
   const [active, setActive] = useState(true);
   const myRef = useRef(null);
   const [patchUrl, setPatchUrl] = useStorage('patchUrl', null);
+  const [answeredSurvey, setAnsweredSurvey] = useStorage(
+    'answeredSurvey',
+    true
+  );
   const [webRequestPermission, setWebRequestPermission] = useStorage(
     'webRequestPermission',
     true
@@ -122,8 +129,15 @@ export default function ThreadHelper({ inHome }) {
       {!isNil(patchUrl) && (
         <Banner
           text="New TH update!"
-          redirect="patchUrl"
+          redirect={patchUrl}
           onDismiss={() => setWebRequestPermission(null)}
+        />
+      )}
+      {!answeredSurvey && (
+        <Banner
+          text="Help us improve ThreadHelper!"
+          redirect={thSurveyUrl}
+          onDismiss={() => setAnsweredSurvey(true)}
         />
       )}
       <Sidebar active={active} />
