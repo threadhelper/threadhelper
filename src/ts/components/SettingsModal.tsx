@@ -31,6 +31,7 @@ import { ArchiveExporter } from './ArchiveExporter';
 import { enqueueStgNoDups, rpcBg } from '../stg/dutils';
 import { manualUrl, patchNotes03 } from '../bg/updateManager';
 import { helpUsUrl, thDmUrl, thSurveyUrl } from '../utils/params';
+import { enqueueEvent } from '../utils/ga';
 
 const Checkbox = ({ get, set, label }) => {
   return (
@@ -109,7 +110,15 @@ const AccountCheckbox = ({ account, isUserInfo }) => {
         label={'@' + account.screen_name}
       /> */}
       <div
-        onClick={() => setFilterItem(!filterItem)}
+        onClick={() => {
+          enqueueEvent(
+            'settings',
+            'account filter',
+            (!filterItem).toString(),
+            1
+          );
+          setFilterItem(!filterItem);
+        }}
         class={filterItem ? '' : 'opacity-50'}
       >
         <AvatarTrophy {...accProp} showCross={!isUserInfo} link={false} />
@@ -137,13 +146,45 @@ const SettingsSearch = () => {
           Let magic search include:
         </div>
         <div class="flex">
-          <Checkbox get={getRTs} set={setGetRTs} label="Retweets" />
+          <Checkbox
+            get={getRTs}
+            set={(val) => {
+              enqueueEvent(
+                'settings',
+                'toggle retweet filter',
+                getRTs.toString(),
+                1
+              );
+              setGetRTs(val);
+            }}
+            label="Retweets"
+          />
           <Checkbox
             get={useBookmarks}
-            set={setUseBookmarks}
+            set={(val) => {
+              enqueueEvent(
+                'settings',
+                'toggle bookmark filter',
+                useBookmarks.toString(),
+                1
+              );
+              setUseBookmarks(val);
+            }}
             label="Bookmarks"
           />
-          <Checkbox get={useReplies} set={setUseReplies} label="Replies" />
+          <Checkbox
+            get={useReplies}
+            set={(val) => {
+              enqueueEvent(
+                'settings',
+                'toggle reply filter',
+                useReplies.toString(),
+                1
+              );
+              setUseReplies(val);
+            }}
+            label="Replies"
+          />
         </div>
       </div>
       <hr></hr>
@@ -156,6 +197,7 @@ const SettingsSearch = () => {
           <Checkbox
             get={idle2Bool(idleMode)}
             set={(mode) => {
+              enqueueEvent('settings', 'toggle idle mode', bool2Idle(mode), 1);
               console.log('seting idleMode', { mode });
               if (mode) {
                 rpcBg('getRandom', null);
@@ -195,7 +237,16 @@ const SettingsSearch = () => {
 
 const StgCheckbox = ({ stgName }) => {
   const [checked, setChecked] = useStorage(stgName, null);
-  return <Checkbox get={checked} set={setChecked} label="" />;
+  return (
+    <Checkbox
+      get={checked}
+      set={(val) => {
+        enqueueEvent('settings', 'toggle ' + stgName, val.toString(), 1);
+        setChecked(val);
+      }}
+      label=""
+    />
+  );
 };
 
 // Description, form pairs
@@ -442,6 +493,7 @@ const SettingsModal = ({ setOpen, setSecretOpen }) => {
                   (sectionName == section ? ' bg-mainBg' : '')
                 }
                 onClick={(e) => {
+                  enqueueEvent('settings', 'settings section', sectionName, 1);
                   setSection(sectionName);
                 }}
               >

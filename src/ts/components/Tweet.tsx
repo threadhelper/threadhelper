@@ -21,7 +21,7 @@ import {
   sendUnretweetRequest,
 } from '../bg/twitterScout';
 import { thTweet } from '../types/tweetTypes';
-import { csEvent } from '../utils/ga';
+import { enqueueEvent, enqueueEventt } from '../utils/ga';
 import { getActiveComposer } from '../domInterface/wutils';
 import { DropdownMenu } from './Dropdown';
 import { Media } from './Media';
@@ -61,6 +61,7 @@ export const ReplyAction = ({ tweet }) => {
 
   var replyTweet = useCallback(
     function () {
+      enqueueEvent('sidebar', 'tweet action', 'reply', 1);
       window.open(
         `https://twitter.com/intent/tweet?in_reply_to=${tweet.id}`,
         '_blank'
@@ -114,6 +115,7 @@ const RetweetAction = ({ tweet }: { tweet: thTweet }) => {
   }, []);
 
   const onFunc = () => {
+    enqueueEvent('sidebar', 'tweet action', 'retweet', 1);
     setActive(true);
     setCount(count + 1);
     sendRetweetRequest(auth, id);
@@ -126,6 +128,7 @@ const RetweetAction = ({ tweet }: { tweet: thTweet }) => {
 
   var quoteTweet = useCallback(
     function () {
+      enqueueEvent('sidebar', 'tweet action', 'quote tweet', 1);
       window.open(
         `https://twitter.com/intent/tweet?url=https://twitter.com/${tweet.username}/status/${tweet.id}`,
         '_blank'
@@ -215,6 +218,7 @@ const LikeAction = ({ tweet }) => {
   }, []);
 
   const onFunc = (e) => {
+    enqueueEvent('sidebar', 'tweet action', 'like', 1);
     setActive(true);
     setCount(count + 1);
     sendLikeRequest(auth, id);
@@ -228,8 +232,11 @@ const LikeAction = ({ tweet }) => {
   return (
     <div
       class="flex cursor-pointer"
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
+      onMouseOver={() => {
+        enqueueEvent('sidebar', 'mouse over tweet', 'mouse over tweet', 1);
+        setHover(true);
+      }}
+      onMouseOut={() => setHover(false)}
     >
       <div
         class={
@@ -274,7 +281,6 @@ export const CopyAction = ({
 
   let copyUrl = function (e: Event) {
     if (isNil(url)) return;
-    csEvent('User', 'Clicked tweet', '');
 
     const input = getActiveComposer();
     linkField.current.style.display = 'flex';
@@ -287,6 +293,7 @@ export const CopyAction = ({
     setTimeout(function () {
       setCopied(false);
     }, 1000);
+    enqueueEvent('sidebar', 'copy url', 'copy url', 1);
     return;
   };
 
@@ -423,21 +430,15 @@ export function Tweet({
             </a>
           </div>
         </div>
-        <div class="flex-grow">
-          <div>
-            <div class="flex flex-shrink font-medium text-lsm">
-              <div class="flex-initial text-lsm font-bold overflow-ellipsis whitespace-nowrap overflow-hidden">
-                <a href={getUserUrl(tweet.username)}>{tweet.name}</a>
-              </div>
-              <div class="flex-initial ml-1 text-neutral overflow-ellipsis whitespace-nowrap overflow-hidden">
-                <a href={getUserUrl(tweet.username)}>@{tweet.username}</a>
-              </div>
-              <div class="px-1 text-neutral">·</div>
-              <div class="flex-none text-neutral">
-                <a class="hover:underline" href={getTweetUrl(tweet)}>
-                  {getTimeDiff(tweet.time)}
-                </a>
-              </div>
+        <div class="min-w-0 pr-2 w-full">
+          <div class="flex font-normal text-lsm">
+            <div
+              class="text-lsm font-bold overflow-ellipsis whitespace-nowrap overflow-hidden hover:underline"
+              onClick={(e) => {
+                enqueueEvent('sidebar', 'click username', 'click username', 1);
+              }}
+            >
+              <a href={getUserUrl(tweet.username)}>{tweet.name}</a>
             </div>
             <div class="ml-1 text-neutral overflow-ellipsis whitespace-nowrap overflow-hidden">
               <a href={getUserUrl(tweet.username)}>@{tweet.username}</a>
@@ -449,7 +450,19 @@ export function Tweet({
               className="flex-shrink-0"
             >
               <div class="text-neutral hover:underline flex-shrink-0">
-                <a href={getTweetUrl(tweet)}>{getTimeDiff(tweet.time)}</a>
+                <a
+                  href={getTweetUrl(tweet)}
+                  onClick={(e) => {
+                    enqueueEvent(
+                      'sidebar',
+                      'click date link',
+                      'click date link',
+                      1
+                    );
+                  }}
+                >
+                  {getTimeDiff(tweet.time)}
+                </a>
               </div>
             </Tooltip>
           </div>
@@ -700,7 +713,19 @@ function renderQuote(quote: thTweet, parent_has_media) {
                 className="flex-shrink-0"
               >
                 <div class="text-neutral hover:underline flex-shrink-0">
-                  <a href={getTweetUrl(quote)}>{timeDiff}</a>
+                  <a
+                    href={getTweetUrl(quote)}
+                    onClick={(e) => {
+                      enqueueEvent(
+                        'sidebar',
+                        'click date link',
+                        'click date link',
+                        1
+                      );
+                    }}
+                  >
+                    {timeDiff}
+                  </a>
                 </div>
               </Tooltip>
             </div>

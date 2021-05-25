@@ -63,6 +63,8 @@ export const defaultStorage = (): StorageInterface => {
     queue_lookupUsers: [],
     queue_addUsers: [],
     queue_removeUsers: [],
+    queue_analyticsEvents: [],
+    queue_analyticsExceptions: [],
     // bg work flags
     doRefreshIdb: false,
     doBigTweetScrape: true,
