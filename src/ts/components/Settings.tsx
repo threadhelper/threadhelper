@@ -3,7 +3,7 @@ import { useCallback, useState } from 'preact/hooks';
 import { defaultTo, pipe } from 'ramda'; // Function
 import GearIcon from '../../images/gear.svg';
 import { msgBG } from '../stg/dutils';
-import { csEvent } from '../utils/ga';
+import { enqueueEvent } from '../utils/ga';
 import SettingsModal, { SecretModal } from './SettingsModal';
 import Tooltip from './Tooltip';
 
@@ -20,6 +20,7 @@ export function SettingsButton(props) {
             class="dropdown-icon"
             style=""
             onClick={() => {
+              enqueueEvent('sidebar', 'settings click', 'settings click', 1);
               setOpen(!open);
             }}
           />

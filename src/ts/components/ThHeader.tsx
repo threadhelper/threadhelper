@@ -17,6 +17,7 @@ import { apiSearchToTweet } from '../bg/tweetImporter';
 import { searchAPI, searchUsers } from '../bg/twitterScout';
 import { saferTweetMap } from '../bg/bgUtils';
 import { setStg } from '../stg/dutils';
+import { enqueueEvent } from '../utils/ga';
 
 var DEBUG = process.env.NODE_ENV != 'production';
 
@@ -110,9 +111,8 @@ export function ApiSearchBar() {
   const inputObj = useRef(null);
   const [value, setValue] = useDebounce('', 800, { leading: true });
   const [showSearchBar, setShowSearchBar] = useState(false);
-  const { feedDisplayMode, dispatchFeedDisplayMode } = useContext(
-    FeedDisplayMode
-  );
+  const { feedDisplayMode, dispatchFeedDisplayMode } =
+    useContext(FeedDisplayMode);
   const { apiTweetResults, setApiTweetResults } = useContext(ApiTweetResults);
   const { apiUserResults, setApiUserResults } = useContext(ApiUserResults);
 
@@ -146,6 +146,12 @@ export function ApiSearchBar() {
   useEffect(() => {
     function handleKeyDown(e) {
       if (e.getModifierState('Control') && e.key == '/') {
+        enqueueEvent(
+          'sidebar',
+          'search icon shortcut',
+          'search icon shortcut',
+          1
+        );
         setShowSearchBar(true);
       }
     }
@@ -182,6 +188,12 @@ export function ApiSearchBar() {
           >
             <button
               onClick={() => {
+                enqueueEvent(
+                  'sidebar',
+                  'search icon click',
+                  'search icon click',
+                  1
+                );
                 setShowSearchBar(!showSearchBar);
                 if (showSearchBar) inputObj.current?.focus();
               }}
