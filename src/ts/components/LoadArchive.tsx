@@ -4,9 +4,9 @@ import { defaultTo, either, isEmpty, isNil, map } from 'ramda'; // Object
 import { validateTweet } from '../bg/tweetImporter';
 import { useStorage } from '../hooks/useStorage';
 import { extractTweetPropIfNeeded } from '../bg/bgUtils';
-import { csEvent, csException } from '../utils/ga';
 import Tooltip from './Tooltip';
 import { enqueueStg } from '../stg/dutils';
+import { enqueueEvent } from '../utils/ga';
 
 const archiveTooltip = (
   <>
@@ -85,8 +85,6 @@ export const ArchiveUploader = (props) => {
   // when the Button component is clicked
   const handleClick = (event) => {
     console.log('load archive clicked');
-    csEvent('User', 'Load Archive click', '');
-    // ts-migrate(2531) FIXME: Object is possibly 'null'.
     hiddenFileInput.current.click();
   };
   // Call a function (passed as a prop from the parent component)
@@ -101,14 +99,13 @@ export const ArchiveUploader = (props) => {
     try {
       reader.onload = importArchive;
       console.log('arch file list', { files });
-      // const file = find(propEq('name', 'tweet.js'))(Array.from(files)) as File;
       const file = files[0];
       console.log('arch file', { file });
       reader.readAsText(file);
     } catch (e) {
       dispatchMsg('failed');
       console.error("ERROR: Couldn't load archive");
-      csException("Couldn't load archive", false);
+      // csException("Couldn't load archive", false);
     }
   };
 
@@ -127,11 +124,17 @@ export const ArchiveUploader = (props) => {
       return;
     }
 
-    csEvent(
-      'User',
-      'Loaded Archive',
+    enqueueEvent(
+      'settings',
+      'load archive',
+      'load archive',
       defaultTo(0, importedTweetArchive.length)
     );
+    // csEvent(
+    //   'User',
+    //   'Loaded Archive',
+    //   defaultTo(0, importedTweetArchive.length)
+    // );
 
     console.log('setting archive', importedTweetArchive);
     dispatchMsg('waiting');
