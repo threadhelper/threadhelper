@@ -1,15 +1,15 @@
 {
   "name": "threadhelper",
-  "version": "0.4.0",
-  "publicVersion": "0.4.0",
+  "version": "0.4.3",
+  "publicVersion": "0.4.3",
   "description": "ThreadHelper, more recall, less tabs.",
   "main": "index.js",
   "scripts": {
     "serve": "cross-env NODE_ENV=development DEV_MODE=serve webpack-dev-server --mode=development --env.devMode=serve",
     "webext": "cross-env NODE_ENV=development DEV_MODE=webext webpack --mode=development --env.devMode=webext",
     "build-dev": "rm -rf build/* && cross-env NODE_ENV=development DEV_MODE=extension webpack --mode=development --env.devMode=development",
-    "build-prod": "cross-env NODE_ENV=production DEV_MODE=production webpack --mode=production",
     "zip-src": "zip dist/thSrc.zip  * -r -T -x \"store/*\" \"node_modules/**/*\" \"dist/**\" \"build/**\" \"buildServe/**\"",
+    "build-prod": "cross-env NODE_ENV=production DEV_MODE=production webpack --mode=production && zip-src",
     "submit-testers-chrome": "webstore upload --source dist/threadhelper.zip --extension-id $DEV_EXTENSION_ID --client-id $CLIENT_ID --client-secret $CLIENT_SECRET --refresh-token $REFRESH_TOKEN",
     "submit-testers-ff": "web-ext sign --channel listed --id $DEV_ADDON_ID -c ./web-ext-config.js",
     "submit-testers": "chmod -x ./store/*.sh && . store/envVars.sh && npm run submit-testers-chrome && npm run submit-testers-ff",
@@ -99,6 +99,7 @@
     "react-tooltip": "^4.2.13",
     "remeda": "0.0.27",
     "serialize-javascript": "^5.0.1",
-    "tailwindcss": "npm:@tailwindcss/postcss7-compat@^2.0.2"
+    "tailwindcss": "npm:@tailwindcss/postcss7-compat@^2.0.2",
+    "uuid": "^3.4.0"
   }
 }

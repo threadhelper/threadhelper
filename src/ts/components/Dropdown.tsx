@@ -1,7 +1,6 @@
 import { h } from 'preact';
 import { useRef } from 'preact/hooks';
 import { defaultTo } from 'ramda'; // Logic, Type, Relation, String, Math
-import { csEvent } from '../utils/ga';
 
 const debug = false;
 
@@ -18,7 +17,6 @@ export function DropdownMenu({
 
   function DropdownItem(props) {
     const onClickItem = (e) => {
-      csEvent('User', `${name} th-dropdown click`, props.id);
       props.effect();
       defaultTo(true, itemClickClose) ? closeMenu() : null;
     };

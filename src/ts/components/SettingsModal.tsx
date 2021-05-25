@@ -30,6 +30,8 @@ import CrossIcon from '../../images/x-red.svg';
 import { ArchiveExporter } from './ArchiveExporter';
 import { enqueueStgNoDups, rpcBg } from '../stg/dutils';
 import { manualUrl, patchNotes03 } from '../bg/updateManager';
+import { helpUsUrl, thDmUrl, thSurveyUrl } from '../utils/params';
+import { enqueueEvent } from '../utils/ga';
 
 const Checkbox = ({ get, set, label }) => {
   return (
@@ -88,6 +90,18 @@ const AccountCheckbox = ({ account, isUserInfo }) => {
     true
   );
   const [accProp, setAccProp] = useState(() => pick(accountProps, account));
+  useEffect(() => {
+    const idbGetAcc = async () => {
+      const accs = await rpcBg('idbGet', {
+        storeName: 'users',
+        ids: [prop('id_str', account)],
+      });
+      setAccProp(pick(accountProps, accs[0]));
+    };
+    idbGetAcc();
+    return;
+  }, []);
+
   return (
     <>
       {/* <Checkbox
@@ -96,7 +110,15 @@ const AccountCheckbox = ({ account, isUserInfo }) => {
         label={'@' + account.screen_name}
       /> */}
       <div
-        onClick={() => setFilterItem(!filterItem)}
+        onClick={() => {
+          enqueueEvent(
+            'settings',
+            'account filter',
+            (!filterItem).toString(),
+            1
+          );
+          setFilterItem(!filterItem);
+        }}
         class={filterItem ? '' : 'opacity-50'}
       >
         <AvatarTrophy {...accProp} showCross={!isUserInfo} link={false} />
@@ -124,13 +146,45 @@ const SettingsSearch = () => {
           Let magic search include:
         </div>
         <div class="flex">
-          <Checkbox get={getRTs} set={setGetRTs} label="Retweets" />
+          <Checkbox
+            get={getRTs}
+            set={(val) => {
+              enqueueEvent(
+                'settings',
+                'toggle retweet filter',
+                getRTs.toString(),
+                1
+              );
+              setGetRTs(val);
+            }}
+            label="Retweets"
+          />
           <Checkbox
             get={useBookmarks}
-            set={setUseBookmarks}
+            set={(val) => {
+              enqueueEvent(
+                'settings',
+                'toggle bookmark filter',
+                useBookmarks.toString(),
+                1
+              );
+              setUseBookmarks(val);
+            }}
             label="Bookmarks"
           />
-          <Checkbox get={useReplies} set={setUseReplies} label="Replies" />
+          <Checkbox
+            get={useReplies}
+            set={(val) => {
+              enqueueEvent(
+                'settings',
+                'toggle reply filter',
+                useReplies.toString(),
+                1
+              );
+              setUseReplies(val);
+            }}
+            label="Replies"
+          />
         </div>
       </div>
       <hr></hr>
@@ -143,6 +197,7 @@ const SettingsSearch = () => {
           <Checkbox
             get={idle2Bool(idleMode)}
             set={(mode) => {
+              enqueueEvent('settings', 'toggle idle mode', bool2Idle(mode), 1);
               console.log('seting idleMode', { mode });
               if (mode) {
                 rpcBg('getRandom', null);
@@ -182,7 +237,16 @@ const SettingsSearch = () => {
 
 const StgCheckbox = ({ stgName }) => {
   const [checked, setChecked] = useStorage(stgName, null);
-  return <Checkbox get={checked} set={setChecked} label="" />;
+  return (
+    <Checkbox
+      get={checked}
+      set={(val) => {
+        enqueueEvent('settings', 'toggle ' + stgName, val.toString(), 1);
+        setChecked(val);
+      }}
+      label=""
+    />
+  );
 };
 
 // Description, form pairs
@@ -323,7 +387,6 @@ const SettingsAbout = () => {
         return;
       }
       const accProps = map(pick(accountProps), flatten(accs));
-      console.log('SecretModal', { accountNames, accs, accProps });
       setAccounts(accProps);
     };
     getUsers();
@@ -337,7 +400,7 @@ const SettingsAbout = () => {
         {/* us */}
         <div class="text-sm  w-full mb-5">
           <div class="text-twitterGray font-semibold">
-            ThreadHelper is brought to you by.
+            ThreadHelper is brought to you by
           </div>
         </div>
         <div class="flex flex-row justify-between pb-5">
@@ -348,10 +411,7 @@ const SettingsAbout = () => {
         {/* buttons */}
         <div class="flex flex-row space-x-4 justify-between text-base pt-5">
           <div class="flex-1">
-            <a
-              href="https://www.notion.so/Help-us-3b7734d28c514412aab56d51e9886d25"
-              target="_blank"
-            >
+            <a href={helpUsUrl} target="_blank">
               <button
                 class="w-full border-2 font-black py-1 px-4 rounded-3xl text-accent border-accent text-center hover:opacity-80 text-lg"
                 // class="w-full border text-blue-500 border-blue-500 hover:border-blue-700 hover:text-blue-700 font-bold py-1 px-4 rounded-3xl text-center"
@@ -361,7 +421,7 @@ const SettingsAbout = () => {
             </a>
           </div>
           <div class="flex-1">
-            <a href="https://twitter.com/messages/compose?recipient_id=1329161144817377283">
+            <a href={thDmUrl}>
               <button
                 class="w-full border-2 font-black py-1 px-4 rounded-3xl text-accent border-accent text-center hover:opacity-80 text-lg"
                 // class="w-full border text-blue-500 border-blue-500 hover:border-blue-700 hover:text-blue-700 font-bold py-1 px-4 rounded-3xl text-center"
@@ -433,6 +493,7 @@ const SettingsModal = ({ setOpen, setSecretOpen }) => {
                   (sectionName == section ? ' bg-mainBg' : '')
                 }
                 onClick={(e) => {
+                  enqueueEvent('settings', 'settings section', sectionName, 1);
                   setSection(sectionName);
                 }}
               >
@@ -471,6 +532,12 @@ export const AvatarTrophy = ({
   const [profilePicSrc, setProfilePicSrc] = useState(() => {
     return profile_image_url_https ?? defaultProfilePic;
   });
+
+  useEffect(() => {
+    console.log('AvatarTrophy profilePicSrc', { profilePicSrc });
+    setProfilePicSrc(profile_image_url_https);
+  }, [profile_image_url_https]);
+
   return (
     <div
       class="flex flex-col items-center px-4 text-xs leading-none mt-6 cursor-pointer"
@@ -482,7 +549,11 @@ export const AvatarTrophy = ({
           <div class="w-full h-full absolute rounded-full inset-0 transition-colors duration-200 hover:bg-black hover:bg-opacity-15"></div>
           <img
             class="rounded-full h-16 w-16"
-            src={profile_image_url_https.replace('_normal', '')}
+            src={profilePicSrc}
+            onError={() => {
+              setProfilePicSrc(defaultProfilePic);
+              if (id_str) enqueueStgNoDups('queue_lookupUsers', [id_str]);
+            }}
           />
         </a>
       ) : (

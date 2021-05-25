@@ -3,7 +3,7 @@ import * as R from 'ramda';
 import { map } from 'ramda';
 import { StoreName } from '../types/dbTypes';
 import { thTweet } from '../types/tweetTypes';
-import { dbDelMany, dbOpen, dbPutMany } from './idb_wrapper';
+import { dbDelMany, dbGetMany, dbOpen, dbPutMany } from './idb_wrapper';
 import { makeIndex } from './nlp';
 import { storeIndexToDb } from './stgOps';
 

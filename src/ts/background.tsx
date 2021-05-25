@@ -35,7 +35,7 @@ import {
   _subObs,
   _subWorkQueueStg,
 } from './bg/bgUtils';
-import { dbFilter, dbOpen } from './bg/idb_wrapper';
+import { dbFilter, dbGetMany, dbOpen } from './bg/idb_wrapper';
 import { apiToTweet, archToTweet, bookmarkToTweet } from './bg/tweetImporter';
 import {
   fetchUserInfo,
@@ -81,7 +81,7 @@ import {
 } from './types/stgTypes';
 import { thTweet, UserAndThTweets, UserObj } from './types/tweetTypes';
 import { Credentials } from './types/types';
-import { initGA, PageView } from './utils/ga';
+import { xhrEvent, xhrException } from './utils/ga';
 import {
   n_tweets_results,
   timeline_scrape_interval,
@@ -108,10 +108,9 @@ const idbWorker = createIdbWorker();
 const scrapeWorker = createScrapeWorker();
 
 // Analytics //IMPORTANT: this block must come before setting the currentValue for Kefir. Property and I have no idea why
-(function initAnalytics() {
-  initGA();
-})();
-PageView('/background.html');
+// (function initAnalytics() {
+//   initGA();
+// })();
 // Project business
 var DEBUG = process.env.NODE_ENV != 'production';
 toggleDebug(window, DEBUG);
@@ -457,6 +456,13 @@ const removeTweetQueue = async (queue) => {
   // dequeueWorkQueueStg('queue_removeTweets', R.length(queue)); // need to empty the working queue after using it
 };
 
+const idbGet = async ({ storeName, ids }) => {
+  const db = await dbOpen();
+  const res = await dbGetMany(db, storeName, ids); // getAllIds :: () -> [ids]
+  db.close();
+  return res;
+};
+
 const updateNTweets = async () => {
   const db = await dbOpen();
   const keys = await db.getAllKeys('tweets');
@@ -487,6 +493,21 @@ const onIndexUpdated = async () => {
   getLatest();
 };
 
+// analytics, side effect
+// category, action, label, value
+const sendAnalytics = (events) => {
+  R.forEach((event) => {
+    console.log('sendAnalytics', event);
+    xhrEvent(event);
+  }, events);
+};
+
+// analytics, side effect
+// description, fatal
+const sendExceptions = (exceptions) => {
+  R.forEach((exception) => xhrException(exception), exceptions);
+};
+
 // RPC functions
 
 // Chrome extension business
@@ -509,7 +530,7 @@ const webReqPermission = async ({}) => {
 };
 // Playground proxy functions
 const fetchBg = async ({ url, options }) => {
-  return await tryFnsAsync(scrapeWorker.thFetch, thFetch, url, options);
+  // return await tryFnsAsync(scrapeWorker.thFetch, thFetch, url, options);
 };
 const getAuth = async (_) => {
   return await getData('auth');
@@ -576,46 +597,6 @@ const contextualSeek = async ({ query }) => {
   return searchResults;
   // return map(R.path(['tweet', 'id']), searchResults);
 };
-// const getLatest = async () => {
-//   const { accsShown, filters } = await getSearchParams();
-//   const db_promise = dbOpen();
-//   const db = await db_promise;
-//   const dbGet = curry((storeName, key) => db.get(storeName, key));
-//   console.log('getting latest tweets ', { accsShown, filters });
-//   const latestTweets = await getLatestTweets(
-//     n_tweets_results,
-//     filters,
-//     dbGet,
-//     accsShown,
-//     () => db.getAllKeys('tweets')
-//   );
-//   const res = map((tweet) => {
-//     return { tweet };
-//   }, latestTweets);
-//   db.close();
-//   setStg('latest_tweets', res);
-//   return map(prop('id'), latestTweets);
-// };
-
-// const getRandom = async () => {
-//   const { accsShown, filters } = await getSearchParams();
-//   const db = await dbOpen();
-//   const dbGet = curry((storeName, key) => db.get(storeName, key));
-//   const randomSample = await getRandomSampleTweets(
-//     n_tweets_results,
-//     filters,
-//     dbGet,
-//     accsShown,
-//     () => db.getAllKeys('tweets')
-//   );
-//   const res = map((tweet) => {
-//     return { tweet };
-//   }, randomSample);
-//   db.close();
-
-//   console.log('getRandom', { res, accsShown, filters });
-//   return map(prop('id'), randomSample);
-// };
 
 const getDefault = async (mode: IdleMode) => {
   const { accsShown, filters } = await getSearchParams();
@@ -668,21 +649,15 @@ const removeAccountTweets = async (id) => {
 };
 
 const removeAccount = async ({ id }) => {
-  // const removeAccount = async (id_str: string): Promise<any> => {
-  //   db.delete('accounts', id_str);
-  //   return db.getAll('accounts');
-  // };
   const remainingAccounts = await removeActiveAccount(id);
   removeAccountTweets(id);
   console.log('removeAccount', { id, remainingAccounts });
   return remainingAccounts;
 };
 
-// const updateTimeline = ({}) => setStgFlag('doSmallTweetScrape', true);
 const updateTimeline = ({}) => emitDoSmallScrape();
 /* BG flow */
 // Listen for auth and store it. simple.
-//const webRequestPermitted$ = permissions$.thru(
 const storageChange$ = makeStorageChangeObs();
 const subWorkQueue = subWorkQueueStg(storageChange$);
 
@@ -695,14 +670,11 @@ const incomingAuth$ = makeAuthObs()
   .filterBy(webRequestPermission$)
   .filter(validateAuthFormat) //No skipping duplicates bc what if setStg fails for some reason?
   .throttle(2000);
-// .skipDuplicates(compareAuths);
 subObs({ incomingAuth$ }, setStg('auth'));
 incomingAuth$.log('[DEBUG] incomingAuth$');
 const auth$ = makeInitStgObs(storageChange$, 'auth')
   .filter(validateAuthFormat)
   .skipDuplicates(R.equals);
-// .throttle(2000);
-// .skipDuplicates(compareAuths);
 auth$.log('[DEBUG] auth$');
 
 const incomingUserInfo$ = auth$
@@ -710,14 +682,12 @@ const incomingUserInfo$ = auth$
     promiseStream(async (auth: Credentials) => {
       console.log('incomingUserInfo$', { auth });
       return await tryFnsAsync(scrapeWorker.fetchUserInfo, fetchUserInfo, auth);
-      // return await scrapeWorker.debugFetchUserInfo(auth);
     })
   )
   .map(inspect('incomingUserInfo$'))
   .filter(pipe(isNil, not))
   .filter(pipe(prop('id'), isNil, not))
   .skipDuplicates()
-  // .throttle(2000);
   .thru(errorFilter('incomingUserInfo$'));
 
 subObs({ incomingUserInfo$ }, setStg('userInfo'));
@@ -726,10 +696,8 @@ const userInfo$ = makeInitStgObs(storageChange$, 'userInfo')
   .filter(pipe(isNil, not))
   .filter(pipe(prop('id'), isNil, not))
   .skipDuplicates(R.equals);
-// .throttle(2000);
 
 userInfo$.log('userInfo$');
-// subObs({ userInfo$ }, (_) => setStgFlag('doSmallTweetScrape', true));
 subObs({ userInfo$ }, (_) => emitDoSmallScrape());
 subObs({ userInfo$ }, async (userInfo) => {
   if (await shouldDoBigTweetScrape(userInfo)) emitDoBigScrape();
@@ -819,6 +787,8 @@ subWorkQueue('queue_tempArchive', importArchive);
 subWorkQueue('queue_lookupUsers', doLookupUsersAPI);
 subWorkQueue('queue_addUsers', importUserQueue);
 subWorkQueue('queue_removeUsers', removeUserQueue);
+subWorkQueue('queue_analyticsEvents', sendAnalytics);
+subWorkQueue('queue_analyticsExceptions', sendExceptions);
 
 const doIndexUpdate$ = makeInitStgObs(storageChange$, 'doIndexUpdate').filter(
   (x) => x != false
@@ -847,9 +817,9 @@ const accounts$ = makeInitStgObs(storageChange$, 'activeAccounts').map(
   defaultTo([])
 );
 accounts$.log('accounts$');
-const accsShown$ = (accounts$.map(
+const accsShown$ = accounts$.map(
   filter(either(pipe(prop('showTweets'), isNil), propEq('showTweets', true)))
-) as unknown) as Observable<User[], any>;
+) as unknown as Observable<User[], any>;
 subObs({ accsShown$ }, async (_) => {
   getDefault(await getOption('idleMode').then(prop('value')));
 });
@@ -878,6 +848,7 @@ var idbFns = {
   removeBookmark,
   deleteTweet,
   removeAccount,
+  idbGet,
 };
 var searchFns = {
   seek,
