@@ -7,7 +7,10 @@
 - `npm run build-dev`: development build, `build` folder, auto reloads when you make changes to the code
 - `npm run build-prod`: production build, `dist` folder, makes a `.zip` file too
 - You need to install the extension manually the first time. In your browser: Extensions > Developer mode on > Load unpacked > build folder. 
+
+#Notes
 - Typescript is used for type checking, but we're compiling with Babel, so no need to follow all the rules. 
+- ignore the `dev` folder
 
 # Get Started
 ## Basic dataflows:
