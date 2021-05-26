@@ -36,7 +36,7 @@
    
 ## TH architecture
 - Browser extensions have background scripts (bg) and content scripts (cs).
-- ![](https://firebasestorage.googleapis.com/v0/b/firescript-577a2.appspot.com/o/imgs%2Fapp%2Fxiqo%2FWKnAHMOWRY.png?alt=media&token=7518d8b4-9b55-4089-98f3-c5e6f6c6b532)
+- ![](https://firebasestorage.googleapis.com/v0/b/firescript-577a2.appspot.com/o/imgs%2Fapp%2Fxiqo%2FLslLaCe_OK.png?alt=media&token=e58fbbee-7145-4ce4-8c74-3eba4285adae)
 - cs.jsx listens to twitter page events, renders and displays sidebars  
 - bg.jsx gets RPC action requests from cs.jsx, processes data in queues stored in chrome.storage
   - `scrapeWorker` interacts with Twitter API, mostly to get tweets and users.
