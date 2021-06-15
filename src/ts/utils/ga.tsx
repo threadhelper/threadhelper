@@ -1,4 +1,4 @@
-import { assoc, curry, mergeLeft, prop } from 'ramda';
+import { assoc, curry, defaultTo, mergeLeft, prop } from 'ramda';
 import v5 from 'uuid/v5';
 import { enqueueStg, getData, getStgPath } from '../stg/dutils';
 
@@ -17,7 +17,7 @@ export const xhr = (params) => {
 //   xhr(assoc('v', chrome.runtime.getManifest().version, params));
 export const xhrCliented = async (params) => {
   const screen_name = await getStgPath(['userInfo', 'screen_name']);
-  const clientId = v5(screen_name, TH_NAMESPACE);
+  const clientId = v5(defaultTo('no userInfo yet', screen_name), TH_NAMESPACE);
   xhr(assoc('cid', clientId, params));
 };
 // version, GA_CLIENT_ID, category, action, label, value
