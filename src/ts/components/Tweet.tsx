@@ -21,8 +21,8 @@ import {
   sendUnretweetRequest,
 } from '../bg/twitterScout';
 import { thTweet } from '../types/tweetTypes';
-import { enqueueEvent, enqueueEventt } from '../utils/ga';
-import { getActiveComposer } from '../read-twitter-page/composerReader';
+import { enqueueEvent, enqueueException } from '../utils/ga';
+import { getActiveComposer } from '../domInterface/wutils';
 import { DropdownMenu } from './Dropdown';
 import { Media } from './Media';
 import { AuthContext } from './ThreadHelper';

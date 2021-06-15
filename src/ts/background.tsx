@@ -81,7 +81,12 @@ import {
 } from './types/stgTypes';
 import { thTweet, UserAndThTweets, UserObj } from './types/tweetTypes';
 import { Credentials } from './types/types';
-import { xhrEvent, xhrException } from './utils/ga';
+import {
+  enqueueEvent,
+  enqueueException,
+  xhrEvent,
+  xhrException,
+} from './utils/ga';
 import {
   n_tweets_results,
   timeline_scrape_interval,
@@ -94,7 +99,7 @@ import {
   promiseStream,
   toggleDebug,
 } from './utils/putils';
-
+enqueueEvent('background', `background start`, `background start`, 1);
 const createSearchWorker = createWorkerFactory(
   () => import('./bg/searchWorker')
 );
@@ -162,6 +167,7 @@ const doBookmarkScrape = async (auth, userInfo): Promise<UserAndThTweets> => {
     return { users, tweets: thTweets };
   } catch (e) {
     console.error("couldn't doBookmarkScrape");
+    enqueueException(`doBookmarkScrape failed. ${e.name}: ${e.message}`, 0);
     return { users: {}, tweets: [] };
   }
 };
@@ -255,9 +261,16 @@ const doBigTweetScrape = async (_) => {
         timelineRes.tweets
       )} tweets. Success.`
     );
+    enqueueEvent(
+      'background',
+      `doBigTweetScrape success`,
+      `doBigTweetScrape success`,
+      R.length(timelineRes.tweets)
+    );
   } catch (e) {
     console.error('doBigTweetScrape failed', { e });
-    bgOpLog(`[doBigTweetScrape] Failed.`);
+    // bgOpLog(`[doBigTweetScrape] Failed.`);
+    enqueueException(`doBigTweetScrape failed. ${e.name}: ${e.message}`, 0);
     setStg('isMidScrape', false);
   }
 };
@@ -295,10 +308,17 @@ const doSmallTweetScrape = async (_) => {
         timelineRes.tweets
       )} tweets. Success.`
     );
+    // enqueueEvent(
+    //   'background',
+    //   `doSmallTweetScrape success`,
+    //   `doSmallTweetScrape success`,
+    //   R.length(timelineRes.tweets)
+    // );
   } catch (e) {
     console.error('doSmallTweetScrape failed', { e });
-    bgOpLog(`[doSmallTweetScrape] Failed.`);
+    // bgOpLog(`[doSmallTweetScrape] Failed.`);
     setStg('isMidScrape', false);
+    enqueueException(`doSmallTweetScrape failed. ${e.name}: ${e.message}`, 0);
   }
 };
 
@@ -330,6 +350,10 @@ const genericLookupAPI = curry(
     } catch (e) {
       console.error('lookupAPI failed', { e, queueName, fnName: toTweet.name });
       setStg('isMidScrape', false);
+      enqueueException(
+        `genericLookupAPI ${queueName} failed. ${e.name}: ${e.message}`,
+        0
+      );
     }
   }
 );
@@ -360,6 +384,7 @@ const doLookupUsersAPI = curry(async (ids: string[]) => {
     setStg('isMidScrape', false);
   } catch (e) {
     console.error('lookupUsersAPI failed', { e });
+    enqueueException(`doLookupUsersAPI failed. ${e.name}: ${e.message}`, 0);
     setStg('isMidScrape', false);
   }
 });
@@ -384,8 +409,15 @@ const importArchive = async (queue) => {
     enqueueUserStg('queue_addUsers', values(users));
     enqueueTweetStg('queue_addTweets', thArchiveTweets);
     setStg('isMidScrape', false);
+    enqueueEvent(
+      'background',
+      `importArchive success`,
+      `importArchive success`,
+      R.length(thArchiveTweets.tweets)
+    );
   } catch (e) {
     console.error("couldn't importArchive ", e);
+    enqueueException(`importArchive failed. ${e.name}: ${e.message}`, 0);
     setStg('isMidScrape', false);
   }
 };
@@ -399,6 +431,7 @@ const importUserQueue = async (queue) => {
   } catch (e) {
     console.error("couldn't importUserQueue ", e);
     setStg('isMidStore', false);
+    enqueueException(`importUserQueue failed. ${e.name}: ${e.message}`, 0);
   }
 };
 
@@ -412,6 +445,7 @@ const removeUserQueue = async (queue) => {
   } catch (e) {
     console.error("couldn't removeUserQueue ", e);
     setStg('isMidStore', false);
+    enqueueException(`removeUserQueue failed. ${e.name}: ${e.message}`, 0);
   }
   // dequeueWorkQueueStg('queue_removeTweets', R.length(queue)); // need to empty the working queue after using it
 };
@@ -425,6 +459,7 @@ const importTweetQueue = async (queue) => {
   } catch (e) {
     console.error("couldn't importTweetQueue ", e);
     setStg('isMidStore', false);
+    enqueueException(`importTweetQueue failed. ${e.name}: ${e.message}`, 0);
   }
 };
 
@@ -433,12 +468,19 @@ const refreshTweetQueue = async (queue) => {
     setStg('isMidRefresh', true);
     await idbWorker.workerRefreshTweets(queue);
     setStg('isMidRefresh', false);
+    enqueueEvent(
+      'background',
+      `refreshTweetQueue success`,
+      `refreshTweetQueue success`,
+      R.length(queue)
+    );
+    setStg('doIndexUpdate', true);
+    setStg('startRefreshIdb', false);
   } catch (e) {
     console.error("couldn't refreshTweetQueue ", e);
     setStg('isMidRefresh', false);
+    enqueueException(`refreshTweetQueue failed. ${e.name}: ${e.message}`, 0);
   }
-  setStg('doIndexUpdate', true);
-  setStg('startRefreshIdb', false);
 };
 
 // remove tweets in the remove queue
@@ -451,16 +493,23 @@ const removeTweetQueue = async (queue) => {
     setStg('doIndexUpdate', true);
   } catch (e) {
     console.error("couldn't removeTweetQueue ", e);
+    enqueueException(`removeTweetQueue failed. ${e.name}: ${e.message}`, 0);
     setStg('isMidStore', false);
   }
   // dequeueWorkQueueStg('queue_removeTweets', R.length(queue)); // need to empty the working queue after using it
 };
 
 const idbGet = async ({ storeName, ids }) => {
-  const db = await dbOpen();
-  const res = await dbGetMany(db, storeName, ids); // getAllIds :: () -> [ids]
-  db.close();
-  return res;
+  try {
+    const db = await dbOpen();
+    const res = await dbGetMany(db, storeName, ids); // getAllIds :: () -> [ids]
+    db.close();
+    return res;
+  } catch (e) {
+    enqueueException(`idbGet failed. ${e.name}: ${e.message}`, 0);
+    console.error("couldn't idbGet ", e);
+    return [];
+  }
 };
 
 const updateNTweets = async () => {
@@ -478,12 +527,29 @@ const setLastUpdated = async () => {
   return date;
 };
 
+// const doIndexUpdate = async () => {
+//   const db_promise = dbOpen();
+//   const index = await loadIndexFromIdb(db_promise);
+//   const newIndex = await updateIdxFromIdb(index, db_promise);
+//   setStg('doIndexUpdate', false);
+//   emitIndexUpdated();
+// };
+
 const doIndexUpdate = async () => {
-  const db_promise = dbOpen();
-  const index = await loadIndexFromIdb(db_promise);
-  const newIndex = await updateIdxFromIdb(index, db_promise);
-  setStg('doIndexUpdate', false);
-  emitIndexUpdated();
+  try {
+    await idbWorker.doIndexUpdate();
+    setStg('doIndexUpdate', false);
+    emitIndexUpdated();
+    // enqueueEvent(
+    //   'background',
+    //   `doIndexUpdate success`,
+    //   `doIndexUpdate success`,
+    //   1
+    // );
+  } catch (e) {
+    console.error("couldn't doIndexUpdate ", e);
+    enqueueException(`doIndexUpdate failed. ${e.name}: ${e.message}`, 0);
+  }
 };
 
 const onIndexUpdated = async () => {
@@ -519,12 +585,24 @@ const webReqPermission = async ({}) => {
   });
   if (permitted) {
     setStg('webRequestPermission', permitted);
+    // enqueueEvent(
+    //   'background',
+    //   `webReqPermission granted`,
+    //   `webReqPermission granted`,
+    //   1
+    // );
     return permitted;
   } else {
     const granted = await chrome.permissions.request({
       permissions: ['webRequest'],
     });
     setStg('webRequestPermission', granted);
+    enqueueEvent(
+      'background',
+      `webReqPermission refused`,
+      `webReqPermission refused`,
+      1
+    );
     return granted;
   }
 };
@@ -558,18 +636,21 @@ const getSearchParams = async () => {
   return { accsShown, filters };
 };
 const genericSeek = async (query) => {
-  // const isMidSearch = getStg('isMidSearch')
-  // console.trace(`seek ${query}`);
-  const { accsShown, filters } = await getSearchParams();
-  // console.time(`${query} genericSeek`);
-  const searchResults = await searchWorker.seek(
-    filters,
-    accsShown,
-    n_tweets_results,
-    query
-  );
+  try {
+    const { accsShown, filters } = await getSearchParams();
+    const searchResults = await searchWorker.seek(
+      filters,
+      accsShown,
+      n_tweets_results,
+      query
+    );
+    return searchResults;
+  } catch (e) {
+    enqueueException(`genericSeek failed. ${e.name}: ${e.message}`, 0);
+    return [];
+  }
+
   // console.timeEnd(`${query} genericSeek`);
-  return searchResults;
 };
 let isMidSearch = false;
 const seek = async ({ query }) => {
@@ -599,18 +680,23 @@ const contextualSeek = async ({ query }) => {
 };
 
 const getDefault = async (mode: IdleMode) => {
-  const { accsShown, filters } = await getSearchParams();
-  if (mode === 'random') {
-    const res = await searchWorker.getRandom(accsShown, filters);
-    setStg('random_tweets', res);
-    setStg('latest_tweets', res);
-    console.log('getDefault', { mode, res });
-    return res;
-  } else {
-    const res = await searchWorker.getLatest(accsShown, filters);
-    setStg('latest_tweets', res);
-    console.log('getDefault', { mode, res });
-    return res;
+  try {
+    const { accsShown, filters } = await getSearchParams();
+    if (mode === 'random') {
+      const res = await searchWorker.getRandom(accsShown, filters);
+      setStg('random_tweets', res);
+      setStg('latest_tweets', res);
+      console.log('getDefault', { mode, res });
+      return res;
+    } else {
+      const res = await searchWorker.getLatest(accsShown, filters);
+      setStg('latest_tweets', res);
+      console.log('getDefault', { mode, res });
+      return res;
+    }
+  } catch (e) {
+    enqueueException(`getDefault ${mode} failed. ${e.name}: ${e.message}`, 0);
+    return [];
   }
 };
 const getLatest = () => getDefault(IdleMode.timeline);
@@ -747,24 +833,16 @@ const addActiveAccount = curry(
       R.mergeDeepLeft(_acc),
       dressActiveAccount
     )();
-    console.log('addActiveAccount', {
-      acc,
-      _acc,
-      activeAccounts: R.mergeDeepLeft(
-        activeAccounts,
-        R.indexBy(prop('id_str'), [acc])
-      ),
-    });
+
     return R.mergeDeepLeft(activeAccounts, R.indexBy(prop('id_str'), [acc]));
     // return R.set(R.lensProp(prop('id_str', acc)), acc, activeAccounts);
   }
 );
 const onIncomingAccount = async (acc: User) => {
-  // if (!R.has('id_str', acc)) return; // it needs to have at least an id_str to be valid
   const oldAccs = await getStg('activeAccounts');
   console.log('[DEBUG] onIncomingAccount', { acc, oldAccs });
   await modStg('activeAccounts', addActiveAccount(acc));
-  // if (await shouldDoBigTweetScrape(acc)) setStgFlag('doBigTweetScrape', true);
+  enqueueEvent('background', 'onIncomingAccount', `onIncomingAccount`, 1);
 };
 subObs({ incomingAccount$ }, onIncomingAccount);
 
@@ -896,10 +974,14 @@ const rpcBgServer = async (request, sender, sendResponse) => {
       sendResponse(response);
       const isFf = await isFirefox();
       return isFf ? response : true;
-    } catch (error) {
+    } catch (e) {
       response = 'RPC call failed';
-      console.error(error);
+      console.error(e);
       sendResponse(response);
+      enqueueException(
+        `rpc ${request.fnName} failed. ${e.name}: ${e.message}`,
+        0
+      );
     }
   } else {
     response = 'not RPC';
@@ -1021,7 +1103,7 @@ const onInstalled = ({ reason, previousVersion, id }) => {
       onUpdated(previousVersion);
       break;
     case 'install':
-      onFirstInstalled(previousVersion, id);
+      onFirstInstalled(id);
       break;
     default:
       console.log('on installed', { reason, previousVersion, id });
@@ -1029,8 +1111,18 @@ const onInstalled = ({ reason, previousVersion, id }) => {
   }
 };
 
-const onFirstInstalled = async (previousVersion, id) => {
-  console.log(`[INFO] first install. Welcome to TH! ${previousVersion}`);
+const onFirstInstalled = async (id) => {
+  console.log(
+    `[INFO] first install. Welcome to TH! ${
+      chrome.runtime.getManifest().version
+    }`
+  );
+  enqueueEvent(
+    'background',
+    'first install',
+    `first install, v${chrome.runtime.getManifest().version}`,
+    1
+  );
   if (!DEBUG) {
     const welcomeUrl =
       'https://www.notion.so/Welcome-e7c1b2b8d8064a80bdf5600c329b370d';
@@ -1040,9 +1132,21 @@ const onFirstInstalled = async (previousVersion, id) => {
 };
 
 const onUpdated = async (previousVersion) => {
-  console.log(`[INFO] updated from version ${previousVersion}`);
+  console.log(
+    `[INFO] updated from version ${previousVersion} to ${
+      chrome.runtime.getManifest().version
+    }`
+  );
   // add new stg fields from defaults
   // fill in empty spots in local storage with default values
+  enqueueEvent(
+    'background',
+    'update',
+    `update, from ${previousVersion} to ${
+      chrome.runtime.getManifest().version
+    }`,
+    1
+  );
   softUpdateStorage();
   // delete old stg fields that are not in default
   const newStg = await cleanOldStorage();

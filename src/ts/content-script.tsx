@@ -15,7 +15,18 @@ import Kefir, { Observable, Property, Subscription } from 'kefir';
 import { h, render } from 'preact';
 import 'preact/debug';
 import 'preact/devtools';
-import { and, curry, equals, isNil, not, prop, propEq } from 'ramda'; // Function
+import {
+  __,
+  and,
+  curry,
+  equals,
+  includes,
+  isNil,
+  not,
+  pipe,
+  prop,
+  propEq,
+} from 'ramda'; // Function
 import * as css from '../style/cs.css';
 import * as pcss from '../styles.css';
 import ThreadHelper from './components/ThreadHelper';
@@ -55,8 +66,11 @@ import {
 } from './stg/dutils';
 import { makeGotMsgObs } from './stg/msgUtils';
 import { currentValue, inspect, nullFn, toggleDebug } from './utils/putils';
-import { getTwitterPageMode } from './read-twitter-page/twitterPageReader';
-import { updateTheme } from './write-twitter/setTheme';
+import {
+  getMetadataForPage,
+  getMode,
+  updateTheme,
+} from './domInterface/wutils';
 import { makeInitStgObs } from './bg/bgUtils';
 import { makeLastStatusObs } from './read-twitter-page/openTweetReader';
 
@@ -137,7 +151,7 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
       Error
     >
   ).map(prop('url'));
-  const mode$ = urlChange$.map(getTwitterPageMode);
+  const mode$ = urlChange$.map(getMode);
   //      storage
   const storageChange$ = makeStorageChangeObs();
   const hideTtSearchBar$ = makeInitStgObs(storageChange$, 'doIndexUpdate');
@@ -199,7 +213,13 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
       : deactivateSidebar(thBarHome); //function
   const searchBar$ = makeSearchBarObserver();
   searchBar$.log('searchBar$');
-  const floatSidebar$ = makeFloatSidebarObserver(thBarComp); // floatSidebar$ :: String || Element  // for floating sidebar in compose mode
+  const isComposing = pipe(
+    (_) => getMetadataForPage(window.location.href),
+    inspect('isComposing'),
+    prop('pageType'),
+    includes(__, ['compose', 'intent', 'intentReply'])
+  );
+  const floatSidebar$ = makeFloatSidebarObserver(thBarComp).filter(isComposing); // floatSidebar$ :: String || Element  // for floating sidebar in compose mode
   const floatActive$ = floatSidebar$
     .map(equals('render'))
     .toProperty(() => false); // floatActive$ ::Bool

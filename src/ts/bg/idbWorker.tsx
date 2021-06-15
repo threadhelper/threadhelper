@@ -6,6 +6,7 @@ import { thTweet } from '../types/tweetTypes';
 import { dbDelMany, dbGetMany, dbOpen, dbPutMany } from './idb_wrapper';
 import { makeIndex } from './nlp';
 import { storeIndexToDb } from './stgOps';
+import { loadIndexFromIdb, updateIdxFromIdb } from './stgUtils';
 
 // var DEBUG = process.env.NODE_ENV != 'production';
 // toggleDebug(window, DEBUG);
@@ -77,4 +78,10 @@ export const resetIndex = async () => {
   const res = storeIndexToDb(db, makeIndex());
   db.close();
   return res;
+};
+
+export const doIndexUpdate = async () => {
+  const db_promise = dbOpen();
+  const index = await loadIndexFromIdb(db_promise);
+  const newIndex = await updateIdxFromIdb(index, db_promise);
 };
