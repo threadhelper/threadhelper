@@ -223,11 +223,18 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
   searchBar$.log('searchBar$');
   const isComposing = pipe(
     (_) => getMetadataForPage(window.location.href),
-    inspect('isComposing'),
     prop('pageType'),
     includes(__, ['compose', 'intent', 'intentReply'])
   );
-  const floatSidebar$ = makeFloatSidebarObserver(thBarComp).filter(isComposing); // floatSidebar$ :: String || Element  // for floating sidebar in compose mode
+  const filterOutRender = (msg) => {
+    if (equals('render', msg)) {
+      return isComposing(null);
+    } else {
+      return msg;
+    }
+  };
+  const floatSidebar$ =
+    makeFloatSidebarObserver(thBarComp).filter(filterOutRender); // floatSidebar$ :: String || Element  // for floating sidebar in compose mode
   const floatActive$ = floatSidebar$
     .map(equals('render'))
     .toProperty(() => false); // floatActive$ ::Bool
