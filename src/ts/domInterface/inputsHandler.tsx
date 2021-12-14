@@ -14,13 +14,13 @@ import {
 } from 'ramda'; // Function
 import { curProp, UrlModes } from '../types/types';
 import { currentValue } from '../utils/putils';
+import { getTweetId } from '../read-twitter-page/openTweetReader';
+import { getTwitterPageMode } from '../read-twitter-page/twitterPageReader';
 import {
   elContained,
   elIntersect,
-  getMode,
-  getTweetId,
   isFocused,
-} from './wutils';
+} from '../read-twitter-page/domUtils';
 (Kefir.Property.prototype as any).currentValue = currentValue;
 const tweetHeaderSelector = '[data-testid="tweet"]';
 const dateSelector = 'a time';
@@ -75,9 +75,9 @@ export function buttonClicked(
 ): boolean {
   parent = parent == null ? document : parent;
   // return [...parent.querySelectorAll(selector)].some((el)=> containsOrContained(target, el))
-  return Array.from(
-    parent.querySelectorAll(selector)
-  ).some((el: { contains: (arg0: any) => unknown }) => el.contains(target));
+  return Array.from(parent.querySelectorAll(selector)).some(
+    (el: { contains: (arg0: any) => unknown }) => el.contains(target)
+  );
 }
 const clickCondStream = curry(
   (parent: ElParent, selector: string, e: Event): boolean =>
@@ -196,14 +196,13 @@ export function makeActionStream() {
   return Kefir.merge([makePostStream(), makeRtStream(), makeUnRtStream()]);
 }
 export function makeComposeFocusObs(): Observable<FocusEvent, any>[] {
-  // const focusIn = Kefir.fromEvents<FocusEvent, any>(document.body, 'focusin').filter(_ => getMode() != UrlModes.other).filter(_ => isFocused(editorSelector)); //.map(_=>'focused')
   const focusIn = Kefir.fromEvents<FocusEvent, any>(document.body, 'focusin')
-    .filter((_) => getMode() != UrlModes.other)
+    .filter((_) => getTwitterPageMode() != UrlModes.other)
     .filter((e: FocusEvent) => {
       return elContained(editorSelector, e.target as Element);
     }); //.map(_=>'focused')
   const focusOut = Kefir.fromEvents<FocusEvent, any>(document.body, 'focusout')
-    .filter((_) => getMode() != UrlModes.other)
+    .filter((_) => getTwitterPageMode() != UrlModes.other)
     .filter((e: FocusEvent) =>
       elIntersect(editorSelector, e.target as Element)
     ); //.map(_ => 'unfocused') ;
@@ -228,9 +227,7 @@ function actionEl2TweetEl(replyEl: { closest: (arg0: string) => any }) {
 }
 // hasDate :: element -> Bool
 const hasDate = (el: {
-  querySelectorAll: (
-    arg0: string
-  ) => {
+  querySelectorAll: (arg0: string) => {
     (): any;
     new (): any;
     length: number;

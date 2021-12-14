@@ -17,7 +17,7 @@ import {
 } from 'ramda';
 import { apiSearchToTweet } from '../bg/tweetImporter';
 import { searchAPI, tweetLookupQuery } from '../bg/twitterScout';
-import { getRepliedToText } from '../domInterface/wutils';
+import { getRepliedToText } from '../read-twitter-page/openTweetReader';
 import { rpcBg, setStg } from '../stg/dutils';
 import { inspect, isExist } from '../utils/putils';
 import {
@@ -30,12 +30,10 @@ import { parseThQuery, useCurrentTwitterPage } from './TtReader';
 export function ContextualSeeker() {
   const auth = useContext(AuthContext);
   const currentPage = useCurrentTwitterPage();
-  const { feedDisplayMode, dispatchFeedDisplayMode } = useContext(
-    FeedDisplayMode
-  );
-  const { contextualResults, setContextualResults } = useContext(
-    ContextualResults
-  );
+  const { feedDisplayMode, dispatchFeedDisplayMode } =
+    useContext(FeedDisplayMode);
+  const { contextualResults, setContextualResults } =
+    useContext(ContextualResults);
 
   useEffect(() => {
     const contextualSearch = async () => {

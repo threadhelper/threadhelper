@@ -379,9 +379,7 @@ const SettingsAbout = () => {
       const accPs = accountNames.map((name) => {
         return userLookupQuery(auth, [name]);
       });
-      console.log('SecretModal', { accountNames, accPs });
       const accs = await Promise.all(accPs);
-      console.log('SecretModal', { accountNames, accs });
       if (!isExist(accs)) {
         console.error('failed to look up author users');
         return;
