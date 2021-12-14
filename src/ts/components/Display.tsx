@@ -29,7 +29,8 @@ import {
   ContextualResults,
   FeedDisplayMode,
 } from './ThreadHelper';
-import { getMetadataForPage, useCurrentTwitterPage } from './TtReader';
+import { useCurrentTwitterPage } from './TtReader';
+import { getMetadataForPage } from '../domInterface/wutils';
 
 import { Tweet as TweetCard } from './Tweet';
 import CrossIcon from '../../images/x-red.svg';
@@ -86,9 +87,8 @@ const calcIdleDisplay = (currentPage) => {
 
 export function DisplayController(props: any) {
   const auth = useContext(AuthContext);
-  const { feedDisplayMode, dispatchFeedDisplayMode } = useContext(
-    FeedDisplayMode
-  );
+  const { feedDisplayMode, dispatchFeedDisplayMode } =
+    useContext(FeedDisplayMode);
   const myRef = useRef(null);
   const [apiUsers, setApiUsers] = useStorage('api_users', []);
   const { apiUserResults, setApiUserResults } = useContext(ApiUserResults);
@@ -300,9 +300,8 @@ const SearchResMsg = () => {
 
 function ContextSearchResults({}) {
   const auth = useContext(AuthContext);
-  const { contextualResults, setContextualResults } = useContext(
-    ContextualResults
-  );
+  const { contextualResults, setContextualResults } =
+    useContext(ContextualResults);
   const [metricsRequested, setMetricsRequested] = useState(false);
   const [res, setRes] = useThrottle([], 200);
   const [searchMode, setSearchMode] = useOption('searchMode');
@@ -423,9 +422,8 @@ function ApiSearchResults() {
 
 function QtDisplay() {
   // const auth = useContext(AuthContext);
-  const { contextualResults, setContextualResults } = useContext(
-    ContextualResults
-  );
+  const { contextualResults, setContextualResults } =
+    useContext(ContextualResults);
   // const [stgQts, setStgQts] = useStorage('qts', []);
 
   return (

@@ -4,7 +4,7 @@ import { defaultTo, pipe } from 'ramda'; // Function
 import GearIcon from '../../images/gear.svg';
 import { msgBG } from '../stg/dutils';
 import { enqueueEvent } from '../utils/ga';
-import SettingsModal, { SecretModal } from './SettingsModal';
+import SettingsModal from './SettingsModal';
 import Tooltip from './Tooltip';
 
 export function SettingsButton(props) {
@@ -29,7 +29,6 @@ export function SettingsButton(props) {
       {open && !secretOpen && (
         <SettingsModal setOpen={setOpen} setSecretOpen={setSecretOpen} />
       )}
-      {secretOpen && <SecretModal setOpen={setSecretOpen} />}
     </div>
   );
 }

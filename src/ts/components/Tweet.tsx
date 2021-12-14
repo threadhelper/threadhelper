@@ -21,7 +21,7 @@ import {
   sendUnretweetRequest,
 } from '../bg/twitterScout';
 import { thTweet } from '../types/tweetTypes';
-import { enqueueEvent, enqueueEventt } from '../utils/ga';
+import { enqueueEvent, enqueueException } from '../utils/ga';
 import { getActiveComposer } from '../domInterface/wutils';
 import { DropdownMenu } from './Dropdown';
 import { Media } from './Media';
@@ -233,7 +233,6 @@ const LikeAction = ({ tweet }) => {
     <div
       class="flex cursor-pointer"
       onMouseOver={() => {
-        enqueueEvent('sidebar', 'mouse over tweet', 'mouse over tweet', 1);
         setHover(true);
       }}
       onMouseOut={() => setHover(false)}
@@ -397,7 +396,10 @@ export function Tweet({
   return (
     <div
       class="px-4 py-3 border-b border-borderBg transition-colors duration-200 cursor-pointer hover:bg-hoverBg"
-      onMouseEnter={(_) => setShowActions(true)}
+      onMouseEnter={(_) => {
+        enqueueEvent('sidebar', 'mouse over tweet', 'mouse over tweet', 1);
+        setShowActions(true);
+      }}
       onMouseLeave={(e) => {
         if (parentTweetRef.current.contains(e.relatedTarget)) {
           console.log('mouse leave but inside child', {
