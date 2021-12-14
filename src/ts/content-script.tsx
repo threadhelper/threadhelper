@@ -39,18 +39,20 @@ import {
   makeDeleteEventStream,
   makeLastClickedObs,
   makeRemoveBookmarkStream,
-} from './domInterface/inputsHandler';
+} from './read-twitter-page/userInputsHandler';
 import {
   injectDummy,
   injectSidebarHome,
-  makeFloatSidebarObserver,
-  makeHomeSidebarObserver,
   makeSearchBarObserver,
   makeSidebarCompose,
   makeSidebarHome,
   removeSearchBar,
   removeSidebarContent,
-} from './domInterface/sidebarHandler';
+} from './write-twitter/injectSidebar';
+import {
+  makeFloatSidebarObserver,
+  makeHomeSidebarObserver,
+} from './read-twitter-page/sidebarReader';
 import { makeThemeObs } from './read-twitter-page/themeReader';
 import * as window from './global';
 import { MsgObs, QueryObs, StorageChangeObs } from './hooks/BrowserEventObs';
@@ -66,7 +68,10 @@ import {
 } from './stg/dutils';
 import { makeGotMsgObs } from './stg/msgUtils';
 import { currentValue, inspect, nullFn, toggleDebug } from './utils/putils';
-import { getTwitterPageMode } from './read-twitter-page/twitterPageReader';
+import {
+  getMetadataForPage,
+  getTwitterPageMode,
+} from './read-twitter-page/twitterPageReader';
 import { updateTheme } from './write-twitter/setTheme';
 import { makeInitStgObs } from './bg/bgUtils';
 import { makeLastStatusObs } from './read-twitter-page/openTweetReader';
