@@ -1,6 +1,5 @@
 import { Curry } from 'Function/_api';
 import Kefir, { Observable } from 'kefir';
-// flattenModule(global,R)
 import {
   curry,
   defaultTo,
@@ -20,19 +19,14 @@ import { elContained, elIntersect, isFocused } from './domUtils';
 (Kefir.Property.prototype as any).currentValue = currentValue;
 const tweetHeaderSelector = '[data-testid="tweet"]';
 const dateSelector = 'a time';
-const editorClass = 'DraftEditor-editorContainer';
 const editorSelector = '.DraftEditor-editorContainer';
 const tweetButtonSelectors =
   '[data-testid="tweetButtonInline"], [data-testid="tweetButton"]';
-const sideBarSelector = '[data-testid="sidebarColumn"]';
 export const rtConfirmSelector = '[data-testid="retweetConfirm"]';
 export const unRtConfirmSelector = '[data-testid="unretweetConfirm"]';
 const deleteConfirmSelector = '[data-testid="confirmationSheetConfirm"]';
-// const bookmarkButtonSelector ='#layers > div.css-1dbjc4n.r-1d2f490.r-105ug2t.r-u8s1d.r-zchlnj.r-ipm5af > div > div > div > div:nth-child(2) > div.css-1dbjc4n.r-14lw9ot.r-1f0042m.r-1upvrn0.r-1ekmkwe.r-1udh08x.r-u8s1d > div > div > div > div:nth-child(2) > div.css-1dbjc4n.r-16y2uox.r-1wbh5a2 > div > span'
-// const bookmarkRemoveSelector ='#layers > div.css-1dbjc4n.r-1d2f490.r-105ug2t.r-u8s1d.r-zchlnj.r-ipm5af > div > div > div > div:nth-child(2) > div.css-1dbjc4n.r-14lw9ot.r-1f0042m.r-1upvrn0.r-1ekmkwe.r-1udh08x.r-u8s1d > div > div > div > div:nth-child(2) > div.css-1dbjc4n.r-16y2uox.r-1wbh5a2 > div > span'
 const shareMenuItemSelector = '[role=menu] div[role=menuitem]';
 const replySelector = 'div[aria-label~="Reply"]';
-// const tweetCardSelector = 'article div[data-testid="tweet"]'
 const tweetCardSelector = 'article';
 export let isRtFocused = () => isFocused(rtConfirmSelector);
 export let isUnRtFocused = () => isFocused(unRtConfirmSelector);
@@ -43,8 +37,8 @@ let isTweetCardFocused = () => isFocused(tweetCardSelector);
 type ElParent = Element | Document | null;
 type InputCond = (e: MouseEvent | KeyboardEvent) => boolean;
 
-// not using, doing lookups instead.
-export function getShowTweetText() {
+export function getShowTweetText(): string {
+  // not using, doing lookups instead.
   const tweetHeads = document.querySelectorAll(tweetHeaderSelector);
   const tweetEl = (x) => x.nextSibling;
   const tweetEls = map((x: Element) => x.nextSibling);
@@ -95,10 +89,7 @@ const fromShortcut = (cond: InputCond) =>
 // Stream streamInput :: (Cond -> Cond) -> Stream (Event)
 const inputStream = curry(
   (
-    shortCond: {
-      (e: any): any;
-      (value: unknown): value is unknown;
-    },
+    shortCond: (e: KeyboardEvent) => boolean,
     clickCond: Curry<(e: any) => any> & ((e: any) => any)
   ) => {
     const s = fromShortcut(shortCond);
@@ -164,8 +155,7 @@ export function makeDeleteEventStream() {
 // stream robo shortcut events
 export function makeRoboStream() {
   // Cond :: Event -> Bool
-  const roboShortCond = (e: { ctrlKey: any; key: string }) =>
-    e.ctrlKey && e.key === ' ' && isComposeFocused();
+  const roboShortCond = (e) => e.ctrlKey && e.key === ' ' && isComposeFocused();
   const roboStream = fromShortcut(roboShortCond)
     .map((x) => 'robo')
     .throttle(1000);
@@ -179,12 +169,18 @@ export const makeAddBookmarkStream = () => {
   return inputStream(
     bookmarkShortCond,
     docClickCondStream(shareMenuItemSelector)
-  ).filter((e) => e.target.textContent.includes('Add')); //.map(x=>'bookmark')
+  ).filter(
+    (event) =>
+      event.target instanceof Element &&
+      event.target.textContent.includes('Add')
+  ); //.map(x=>'bookmark')
 };
 // () -> event
 export function makeRemoveBookmarkStream() {
-  return fromClick(docClickCondStream(shareMenuItemSelector)).filter((e) =>
-    e.target.textContent.includes('Remove')
+  return fromClick(docClickCondStream(shareMenuItemSelector)).filter(
+    (event) =>
+      event.target instanceof Element &&
+      event.target.textContent.includes('Remove')
   ); //.map(x=>'remove_bookmark')
 }
 // tweet posting actions
