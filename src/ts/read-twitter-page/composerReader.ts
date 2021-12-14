@@ -1,11 +1,29 @@
 import { filter, isEmpty, join, map, not, pipe, prop } from 'ramda'; // Function
 import { obsCharData } from '../utils/kefirMutationObs';
 import { inspect } from '../utils/putils';
-import { url_regex } from './wutils.tsx';
+import { url_regex } from './openTweetReader';
+
+const editorSelector = '.DraftEditor-editorContainer';
+export const getComposers = () => document.querySelectorAll(editorSelector);
+export const getActiveComposer = () => {
+  // @ts-expect-error ts-migrate(2461) FIXME: Type 'NodeListOf<Element>' is not an array type.
+  const comps = [...getComposers()];
+  let comp = null;
+  switch (comps.length) {
+    case 0:
+      break;
+    case 1:
+      comp = comps[comps.length - 1];
+      break;
+    default:
+      comp = comps[comps.length - 2];
+      break;
+  }
+  return comp;
+};
 
 // We use this to find the tweet editor
 let editorClass = 'DraftEditor-editorContainer';
-let editorSelector = '.DraftEditor-editorContainer';
 // We use this to detect changes in the text of a tweet being composed
 let textFieldClass = 'span[data-text="true"]';
 //

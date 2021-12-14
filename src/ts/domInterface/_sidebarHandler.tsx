@@ -1,7 +1,7 @@
 import { fromEvents, Kefir, Observable } from 'kefir';
 import { isNil } from 'ramda'; // Logic, Type, Relation, String, Math
 import { obsAdded, obsRemoved } from '../utils/kefirMutationObs';
-import { isSidebar } from './wutils';
+import { isSidebar } from '../read-twitter-page/sidebarReader';
 const trendText = '[aria-label="Timeline: Trending now"]';
 const searchBarSelector = '[data-testid="SearchBox_Search_Input"] ';
 const sideBarSelector = '[data-testid="sidebarColumn"]';

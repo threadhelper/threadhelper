@@ -21,12 +21,13 @@ import {
 
 
 
-  makeOptionObs, setStg,
+  setStg,
 
 
 
   stgPathObs
 } from '../stg/dutils'
+import { makeOptionObs } from "../stg/msgUtils"
 import { Option, SearchFilters, StorageChange } from '../types/stgTypes'
 import { thTweet } from '../types/tweetTypes'
 import { Credentials } from '../types/types'

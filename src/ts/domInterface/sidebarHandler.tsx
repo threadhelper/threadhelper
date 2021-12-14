@@ -3,7 +3,7 @@ import { isNil } from 'ramda'; // Logic, Type, Relation, String, Math
 import { getData, getStg } from '../stg/dutils';
 import { obsAdded, obsRemoved } from '../utils/kefirMutationObs';
 import { inspect } from '../utils/putils';
-import { isSidebar } from './wutils';
+import { isSidebar } from '../read-twitter-page/sidebarReader';
 const photoSelector = '[data-testid="tweetPhoto"]'; // can't use this bc sidebar doesn't start with photos loaded
 const photoHrefSelector = '[href*="/photo"]';
 const advancedSearchSelector = '[href*="/search-advanced"]';

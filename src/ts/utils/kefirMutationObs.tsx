@@ -13,8 +13,9 @@ Creates a stream emitting root when an attribute matching attributeFilter (optio
 
 */
 
-import { fromEvents, constant, stream } from 'kefir';
+import Kefir, { fromEvents, constant, stream } from 'kefir';
 import { isNil } from 'ramda';
+import { currentValue } from './putils';
 
 const domReady = constant(document.readyState)
   .filter((state) => state !== 'loading')

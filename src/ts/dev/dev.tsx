@@ -8,14 +8,10 @@ import * as css from '../../style/cs.css';
 import * as pcss from '../../styles.css';
 import ThreadHelper from '../components/ThreadHelper';
 import { MsgObs, StorageChangeObs } from '../hooks/BrowserEventObs';
-import {
-  initStg,
-  makeGotMsgObs,
-  makeStorageChangeObs,
-  setData,
-} from '../stg/dutils';
+import { initStg, makeStorageChangeObs, setData } from '../stg/dutils';
+import { makeGotMsgObs } from '../stg/msgUtils';
 import { nullFn } from '../utils/putils';
-import { updateTheme } from '../domInterface/wutils';
+import { updateTheme } from '../write-twitter/setTheme';
 import { dbOpen } from '../bg/idb_wrapper';
 import Scraper from './components/Scraper';
 import Search from './components/Search';

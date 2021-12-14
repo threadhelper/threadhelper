@@ -19,7 +19,7 @@ import { and, curry, equals, isNil, not, prop, propEq } from 'ramda'; // Functio
 import * as css from '../style/cs.css';
 import * as pcss from '../styles.css';
 import ThreadHelper from './components/ThreadHelper';
-import { makeComposeObs } from './domInterface/composeHandler';
+import { makeComposeObs } from './read-twitter-page/composerReader';
 import {
   getHostTweetId,
   makeActionStream,
@@ -40,23 +40,25 @@ import {
   removeSearchBar,
   removeSidebarContent,
 } from './domInterface/sidebarHandler';
-import { makeLastStatusObs, makeThemeObs } from './domInterface/tabsHandler';
+import { makeThemeObs } from './read-twitter-page/themeReader';
 import * as window from './global';
 import { MsgObs, QueryObs, StorageChangeObs } from './hooks/BrowserEventObs';
 import { UrlMsg } from './types/msgTypes';
 import { curProp } from './types/types';
 import {
   getStg,
-  makeGotMsgObs,
   makeStorageChangeObs,
   msgBG,
   resetStorageField,
   rpcBg,
   setStg,
 } from './stg/dutils';
+import { makeGotMsgObs } from './stg/msgUtils';
 import { currentValue, inspect, nullFn, toggleDebug } from './utils/putils';
-import { getMode, updateTheme } from './domInterface/wutils';
+import { getTwitterPageMode } from './read-twitter-page/twitterPageReader';
+import { updateTheme } from './write-twitter/setTheme';
 import { makeInitStgObs } from './bg/bgUtils';
+import { makeLastStatusObs } from './read-twitter-page/openTweetReader';
 
 console.log('hi pcss', pcss);
 console.log('hi css', css);
@@ -82,7 +84,6 @@ const activateSidebar = curry(
     msgObs$,
     composeQuery$
   ) => {
-    console.log('[DEBUG] activating sidebar', { storageChange$ });
     inject(bar);
     render(
       <StorageChangeObs.Provider value={storageChange$}>
@@ -124,43 +125,38 @@ const initCsStg = () => {
   );
 };
 
-function main() {
-  onLoad(thBarHome, thBarComp);
-}
-
 async function onLoad(thBarHome: Element, thBarComp: Element) {
-  console.log('[DEBUG] onLoad', { thBarHome, thBarComp });
   initCsStg();
   // Define streams
   //      messages
   const msgObs$ = makeGotMsgObs();
   const gotMsg$ = msgObs$.map(prop('m'));
-  const urlChange$ = ((gotMsg$.filter(
-    propEq('type', 'tab-change-url')
-  ) as unknown) as Observable<UrlMsg, Error>).map(prop('url'));
-  const mode$ = urlChange$.map(getMode);
+  const urlChange$ = (
+    gotMsg$.filter(propEq('type', 'tab-change-url')) as unknown as Observable<
+      UrlMsg,
+      Error
+    >
+  ).map(prop('url'));
+  const mode$ = urlChange$.map(getTwitterPageMode);
   //      storage
   const storageChange$ = makeStorageChangeObs();
   const hideTtSearchBar$ = makeInitStgObs(storageChange$, 'doIndexUpdate');
-  hideTtSearchBar$.log('hideTtSearchBar$');
   const hideTtSidebarContent$ = makeInitStgObs(storageChange$, 'doIndexUpdate');
-  hideTtSidebarContent$.log('hideTtSidebarContent$');
   //      webpage events
   //          theme
-  const theme$ = makeThemeObs();
+  const theme$ = makeThemeObs(document);
+  subObs(theme$, updateTheme);
   //          tweet ids
   const lastStatus$ = makeLastStatusObs(mode$);
   const getTargetId = getHostTweetId(lastStatus$);
-  const lastClickedId$ = (makeLastClickedObs()
+  const lastClickedId$ = makeLastClickedObs()
     .map(getTargetId)
     .filter((x) => !isNil(x))
-    .toProperty() as unknown) as curProp<string>;
+    .toProperty() as unknown as curProp<string>;
   subObs(lastClickedId$, setStg('lastClickedId'));
   //          actions
   const actions$ = makeActionStream(); // post, rt, unrt
-  actions$.log('actions$');
   const post$ = actions$.filter((x) => x == 'tweet');
-  post$.log('post$');
   subObs(post$.delay(1000), async (_) => rpcBg('updateTimeline'));
   const addBookmark$ = makeAddBookmarkStream()
     .map(inspect('add bookmark'))
@@ -191,7 +187,7 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
     urlChange$.map((_) => ''),
     composeContent$,
   ]).toProperty(() => '');
-
+  //
   // Sidebar control
   const updateFloat = (value: any) =>
     value
@@ -221,7 +217,6 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
   subObs(actions$.delay(800), (_) => {
     handlePosting();
   });
-  subObs(theme$, updateTheme);
   subObs(floatActive$, updateFloat);
   subObs(homeActiveSafe$, updateHome);
   subObs(storageChange$, nullFn);
@@ -270,5 +265,5 @@ window.addEventListener('unload', () => {
   render(null, thBarHome);
   render(null, thBarComp);
 });
-main(); // Let's go
+onLoad(thBarHome, thBarComp); // Let's go
 //
