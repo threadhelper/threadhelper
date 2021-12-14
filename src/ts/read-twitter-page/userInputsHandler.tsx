@@ -14,13 +14,9 @@ import {
 } from 'ramda'; // Function
 import { curProp, UrlModes } from '../types/types';
 import { currentValue } from '../utils/putils';
-import { getTweetId } from '../read-twitter-page/openTweetReader';
-import { getTwitterPageMode } from '../read-twitter-page/twitterPageReader';
-import {
-  elContained,
-  elIntersect,
-  isFocused,
-} from '../read-twitter-page/domUtils';
+import { getTweetId } from './openTweetReader';
+import { getTwitterPageMode } from './twitterPageReader';
+import { elContained, elIntersect, isFocused } from './domUtils';
 (Kefir.Property.prototype as any).currentValue = currentValue;
 const tweetHeaderSelector = '[data-testid="tweet"]';
 const dateSelector = 'a time';
@@ -51,7 +47,7 @@ type InputCond = (e: MouseEvent | KeyboardEvent) => boolean;
 export function getShowTweetText() {
   const tweetHeads = document.querySelectorAll(tweetHeaderSelector);
   const tweetEl = (x) => x.nextSibling;
-  const tweetEls = map((x) => x.nextSibling);
+  const tweetEls = map((x: Element) => x.nextSibling);
   const tweetElId = (el) => {
     return el;
   };
