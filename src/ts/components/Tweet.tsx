@@ -233,7 +233,6 @@ const LikeAction = ({ tweet }) => {
     <div
       class="flex cursor-pointer"
       onMouseOver={() => {
-        enqueueEvent('sidebar', 'mouse over tweet', 'mouse over tweet', 1);
         setHover(true);
       }}
       onMouseOut={() => setHover(false)}
@@ -397,7 +396,10 @@ export function Tweet({
   return (
     <div
       class="px-4 py-3 border-b border-borderBg transition-colors duration-200 cursor-pointer hover:bg-hoverBg"
-      onMouseEnter={(_) => setShowActions(true)}
+      onMouseEnter={(_) => {
+        enqueueEvent('sidebar', 'mouse over tweet', 'mouse over tweet', 1);
+        setShowActions(true);
+      }}
       onMouseLeave={(e) => {
         if (parentTweetRef.current.contains(e.relatedTarget)) {
           console.log('mouse leave but inside child', {

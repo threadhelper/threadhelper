@@ -15,7 +15,18 @@ import Kefir, { Observable, Property, Subscription } from 'kefir';
 import { h, render } from 'preact';
 import 'preact/debug';
 import 'preact/devtools';
-import { and, curry, equals, isNil, not, prop, propEq } from 'ramda'; // Function
+import {
+  __,
+  and,
+  curry,
+  equals,
+  includes,
+  isNil,
+  not,
+  pipe,
+  prop,
+  propEq,
+} from 'ramda'; // Function
 import * as css from '../style/cs.css';
 import * as pcss from '../styles.css';
 import ThreadHelper from './components/ThreadHelper';
@@ -199,7 +210,20 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
       : deactivateSidebar(thBarHome); //function
   const searchBar$ = makeSearchBarObserver();
   searchBar$.log('searchBar$');
-  const floatSidebar$ = makeFloatSidebarObserver(thBarComp); // floatSidebar$ :: String || Element  // for floating sidebar in compose mode
+  const isComposing = pipe(
+    (_) => getMetadataForPage(window.location.href),
+    prop('pageType'),
+    includes(__, ['compose', 'intent', 'intentReply'])
+  );
+  const filterOutRender = (msg) => {
+    if (equals('render', msg)) {
+      return isComposing(null);
+    } else {
+      return msg;
+    }
+  };
+  const floatSidebar$ =
+    makeFloatSidebarObserver(thBarComp).filter(filterOutRender); // floatSidebar$ :: String || Element  // for floating sidebar in compose mode
   const floatActive$ = floatSidebar$
     .map(equals('render'))
     .toProperty(() => false); // floatActive$ ::Bool
