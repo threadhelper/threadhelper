@@ -17,7 +17,7 @@ import { QueryObs } from '../hooks/BrowserEventObs';
 import { useMsg } from '../hooks/useMsg';
 import { _useStream } from '../hooks/useStream';
 import { rpcBg, setStg } from '../stg/dutils';
-import { getMetadataForPage } from '../domInterface/wutils';
+import { getMetadataForPage } from '../read-twitter-page/twitterPageReader';
 import { FeedDisplayMode } from './ThreadHelper';
 
 export function TtReader() {
