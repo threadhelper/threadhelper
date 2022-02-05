@@ -32,7 +32,7 @@ import {
   __,
   union,
 } from 'ramda'; // Function
-import { Msg, MsgWrapper } from '../types/msgTypes';
+import { Msg } from '../types/msgTypes';
 import {
   Option,
   Options,
@@ -42,7 +42,6 @@ import {
 import {
   defaultOptions,
   defaultStorage as _defaultStorage,
-  devStorage,
 } from './defaultStg';
 import { asyncTimeFn, currentValue, inspect, timeFn } from '../utils/putils';
 
@@ -52,7 +51,7 @@ let defaultStorage: () => StorageInterface = _defaultStorage;
 
 /* Development experience */
 
-const SERVE = process.env.DEV_MODE == 'serve';
+export const SERVE = process.env.DEV_MODE == 'serve';
 export function initStg() {
   if (!SERVE) {
     console.log('not SERVE');
@@ -421,7 +420,7 @@ export function makeOnStorageChanged(act: (stgCh: StorageChange) => void): any {
 const isStgItemSame = (x: StorageChange) =>
   (isNil(x.oldVal) && isNil(x.newVal)) || x.oldVal === x.newVal;
 
-const isOptionSame = curry(
+export const isOptionSame = curry(
   (name: string, x: StorageChange): boolean =>
     isStgItemSame(x) ||
     (!isNil(x.oldVal) &&
@@ -431,7 +430,7 @@ const isOptionSame = curry(
 
 /* Observers */
 /* Obs Stg */
-const makeCustomEventObs = (
+export const makeCustomEventObs = (
   eventName: string,
   makeEmit
 ): Stream<any, Error> => {
@@ -459,17 +458,14 @@ const makeCustomEventObs = (
       emitter.end();
     };
   });
-  // console.log('makeCustomEventObs ' + eventName, { obs, makeEmit });
   return obs;
 };
 
-const makeEventObs = curry(
+export const makeEventObs = curry(
   (event: chrome.events.Event<any>, makeEmit): Stream<any, Error> => {
     return Kefir.stream((emitter) => {
-      // emitter.emit(initVal);
       const emit = makeEmit(emitter);
       event.addListener(emit);
-      // event.addListener(pipe(inspect('ChromeStorageEvent'), (x) => emit(x)));
       return () => {
         event.removeListener(emit);
         emitter.end();
@@ -510,41 +506,3 @@ export const makeStgPathObs = (_path: string[]): Observable<any, Error> => {
 };
 export const makeStgItemObs = (itemName) =>
   makeStgPathObs([itemName]).map(inspect('StgItemObs'));
-
-/* Obs Msgs */
-
-export const makeGotMsgObs = (): Observable<MsgWrapper, Error> => {
-  const makeEmitMsg = (emitter: Emitter<MsgWrapper, Error>) => (
-    message,
-    sender,
-    sendResponse
-  ) => {
-    console.log('emitting msg', { message });
-    emitter.emit({ m: message, s: sender });
-    sendResponse({ type: 'ok' });
-  };
-  return SERVE
-    ? makeCustomEventObs('message', makeEmitMsg)
-    : makeEventObs(chrome.runtime.onMessage, makeEmitMsg);
-};
-export const msgStream = curry(
-  (
-    msgObs: Observable<MsgWrapper, Error>,
-    msgType: string
-  ): Observable<Msg, Error> =>
-    msgObs.map(prop('m')).filter(propEq('type', msgType))
-);
-export const makeMsgStream = msgStream(makeGotMsgObs());
-
-export const makeOptionObs = curry(
-  (
-    optionsChange$: Observable<StorageChange, any>,
-    itemName: string
-  ): Observable<Option, any> =>
-    optionsChange$
-      .filter((x) => !isOptionSame(itemName, x))
-      .map(
-        path<any>(['newVal', itemName])
-      )
-      .map(defaultTo(prop(itemName, defaultOptions())))
-);
