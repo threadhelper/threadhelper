@@ -2,22 +2,22 @@ import { useDebounce } from '@react-hook/debounce';
 import { h } from 'preact';
 import { useContext, useEffect, useRef, useState } from 'preact/hooks';
 import { defaultTo, isEmpty, path, pipe, prop, map } from 'ramda';
-import SearchIcon from '../../images/search.svg';
-import { SettingsButton } from './Settings';
-import { NinjaSyncIcon } from './Sync';
+import SearchIcon from '../../../../images/search.svg';
+import { SettingsButton } from './SettingsButton';
+import { NinjaSyncIcon } from '../../common/Sync';
 import {
-  FeedDisplayMode,
+  FeedDisplayModeContext,
   AuthContext,
   ApiTweetResults,
   ApiUserResults,
-} from './ThreadHelper';
-import { StgFlagTooltip } from './Tooltip';
-import { goToTwitterSearchPage } from './TtReader';
-import { apiSearchToTweet } from '../bg/tweetImporter';
-import { searchAPI, searchUsers } from '../bg/twitterScout';
-import { saferTweetMap } from '../bg/bgUtils';
-import { setStg } from '../stg/dutils';
-import { enqueueEvent } from '../utils/ga';
+} from '../Sidebar';
+import { StgFlagTooltip } from '../../common/Tooltip';
+import { goToTwitterSearchPage } from '../../page/TtReader';
+import { apiSearchToTweet } from '../../../bg/tweetImporter';
+import { searchAPI, searchUsers } from '../../../bg/twitterScout';
+import { saferTweetMap } from '../../../bg/bgUtils';
+import { setStg } from '../../../stg/dutils';
+import { enqueueEvent } from '../../../utils/ga';
 
 var DEBUG = process.env.NODE_ENV != 'production';
 
@@ -97,13 +97,13 @@ const doSearchApi = async (auth, query) => {
     return [];
   }
   const { users, tweets } = await searchAPI(auth, query);
-  const toTh = pipe(
+  const res = pipe(
+    () => tweets,
     saferTweetMap(apiSearchToTweet),
     map((tweet) => {
       return { tweet };
     })
-  );
-  const res = toTh(tweets);
+  )();
   // setStg('api_results', res);
   return res;
 };
@@ -111,8 +111,9 @@ export function ApiSearchBar() {
   const inputObj = useRef(null);
   const [value, setValue] = useDebounce('', 800, { leading: true });
   const [showSearchBar, setShowSearchBar] = useState(false);
-  const { feedDisplayMode, dispatchFeedDisplayMode } =
-    useContext(FeedDisplayMode);
+  const { feedDisplayMode, dispatchFeedDisplayMode } = useContext(
+    FeedDisplayModeContext
+  );
   const { apiTweetResults, setApiTweetResults } = useContext(ApiTweetResults);
   const { apiUserResults, setApiUserResults } = useContext(ApiUserResults);
 
@@ -185,6 +186,7 @@ export function ApiSearchBar() {
             direction="bottom"
             flagName="showApiSearchTooltip"
             className=" flex items-end"
+            delay={800}
           >
             <button
               onClick={() => {
@@ -239,7 +241,11 @@ export function ApiSearchBar() {
                   goToTwitterSearchPage(value);
                 }
               }}
-              onFocus={(e) => e.target?.select()}
+              onFocus={(e) =>
+                e.target instanceof Element
+                  ? (e.target as HTMLInputElement).select()
+                  : null
+              }
               onBlur={() => setShowSearchBar(false)}
               type="text"
               placeholder="Search Twitter. Enter to open the search page."

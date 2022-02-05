@@ -18,20 +18,17 @@ import {
   propSatisfies,
   values,
 } from 'ramda';
-import { userLookupQuery } from '../bg/twitterScout';
-import { useOption, useStorage, useStgPath } from '../hooks/useStorage';
-import { isExist } from '../utils/putils';
+import { userLookupQuery } from '../../bg/twitterScout';
+import { useOption, useStorage, useStgPath } from '../../hooks/useStorage';
+import { isExist } from '../../utils/putils';
 import { ArchiveUploader } from './LoadArchive';
-import { SyncIcon } from './Sync';
-import { AuthContext } from './ThreadHelper';
-import Tooltip from './Tooltip';
-import defaultProfilePic from '../../images/defaultProfilePic.png';
-import CrossIcon from '../../images/x-red.svg';
-import { ArchiveExporter } from './ArchiveExporter';
-import { enqueueStgNoDups, rpcBg } from '../stg/dutils';
-import { manualUrl, patchNotes03 } from '../bg/updateManager';
-import { helpUsUrl, thDmUrl, thSurveyUrl } from '../utils/params';
-import { enqueueEvent } from '../utils/ga';
+import { SyncIcon } from '../common/Sync';
+import { AuthContext } from '../sidebar/Sidebar';
+import defaultProfilePic from '../../../images/defaultProfilePic.png';
+import { enqueueStgNoDups, rpcBg } from '../../stg/dutils';
+import { manualUrl, patchNotes03 } from '../../bg/updateManager';
+import { helpUsUrl, thDmUrl, thSurveyUrl } from '../../utils/params';
+import { enqueueEvent } from '../../utils/ga';
 
 const Checkbox = ({ get, set, label }) => {
   return (

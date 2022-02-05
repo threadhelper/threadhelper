@@ -1,5 +1,5 @@
 import { Fragment, h } from 'preact';
-import { getData } from '../stg/dutils';
+import { getData } from '../../stg/dutils';
 
 const archiveTooltip = <>{'Export your TH archive.'}</>;
 

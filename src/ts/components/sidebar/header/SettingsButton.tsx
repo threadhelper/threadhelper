@@ -1,11 +1,9 @@
 import { h } from 'preact';
-import { useCallback, useState } from 'preact/hooks';
-import { defaultTo, pipe } from 'ramda'; // Function
-import GearIcon from '../../images/gear.svg';
-import { msgBG } from '../stg/dutils';
-import { enqueueEvent } from '../utils/ga';
-import SettingsModal from './SettingsModal';
-import Tooltip from './Tooltip';
+import { useState } from 'preact/hooks';
+import GearIcon from '../../../../images/gear.svg';
+import SettingsModal from '../../settings/SettingsModal';
+import Tooltip from '../../common/Tooltip';
+import { enqueueEvent } from '../../../utils/ga';
 
 export function SettingsButton(props) {
   const [open, setOpen] = useState(false);

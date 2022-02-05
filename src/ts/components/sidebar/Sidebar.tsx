@@ -1,16 +1,17 @@
 import { createContext, h } from 'preact';
 import { useEffect, useReducer, useRef, useState } from 'preact/hooks';
-import { useStorage } from '../hooks/useStorage';
-import { DisplayMode } from '../types/interfaceTypes';
-import { TweetResult } from '../types/msgTypes';
-import { rpcBg } from '../stg/dutils';
-import { ApiSearchBar } from './ThHeader';
+import { useStorage } from '../../hooks/useStorage';
+import { DisplayMode } from '../../types/interfaceTypes';
+import { TweetResult } from '../../types/msgTypes';
+import { rpcBg } from '../../stg/dutils';
+import { ApiSearchBar } from './header/ThHeader';
 import { Banner } from './Banner';
-import { DisplayController } from './Display';
-import { TtReader, useCurrentTwitterPage } from './TtReader';
+import { DisplayController } from './feed/Display';
+import { TtReader } from '../page/TtReader';
 import { isNil } from 'ramda';
-import { ContextualSeeker } from './ContextualSeeker';
-import { thSurveyUrl } from '../utils/params';
+import { ContextualSeeker } from '../common/ContextualSeeker';
+import { thSurveyUrl } from '../../utils/params';
+import { Credentials } from '../../types/types';
 
 // Tweets to show that results from navigation, not explicit search (i.e., QTs, auto search an open tweet's text)
 export const ContextualResults = createContext(null);
@@ -23,11 +24,11 @@ export const AuthContext = createContext<Credentials>({
 });
 type FeedDisplayReduce = {
   feedDisplayMode: DisplayMode;
-  dispatchFeedDisplayMode;
+  dispatchFeedDisplayMode?;
 };
-export const FeedDisplayMode = createContext<FeedDisplayReduce>(
-  DisplayMode.Idle
-);
+export const FeedDisplayModeContext = createContext<FeedDisplayReduce>({
+  feedDisplayMode: DisplayMode.Idle,
+});
 
 type UpdateFeedDisplayAction = { action: string; tweets: TweetResult[] };
 const updateFeedDisplay = (
@@ -162,7 +163,7 @@ function Sidebar(props: { active: any }) {
     console.log('Sidebar', { contextualResults });
   }, [contextualResults]);
   return (
-    <FeedDisplayMode.Provider
+    <FeedDisplayModeContext.Provider
       value={{ feedDisplayMode, dispatchFeedDisplayMode }}
     >
       <AuthContext.Provider value={auth}>
@@ -194,6 +195,6 @@ function Sidebar(props: { active: any }) {
           </ApiTweetResults.Provider>
         </ContextualResults.Provider>
       </AuthContext.Provider>
-    </FeedDisplayMode.Provider>
+    </FeedDisplayModeContext.Provider>
   );
 }
