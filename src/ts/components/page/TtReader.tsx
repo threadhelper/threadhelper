@@ -1,4 +1,4 @@
-import { h } from 'preact';
+import { h, Fragment } from 'preact';
 import { useContext, useEffect, useRef, useState } from 'preact/hooks';
 import {
   curry,
@@ -12,13 +12,13 @@ import {
   prop,
   trim,
 } from 'ramda';
-import SearchIcon from '../../images/search.svg';
-import { QueryObs } from '../hooks/BrowserEventObs';
-import { useMsg } from '../hooks/useMsg';
-import { _useStream } from '../hooks/useStream';
-import { rpcBg, setStg } from '../stg/dutils';
-import { getMetadataForPage } from '../read-twitter-page/twitterPageReader';
-import { FeedDisplayMode } from './ThreadHelper';
+import SearchIcon from '../../../images/search.svg';
+import { QueryObs } from '../../hooks/BrowserEventObs';
+import { useMsg } from '../../hooks/useMsg';
+import { _useStream } from '../../hooks/useStream';
+import { rpcBg, setStg } from '../../stg/dutils';
+import { getMetadataForPage } from '../../read-twitter-page/twitterPageReader';
+import { FeedDisplayModeContext } from '../sidebar/Sidebar';
 
 export function TtReader() {
   return (
@@ -108,8 +108,9 @@ export const combineBracketedQueries = (queries: string[]): string => {
 export function SearchBar({ show }) {
   const inputObj = useRef(null);
   // const [query, setQuery] = useStorage('query', '');
-  const { feedDisplayMode, dispatchFeedDisplayMode } =
-    useContext(FeedDisplayMode);
+  const { feedDisplayMode, dispatchFeedDisplayMode } = useContext(
+    FeedDisplayModeContext
+  );
   const query$ = useContext(QueryObs);
   const [query, setQuery] = _useStream(query$, '');
 
@@ -155,7 +156,11 @@ export function SearchBar({ show }) {
                 setQuery(defaultTo('', path(['target', 'value'], e)))
               }
               onKeyUp={(e) => (e.key === 'Enter' ? submitSearch(query) : null)}
-              onFocus={(e) => e.target?.select()}
+              onFocus={(e) =>
+                e.target instanceof Element
+                  ? (e.target as HTMLInputElement).select()
+                  : null
+              }
               type="text"
               style="background-color:rgba(125,125,125,0.1)"
             />
