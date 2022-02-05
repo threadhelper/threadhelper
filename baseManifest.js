@@ -57,7 +57,6 @@ module.exports = {
       ],
       js: ['content-script.bundle.js'],
     },
-    ,
   ],
   background: {
     scripts: ['background.bundle.js'],
