@@ -9,7 +9,7 @@ const photoSelector = '[data-testid="tweetPhoto"]'; // can't use this bc sidebar
 const trendText = '[aria-label="Timeline: Trending now"]';
 
 const isHomeSidebar = () => {
-  const sugHome = document.getElementsByClassName('sug_home');
+  const sugHome = document.getElementsByClassName('sidebarContainerHome');
   if (sugHome.length > 0) {
     if (sugHome[0].children.length > 0) {
       return true;
@@ -20,7 +20,9 @@ const isHomeSidebar = () => {
   return false;
 };
 const isFloatSidebar = () => {
-  const sugCompose = document.getElementsByClassName('sug_compose');
+  const sugCompose = document.getElementsByClassName(
+    'sidebarContainerComposer'
+  );
   if (sugCompose.length > 0) {
     if (sugCompose[0].children.length > 0) {
       return true;
@@ -34,7 +36,7 @@ const isFloatSidebar = () => {
 export function isSidebar(mode) {
   switch (mode) {
     case 'home':
-      return document.getElementsByClassName('sug_home').length > 0;
+      return document.getElementsByClassName('sidebarContainerHome').length > 0;
     case 'compose':
       return isFloatSidebar();
     default:
@@ -90,7 +92,7 @@ export function makeHomeSidebarObserver(
 }
 // export const removeHomeSidebar = () => {
 //   // console.log('removing sidebar');
-//   const sugHomes = [...document.getElementsByClassName('sug_home')];
+//   const sugHomes = [...document.getElementsByClassName('sidebarContainerHome')];
 //   sugHomes.forEach((x: { remove: () => void }) => x.remove());
 // };
 export function makeFloatSidebarObserver(
