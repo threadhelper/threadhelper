@@ -5,23 +5,19 @@ import { obsAdded, obsRemoved } from '../utils/kefirMutationObs';
 const photoHrefSelector = '[href*="/photo"]';
 const advancedSearchSelector = '[href*="/search-advanced"]';
 const searchBarInputSelector = '[data-testid="SearchBox_Search_Input"] ';
-const searchBarSelector =
-  'div div div div form div div div div' + ' ' + searchBarInputSelector;
 export const sideBarSelector = '[data-testid="sidebarColumn"]';
-const editorClass = 'DraftEditor-editorContainer';
 export const floatingComposeSelector =
   '[aria-labelledby="modal-header"] .DraftEditor-editorContainer';
 
-export function makeSidebarHome() {
+export function createSidebarContainerHome() {
   let thBar = document.createElement('div');
-  thBar.setAttribute('class', 'sug_home');
+  thBar.setAttribute('class', 'sidebarContainerHome');
   return thBar;
 }
 // impure
-export async function injectSidebarHome(thBar: Element) {
+export async function injectSidebarContainerHome(thBar: Element) {
   const hideTtSearchBar = await getStg('hideTtSearchBar');
   const hideTtSidebarContent = await getStg('hideTtSidebarContent');
-  console.log('injectSidebarHome', { hideTtSearchBar });
   if (hideTtSearchBar) {
     removeSearchBar();
   }
@@ -72,25 +68,22 @@ function makeDummyCompose(thBar: Element): Element | null {
 }
 //for wutils
 function insertAfter(newNode: Element, referenceNode: Element) {
-  // console.log('[DEBUG] insertBefore', { referenceNode, newNode });
   referenceNode.parentNode.insertBefore(newNode, referenceNode.nextSibling); // if referenceNode.nextSibling is null, it inserts at the end
 }
 
-export function injectDummy(thBar: Element): Element {
+export function injectSidebarContainerCompose(thBar: Element): Element {
   const floatingSelector = '[aria-labelledby="modal-header"]';
   const dummyUI = makeDummyCompose(thBar);
   const floating_compose = document.querySelector(floatingSelector);
-  // isNil(floating_compose) ? null : insertAfter(dummyUI, floating_compose);#
   if (isNil(floating_compose)) {
     console.log('[ERROR] no floating composer element');
   }
-  // console.log('[DEBUG] injecting dummy', { dummyUI, floating_compose });
   insertAfter(dummyUI, floating_compose);
   return dummyUI;
 }
-export function makeSidebarCompose(): Element {
+export function createSidebarElementCompose(): Element {
   let thBar = document.createElement('div');
-  thBar.setAttribute('class', 'sug_compose w-full');
+  thBar.setAttribute('class', 'sidebarContainerComposer w-full');
   return thBar;
 }
 // Produces events every time a sidebar should be created (trends sidebar shows up or compose screen comes up)
@@ -100,8 +93,7 @@ export function makeSearchBarObserver(): Observable<Element, any> {
     document,
     searchBarInputSelector,
     true
-  ); // searchBarAdd$ :: Element // Trends element is added
-  const searchBarRemove$ = obsRemoved(document, searchBarSelector, true); // searchBarAdd$ :: Element // Trends element is remove
+  );
   return searchBarAdd$;
 }
 //
@@ -123,7 +115,7 @@ export function removeSearchBar(_?) {
 
 export function removeSidebarContent(_?) {
   const sidebarElement = document.querySelector(sideBarSelector);
-  const istTh = (el) => el.className.includes('sug_home');
+  const istTh = (el) => el.className.includes('sidebarContainerHome');
   const isUserPhotos = (el) => !isNil(el.querySelector(photoHrefSelector));
   const isAdvancedSearch = (el) =>
     !isNil(el.querySelector(advancedSearchSelector));
