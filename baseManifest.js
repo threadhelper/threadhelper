@@ -57,15 +57,6 @@ module.exports = {
       ],
       js: ['content-script.bundle.js'],
     },
-    ...(isServe || isDevelopment
-      ? [
-          {
-            // matches: ['ws://localhost/*', 'http://localhost/*', 'http://127.0.0.1/*'],
-            matches: ['http://localhost/*'],
-            js: ['devCs.bundle.js'],
-          },
-        ]
-      : []),
   ],
   background: {
     scripts: ['background.bundle.js'],
