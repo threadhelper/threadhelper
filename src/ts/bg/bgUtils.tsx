@@ -47,7 +47,7 @@ export const extractTweetPropIfNeeded = ifElse(
 );
 
 export const saferTweetMap = curry(
-  (fn: (x: Status) => thTweet, tweets: thTweet): thTweet[] =>
+  (fn: (x: Status) => thTweet, tweets): thTweet[] =>
     pipe(
       () => tweets,
       defaultTo([]),
@@ -97,7 +97,7 @@ export const makeInitOptionsObs = curry((optionsChange$, itemName) => {
   return (
     Kefir.fromPromise(_makeOptionObs(optionsChange$, itemName))
       // .flatMap((x) => x)
-      .flatten()
+      .flatMap(identity)
       .map(prop('value'))
   );
 });
@@ -109,11 +109,13 @@ export const _makeStgObs = curry(async (storageChange$, itemName) => {
 });
 export const makeInitStgObs = (storageChange$, itemName) => {
   // return Kefir.fromPromise(_makeStgObs(storageChange$, itemName)).flatMap((x) => {return x})
-  return Kefir.fromPromise(_makeStgObs(storageChange$, itemName)).flatten();
+  return Kefir.fromPromise(_makeStgObs(storageChange$, itemName)).flatMap(
+    R.identity
+  );
 };
 
-export const combineOptions = (...args: Option[]): SearchFilters | any =>
-  reduce((a, b: Option) => assoc(b.name, b.value, a), {})(args);
+export const combineOptions = (...args: Option[]): SearchFilters =>
+  pipe(reduce((a, b) => assoc(b.name, b.value, a), {}))(args);
 
 // Scrape worker can't make requests for some people (TODO: find cause)
 // tries one function with the arguments and if it doesn't work tries the other one
