@@ -42,7 +42,6 @@ import {
 import {
   defaultOptions,
   defaultStorage as _defaultStorage,
-  devStorage,
 } from './defaultStg';
 import { asyncTimeFn, currentValue, inspect, timeFn } from '../utils/putils';
 
