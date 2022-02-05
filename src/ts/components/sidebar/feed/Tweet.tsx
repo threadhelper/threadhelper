@@ -7,30 +7,28 @@ import {
   useState,
 } from 'preact/hooks';
 import { defaultTo, isNil, last, prop } from 'ramda';
-import defaultProfilePic from '../../images/defaultProfilePic.png';
-import LikeIcon from '../../images/like.svg';
-import FullLikeIcon from '../../images/like_full.svg';
-import LinkIcon from '../../images/link.svg';
-import PencilIcon from '../../images/pencil.svg';
-import ReplyIcon from '../../images/reply.svg';
-import RetweetIcon from '../../images/retweet.svg';
+import defaultProfilePic from '../../../../images/defaultProfilePic.png';
+import LikeIcon from '../../../../images/like.svg';
+import FullLikeIcon from '../../../../images/like_full.svg';
+import LinkIcon from '../../../../images/link.svg';
+import PencilIcon from '../../../../images/pencil.svg';
+import ReplyIcon from '../../../../images/reply.svg';
+import RetweetIcon from '../../../../images/retweet.svg';
 import {
   sendLikeRequest,
   sendRetweetRequest,
   sendUnlikeRequest,
   sendUnretweetRequest,
-} from '../bg/twitterScout';
-import { thTweet } from '../types/tweetTypes';
-import { enqueueEvent, enqueueException } from '../utils/ga';
-import { getActiveComposer } from '../domInterface/wutils';
-import { DropdownMenu } from './Dropdown';
+} from '../../../bg/twitterScout';
+import { thTweet } from '../../../types/tweetTypes';
+import { enqueueEvent } from '../../../utils/ga';
+import { getActiveComposer } from '../../../read-twitter-page/composerReader';
+import { DropdownMenu } from '../../common/Dropdown';
 import { Media } from './Media';
-import { AuthContext } from './ThreadHelper';
-import Tooltip from './Tooltip';
-import { enqueueStgNoDups } from '../stg/dutils';
-import { isExist } from '../utils/putils';
-
-const isProduction = process.env.NODE_ENV != 'development';
+import { AuthContext } from '../Sidebar';
+import Tooltip from '../../common/Tooltip';
+import { enqueueStgNoDups } from '../../../stg/dutils';
+import { isExist } from '../../../utils/putils';
 
 const getUserUrl = (username: string) => `https://twitter.com/${username}`;
 const getTweetUrl = (tweet: thTweet) =>
@@ -529,8 +527,8 @@ const selectComposer = (input: HTMLElement) => {
   if (_span != null) {
     var text = _span.firstChild;
     var range = document.createRange();
-    range.setStart(text, text.length);
-    range.setEnd(text, text.length);
+    range.setStart(text, text.textContent.length);
+    range.setEnd(text, text.textContent.length);
     var sel = window.getSelection();
     sel?.removeAllRanges()!; //ts override of "Object is possibly 'null'."
     sel?.addRange(range)!; //ts override of "Object is possibly 'null'."

@@ -1,8 +1,7 @@
 import { h } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
-import '../../style/Tooltip.css';
-import { useStorage } from '../hooks/useStorage';
-import { getStg, setStg } from '../stg/dutils';
+import '../../../style/Tooltip.css';
+import { getStg, setStg } from '../../stg/dutils';
 
 const GenericTooltip = ({
   children,
@@ -88,7 +87,7 @@ export const StgFlagTooltip = ({
   const [active, setActive] = useState(false);
 
   useEffect(() => {
-    getStg(flagName).then((x) => setActive(x ?? false));
+    getStg(flagName).then((x) => setActive(!!x ?? false));
   }, []);
 
   const showTip = () => {

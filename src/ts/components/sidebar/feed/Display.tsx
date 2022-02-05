@@ -17,24 +17,22 @@ import {
   slice,
 } from 'ramda'; // Function
 import { User } from 'twitter-d';
-import { apiMetricsFetch } from '../bg/twitterScout';
+import { apiMetricsFetch } from '../../../bg/twitterScout';
 // import { useAsync } from '../hooks/useAsync';
-import { useOption, useStorage } from '../hooks/useStorage';
-import { DisplayMode } from '../types/interfaceTypes';
-import { SearchResult, TweetResult } from '../types/msgTypes';
+import { useOption, useStorage } from '../../../hooks/useStorage';
+import { DisplayMode } from '../../../types/interfaceTypes';
+import { SearchResult, TweetResult } from '../../../types/msgTypes';
 import {
   ApiTweetResults,
   ApiUserResults,
   AuthContext,
   ContextualResults,
-  FeedDisplayMode,
-} from './ThreadHelper';
-import { useCurrentTwitterPage } from './TtReader';
-import { getMetadataForPage } from '../domInterface/wutils';
+  FeedDisplayModeContext,
+} from '../Sidebar';
+import { useCurrentTwitterPage } from '../../page/TtReader';
 
 import { Tweet as TweetCard } from './Tweet';
-import CrossIcon from '../../images/x-red.svg';
-import { pre_render_n } from '../utils/params';
+import { pre_render_n } from '../../../utils/params';
 
 const prepTweets = (list: TweetResult[] | null): SearchResult[] =>
   filter(pipe(prop('tweet'), isNil, not), defaultTo([], list));
@@ -87,8 +85,9 @@ const calcIdleDisplay = (currentPage) => {
 
 export function DisplayController(props: any) {
   const auth = useContext(AuthContext);
-  const { feedDisplayMode, dispatchFeedDisplayMode } =
-    useContext(FeedDisplayMode);
+  const { feedDisplayMode, dispatchFeedDisplayMode } = useContext(
+    FeedDisplayModeContext
+  );
   const myRef = useRef(null);
   const [apiUsers, setApiUsers] = useStorage('api_users', []);
   const { apiUserResults, setApiUserResults } = useContext(ApiUserResults);
@@ -416,6 +415,7 @@ function ApiSearchResults() {
       title={'Twitter search results:'}
       results={prepTweets(apiTweetResults)}
       emptyMsg={'No search results. Yet!'}
+      onMouseEnter={(_) => null}
     />
   );
 }
@@ -431,6 +431,7 @@ function QtDisplay() {
       title="Quote Tweets:"
       results={prepTweets(contextualResults)}
       emptyMsg={'No Quote Tweets.'}
+      onMouseEnter={(_) => null}
     />
   );
 }

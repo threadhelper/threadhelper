@@ -1,9 +1,9 @@
 import { h } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
-import { useStorage } from '../hooks/useStorage';
+import { useStorage } from '../../hooks/useStorage';
 import Tooltip from './Tooltip';
-import { msgBG } from '../stg/dutils';
-import { getTimeDiff } from './Tweet';
+import { msgBG } from '../../stg/dutils';
+import { getTimeDiff } from '../sidebar/feed/Tweet';
 import { join, filter, isNil } from 'ramda';
 
 function isSync(
@@ -43,12 +43,15 @@ function makeSyncMsg(
   };
   const jobsMsg = join(
     '\n',
-    filter((x) => x, [
-      ...[isMidScrape && jobs.scrape],
-      ...[isMidStore && jobs.store],
-      ...[isMidRefresh && jobs.refresh],
-      ...[archQueueLength > 0 && jobs.arch],
-    ])
+    filter(
+      (x) => !!x,
+      [
+        ...[isMidScrape && jobs.scrape],
+        ...[isMidStore && jobs.store],
+        ...[isMidRefresh && jobs.refresh],
+        ...[archQueueLength > 0 && jobs.arch],
+      ]
+    )
   );
   const sync = isSync(
     isMidSearch,

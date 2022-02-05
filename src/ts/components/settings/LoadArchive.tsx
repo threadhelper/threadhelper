@@ -1,12 +1,12 @@
 import { Fragment, h } from 'preact';
 import { useEffect, useReducer, useRef } from 'preact/hooks';
 import { defaultTo, either, isEmpty, isNil, map } from 'ramda'; // Object
-import { validateTweet } from '../bg/tweetImporter';
-import { useStorage } from '../hooks/useStorage';
-import { extractTweetPropIfNeeded } from '../bg/bgUtils';
-import Tooltip from './Tooltip';
-import { enqueueStg } from '../stg/dutils';
-import { enqueueEvent } from '../utils/ga';
+import { validateTweet } from '../../bg/tweetImporter';
+import { useStorage } from '../../hooks/useStorage';
+import { extractTweetPropIfNeeded } from '../../bg/bgUtils';
+import Tooltip from '../common/Tooltip';
+import { enqueueStg } from '../../stg/dutils';
+import { enqueueEvent } from '../../utils/ga';
 
 const archiveTooltip = (
   <>
