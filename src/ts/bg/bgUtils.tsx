@@ -17,6 +17,7 @@ import {
   prop,
   reduce,
   values,
+  identity,
 } from 'ramda'; // Function
 import { Status } from 'twitter-d';
 import {
