@@ -101,12 +101,13 @@ import {
 } from './utils/putils';
 enqueueEvent('background', `background start`, `background start`, 1);
 const createSearchWorker = createWorkerFactory(
-  () => import('./bg/searchWorker')
+  () => import(/* webpackChunkName: 'searchWorker' */ './bg/searchWorker')
 );
-const createIdbWorker = createWorkerFactory(() => import('./bg/idbWorker'));
+const createIdbWorker = createWorkerFactory(
+  () => import(/* webpackChunkName: 'idbWorker' */ './bg/idbWorker')
+);
 const createScrapeWorker = createWorkerFactory(
-  () => import('./bg/twitterScout')
-  // () => import('./dev/workers/scrapeWorker')
+  () => import(/* webpackChunkName: 'twitterScout' */ './bg/twitterScout')
 );
 const searchWorker = createSearchWorker();
 const idbWorker = createIdbWorker();
@@ -244,6 +245,7 @@ const doBigTweetScrape = async (_) => {
       getStg('userInfo'),
     ]);
     setStg('isMidScrape', true);
+    console.log('doBigTweetScrape', { userInfo });
     const [timelineRes, bookmarksRes] = await Promise.all([
       credsAndRetry(doTimelineScrape, userInfo),
       credsAndRetry(doBookmarkScrape, userInfo),
@@ -752,8 +754,7 @@ const webRequestPermission$: Observable<boolean, any> = makeInitStgObs(
   'webRequestPermission'
 );
 webRequestPermission$.log('webRequestPermission$');
-const incomingAuth$ = makeAuthObs();
-const auth$ = incomingAuth$
+const incomingAuth$ = makeAuthObs()
   .filterBy(webRequestPermission$)
   .filter(validateAuthFormat) //No skipping duplicates bc what if setStg fails for some reason?
   .throttle(2000);
@@ -764,14 +765,7 @@ const auth$ = makeInitStgObs(storageChange$, 'auth')
   .skipDuplicates(R.equals);
 auth$.log('[DEBUG] auth$');
 
-// const auth$ = webRequestPermission$
-//   .filter((x) => x)
-//   .skipDuplicates()
-//   .flatMapLatest((_) => makeAuthObs())
-//   .filter(validateAuth)
-//   .skipDuplicates(compareAuths);
-subObs({ auth$ }, setStg('auth'));
-const _userInfo$ = auth$
+const incomingUserInfo$ = auth$
   .thru<Observable<User, any>>(
     promiseStream(async (auth: Credentials) => {
       console.log('incomingUserInfo$', { auth });

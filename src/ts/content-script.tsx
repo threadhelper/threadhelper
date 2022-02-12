@@ -166,7 +166,7 @@ async function onLoad(
       Error
     >
   ).map(prop('url'));
-  const mode$ = urlChange$.map(getMode);
+  const mode$ = urlChange$.map(getTwitterPageMode);
   //      storage
   const storageChange$ = makeStorageChangeObs();
   const hideTtSearchBar$ = makeInitStgObs(storageChange$, 'doIndexUpdate');
@@ -268,6 +268,7 @@ async function onLoad(
     searchBar$.filterBy(hideTtSearchBar$.map((x) => !!x)),
     removeSearchBar
   );
+  //
   subObs(
     searchBar$.filterBy(hideTtSidebarContent$.map((x) => !!x)),
     removeSidebarContent
