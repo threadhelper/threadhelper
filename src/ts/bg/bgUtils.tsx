@@ -98,7 +98,7 @@ export const makeInitOptionsObs = curry((optionsChange$, itemName) => {
   return (
     Kefir.fromPromise(_makeOptionObs(optionsChange$, itemName))
       // .flatMap((x) => x)
-      .flatten()
+      .flatMap()
       .map(prop('value'))
   );
 });
@@ -110,11 +110,11 @@ export const _makeStgObs = curry(async (storageChange$, itemName) => {
 });
 export const makeInitStgObs = (storageChange$, itemName) => {
   // return Kefir.fromPromise(_makeStgObs(storageChange$, itemName)).flatMap((x) => {return x})
-  return Kefir.fromPromise(_makeStgObs(storageChange$, itemName)).flatten();
+  return Kefir.fromPromise(_makeStgObs(storageChange$, itemName)).flatMap();
 };
 
-export const combineOptions = (...args: Option[]): SearchFilters | any =>
-  reduce((a, b: Option) => assoc(b.name, b.value, a), {})(args);
+export const combineOptions = (...args: Option[]): SearchFilters =>
+  pipe(reduce((a, b) => assoc(b.name, b.value, a), {}))(args);
 
 // Scrape worker can't make requests for some people (TODO: find cause)
 // tries one function with the arguments and if it doesn't work tries the other one
