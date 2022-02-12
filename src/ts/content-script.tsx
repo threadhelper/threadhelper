@@ -268,7 +268,6 @@ async function onLoad(
     searchBar$.filterBy(hideTtSearchBar$.map((x) => !!x)),
     removeSearchBar
   );
-  //
   subObs(
     searchBar$.filterBy(hideTtSidebarContent$.map((x) => !!x)),
     removeSidebarContent

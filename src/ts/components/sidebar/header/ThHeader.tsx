@@ -211,7 +211,7 @@ export function ApiSearchBar() {
         ) : null}
         {showSearchBar ? (
           <div
-            class="inline-flex items-center h-8 pl-3 pr-5 ml-2 mr-3 rounded-full text-sm focus-within:ring-2 ring-current w-full text-accent bg-mainBg"
+            class="inline-flex items-center h-8 pl-2 pr-5 ml-2 rounded-full text-sm focus-within:ring-2 ring-current w-full text-accent bg-searchBarBg"
             // style={{
             //   // backgroundColor: 'var(--main-bg-color)',
             //   // borderColor: 'var(--accent-color)',
@@ -221,13 +221,12 @@ export function ApiSearchBar() {
           >
             {' '}
             <SearchIcon
-              // class="h-6 w-6 text-accent fill-current stroke-current"
-              class="h-6 w-6 mr-4 text-accent fill-current stroke-current"
+              class="h-6 w-9 mr-3 text-accent fill-current stroke-current flex-grow"
               // style="fill:var(--accent-color); stroke:var(--accent-color)"
             />{' '}
             <input
               ref={inputObj}
-              class="outline-none text-mainTxt bg-mainBg w-full"
+              class="outline-none text-mainTxt bg-searchBarBg w-full flex-shrink"
               // style={{
               //   backgroundColor: 'var(--main-bg-color)',
               //   // border: '0px',

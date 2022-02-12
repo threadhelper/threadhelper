@@ -683,12 +683,13 @@ function renderQuote(quote: thTweet, parent_has_media) {
     const media = quote.has_media ? renderMedia(quote.media, true) : null;
 
     const template = (
-      <div class="mt-3 border border-borderBg rounded-2xl transition-colors duration-200 cursor-pointer hover:bg-white hover:bg-opacity-5">
-        <div class="p-3 pb-1">
-          <div class="flex">
-            <div class="flex flex-shrink font-medium text-lsm items-center h-6">
-              <div class="w-5 h-5 mr-2 flex items-center justify-center">
+      <div class="mt-3 border rounded-2xl border-borderBg transition-colors duration-200 cursor-pointer hover:bg-hoverBg">
+        <div class="flex flex-col">
+          <div class="min-w-0 w-full p-3 pb-0">
+            <div class="flex font-normal text-lsm items-center mb-2">
+              <div class="relative w-6 h-6 rounded-full transition-colors duration-200 mr-2 flex-shrink-0">
                 <a href={getUserUrl(quote.username)}>
+                  <div class="w-full h-full absolute rounded-full inset-0 transition-colors duration-200 hover:bg-black hover:bg-opacity-15"></div>
                   <img
                     class="rounded-full"
                     src={profilePicSrc}
@@ -700,10 +701,10 @@ function renderQuote(quote: thTweet, parent_has_media) {
                   />
                 </a>
               </div>
-              <div class="flex-initial text-lsm font-bold overflow-ellipsis whitespace-nowrap overflow-hidden leading-none">
+              <div class="text-lsm font-bold overflow-ellipsis whitespace-nowrap overflow-hidden hover:underline">
                 <a href={getUserUrl(quote.username)}>{quote.name}</a>
               </div>
-              <div class="flex-initial ml-1 text-neutral overflow-ellipsis whitespace-nowrap overflow-hidden leading-none">
+              <div class="ml-1 text-neutral overflow-ellipsis whitespace-nowrap overflow-hidden">
                 <a href={getUserUrl(quote.username)}>@{quote.username}</a>
               </div>
               <div class="px-1 text-neutral flex-shrink-0">·</div>
@@ -729,13 +730,13 @@ function renderQuote(quote: thTweet, parent_has_media) {
                 </div>
               </Tooltip>
             </div>
+            <div class="flex-none">
+              <div class="text-neutral">{replyText}</div>
+              {text}
+            </div>
           </div>
-          <div>
-            <div class="text-neutral">{replyText}</div>
-            {text}
-          </div>
+          <div class="w-full">{media}</div>
         </div>
-        {media}
       </div>
     );
 
