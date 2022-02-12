@@ -30,6 +30,7 @@ module.exports = function (configDirs) {
   devConfig.output.path = configDirs.SERVE_DIR;
   devConfig.entry = {
     ...devConfig.entry,
+    dev: configDirs.APP_DIR + '/dev/dev.tsx',
   };
   devConfig.module.rules[0].use[0].options.plugins = [
     ...devConfig.module.rules[0].use[0].options.plugins,
@@ -47,6 +48,16 @@ module.exports = function (configDirs) {
       filename: 'content-script.html',
       template: configDirs.HTML_DIR + '/content-script.html',
       chunks: ['content-script'],
+    }),
+    new HtmlPlugin({
+      filename: 'dev.html',
+      template: configDirs.HTML_DIR + '/dev.html',
+      chunks: ['dev'],
+    }),
+    new HtmlPlugin({
+      filename: 'index.html',
+      template: configDirs.HTML_DIR + '/dev.html',
+      chunks: ['dev'],
     }),
     new PreactRefreshPlugin(),
   ];
