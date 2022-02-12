@@ -26,8 +26,8 @@ interface CssExports {
   searchWidget: string;
   'settings-menu': string;
   sidebar: string;
-  sug_compose: string;
-  sug_home: string;
+  sidebarContainerComposer: string;
+  sidebarContainerHome: string;
   sync: string;
   synced: string;
   'th-body': string;

@@ -12,7 +12,7 @@ export interface StorageInterface {
   options: Options;
   hasArchive: boolean;
   hasTimeline: object; // {id_str: Bool}
-  activeAccounts: activeAccsType; //{screen_name: String, id_str: String, showTweets: Bool, ...}
+  activeAccounts: ActiveAccsType; //{screen_name: String, id_str: String, showTweets: Bool, ...}
   currentScreenName: string;
   latest_tweets: SearchResult[];
   search_results: SearchResult[];
@@ -29,8 +29,6 @@ export interface StorageInterface {
   doRefreshIdb: boolean;
   patchUrl: string;
 }
-
-export interface StorageInterface extends DevStorageInterface {}
 
 export interface TweetResult {
   tweet: thTweet;

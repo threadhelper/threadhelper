@@ -29,8 +29,8 @@ import {
 } from 'ramda'; // Function
 import * as css from '../style/cs.css';
 import * as pcss from '../styles.css';
-import ThreadHelper from './components/ThreadHelper';
-import { makeComposeObs } from './domInterface/composeHandler';
+import ThreadHelper from './components/sidebar/Sidebar';
+import { makeComposeObs } from './read-twitter-page/composerReader';
 import {
   getHostTweetId,
   makeActionStream,
@@ -39,42 +39,47 @@ import {
   makeDeleteEventStream,
   makeLastClickedObs,
   makeRemoveBookmarkStream,
-} from './domInterface/inputsHandler';
+} from './read-twitter-page/userInputsHandler';
 import {
-  injectDummy,
-  injectSidebarHome,
-  makeFloatSidebarObserver,
-  makeHomeSidebarObserver,
+  injectSidebarContainerCompose,
+  injectSidebarContainerHome,
   makeSearchBarObserver,
-  makeSidebarCompose,
-  makeSidebarHome,
+  createSidebarElementCompose,
+  createSidebarContainerHome,
   removeSearchBar,
   removeSidebarContent,
-} from './domInterface/sidebarHandler';
-import { makeLastStatusObs, makeThemeObs } from './domInterface/tabsHandler';
+} from './write-twitter/injectSidebar';
+import {
+  makeFloatSidebarObserver,
+  makeHomeSidebarObserver,
+} from './read-twitter-page/sidebarReader';
+import { makeThemeObs } from './read-twitter-page/themeReader';
 import * as window from './global';
 import { MsgObs, QueryObs, StorageChangeObs } from './hooks/BrowserEventObs';
 import { UrlMsg } from './types/msgTypes';
 import { curProp } from './types/types';
 import {
   getStg,
-  makeGotMsgObs,
   makeStorageChangeObs,
   msgBG,
   resetStorageField,
   rpcBg,
   setStg,
 } from './stg/dutils';
+import { makeGotMsgObs } from './stg/msgUtils';
 import { currentValue, inspect, nullFn, toggleDebug } from './utils/putils';
 import {
   getMetadataForPage,
-  getMode,
-  updateTheme,
-} from './domInterface/wutils';
+  getTwitterPageMode,
+} from './read-twitter-page/twitterPageReader';
+import { updateTheme } from './write-twitter/setTheme';
 import { makeInitStgObs } from './bg/bgUtils';
+import { makeLastStatusObs } from './read-twitter-page/openTweetReader';
 
-console.log('hi pcss', pcss);
-console.log('hi css', css);
+// console.log('need to reference pcss so it doesn\'t vanish on packing', pcss);
+pcss;
+css;
+// console.log('hi css', css);
 
 // Project business
 var DEBUG = process.env.NODE_ENV != 'production';
@@ -86,9 +91,9 @@ toggleDebug(window, DEBUG);
 let myPort = chrome.runtime.connect({ name: 'port-from-cs' });
 
 // Sidebar functions
-let thBarHome = makeSidebarHome();
-let thBarComp = makeSidebarCompose();
-const activateSidebar = curry(
+let sidebarContainerHome = createSidebarContainerHome();
+let sidebarContainerComposer = createSidebarElementCompose();
+const injectAndRenderSidebar = curry(
   (
     inject: (arg0: Element) => any,
     bar: Element,
@@ -97,7 +102,6 @@ const activateSidebar = curry(
     msgObs$,
     composeQuery$
   ) => {
-    console.log('[DEBUG] activating sidebar', { storageChange$ });
     inject(bar);
     render(
       <StorageChangeObs.Provider value={storageChange$}>
@@ -111,8 +115,16 @@ const activateSidebar = curry(
     );
   }
 );
-const activateFloatSidebar = activateSidebar(injectDummy, thBarComp, false);
-const activateHomeSidebar = activateSidebar(injectSidebarHome, thBarHome, true);
+const activateComposeSidebar = injectAndRenderSidebar(
+  injectSidebarContainerCompose,
+  sidebarContainerComposer,
+  false
+);
+const activateHomeSidebar = injectAndRenderSidebar(
+  injectSidebarContainerHome,
+  sidebarContainerHome,
+  true
+);
 const deactivateSidebar = (bar: Element) => {
   render(null, bar);
 };
@@ -139,12 +151,10 @@ const initCsStg = () => {
   );
 };
 
-function main() {
-  onLoad(thBarHome, thBarComp);
-}
-
-async function onLoad(thBarHome: Element, thBarComp: Element) {
-  console.log('[DEBUG] onLoad', { thBarHome, thBarComp });
+async function onLoad(
+  sidebarContainerHome: Element,
+  sidebarContainerComposer: Element
+) {
   initCsStg();
   // Define streams
   //      messages
@@ -156,16 +166,15 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
       Error
     >
   ).map(prop('url'));
-  const mode$ = urlChange$.map(getMode);
+  const mode$ = urlChange$.map(getTwitterPageMode);
   //      storage
   const storageChange$ = makeStorageChangeObs();
   const hideTtSearchBar$ = makeInitStgObs(storageChange$, 'doIndexUpdate');
-  hideTtSearchBar$.log('hideTtSearchBar$');
   const hideTtSidebarContent$ = makeInitStgObs(storageChange$, 'doIndexUpdate');
-  hideTtSidebarContent$.log('hideTtSidebarContent$');
   //      webpage events
   //          theme
-  const theme$ = makeThemeObs();
+  const theme$ = makeThemeObs(document);
+  subObs(theme$, updateTheme);
   //          tweet ids
   const lastStatus$ = makeLastStatusObs(mode$);
   const getTargetId = getHostTweetId(lastStatus$);
@@ -176,9 +185,7 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
   subObs(lastClickedId$, setStg('lastClickedId'));
   //          actions
   const actions$ = makeActionStream(); // post, rt, unrt
-  actions$.log('actions$');
   const post$ = actions$.filter((x) => x == 'tweet');
-  post$.log('post$');
   subObs(post$.delay(1000), async (_) => rpcBg('updateTimeline'));
   const addBookmark$ = makeAddBookmarkStream()
     .map(inspect('add bookmark'))
@@ -209,16 +216,16 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
     urlChange$.map((_) => ''),
     composeContent$,
   ]).toProperty(() => '');
-
+  //
   // Sidebar control
   const updateFloat = (value: any) =>
     value
-      ? activateFloatSidebar(storageChange$, msgObs$, composeQuery$)
-      : deactivateSidebar(thBarComp); //function
+      ? activateComposeSidebar(storageChange$, msgObs$, composeQuery$)
+      : deactivateSidebar(sidebarContainerComposer); //function
   const updateHome = (value: any) =>
     value
       ? activateHomeSidebar(storageChange$, msgObs$, composeQuery$)
-      : deactivateSidebar(thBarHome); //function
+      : deactivateSidebar(sidebarContainerHome); //function
   const searchBar$ = makeSearchBarObserver();
   searchBar$.log('searchBar$');
   const isComposing = pipe(
@@ -233,12 +240,13 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
       return msg;
     }
   };
-  const floatSidebar$ =
-    makeFloatSidebarObserver(thBarComp).filter(filterOutRender); // floatSidebar$ :: String || Element  // for floating sidebar in compose mode
+  const floatSidebar$ = makeFloatSidebarObserver(
+    sidebarContainerComposer
+  ).filter(filterOutRender); // floatSidebar$ :: String || Element  // for floating sidebar in compose mode
   const floatActive$ = floatSidebar$
     .map(equals('render'))
     .toProperty(() => false); // floatActive$ ::Bool
-  const homeSidebar$ = makeHomeSidebarObserver(thBarHome); // homeSidebar$ :: String || Element // for main site sidebar over recent trends
+  const homeSidebar$ = makeHomeSidebarObserver(sidebarContainerHome); // homeSidebar$ :: String || Element // for main site sidebar over recent trends
   const homeActive$ = homeSidebar$
     .map(equals('render'))
     .toProperty(() => false); // homeActive$ ::Bool
@@ -252,13 +260,18 @@ async function onLoad(thBarHome: Element, thBarComp: Element) {
   subObs(actions$.delay(800), (_) => {
     handlePosting();
   });
-  subObs(theme$, updateTheme);
   subObs(floatActive$, updateFloat);
   subObs(homeActiveSafe$, updateHome);
   subObs(storageChange$, nullFn);
   subObs(msgObs$, nullFn);
-  subObs(searchBar$.filterBy(hideTtSearchBar$), removeSearchBar);
-  subObs(searchBar$.filterBy(hideTtSidebarContent$), removeSidebarContent);
+  subObs(
+    searchBar$.filterBy(hideTtSearchBar$.map((x) => !!x)),
+    removeSearchBar
+  );
+  subObs(
+    searchBar$.filterBy(hideTtSidebarContent$.map((x) => !!x)),
+    removeSidebarContent
+  );
   subObs(
     hideTtSearchBar$.filter((x) => x == true),
     removeSearchBar
@@ -276,8 +289,8 @@ function destructor(destructionEvent: any) {
   // Tear down content script: Unbind events, clear timers, restore DOM, etc.
   window.removeEventListener('load', onLoad, true);
   subscriptions.forEach((x: { unsubscribe: () => void }) => x.unsubscribe());
-  render(null, thBarHome);
-  render(null, thBarComp);
+  render(null, sidebarContainerHome);
+  render(null, sidebarContainerComposer);
   console.log('DESTROYED');
 }
 function setDestruction(destructor: {
@@ -298,8 +311,8 @@ setDestruction(destructor); // destroys previous content script
 window.addEventListener('unload', () => {
   msgBG({ type: 'window is closing!' });
   subscriptions.forEach((x: { unsubscribe: () => void }) => x.unsubscribe());
-  render(null, thBarHome);
-  render(null, thBarComp);
+  render(null, sidebarContainerHome);
+  render(null, sidebarContainerComposer);
 });
-main(); // Let's go
+onLoad(sidebarContainerHome, sidebarContainerComposer); // Let's go
 //
