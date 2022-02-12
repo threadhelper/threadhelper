@@ -296,9 +296,9 @@ export const CopyAction = ({
 
   return (
     <div
-      class="flex cursor-pointer relative"
+      class="flex cursor-pointer"
       onMouseOver={() => setHover(true)}
-      onMouseOut={() => setHover(false)}
+      onMouseLeave={() => setHover(false)}
     >
       <textarea class="th-link hidden" ref={linkField}>
         {url}
