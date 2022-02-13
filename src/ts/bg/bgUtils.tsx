@@ -109,7 +109,6 @@ export const _makeStgObs = curry(async (storageChange$, itemName) => {
   // return makeStgItemObs(itemName).toProperty(()=>initVal)
 });
 export const makeInitStgObs = (storageChange$, itemName) => {
-  // return Kefir.fromPromise(_makeStgObs(storageChange$, itemName)).flatMap((x) => {return x})
   return Kefir.fromPromise(_makeStgObs(storageChange$, itemName)).flatMap();
 };
 

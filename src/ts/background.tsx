@@ -101,12 +101,13 @@ import {
 } from './utils/putils';
 enqueueEvent('background', `background start`, `background start`, 1);
 const createSearchWorker = createWorkerFactory(
-  () => import('./bg/searchWorker')
+  () => import(/* webpackChunkName: 'searchWorker' */ './bg/searchWorker')
 );
-const createIdbWorker = createWorkerFactory(() => import('./bg/idbWorker'));
+const createIdbWorker = createWorkerFactory(
+  () => import(/* webpackChunkName: 'idbWorker' */ './bg/idbWorker')
+);
 const createScrapeWorker = createWorkerFactory(
-  () => import('./bg/twitterScout')
-  // () => import('./dev/workers/scrapeWorker')
+  () => import(/* webpackChunkName: 'twitterScout' */ './bg/twitterScout')
 );
 const searchWorker = createSearchWorker();
 const idbWorker = createIdbWorker();
@@ -244,6 +245,7 @@ const doBigTweetScrape = async (_) => {
       getStg('userInfo'),
     ]);
     setStg('isMidScrape', true);
+    console.log('doBigTweetScrape', { userInfo });
     const [timelineRes, bookmarksRes] = await Promise.all([
       credsAndRetry(doTimelineScrape, userInfo),
       credsAndRetry(doBookmarkScrape, userInfo),

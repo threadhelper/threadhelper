@@ -76,7 +76,7 @@ module.exports = {
   //     "script-src 'self' blob:; script-src-elem 'self' blob: data:; worker-src 'self' blob: data:; object-src 'self' blob:;",
   // },
   content_security_policy:
-    "script-src-elem 'self' chrome-extension://*/0.bundle.worker.js chrome-extension://*/1.bundle.worker.js chrome-extension://*/2.bundle.worker.js ;",
+    "script-src-elem 'self' chrome-extension://*/idbWorker.bundle.worker.js chrome-extension://*/searchWorker.bundle.worker.js chrome-extension://*/twitterScout.bundle.worker.js  ;",
   // "content_security_policy": "default-src 'self' data: 'unsafe-eval' 'unsafe-inline' blob; script-src 'self'; object-src 'self'",
   // browser_specific_settings: {
   //   gecko: {
