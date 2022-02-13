@@ -47,7 +47,7 @@
 
 
 
-# Tech stack
+# Relevant Tech
 
 | Package  | Description |
 | ------------- | ------------- |
