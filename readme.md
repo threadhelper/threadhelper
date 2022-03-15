@@ -1,5 +1,3 @@
-# [Documentation (Roam page w/ more stuff)](https://roamresearch.com/#/app/xiqo/page/dFuVw5Xxl)
-
 # Building
 
 - don't forget to `npm install`
