@@ -3,7 +3,7 @@ import { obsAdded, obsRemoved } from '../utils/kefirMutationObs';
 import {
   sideBarSelector,
   floatingComposeSelector,
-} from '../write-twitter/injectSidebar';
+} from '../twitter-page-write/injectSidebar';
 
 const photoSelector = '[data-testid="tweetPhoto"]'; // can't use this bc sidebar doesn't start with photos loaded
 const trendText = '[aria-label="Timeline: Trending now"]';

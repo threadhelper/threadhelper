@@ -428,6 +428,16 @@ const getTopCursor = getCursor('top');
 const stop_condition = (_res, res: ScoutUserAndTweets, count) => {
   const updateSize = R.length(unpackTweetsQL(_res));
   const totalSize = R.length(prop('tweets', res));
+  console.log('stop_condition', {
+    updateSize,
+    totalSize,
+    botCursor: getBottomCursor(_res),
+    topCursor: getTopCursor(_res),
+    cursorsEqual: getBottomCursor(_res) == getTopCursor(_res),
+    res,
+    _res,
+    count,
+  });
   return (
     updateSize <= 2 ||
     totalSize >= count ||

@@ -11,7 +11,7 @@ import { MsgObs, StorageChangeObs } from '../hooks/BrowserEventObs';
 import { initStg, makeStorageChangeObs, setData } from '../stg/dutils';
 import { makeGotMsgObs } from '../stg/msgUtils';
 import { nullFn } from '../utils/putils';
-import { updateTheme } from '../write-twitter/setTheme';
+import { updateTheme } from '../twitter-page-write/setTheme';
 import { dbOpen } from '../bg/idb_wrapper';
 import Scraper from './components/Scraper';
 import Search from './components/Search';

@@ -1,12 +1,11 @@
-/* CS is here to manage the presence of components and events they're not supposed to access.
+/* 
+- `content-script.tsx`: Reads webpage activity and injects sidebar. 
+- Observes webpage activity like:
+    - compose text
+    - theme colors
+    - url changes
+    - tweet actions (post, delete, rt, bookmarking)
 
-. Process messages from BG
-. Create Sidebar
-. Inject Sidebar into twitter pages when appropriate
-. Remove Sidebar from twitter pages when appropriate
-. manage information about twitter use (inited in initLocalStorage)
-. manage inputs in twitter use
-. define destruction and dispatch its event on start up
 */
 //
 import '@babel/polyfill';
@@ -30,7 +29,7 @@ import {
 import * as css from '../style/cs.css';
 import * as pcss from '../styles.css';
 import ThreadHelper from './components/sidebar/Sidebar';
-import { makeComposeObs } from './read-twitter-page/composerReader';
+import { makeComposeObs } from './twitter-page-read/composerReader';
 import {
   getHostTweetId,
   makeActionStream,
@@ -39,7 +38,7 @@ import {
   makeDeleteEventStream,
   makeLastClickedObs,
   makeRemoveBookmarkStream,
-} from './read-twitter-page/userInputsHandler';
+} from './twitter-page-read/userInputsHandler';
 import {
   injectSidebarContainerCompose,
   injectSidebarContainerHome,
@@ -48,12 +47,12 @@ import {
   createSidebarContainerHome,
   removeSearchBar,
   removeSidebarContent,
-} from './write-twitter/injectSidebar';
+} from './twitter-page-write/injectSidebar';
 import {
   makeFloatSidebarObserver,
   makeHomeSidebarObserver,
-} from './read-twitter-page/sidebarReader';
-import { makeThemeObs } from './read-twitter-page/themeReader';
+} from './twitter-page-read/sidebarReader';
+import { makeThemeObs } from './twitter-page-read/themeReader';
 import * as window from './global';
 import { MsgObs, QueryObs, StorageChangeObs } from './hooks/BrowserEventObs';
 import { UrlMsg } from './types/msgTypes';
@@ -71,10 +70,10 @@ import { currentValue, inspect, nullFn, toggleDebug } from './utils/putils';
 import {
   getMetadataForPage,
   getTwitterPageMode,
-} from './read-twitter-page/twitterPageReader';
-import { updateTheme } from './write-twitter/setTheme';
+} from './twitter-page-read/twitterPageReader';
+import { updateTheme } from './twitter-page-write/setTheme';
 import { makeInitStgObs } from './bg/bgUtils';
-import { makeLastStatusObs } from './read-twitter-page/openTweetReader';
+import { makeLastStatusObs } from './twitter-page-read/openTweetReader';
 
 // console.log('need to reference pcss so it doesn\'t vanish on packing', pcss);
 pcss;

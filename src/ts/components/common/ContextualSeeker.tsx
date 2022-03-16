@@ -18,7 +18,7 @@ import {
 } from 'ramda';
 import { apiSearchToTweet } from '../../bg/tweetImporter';
 import { searchAPI, tweetLookupQuery } from '../../bg/twitterScout';
-import { getRepliedToText } from '../../read-twitter-page/openTweetReader';
+import { getRepliedToText } from '../../twitter-page-read/openTweetReader';
 import { rpcBg, setStg } from '../../stg/dutils';
 import { inspect, isExist } from '../../utils/putils';
 import {
