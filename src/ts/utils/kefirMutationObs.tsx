@@ -1,3 +1,4 @@
+// Kefir interface for mutation observers
 // https://github.com/sktt/kefir-observable-selector
 /*
 Exposes the obsAdded, obsRemoved and obsAttributes for creating streams
