@@ -13,6 +13,17 @@
 
 # Get Started
 
+## TH architecture
+
+- Browser extensions have background scripts (bg) and content scripts (cs).
+- ![](https://firebasestorage.googleapis.com/v0/b/firescript-577a2.appspot.com/o/imgs%2Fapp%2Fxiqo%2FZXKdz1png0.png?alt=media&token=53740a6e-4477-4e6a-9c06-de5bd2c2d945)
+- cs.jsx listens to twitter page events, renders and displays sidebars
+- bg.jsx gets RPC action requests from cs.jsx, processes data in queues stored in chrome.storage
+  - `scrapeWorker` interacts with Twitter API, mostly to get tweets and users.
+  - `idbWorker` interacts with IndexedDB to save tweets, users, and update the search index.
+  - `searchWorker` interacts with the elasticlunr search index.
+- [Browser Extensions basics](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions)
+
 ## Basic dataflows:
 
 To give you an idea of the operations that happend and how data flows inside Threadhelper.
@@ -36,17 +47,6 @@ To give you an idea of the operations that happend and how data flows inside Thr
   - They are put into `queue_tempArchive`
   - `background` observes `queue_tempArchive` and asks `scrapeWorker` to `patchArchive` with the information that's missing (users, mostly)
   - converts them to `thTweet`s
-
-## TH architecture
-
-- Browser extensions have background scripts (bg) and content scripts (cs).
-- ![](https://firebasestorage.googleapis.com/v0/b/firescript-577a2.appspot.com/o/imgs%2Fapp%2Fxiqo%2FZXKdz1png0.png?alt=media&token=53740a6e-4477-4e6a-9c06-de5bd2c2d945)
-- cs.jsx listens to twitter page events, renders and displays sidebars
-- bg.jsx gets RPC action requests from cs.jsx, processes data in queues stored in chrome.storage
-  - `scrapeWorker` interacts with Twitter API, mostly to get tweets and users.
-  - `idbWorker` interacts with IndexedDB to save tweets, users, and update the search index.
-  - `searchWorker` interacts with the elasticlunr search index.
-- [Browser Extensions basics](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions)
 
 # Relevant Tech
 
